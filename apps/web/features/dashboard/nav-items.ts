@@ -2,10 +2,12 @@ import {
   ArrowLeftRight,
   Bookmark,
   CalendarCheck,
+  ClipboardList,
   FilePlus2,
   FolderClosed,
   House,
   MessageSquare,
+  PhoneCall,
   Scale,
   Telescope,
   UserRound,
@@ -22,6 +24,12 @@ export type NavItem = {
   loansOnly?: boolean;
   // Real-estate-only surfaces. Hidden on the loans line for the same reason.
   realEstateOnly?: boolean;
+  // Telecaller-only surface. Shown alongside Home for role=telecaller, hidden
+  // for every other role (mirrors how loansOnly/realEstateOnly gate the client rail).
+  telecallerOnly?: boolean;
+  // Employee-only surface. Shown alongside Home for role=employee, hidden for
+  // every other role (same pattern as telecallerOnly).
+  employeeOnly?: boolean;
 };
 
 // Slim workspace rail. Near-white chrome, icon-only with tooltips on desktop.
@@ -43,4 +51,6 @@ export const NAV_ITEMS: NavItem[] = [
   { key: "compare", label: "Compare", href: "/dashboard/compare", icon: Scale, realEstateOnly: true },
   { key: "agent", label: "My Agent", href: "/dashboard/agent", icon: UserRound, realEstateOnly: true },
   { key: "transactions", label: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },
+  { key: "leads", label: "Leads", href: "/dashboard/leads", icon: PhoneCall, telecallerOnly: true },
+  { key: "tasks", label: "Tasks", href: "/dashboard/tasks", icon: ClipboardList, employeeOnly: true },
 ];

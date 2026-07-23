@@ -11,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth } from "@/components/auth/session-provider";
 import { useBookmarks } from "@/features/real-estate/store";
 import { RE_CATEGORIES } from "@/lib/real-estate";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,10 @@ export function AppSidebar({
   const pathname = usePathname();
   const { activeLine } = useLine();
   const { count: bookmarkCount } = useBookmarks();
+  const { session } = useAuth();
+  const isClient = session?.role === "client";
+  const isTelecaller = session?.role === "telecaller";
+  const isEmployee = session?.role === "employee";
 
   // Labeled = the mobile drawer, or the desktop rail when the user expands it.
   const labeled = showLabels || expanded;
@@ -63,15 +68,27 @@ export function AppSidebar({
   const screenLine = isLoansRoute(pathname) ? "loans" : activeLine;
   const activeText = screenLine === "loans" ? "text-loans-accent" : "text-realestate-accent";
 
-  // Apply/Documents are loans-only; Bookmarks/Enquiries/Site Visits/Compare/My
-  // Agent are real-estate-only. Each drops out on the other line so a feature is
-  // never offered under the wrong line's screen. Home + the identity-level items
-  // (Explore, Transactions) stay for both.
-  const items = NAV_ITEMS.filter((i) => {
-    if (i.loansOnly && screenLine !== "loans") return false;
-    if (i.realEstateOnly && screenLine !== "real_estate") return false;
-    return true;
-  });
+  // This rail is a client's property/loan browsing nav — Explore, Bookmarks,
+  // Enquiries, etc. are meaningless for staff roles, who have no business line
+  // of their own. Most non-client roles get just Home; their real navigation
+  // lives on the role's own landing page (e.g. AdminHome's cards). Telecaller is
+  // the exception: working leads is their everyday primary task, not an
+  // occasional action, so it gets a persistent rail item alongside Home.
+  const items = isClient
+    ? NAV_ITEMS.filter((i) => {
+        // Apply/Documents are loans-only; Bookmarks/Enquiries/Site Visits/
+        // Compare/My Agent are real-estate-only. Each drops out on the other
+        // line so a feature is never offered under the wrong line's screen.
+        // Home + the identity-level items (Explore, Transactions) stay for both.
+        if (i.loansOnly && screenLine !== "loans") return false;
+        if (i.realEstateOnly && screenLine !== "real_estate") return false;
+        return true;
+      })
+    : isTelecaller
+      ? NAV_ITEMS.filter((i) => i.key === "home" || i.telecallerOnly)
+      : isEmployee
+        ? NAV_ITEMS.filter((i) => i.key === "home" || i.employeeOnly)
+        : NAV_ITEMS.filter((i) => i.key === "home");
 
   return (
     <TooltipProvider delayDuration={0}>

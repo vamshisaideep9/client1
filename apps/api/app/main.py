@@ -17,8 +17,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.admin import router as admin_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.bookmarks import router as bookmarks_router
+from app.api.v1.employee import router as employee_router
 from app.api.v1.enquiries import router as enquiries_router
 from app.api.v1.leads import router as leads_router
 from app.api.v1.loans import router as loans_router
@@ -28,6 +30,7 @@ from app.api.v1.properties import router as properties_router
 from app.api.v1.property_submissions import router as property_submissions_router
 from app.api.v1.site_visits import router as site_visits_router
 from app.api.v1.support_tickets import router as support_tickets_router
+from app.api.v1.telecaller import router as telecaller_router
 from app.api.v1.transactions import router as transactions_router
 from app.core.config import settings
 from app.db.session import engine, get_db
@@ -73,6 +76,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
 app.include_router(leads_router, prefix="/api/v1/leads", tags=["leads"])
 app.include_router(loans_router, prefix="/api/v1/loans", tags=["loans"])
 app.include_router(
@@ -90,6 +94,8 @@ app.include_router(bookmarks_router, prefix="/api/v1/bookmarks", tags=["bookmark
 app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
 app.include_router(transactions_router, prefix="/api/v1/transactions", tags=["transactions"])
 app.include_router(payments_router, prefix="/api/v1/payouts", tags=["payouts"])
+app.include_router(telecaller_router, prefix="/api/v1/telecaller", tags=["telecaller"])
+app.include_router(employee_router, prefix="/api/v1/employee", tags=["employee"])
 
 
 @app.get("/")

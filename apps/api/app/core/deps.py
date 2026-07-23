@@ -194,6 +194,48 @@ async def require_re_agent(
     return current_user
 
 
+async def require_telecaller(
+    current_user: CurrentUser = Depends(get_active_user),
+) -> CurrentUser:
+    """Only a telecaller may work the assigned-leads surface. App-layer defense atop
+    the leads_rls / lead_activities_rls own-assignment predicates."""
+    if current_user.role != "telecaller":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only telecallers may access this.",
+        )
+    return current_user
+
+
+async def require_employee(
+    current_user: CurrentUser = Depends(get_active_user),
+) -> CurrentUser:
+    """Only an employee may work the assigned-task surface. App-layer defense atop
+    the tasks_rls own-assignment predicate."""
+    if current_user.role != "employee":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only employees may access this.",
+        )
+    return current_user
+
+
+async def require_admin(
+    current_user: CurrentUser = Depends(get_active_user),
+) -> CurrentUser:
+    """Only Admin may provision staff or approve/reject agent applications.
+
+    RLS's `WITH CHECK` on staff_profiles/agent_profiles/agent_applications accepts
+    ANY platform-scoped staff (including a platform sub_admin) — this app-layer
+    gate, not RLS, is the actual admin-only wall for these writes."""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Admin may perform this action.",
+        )
+    return current_user
+
+
 async def require_re_reviewer(
     current_user: CurrentUser = Depends(get_active_user),
 ) -> CurrentUser:
