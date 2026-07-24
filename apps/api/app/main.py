@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.admin import router as admin_router
 from app.api.v1.auth import router as auth_router
+from app.api.v1.banners import router as banners_router
 from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.employee import router as employee_router
 from app.api.v1.enquiries import router as enquiries_router
@@ -27,6 +28,7 @@ from app.api.v1.loans import router as loans_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.payments import router as payments_router
 from app.api.v1.properties import router as properties_router
+from app.api.v1.property_deals import router as property_deals_router
 from app.api.v1.property_submissions import router as property_submissions_router
 from app.api.v1.site_visits import router as site_visits_router
 from app.api.v1.support_tickets import router as support_tickets_router
@@ -90,12 +92,14 @@ app.include_router(
     prefix="/api/v1/property-submissions",
     tags=["property-submissions"],
 )
+app.include_router(property_deals_router, prefix="/api/v1/property-deals", tags=["property-deals"])
 app.include_router(bookmarks_router, prefix="/api/v1/bookmarks", tags=["bookmarks"])
 app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
 app.include_router(transactions_router, prefix="/api/v1/transactions", tags=["transactions"])
 app.include_router(payments_router, prefix="/api/v1/payouts", tags=["payouts"])
 app.include_router(telecaller_router, prefix="/api/v1/telecaller", tags=["telecaller"])
 app.include_router(employee_router, prefix="/api/v1/employee", tags=["employee"])
+app.include_router(banners_router, prefix="/api/v1/banners", tags=["banners"])
 
 
 @app.get("/")
