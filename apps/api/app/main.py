@@ -22,6 +22,7 @@ from app.api.v1.agent import router as agent_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.banners import router as banners_router
 from app.api.v1.bookmarks import router as bookmarks_router
+from app.api.v1.content import router as content_router
 from app.api.v1.employee import router as employee_router
 from app.api.v1.enquiries import router as enquiries_router
 from app.api.v1.leads import router as leads_router
@@ -32,7 +33,9 @@ from app.api.v1.payments import router as payments_router
 from app.api.v1.properties import router as properties_router
 from app.api.v1.property_deals import router as property_deals_router
 from app.api.v1.property_submissions import router as property_submissions_router
+from app.api.v1.referral_bonus import router as referral_bonus_router
 from app.api.v1.site_visits import router as site_visits_router
+from app.api.v1.sub_admin import router as sub_admin_router
 from app.api.v1.support_tickets import router as support_tickets_router
 from app.api.v1.telecaller import router as telecaller_router
 from app.api.v1.transactions import router as transactions_router
@@ -87,6 +90,7 @@ app.include_router(
     support_tickets_router, prefix="/api/v1/support-tickets", tags=["support-tickets"]
 )
 app.include_router(site_visits_router, prefix="/api/v1/site-visits", tags=["site-visits"])
+app.include_router(sub_admin_router, prefix="/api/v1/sub-admin", tags=["sub-admin"])
 app.include_router(enquiries_router, prefix="/api/v1/enquiries", tags=["enquiries"])
 app.include_router(properties_router, prefix="/api/v1/properties", tags=["properties"])
 app.include_router(
@@ -104,6 +108,10 @@ app.include_router(agent_router, prefix="/api/v1/agent", tags=["agent"])
 app.include_router(employee_router, prefix="/api/v1/employee", tags=["employee"])
 app.include_router(banners_router, prefix="/api/v1/banners", tags=["banners"])
 app.include_router(offers_router, prefix="/api/v1/offers", tags=["offers"])
+app.include_router(content_router, prefix="/api/v1/content-blocks", tags=["content-blocks"])
+app.include_router(
+    referral_bonus_router, prefix="/api/v1/referral-bonus-config", tags=["referral-bonus-config"]
+)
 
 
 @app.get("/")

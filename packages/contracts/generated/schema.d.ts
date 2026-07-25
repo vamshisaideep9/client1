@@ -622,6 +622,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/content-blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Content Blocks */
+        get: operations["list_content_blocks_api_v1_content_blocks_get"];
+        put?: never;
+        /** Create Content Block */
+        post: operations["create_content_block_api_v1_content_blocks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content-blocks/{block_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Content Block */
+        get: operations["get_content_block_api_v1_content_blocks__block_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Content Block */
+        patch: operations["update_content_block_api_v1_content_blocks__block_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/content-blocks/{block_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive */
+        post: operations["archive_api_v1_content_blocks__block_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content-blocks/{block_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish */
+        post: operations["publish_api_v1_content_blocks__block_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/employee/home": {
         parameters: {
             query?: never;
@@ -1197,6 +1267,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/referral-bonus-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Configs */
+        get: operations["list_configs_api_v1_referral_bonus_config_get"];
+        put?: never;
+        /** Create Config */
+        post: operations["create_config_api_v1_referral_bonus_config_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-bonus-config/payout-activity/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Payout Activity */
+        get: operations["payout_activity_api_v1_referral_bonus_config_payout_activity_recent_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referral-bonus-config/{config_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Config */
+        get: operations["get_config_api_v1_referral_bonus_config__config_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Config */
+        patch: operations["update_config_api_v1_referral_bonus_config__config_id__patch"];
+        trace?: never;
+    };
     "/api/v1/site-visits": {
         parameters: {
             query?: never;
@@ -1230,6 +1353,23 @@ export interface paths {
         head?: never;
         /** Cancel Site Visit Endpoint */
         patch: operations["cancel_site_visit_endpoint_api_v1_site_visits__visit_id__cancel_patch"];
+        trace?: never;
+    };
+    "/api/v1/sub-admin/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Home */
+        get: operations["home_api_v1_sub_admin_home_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/support-tickets/tickets": {
@@ -1941,6 +2081,72 @@ export interface components {
          * @enum {string}
          */
         ConstructionStatus: "ready" | "under_construction";
+        /** ContentBlockCreate */
+        ContentBlockCreate: {
+            /** Body */
+            body?: string | null;
+            /** Business Line */
+            business_line?: string | null;
+            /** Section */
+            section: string;
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+        };
+        /** ContentBlockListResponse */
+        ContentBlockListResponse: {
+            /** Content Blocks */
+            content_blocks: components["schemas"]["ContentBlockRead"][];
+        };
+        /** ContentBlockRead */
+        ContentBlockRead: {
+            /** Body */
+            body: string | null;
+            /** Business Line */
+            business_line: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Created By Uuid
+             * Format: uuid
+             */
+            created_by_uuid: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Section */
+            section: string;
+            /** Slug */
+            slug: string;
+            status: components["schemas"]["ContentStatus"];
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ContentBlockUpdate */
+        ContentBlockUpdate: {
+            /** Body */
+            body?: string | null;
+            /** Section */
+            section?: string | null;
+            /** Title */
+            title?: string | null;
+        };
+        /**
+         * ContentStatus
+         * @enum {string}
+         */
+        ContentStatus: "draft" | "published" | "archived";
         /** DealPropertySummary */
         DealPropertySummary: {
             /**
@@ -2609,6 +2815,28 @@ export interface components {
          */
         PayoutType: "cashback" | "referral_bonus" | "commission";
         /**
+         * PendingApprovalItem
+         * @description An own-authored banner or property listing still awaiting Admin review.
+         */
+        PendingApprovalItem: {
+            /** Business Line */
+            business_line: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+            /** Title */
+            title: string;
+        };
+        /**
          * PropertyCategory
          * @enum {string}
          */
@@ -2750,6 +2978,109 @@ export interface components {
              * @default true
              */
             ok: boolean;
+        };
+        /** ReferralBonusConfigCreate */
+        ReferralBonusConfigCreate: {
+            /**
+             * Active
+             * @default false
+             */
+            active: boolean;
+            /** Bonus Amount */
+            bonus_amount: number | string;
+            /** Business Line */
+            business_line: string;
+            /** Rule */
+            rule?: {
+                [key: string]: unknown;
+            };
+        };
+        /** ReferralBonusConfigListResponse */
+        ReferralBonusConfigListResponse: {
+            /** Configs */
+            configs: components["schemas"]["ReferralBonusConfigRead"][];
+        };
+        /** ReferralBonusConfigRead */
+        ReferralBonusConfigRead: {
+            /** Active */
+            active: boolean;
+            /** Bonus Amount */
+            bonus_amount: string;
+            /** Business Line */
+            business_line: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Created By Uuid
+             * Format: uuid
+             */
+            created_by_uuid: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Rule */
+            rule: {
+                [key: string]: unknown;
+            };
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ReferralBonusConfigUpdate */
+        ReferralBonusConfigUpdate: {
+            /** Active */
+            active?: boolean | null;
+            /** Bonus Amount */
+            bonus_amount?: number | string | null;
+            /** Rule */
+            rule?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** ReferralPayoutActivityListResponse */
+        ReferralPayoutActivityListResponse: {
+            /** Activity */
+            activity: components["schemas"]["ReferralPayoutActivityRead"][];
+        };
+        /**
+         * ReferralPayoutActivityRead
+         * @description Read-only projection of a referral_bonus transaction row, for the Sub
+         *     Admin oversight view (spec §6.4). No write path into transactions exists
+         *     from this router at all.
+         */
+        ReferralPayoutActivityRead: {
+            /** Amount Paise */
+            amount_paise: number;
+            /** Business Line */
+            business_line: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /** Description */
+            description: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
+            /**
+             * User Uuid
+             * Format: uuid
+             */
+            user_uuid: string;
         };
         /** RegisterInitiateRequest */
         RegisterInitiateRequest: {
@@ -2963,6 +3294,19 @@ export interface components {
             staff_code: string;
             /** Temp Password */
             temp_password: string | null;
+        };
+        /** SubAdminHomeResponse */
+        SubAdminHomeResponse: {
+            /** Content Drafts Count */
+            content_drafts_count: number;
+            /** Live Banners Count */
+            live_banners_count: number;
+            /** Live Offers Count */
+            live_offers_count: number;
+            /** Pending Approval */
+            pending_approval: components["schemas"]["PendingApprovalItem"][];
+            /** Recent Referral Payouts */
+            recent_referral_payouts: components["schemas"]["ReferralPayoutActivityRead"][];
         };
         /** SubmissionCreate */
         SubmissionCreate: {
@@ -4776,6 +5120,198 @@ export interface operations {
             };
         };
     };
+    list_content_blocks_api_v1_content_blocks_get: {
+        parameters: {
+            query?: {
+                status_filter?: components["schemas"]["ContentStatus"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContentBlockListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_content_block_api_v1_content_blocks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContentBlockCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContentBlockRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_content_block_api_v1_content_blocks__block_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                block_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContentBlockRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_content_block_api_v1_content_blocks__block_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                block_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContentBlockUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContentBlockRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_api_v1_content_blocks__block_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                block_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContentBlockRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_api_v1_content_blocks__block_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                block_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContentBlockRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     home_api_v1_employee_home_get: {
         parameters: {
             query?: never;
@@ -5962,6 +6498,145 @@ export interface operations {
             };
         };
     };
+    list_configs_api_v1_referral_bonus_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralBonusConfigListResponse"];
+                };
+            };
+        };
+    };
+    create_config_api_v1_referral_bonus_config_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReferralBonusConfigCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralBonusConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    payout_activity_api_v1_referral_bonus_config_payout_activity_recent_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralPayoutActivityListResponse"];
+                };
+            };
+        };
+    };
+    get_config_api_v1_referral_bonus_config__config_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                config_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralBonusConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_config_api_v1_referral_bonus_config__config_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                config_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReferralBonusConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralBonusConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_site_visits_api_v1_site_visits_get: {
         parameters: {
             query?: never;
@@ -6042,6 +6717,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    home_api_v1_sub_admin_home_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubAdminHomeResponse"];
                 };
             };
         };
