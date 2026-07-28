@@ -264,6 +264,40 @@ export interface paths {
         patch: operations["update_property_deal_progress_api_v1_admin_property_deals__deal_id__patch"];
         trace?: never;
     };
+    "/api/v1/admin/support-tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Support Tickets */
+        get: operations["list_support_tickets_api_v1_admin_support_tickets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/support-tickets/{ticket_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Advance Support Ticket */
+        patch: operations["advance_support_ticket_api_v1_admin_support_tickets__ticket_id__patch"];
+        trace?: never;
+    };
     "/api/v1/admin/tasks": {
         parameters: {
             query?: never;
@@ -1515,6 +1549,23 @@ export interface paths {
         };
         /** List Banners Public */
         get: operations["list_banners_public_api_v1_public_banners_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/content-blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Content Blocks Public */
+        get: operations["list_content_blocks_public_api_v1_public_content_blocks_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3459,7 +3510,7 @@ export interface components {
          * NotificationType
          * @enum {string}
          */
-        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted";
+        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved";
         /** OfferCreate */
         OfferCreate: {
             /** Business Line */
@@ -3624,11 +3675,8 @@ export interface components {
             recipient_code?: string | null;
             /** Recipient Name */
             recipient_name?: string | null;
-            /**
-             * Recipient User Uuid
-             * Format: uuid
-             */
-            recipient_user_uuid: string;
+            /** Recipient User Uuid */
+            recipient_user_uuid: string | null;
             /** Reject Reason */
             reject_reason: string | null;
             /** Rejected By Name */
@@ -3882,6 +3930,41 @@ export interface components {
             id: string;
             /** Subtitle */
             subtitle: string | null;
+            /** Title */
+            title: string;
+        };
+        /** PublicContentBlockListResponse */
+        PublicContentBlockListResponse: {
+            /** Content Blocks */
+            content_blocks: components["schemas"]["PublicContentBlockRead"][];
+        };
+        /**
+         * PublicContentBlockRead
+         * @description Anonymous-read shape (docs/specs/public-content-block-serving.md).
+         *
+         *     Deliberately NOT a subclass of ContentBlockRead -- a future sensitive
+         *     column added to the authenticated read can never silently surface here.
+         *
+         *     - id: no public use, would only invite ID-based scraping.
+         *     - status: constant "published" by construction on this path (see
+         *       services/public_catalog.py::list_public_content_blocks). Exposing a
+         *       constant invites a client-side filter that would quietly become the
+         *       de-facto access control (same reasoning as PublicOfferRead).
+         *     - created_by_uuid: staff identity, never public.
+         *     - created_at / updated_at: internal metadata, no display use.
+         *
+         *     business_line IS included: a block can be line-scoped (spec §5.3), and a
+         *     future line-specific placement needs it to decide whether to render.
+         */
+        PublicContentBlockRead: {
+            /** Body */
+            body: string | null;
+            /** Business Line */
+            business_line: string | null;
+            /** Section */
+            section: string;
+            /** Slug */
+            slug: string;
             /** Title */
             title: string;
         };
@@ -4549,6 +4632,61 @@ export interface components {
          * @enum {string}
          */
         SupportStatus: "open" | "in_progress" | "resolved" | "closed";
+        /** SupportTicketAdminListResponse */
+        SupportTicketAdminListResponse: {
+            /** Tickets */
+            tickets: components["schemas"]["SupportTicketAdminRead"][];
+        };
+        /**
+         * SupportTicketAdminRead
+         * @description Admin-only shape. Deliberately NOT a subclass of SupportTicketRead -- a
+         *     future sensitive column added to the client-facing read can never
+         *     silently surface here, and vice versa: resolution_note and the resolved
+         *     requester identity must never leak into SupportTicketRead.
+         *
+         *     requester_name / requester_mobile are resolved server-side from
+         *     auth_user_uuid (services/support_tickets.py::list_for_admin) so the
+         *     client never sees a raw UUID it has no use for. Both are None when the
+         *     account is soft-deleted (account_deletion.py has already tombstoned the
+         *     real mobile by then) -- the frontend renders "Deleted account" for that
+         *     case, same convention apps/web/features/admin/payouts-view.tsx uses for
+         *     a delinked payout recipient.
+         */
+        SupportTicketAdminRead: {
+            /** Body */
+            body: string;
+            category: components["schemas"]["SupportCategory"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Requester Mobile */
+            requester_mobile: string | null;
+            /** Requester Name */
+            requester_name: string | null;
+            /** Resolution Note */
+            resolution_note: string | null;
+            status: components["schemas"]["SupportStatus"];
+            /** Subject */
+            subject: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** SupportTicketAdvanceRequest */
+        SupportTicketAdvanceRequest: {
+            /** Resolution Note */
+            resolution_note?: string | null;
+            status: components["schemas"]["SupportStatus"];
+        };
         /** SupportTicketCreate */
         SupportTicketCreate: {
             /** Body */
@@ -5398,6 +5536,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminPropertyDealRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_support_tickets_api_v1_admin_support_tickets_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["SupportStatus"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportTicketAdminListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    advance_support_ticket_api_v1_admin_support_tickets__ticket_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportTicketAdvanceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportTicketAdminRead"];
                 };
             };
             /** @description Validation Error */
@@ -8082,6 +8286,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicBannerListResponse"];
+                };
+            };
+        };
+    };
+    list_content_blocks_public_api_v1_public_content_blocks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicContentBlockListResponse"];
                 };
             };
         };
