@@ -167,11 +167,25 @@ class Settings(BaseSettings):
     # every future tick forever. See services/payments.py::
     # audit_paid_payouts_for_drift.
     PAYOUT_REVERSAL_AUDIT_WINDOW_DAYS: int = 7
+    # Payout-linkage reconciliation grace: a referral/commission/fee_cashback
+    # row is only swept for divergence from its payout once this long has
+    # passed, so the sweep never races a settle/reject that is still mid-hook
+    # (the source-row write happens on a session separate from the payout's
+    # own commit). See services/payout_links.py.
+    PAYOUT_LINK_RECONCILE_GRACE_MINUTES: int = 10
 
     # 7-year PII retention purge (SRS 5.1). Anchor is `delinked_at` on
     # transactions/payouts, stamped by services/account_deletion.py's Phase B
     # — never `created_at`. See services/retention_purge.py.
     FINANCIAL_RECORD_RETENTION_YEARS: int = 7
+
+    # Admin broadcast notifications (feature-status.md §3 #12). A broadcast is
+    # unretractable (no delete endpoint, no grant to add one), so both guards
+    # are hard limits, not soft warnings — see services/admin_notify.py::broadcast.
+    ADMIN_BROADCAST_MAX_RECIPIENTS: int = 50_000
+    # One send per admin per this window: a double-clicked button is 2x the
+    # fanout, and there is no undo.
+    ADMIN_BROADCAST_RATE_LIMIT_MINUTES: int = 5
 
     # Web push (VAPID) — browser push delivery for the existing notifications
     # feed (services/notifications.py::emit_notification). Live-vs-mock is

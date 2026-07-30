@@ -834,7 +834,7 @@ export interface paths {
         /**
          * Delete User
          * @description FR-17.4 — Admin removal of a suspicious account. Admin-only (not Sub
-         *     Admin): mirrors the require_admin wall on the other irreversible
+         *     Admin): mirrors the require_platform_admin wall on the other irreversible
          *     platform-identity actions above (staff provisioning, agent-app review).
          */
         post: operations["delete_user_api_v1_admin_users__auth_user_uuid__delete_post"];
@@ -1256,6 +1256,23 @@ export interface paths {
         put?: never;
         /** Create Banner */
         post: operations["create_banner_api_v1_banners_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banners/image-upload-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Get Banner Image Upload Url */
+        post: operations["get_banner_image_upload_url_api_v1_banners_image_upload_url_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1718,6 +1735,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/loans/officer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get My Loan Officer Contact
+         * @description Null is the "no officer assigned yet" state, not an error -- a client
+         *     with no loan application yet, or one whose telecaller hasn't been
+         *     assigned, legitimately has no officer to show.
+         */
+        get: operations["get_my_loan_officer_contact_api_v1_loans_officer_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications": {
         parameters: {
             query?: never;
@@ -1727,6 +1766,46 @@ export interface paths {
         };
         /** List Notifications */
         get: operations["list_notifications_api_v1_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/broadcast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send Broadcast */
+        post: operations["send_broadcast_api_v1_notifications_broadcast_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/broadcast/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Broadcast
+         * @description Dry run: resolves and counts the audience without sending anything.
+         *     A broadcast is unretractable (no delete endpoint exists, and none should
+         *     be added), so an admin should see "this reaches N people" before
+         *     committing to a send.
+         */
+        get: operations["preview_broadcast_api_v1_notifications_broadcast_preview_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1891,6 +1970,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payouts/link-divergences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Payout Link Divergences
+         * @description Read-only: payouts whose linked referral/commission/fee_cashback row
+         *     hasn't caught up yet (services/payout_links.py's scheduled sweep repairs
+         *     these automatically — this is visibility, not a manual trigger). No
+         *     mutating counterpart exists on purpose: see payout_links.py's docstring
+         *     for why a force-unlink endpoint would convert a display bug into a money
+         *     bug.
+         */
+        get: operations["get_payout_link_divergences_api_v1_payouts_link_divergences_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/payouts/recipients": {
         parameters: {
             query?: never;
@@ -2023,6 +2127,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/property-deals/agent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get My Agent Contact
+         * @description Null is the "no agent assigned yet" state, not an error -- a client
+         *     with no property deal yet, or one whose lead has no origin agent, has no
+         *     agent to show. Name + agent_code only -- contact routes through the
+         *     support-ticket flow.
+         */
+        get: operations["get_my_agent_contact_api_v1_property_deals_agent_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/property-deals/{deal_id}": {
         parameters: {
             query?: never;
@@ -2135,6 +2262,29 @@ export interface paths {
         };
         /** List Content Blocks Public */
         get: operations["list_content_blocks_public_api_v1_public_content_blocks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/content-blocks/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Content Block By Slug Public
+         * @description Closes feature-status.md §2-1 — a direct lookup for the one caller
+         *     that needs exactly one block (the homepage's `homepage-closing`
+         *     placement), removing both the over-fetch and the >50-published-blocks
+         *     starvation cliff the list endpoint's own docstring documents.
+         */
+        get: operations["get_content_block_by_slug_public_api_v1_public_content_blocks__slug__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3084,6 +3234,8 @@ export interface components {
             mobile: string | null;
             /** Rera Code */
             rera_code: string | null;
+            /** Review Note */
+            review_note?: string | null;
             /**
              * Status
              * @enum {string}
@@ -3254,6 +3406,17 @@ export interface components {
             business_line: "loans" | "real_estate";
             /** Temp Password */
             temp_password: string | null;
+        };
+        /**
+         * AgentContactRead
+         * @description Name + agent_code only -- never phone/email. Contact routes through
+         *     the support-ticket flow (POST /api/v1/support-tickets/tickets).
+         */
+        AgentContactRead: {
+            /** Agent Code */
+            agent_code: string;
+            /** Name */
+            name: string;
         };
         /** AgentEarningsResponse */
         AgentEarningsResponse: {
@@ -3460,7 +3623,7 @@ export interface components {
          *     `services/fee_cashbacks.py` (FR-6.6 processing-fee cashback).
          * @enum {string}
          */
-        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "account_removed" | "payout_approved" | "payout_rejected" | "property_submission_approved" | "property_submission_rejected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "bank_created" | "bank_updated" | "bank_availability_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified";
+        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "account_removed" | "payout_approved" | "payout_rejected" | "property_submission_approved" | "property_submission_rejected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "bank_created" | "bank_updated" | "bank_availability_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast";
         /** AuditLogListResponse */
         AuditLogListResponse: {
             /** Entries */
@@ -3656,6 +3819,29 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** BannerImageUploadRequest */
+        BannerImageUploadRequest: {
+            /**
+             * Content Type
+             * @enum {string}
+             */
+            content_type: "image/jpeg" | "image/png" | "image/webp";
+            /** Filename */
+            filename: string;
+        };
+        /** BannerImageUploadResponse */
+        BannerImageUploadResponse: {
+            /** Fields */
+            fields: {
+                [key: string]: string;
+            };
+            /** Max Bytes */
+            max_bytes: number;
+            /** Object Key */
+            object_key: string;
+            /** Upload Url */
+            upload_url: string;
+        };
         /** BannerListResponse */
         BannerListResponse: {
             /** Banners */
@@ -3781,6 +3967,33 @@ export interface components {
             property_ref: string;
             /** Title */
             title: string | null;
+        };
+        /**
+         * BroadcastAudience
+         * @enum {string}
+         */
+        BroadcastAudience: "admins" | "staff" | "agents" | "clients" | "all";
+        /** BroadcastPreviewResponse */
+        BroadcastPreviewResponse: {
+            /** Recipients */
+            recipients: number;
+        };
+        /** BroadcastRequest */
+        BroadcastRequest: {
+            audience: components["schemas"]["BroadcastAudience"];
+            /** Body */
+            body: string;
+            /** Business Line */
+            business_line?: ("loans" | "real_estate") | null;
+            /** Href */
+            href?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** BroadcastResponse */
+        BroadcastResponse: {
+            /** Recipients */
+            recipients: number;
         };
         /** ChangePasswordRequest */
         ChangePasswordRequest: {
@@ -4687,6 +4900,17 @@ export interface components {
             verified: boolean;
         };
         /**
+         * LoanOfficerContactRead
+         * @description Name + staff_code only -- never phone/email. Contact routes through
+         *     the support-ticket flow (POST /api/v1/support-tickets/tickets).
+         */
+        LoanOfficerContactRead: {
+            /** Name */
+            name: string;
+            /** Staff Code */
+            staff_code: string;
+        };
+        /**
          * LoanStatus
          * @enum {string}
          */
@@ -4867,7 +5091,7 @@ export interface components {
          * NotificationType
          * @enum {string}
          */
-        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated";
+        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast";
         /** OfferCreate */
         OfferCreate: {
             /** Business Line */
@@ -4984,6 +5208,28 @@ export interface components {
             name?: string | null;
             /** Vpa */
             vpa?: string | null;
+        };
+        /** PayoutLinkDivergenceRead */
+        PayoutLinkDivergenceRead: {
+            /**
+             * Payout Id
+             * Format: uuid
+             */
+            payout_id: string;
+            payout_type: components["schemas"]["PayoutType"];
+        };
+        /**
+         * PayoutLinkDivergencesRead
+         * @description Read-only view for services/payout_links.py::list_link_divergences —
+         *     payouts whose linked referral/commission/fee_cashback row hasn't caught
+         *     up yet. No mutating endpoint exists for this on purpose; see that
+         *     module's docstring.
+         */
+        PayoutLinkDivergencesRead: {
+            /** Paid Direction */
+            paid_direction: components["schemas"]["PayoutLinkDivergenceRead"][];
+            /** Release Direction */
+            release_direction: components["schemas"]["PayoutLinkDivergenceRead"][];
         };
         /** PayoutListResponse */
         PayoutListResponse: {
@@ -5242,11 +5488,14 @@ export interface components {
          *     means a future sensitive column added to the authenticated read can never
          *     silently surface here. Every exclusion below has a reason:
          *
-         *     - image_key: deferred this slice, and it's a storage key, not a URL --
-         *       services/storage.py's presign_download forces
-         *       ResponseContentDisposition: attachment (unusable as an <img> src) and
-         *       next.config.ts has no images.remotePatterns configured. Serving banner
-         *       images needs its own slice and its own security review.
+         *     - image_key: still excluded -- it's a storage key, not a URL, and its
+         *       shape (`public/banners/{uuid}/{name}`) leaks bucket layout for no
+         *       benefit to a public consumer. `image_url` (below) is the servable
+         *       replacement, computed at the router from image_key via
+         *       services/storage.py::public_asset_url -- never round-tripped from the
+         *       column directly, so a non-`public/`-prefixed key (shouldn't exist post
+         *       write-validator, but see the backfill migration) degrades to None
+         *       instead of ever reaching a client.
          *     - audience_rules: targeting internals, meaningless (and a segmentation
          *       disclosure) to an anonymous client that can never be targeted.
          *     - priority: an ordering INPUT, already fully expressed by response order.
@@ -5274,6 +5523,12 @@ export interface components {
          *     cannot function without it. The frontend (lib/public-banners.ts) applies
          *     a same-origin guard before building a CTA from it; this schema stores
          *     exactly what the author typed.
+         *
+         *     image_url IS included -- the direct, unsigned URL for a `public/`-prefixed
+         *     image_key (None if the banner has no image, or -- should never happen
+         *     post write-validator -- a non-conforming one). The frontend applies an
+         *     allowed-host guard before ever passing this to next/image, mirroring the
+         *     deep_link same-origin guard above: see lib/public-banners.ts.
          */
         PublicBannerRead: {
             /** Cta Label */
@@ -5285,6 +5540,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Image Url */
+            image_url: string | null;
             /** Subtitle */
             subtitle: string | null;
             /** Title */
@@ -6124,7 +6381,7 @@ export interface components {
              * Content Type
              * @enum {string}
              */
-            content_type: "image/jpeg" | "image/png" | "application/pdf";
+            content_type: "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
             /**
              * Doc Type
              * @enum {string}
@@ -9052,6 +9309,39 @@ export interface operations {
             };
         };
     };
+    get_banner_image_upload_url_api_v1_banners_image_upload_url_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BannerImageUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BannerImageUploadResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_banner_api_v1_banners__banner_id__get: {
         parameters: {
             query?: never;
@@ -10110,6 +10400,26 @@ export interface operations {
             };
         };
     };
+    get_my_loan_officer_contact_api_v1_loans_officer_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoanOfficerContactRead"] | null;
+                };
+            };
+        };
+    };
     list_notifications_api_v1_notifications_get: {
         parameters: {
             query?: never;
@@ -10126,6 +10436,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotificationListResponse"];
+                };
+            };
+        };
+    };
+    send_broadcast_api_v1_notifications_broadcast_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BroadcastRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BroadcastResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_broadcast_api_v1_notifications_broadcast_preview_get: {
+        parameters: {
+            query: {
+                audience: string;
+                business_line?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BroadcastPreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -10488,6 +10863,26 @@ export interface operations {
             };
         };
     };
+    get_payout_link_divergences_api_v1_payouts_link_divergences_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutLinkDivergencesRead"];
+                };
+            };
+        };
+    };
     list_payout_recipients_api_v1_payouts_recipients_get: {
         parameters: {
             query: {
@@ -10673,6 +11068,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PropertyDealListResponse"];
+                };
+            };
+        };
+    };
+    get_my_agent_contact_api_v1_property_deals_agent_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentContactRead"] | null;
                 };
             };
         };
@@ -10905,6 +11320,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicContentBlockListResponse"];
+                };
+            };
+        };
+    };
+    get_content_block_by_slug_public_api_v1_public_content_blocks__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicContentBlockRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -23,11 +23,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import CurrentUser, get_active_user
+from app.core.deps import CurrentUser, get_active_user, is_platform_admin
 from app.db.session import get_db
 from app.models.payout import Payout, PayoutStatus, PayoutType
 from app.schemas.payments import (
     PayoutCreate,
+    PayoutLinkDivergenceRead,
+    PayoutLinkDivergencesRead,
     PayoutListResponse,
     PayoutRead,
     PayoutRecipientListResponse,
@@ -36,6 +38,7 @@ from app.schemas.payments import (
     WebhookAck,
 )
 from app.services import payments as payments_service
+from app.services.payout_links import list_link_divergences
 from app.services.payout_recipients import resolve_identities, search_recipients
 
 logger = logging.getLogger(__name__)
@@ -74,8 +77,11 @@ def _require_platform_admin(current_user: CurrentUser) -> None:
 
 
 def _require_admin(current_user: CurrentUser, action: str = "Approving a payout") -> None:
-    """Full-Admin-only actions (checker approve, recipient lookup)."""
-    if current_user.role != "admin" or current_user.platform_scope != "true":
+    """Full-Admin-only actions (checker approve, recipient lookup). Thin
+    wrapper around deps.is_platform_admin (feature-status.md §2-20) — kept
+    local only for this per-call custom error message; the condition itself
+    is no longer duplicated."""
+    if not is_platform_admin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"{action} is restricted to platform admins.",
@@ -254,6 +260,25 @@ async def list_payout_recipients(
             )
             for h in hits
         ]
+    )
+
+
+@router.get("/link-divergences", response_model=PayoutLinkDivergencesRead)
+async def get_payout_link_divergences(
+    current_user: CurrentUser = Depends(get_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> PayoutLinkDivergencesRead:
+    """Read-only: payouts whose linked referral/commission/fee_cashback row
+    hasn't caught up yet (services/payout_links.py's scheduled sweep repairs
+    these automatically — this is visibility, not a manual trigger). No
+    mutating counterpart exists on purpose: see payout_links.py's docstring
+    for why a force-unlink endpoint would convert a display bug into a money
+    bug."""
+    _require_platform_admin(current_user)
+    result = await list_link_divergences(db)
+    return PayoutLinkDivergencesRead(
+        paid_direction=[PayoutLinkDivergenceRead(**row) for row in result["paid_direction"]],
+        release_direction=[PayoutLinkDivergenceRead(**row) for row in result["release_direction"]],
     )
 
 

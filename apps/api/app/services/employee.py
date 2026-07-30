@@ -11,16 +11,23 @@ only wall — same posture as services/telecaller.py.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import app.db.session as db_session
 from app.models.lead import Lead
 from app.models.task import BgCheckOutcome, Task, TaskDocument, TaskStatus, TaskType
 from app.schemas.employee import EmployeeTaskUpdate
 from app.services import storage
+
+_TASK_DOCUMENT_KEY_PREFIX = "tasks/"
+# Well clear of the 300s presign TTL (services/storage.py::_PRESIGN_EXPIRE_SECONDS),
+# so an in-flight upload is never mistaken for an orphan — same margin
+# purge_loan_document_orphans / purge_agent_application_orphans use.
+_ORPHAN_MIN_AGE = timedelta(hours=1)
 
 _TERMINAL = {TaskStatus.COMPLETED, TaskStatus.CANCELLED}
 
@@ -62,6 +69,19 @@ class TaskDocumentKeyMismatch(Exception):
     doesn't belong to this task's own key prefix — presign never hands out
     a key outside tasks/{task_id}/, so a mismatch means the caller is trying
     to attach an object from elsewhere (security review finding)."""
+
+
+class TaskDocumentContentTypeUnrecognized(Exception):
+    """The uploaded object's actual leading bytes don't sniff to any of the
+    accepted document content types. Security-review finding (feature-
+    status.md §2-12) — presign_task_document_upload uses the uncapped PUT
+    (no signed content-type policy the way the other two upload flows'
+    signed-POST has), so this confirm-time check is this flow's only
+    content-type enforcement at all."""
+
+
+class TaskDocumentStorageUnavailable(Exception):
+    """Storage was unreachable while verifying an upload. Fail closed."""
 
 
 def _base_stmt():
@@ -209,6 +229,18 @@ async def create_task_document(
     _check_document_writable(task)
     if not object_key.startswith(_document_key_prefix(task.id)):
         raise TaskDocumentKeyMismatch
+    try:
+        recognized = storage.content_type_is_recognized(object_key)
+    except Exception as exc:  # transport failure — fail closed, don't swallow
+        raise TaskDocumentStorageUnavailable from exc
+    if not recognized:
+        # A missing object and an unrecognized/polyglot object both fail
+        # this single check (content_type_is_recognized returns False for
+        # both) — this flow has no separate existence/size verification
+        # (unlike the other two upload flows), so both cases are rejected
+        # here alike.
+        storage.delete_object(object_key)
+        raise TaskDocumentContentTypeUnrecognized
     document = TaskDocument(task_uuid=task.id, doc_type=doc_type, object_key=object_key)
     db.add(document)
     await db.commit()
@@ -249,3 +281,31 @@ async def delete_task_document(db: AsyncSession, document: TaskDocument) -> None
     await db.delete(document)
     await db.commit()
     storage.delete_object(object_key)
+
+
+async def purge_orphaned_task_documents(*, min_age: timedelta = _ORPHAN_MIN_AGE) -> dict[str, int]:
+    """Delete objects under tasks/ that no TaskDocument row references.
+
+    presign_task_document_upload hands out a signed PUT before any
+    TaskDocument row exists (create_task_document only writes the row once
+    the client confirms the upload succeeded) — an abandoned upload leaves an
+    object nothing points at. Mirrors
+    services/loan_documents.py::purge_orphaned_uploads and
+    services/agent_applications.py's orphan sweep exactly; this was the one
+    upload prefix in the codebase without an equivalent job
+    (feature-status.md §2)."""
+    cutoff = datetime.now(UTC) - min_age
+    objects = storage.list_objects(_TASK_DOCUMENT_KEY_PREFIX)
+    candidates = [o for o in objects if o["last_modified"] < cutoff]
+    if not candidates:
+        return {"scanned": len(objects), "deleted": 0}
+
+    async with db_session.AsyncSessionLocal() as session:
+        referenced = set((await session.scalars(select(TaskDocument.object_key))).all())
+
+    deleted = 0
+    for obj in candidates:
+        if obj["key"] not in referenced:
+            storage.delete_object(obj["key"])
+            deleted += 1
+    return {"scanned": len(objects), "deleted": deleted}

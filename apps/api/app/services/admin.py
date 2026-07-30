@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import generate_profile_code, generate_temp_password, hash_password
 from app.models.audit_log import AuditAction
+from app.models.notification import NotificationType
 from app.models.profile import (
     AgentApplication,
     AgentProfile,
@@ -34,6 +35,9 @@ from app.models.profile import (
 )
 from app.models.user import User, UserStatus
 from app.schemas.admin import StaffCreateRequest
+from app.services import storage
+from app.services.admin_notify import notify_admins
+from app.services.agent_applications import scrub_documents
 from app.services.audit_log import record as record_audit
 
 
@@ -136,6 +140,17 @@ async def create_staff(
         },
     )
     await db.commit()
+
+    await notify_admins(
+        notification_type=NotificationType.ADMIN_ACCOUNT_ACTION,
+        title="Staff account created",
+        body=(
+            f"A new {role.value.replace('_', ' ')} account was provisioned ({profile.staff_code})."
+        ),
+        href="/dashboard/staff",
+        exclude_user_uuid=actor_id,
+    )
+
     return profile, temp_password
 
 
@@ -257,9 +272,16 @@ async def reject_agent_application(
     application.status = SubmissionStatus.REJECTED
     application.reviewed_by_staff_profile_uuid = reviewer_staff_uuid
     application.reviewed_at = datetime.now(UTC)
-    # `note` still has no column on agent_applications (feature-status §2 row 10),
-    # but it is no longer discarded entirely: the audit trail now preserves the
-    # reviewer's stated reason, which was the point of collecting it.
+    # Persisted now (closes feature-status §2-11), not just carried in the
+    # audit detail below — an admin re-opening a rejected application's
+    # detail view needs to see why without reading the activity log.
+    application.review_note = note
+    # PII retention (closes feature-status §2-11): a rejected application's
+    # KYC objects stayed referenced forever otherwise, so the orphan-purge
+    # sweep (which only deletes UNREFERENCED objects) could never reach
+    # them. Null the refs, flush so the DB write is durable, THEN delete
+    # from storage — a storage failure must never roll back the rejection.
+    doc_keys = scrub_documents(application)
     await record_audit(
         db,
         action=AuditAction.AGENT_REJECTED,
@@ -276,4 +298,6 @@ async def reject_agent_application(
         },
     )
     await db.commit()
+    for key in doc_keys:
+        storage.delete_object(key)  # best-effort, already swallows failures
     return True

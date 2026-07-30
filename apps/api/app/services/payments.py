@@ -22,12 +22,14 @@ Split of concerns:
     NEVER raises into the caller (a gateway fault sets status=failed and is
     visible in the admin list), the same discipline as OTP delivery.
 
-A REFERRAL_BONUS, COMMISSION, or CASHBACK payout's source row
-(services.referrals / services.commissions / services.fee_cashbacks
-respectively) hears about every terminal transition via _payout_paid_hook /
-_payout_released_hook, called right after each status-changing commit — see
-those call sites in initiate_payout (mock), settle_from_webhook
-(paid/reversed/failed), reject_payout, and _mark_failed.
+A REFERRAL_BONUS, COMMISSION, or CASHBACK payout's source row hears about
+every terminal transition via _payout_paid_hook / _payout_released_hook,
+called right after each status-changing commit — see those call sites in
+initiate_payout (mock), settle_from_webhook (paid/reversed/failed),
+reject_payout, and _mark_failed. Both hooks delegate to
+services/payout_links.py, which also runs a scheduled sweep
+(jobs/reconcile_payout_links.py) re-driving either hook for any source row
+whose write silently failed — see that module's docstring.
 
 Money is integer minor units (amount_paise), never a float.
 """
@@ -46,10 +48,12 @@ from app.core.config import settings
 from app.core.masking import mask_bank_account, mask_vpa
 from app.db.session import AsyncSessionLocal
 from app.models.audit_log import AuditAction
+from app.models.notification import NotificationType
 from app.models.payout import Payout, PayoutDestination, PayoutStatus, PayoutType
 from app.models.profile import AgentProfile, ClientProfile, StaffProfile
 from app.models.transaction import Transaction, TransactionStatus, TransactionType
-from app.services import commissions, fee_cashbacks, referrals
+from app.services import payout_links
+from app.services.admin_notify import notify_admins
 from app.services.audit_log import record as record_audit
 
 logger = logging.getLogger(__name__)
@@ -404,6 +408,14 @@ async def approve_payout(
         )
         await db.commit()
 
+    await notify_admins(
+        notification_type=NotificationType.ADMIN_PAYOUT_REVIEWED,
+        title="Payout approved",
+        body=f"A {payout.type.value.replace('_', ' ')} payout was approved.",
+        href="/dashboard/payouts",
+        exclude_user_uuid=checker_user_uuid,
+    )
+
     # Separate step: initiate on its own session, best-effort.
     await initiate_payout(payout_id)
 
@@ -441,6 +453,14 @@ async def reject_payout(
         )
         await db.commit()
         await _payout_released_hook(payout)
+
+    await notify_admins(
+        notification_type=NotificationType.ADMIN_PAYOUT_REVIEWED,
+        title="Payout rejected",
+        body=f"A {payout.type.value.replace('_', ' ')} payout was rejected: {reason}",
+        href="/dashboard/payouts",
+        exclude_user_uuid=rejector_user_uuid,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -773,7 +793,16 @@ async def _backfill_gateway_id(payout_id: uuid.UUID, gateway_payout_id: str) -> 
 async def _emit_ledger_row(db, payout: Payout) -> uuid.UUID:
     """Insert the single positive client-facing ledger row for a settled payout
     and return its id. Insert-only (no payout mutation) so callers can claim the
-    settle with an atomic CAS. Caller commits (or rolls back on a lost CAS)."""
+    settle with an atomic CAS. Caller commits (or rolls back on a lost CAS).
+
+    retained_ref/delinked_at are copied straight from the payout: for a live
+    payout both are NULL (no-op). For a payout that was already de-linked at
+    account-deletion time (feature-status.md §2 #17 — an INITIATED payout
+    settling days after its recipient's account was deleted), the emitted
+    ledger row is born already de-linked instead of pointing at the now-freed
+    user_uuid with no delinked_at at all — otherwise it would be an orphan the
+    retention purge (which scopes strictly to delinked_at IS NOT NULL) could
+    never find."""
     txn = Transaction(
         user_uuid=payout.recipient_user_uuid,
         business_line=payout.business_line,
@@ -783,6 +812,8 @@ async def _emit_ledger_row(db, payout: Payout) -> uuid.UUID:
         currency=payout.currency,
         description=_ledger_description(payout.type),
         reference=payout.gateway_payout_id,
+        retained_ref=payout.retained_ref,
+        delinked_at=payout.delinked_at,
     )
     db.add(txn)
     await db.flush()  # populate txn.id
@@ -809,6 +840,11 @@ async def _emit_clawback_row(db, payout: Payout) -> uuid.UUID:
     the caller links it via reversal_transaction_id under an atomic CAS, which is
     what makes emission idempotent. Caller commits (or rolls back on a lost CAS,
     which also discards this insert).
+
+    retained_ref/delinked_at copied from the payout — same reasoning as
+    _emit_ledger_row above: a reversal against an already de-linked payout
+    (recipient's account deleted between settle and reversal) must not emit
+    an orphan the retention purge can never find.
     """
     txn = Transaction(
         user_uuid=payout.recipient_user_uuid,
@@ -819,6 +855,8 @@ async def _emit_clawback_row(db, payout: Payout) -> uuid.UUID:
         currency=payout.currency,
         description=_clawback_description(payout.type),
         reference=payout.gateway_payout_id,
+        retained_ref=payout.retained_ref,
+        delinked_at=payout.delinked_at,
     )
     db.add(txn)
     await db.flush()  # populate txn.id
@@ -843,34 +881,29 @@ async def _mark_failed(payout_id: uuid.UUID, reason: str) -> None:
 async def _payout_paid_hook(payout: Payout, transaction_id: uuid.UUID) -> None:
     """REFERRAL_BONUS, COMMISSION, and CASHBACK are the only payout types with
     a source row that needs to hear about settlement; every other type is a
-    no-op. All three mark_paid_from_payout implementations are best-effort on
-    their own side (never raise), so this is a plain call, no local
-    try/except — same discipline as the record_conversion call sites in
-    services/loan_applications.py and services/property_deals.py.
+    no-op (payout_links.apply_paid_link no-ops on any other PayoutType).
+    payout_links's dispatch is best-effort on its own side (never raises), so
+    this is a plain call, no local try/except — same discipline as the
+    record_conversion call sites in services/loan_applications.py and
+    services/property_deals.py.
 
     A manually-created CASHBACK payout with no linked fee_cashbacks row
     (payout-form.ts's admin manual-payout picker already offers the type) is
-    safe here: fee_cashbacks.mark_paid_from_payout's CAS updates zero rows."""
-    if payout.type == PayoutType.REFERRAL_BONUS:
-        await referrals.mark_paid_from_payout(payout_id=payout.id, transaction_id=transaction_id)
-    elif payout.type == PayoutType.COMMISSION:
-        await commissions.mark_paid_from_payout(payout_id=payout.id, transaction_id=transaction_id)
-    elif payout.type == PayoutType.CASHBACK:
-        await fee_cashbacks.mark_paid_from_payout(
-            payout_id=payout.id, transaction_id=transaction_id
-        )
+    safe here: fee_cashbacks.mark_paid_from_payout's CAS updates zero rows.
+
+    If this hook fails to fire at all (crash, or a bug upstream of this
+    call), jobs/reconcile_payout_links.py's scheduled sweep re-drives it —
+    see services/payout_links.py."""
+    await payout_links.apply_paid_link(
+        payout_type=payout.type, payout_id=payout.id, transaction_id=transaction_id
+    )
 
 
 async def _payout_released_hook(payout: Payout) -> None:
     """Symmetric release for a REFERRAL_BONUS, COMMISSION, or CASHBACK payout
     that lands on failed, rejected, or reversed — frees the source row to be
-    paid again."""
-    if payout.type == PayoutType.REFERRAL_BONUS:
-        await referrals.release_payout_link(payout_id=payout.id)
-    elif payout.type == PayoutType.COMMISSION:
-        await commissions.release_payout_link(payout_id=payout.id)
-    elif payout.type == PayoutType.CASHBACK:
-        await fee_cashbacks.release_payout_link(payout_id=payout.id)
+    paid again. Same reconciliation backstop as _payout_paid_hook above."""
+    await payout_links.apply_release_link(payout_type=payout.type, payout_id=payout.id)
 
 
 def _ledger_description(payout_type: PayoutType) -> str:
