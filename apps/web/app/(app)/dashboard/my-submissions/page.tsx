@@ -7,18 +7,17 @@ import { Loader2 } from "lucide-react";
 import { useAuth } from "@/components/auth/session-provider";
 import { MySubmissionsView } from "@/features/real-estate/my-submissions-view";
 
-// Agent-gated route. UX gate only: RLS scopes the GET to the submitter, so a
-// non-agent who forces the route sees an empty list, never another agent's
-// rows. Deliberately NOT widened to sub_admin like property-submit: sub_admin
-// is always platform-scoped, so property_submissions_select's platform_scope
-// branch would show them the ENTIRE review queue here, mislabeled as "my
-// submissions" — sub_admin already has the correct queue view at
-// /dashboard/property-review.
+// Author workspace for real-estate Agents, Sub Admins, and Admins. This is only
+// a routing hint; the API and RLS enforce role, ownership, and line boundaries.
 export default function MySubmissionsPage() {
   const router = useRouter();
   const { session, isLoading } = useAuth();
   const allowed =
-    session != null && ["client", "agent", "sub_admin"].includes(session.role);
+    session != null &&
+    ["agent", "sub_admin", "admin"].includes(session.role) &&
+    (session.role !== "agent" ||
+      session.businessLine === "real_estate" ||
+      session.businessLine === "both");
 
   React.useEffect(() => {
     if (!isLoading && !allowed) router.replace("/dashboard");
