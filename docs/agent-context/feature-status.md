@@ -190,6 +190,179 @@ harmless and left as reinforcing, not misleading, feedback. Fresh evidence
 after these three fixes: `pnpm lint`, `pnpm typecheck`, and `pnpm test` (72
 files, 468 tests) all pass unchanged.
 
+**Done - Telecaller leads table and lead detail redesign: `DashboardPanel`
+migration, advanced filters, sortable columns, call-history timeline** on
+`claude/20260826-155030-switch-to-main-and-pull-changes`
+([PR #237](https://github.com/brollysolutions/client1/pull/237); direct user-reported UI
+overhaul request — "make it clean and state of the art, add animations, add
+advanced filters" for the leads table, "change the entire UI" for the lead
+form — no requirement or completion-percentage change): the telecaller leads
+table and lead detail page were the two screens the Agent Dashboard Overhaul
+(PR #235) deliberately left on the pre-migration hand-rolled layout; this
+closes that gap and adds real filtering/sorting on top.
+
+(1) `telecaller-leads-view.tsx` migrates onto `DashboardPage`/
+`DashboardHeader`/`DashboardPanel` (the same primitives `agent-leads-view.tsx`
+uses) and gains an always-visible filter bar (search by name/mobile, status,
+follow-up date-from/to — same `Input`/`Select` grid convention as
+`features/admin/assigned-leads-view.tsx`) plus sortable column headers
+(Lead/Status/Last disposition/Next follow-up) via new pure
+`filterTelecallerLeads`/`sortTelecallerLeads` helpers in
+`telecaller-lead-filters.ts` (unit-tested, mirrors
+`features/admin/operational-records-filter.ts`'s shape). Default sort is
+soonest-follow-up-first with never-called leads sinking to the bottom
+regardless of direction (confirmed with the user as the desired default over
+leaving the API's implicit order). No `MetricGrid` was added to this page —
+`telecaller-home.tsx` already shows the identical assigned/working/converted/
+follow-ups-due counts and links here, so a second copy would be pure
+duplication. No business-line filter `Select` either: `useLine()`'s
+`activeLine` already scopes `GET /api/v1/telecaller/leads` server-side via the
+`X-Business-Line` header/RLS for dual-line telecallers, so every row already
+shares one line — a redundant in-page filter would be a no-op. Fixed a real
+latent bug while touching this: `use-telecaller-leads.ts` didn't refetch when
+a dual-line telecaller flipped their active line via the global switcher
+while sitting on this page (unlike `telecaller-home.tsx`, which already
+re-fetches on `activeLine` change) — now it does. Motion is one restrained
+`animate-in fade-in-0 duration-200 motion-reduce:animate-none` on the table
+wrapper plus the existing row hover transition; no per-row stagger, since
+rows reorder on every filter keystroke and a stagger would re-fire
+disruptively.
+
+(2) `telecaller-lead-detail-view.tsx` is rebuilt on `DashboardPage`/
+`DashboardBackLink`/`DashboardPanel`/`DashboardFormSection` — one step
+further than its sibling `agent-lead-detail-view.tsx`, which still wraps its
+`DashboardPanel`s in a raw `max-w-3xl` div with no back-link; this file adds
+`DashboardBackLink` since the primitive already exists for exactly this. Two
+real bugs fixed in the same pass: the phone number was shown raw
+(`{lead.mobile}`) with a hand-rolled `toWaHref()` that only worked because
+`lead.mobile` happens to already be bare-digit — now uses `formatMobile()`/
+`toE164()` from `lib/phone.ts`, matching `agent-lead-detail-view.tsx`'s
+already-correct usage, and the WhatsApp helper moved into `lib/phone.ts`
+itself as a shared `toWaHref()` built on `normalizeMobile()`. The "Log a
+call" form rendered `follow_up_at` on two different DOM nodes
+(`follow_up_at`/`follow_up_at_connected`) depending on the disposition
+branch, both bound to the same state — only one was ever mounted, but the
+duplication was fragile; now renders once, unconditionally. Call history is
+now a CSS-only vertical timeline (`border-l` line + disposition-colored dot
+per activity) replacing the flat bordered-card list.
+`telecaller-loan-apps-section.tsx`/`telecaller-property-deals-section.tsx`/
+`telecaller-tasks-section.tsx` get an outer-wrapper-only swap onto
+`DashboardPanel` (no functional change — reviewed, no bugs found worth
+bundling in). Shared status/disposition maps that were duplicated verbatim
+between the table and detail view are extracted to `telecaller-lead-status.ts`.
+
+New/extended tests: `telecaller-lead-filters.test.ts` (new) covers
+search/status/date-range filtering and the follow-up sort's null-handling and
+direction behavior. `phone.test.ts` gains `toWaHref` cases (bare and
+`+91`-prefixed/spaced input). `isInDateRange` moved from
+`features/admin/admin-list-tools.tsx` to a new shared `lib/date-range.ts`
+(re-exported from its old location so all existing admin call sites are
+unaffected) rather than duplicating the same logic a second time for the
+telecaller filter file.
+
+Fresh evidence: `npm run typecheck` (clean), `npm run lint` (clean — caught
+and fixed an `aria-sort`-on-`<button>` placement issue, moved to the `<th>`
+per ARIA semantics), and `npm run test` (73 files, 477 tests, all passing,
+including the two new/extended files above). `npm run build` compiled,
+typechecked, and generated all 93 pages successfully, then hit the same
+pre-existing Windows-host `output: "standalone"` symlink `EPERM` failure
+recorded repeatedly elsewhere in this document (reproduced identically,
+confirmed unrelated — the failure is in the post-generation trace-copy step,
+after every page had already compiled). Live interactive browser
+verification was not possible in this sandbox: Playwright has no network
+access at all here (confirmed against `example.com`, not just localhost) — a
+standalone dev server was started in this worktree against the already-
+running API container as a fallback, and the dev-only idempotent
+`seed_demo.py` was re-run once to refresh stale demo credentials while
+attempting this, but the browser tool itself could not reach any URL.
+
+**Apple-design skill review pass** (per direct user request to verify with
+the skill at the end): reviewed `telecaller-leads-view.tsx`/
+`telecaller-lead-detail-view.tsx`/`telecaller-lead-status.ts`/
+`telecaller-lead-filters.ts`/the three sub-sections against the
+accessibility, color, layout, typography, motion, and entering-data
+guideline references, computing contrast ratios from `globals.css`'s actual
+token values since no live render was available. Found and fixed three
+concrete issues: (1) the sort-header's inactive-state icon used
+`text-text-secondary/50` (~2.24:1 against the card background, below the
+3:1 non-text-contrast minimum) — bumped to `/70` (~3.3:1). (2) The
+sort-header `<button>` had no padding, giving it a ~16px-tall click target
+well under the 20pt desktop-minimum control size — the button now fills the
+full `<th>` cell (`w-full px-5 py-3`), also making the header click target
+consistent with normal sortable-table UX. (3) The lead detail page had no
+page-level `<h1>` at all (every `DashboardPanel` title renders as `<h2>`,
+and this page — unlike the table — doesn't use `DashboardHeader`), a real
+screen-reader heading-navigation gap; added a visually-hidden
+`<h1>{lead.name}</h1>`. Other findings were judged systemic/pre-existing,
+shared with already-shipped agent screens, and out of this task's scope to
+fix unilaterally: `text-warning`/`text-success` on their `/10` tint pill
+backgrounds and `text-brand-cta` on white all sit under the 4.5:1
+text-contrast minimum (~3.3-4.1:1), but this is inherited design-system
+coloring used identically across Leads/Earnings/status pills app-wide — a
+candidate for a dedicated design-system-wide contrast pass, not a one-off
+deviation here. Security and maintainer review were not separately
+requested for this direct user-reported UI redesign; no auth, RLS, payout,
+migration, or contract surface changed.
+
+**Done - Clickable-row affordance and Employee task screens brought onto
+`DashboardPanel`** on `claude/20260826-155030-switch-to-main-and-pull-changes`
+([PR #238](https://github.com/brollysolutions/client1/pull/238); direct
+user-reported follow-up to PR #237 — "there is no way a telecaller can know
+to click on leads" plus "even same for employees"; no requirement or
+completion-percentage change): PR #237 shipped the telecaller leads
+table/detail redesign but left rows with only a subtle `hover:bg-muted/50`
+tint and a `cursor-pointer` as the sole clickability signal — genuinely too
+weak, confirmed by re-inspecting the live app via Playwright MCP (which
+regained sandbox network access mid-session, so this pass could
+browser-verify where PR #237 could not). Added a trailing chevron
+(`ChevronRight`) to every row that slides right on hover
+(`group-hover:translate-x-0.5`) and tints `text-brand-cta`, reusing the exact
+micro-interaction already established by `DashboardQuickAction` in
+`dashboard-ui.tsx` — not a new pattern. Applied to both
+`telecaller-leads-view.tsx` and, per the "even same for employees" follow-up,
+`employee-tasks-view.tsx` (previously untouched by PR #237, still on the
+pre-migration hand-rolled `max-w-5xl` layout). `employee-tasks-view.tsx` and
+`employee-task-detail-view.tsx` are migrated onto `DashboardPage`/
+`DashboardHeader`/`DashboardBackLink`/`DashboardPanel`, mirroring the
+telecaller pattern: a visually-hidden page `<h1>`, the same raw-phone-display
+bug fixed (`formatMobile`/`toE164` from `lib/phone.ts`, replacing
+`{task.lead_mobile}`/`tel:${task.lead_mobile}`), and the task-type/status/
+outcome badges moved into the header panel's `action` slot. The two
+sub-panels `employee-task-document-panel.tsx` and
+`employee-task-feedback-panel.tsx` get the same outer-wrapper-only
+`DashboardPanel` swap already applied to telecaller's three sub-sections in
+PR #237 (no functional change); the feedback panel's header — title +
+description + upload/photo buttons — maps directly onto `DashboardPanel`'s
+`title`/`description`/`action` props. All functional logic (task status
+transitions, `ALLOWED_TRANSITIONS`, contact-share-link creation, document
+upload/delete) is untouched. A live Playwright pass over the redesigned
+telecaller lead-detail page (login as the seeded demo Telecaller, "Charan
+Client" lead) found no actual rendering defect — computed styles, a cropped
+element screenshot, and checks at 1440px/390px widths all matched the
+intended design; an earlier read of a heavily-downscaled full-page screenshot
+had been misleading (a nested `bg-muted/25` box briefly looked dark in the
+compressed thumbnail but rendered correctly at native resolution, confirmed
+via `getComputedStyle`), noted here so a future pass doesn't re-chase the
+same non-issue (that live pass was against the code already merged in PR
+#237, checked out in the primary repo's running container — not this
+session's own worktree). Fresh evidence: `npm run typecheck` (clean), `npm
+run lint` (clean), `npm run test` (73 files, 477 tests, unchanged — no new
+test surface, this pass is UI-structure/affordance only) all pass. The
+chevron/hover affordance and the Employee screen migration themselves were
+**not** live-verified in a browser this pass: this worktree's running
+`client1-web-1` container bind-mounts the primary checkout
+(`D:\dhanadhara\client1\apps\web`), not this worktree, so edits made here
+only become visible in that container after this branch merges to `main` and
+someone pulls + restarts it there — confirmed by `docker exec client1-web-1
+grep ChevronRight ...` returning no match immediately after writing this
+change. Verified instead via `getComputedStyle`-level review against the
+already-live PR #237 code for the underlying patterns being reused
+(`DashboardPanel`, the `DashboardQuickAction` hover-chevron micro-interaction
+copied verbatim) plus typecheck/lint/tests. Live browser verification of
+this specific change is the recommended follow-up once merged and pulled.
+No auth, RLS, payout, migration, or contract surface changed; scope is
+`apps/web` only.
+
 **Done - Real-estate Client dashboard property presentation** on
 `claude/20260825-211218-remove-browse-by-type-section-in-explore` (PR #233
 update; direct user-reported UI change, no requirement or
