@@ -28,9 +28,7 @@ export function AgentIntroduceLeadForm() {
     e.preventDefault();
     if (!isValidMobile(mobile)) {
       setMobileError("Enter a 10-digit Indian mobile number.");
-      toast.error("Enter a valid mobile number", {
-        description: "Enter a 10-digit Indian mobile number.",
-      });
+      requestAnimationFrame(() => document.getElementById("mobile")?.focus());
       return;
     }
     setMobileError(null);
@@ -51,14 +49,13 @@ export function AgentIntroduceLeadForm() {
 
   return (
     <DashboardFormPage
-      eyebrow="Agent workspace"
       title="Introduce a lead"
       description="Add someone you have referred. A telecaller will follow up."
       backHref="/dashboard/leads"
       backLabel="Back to leads"
       formTitle="Lead details"
     >
-      <form className="space-y-6" onSubmit={(e) => void onSubmit(e)}>
+      <form className="space-y-6" onSubmit={(e) => void onSubmit(e)} noValidate>
         <DashboardFormSection title="Contact">
           <div>
             <Label htmlFor="mobile">
@@ -90,6 +87,7 @@ export function AgentIntroduceLeadForm() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Full name"
+              maxLength={100}
             />
           </div>
         </DashboardFormSection>

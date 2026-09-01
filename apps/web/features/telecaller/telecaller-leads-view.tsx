@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardHeader, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
-import { useLine } from "@/features/dashboard/line-provider";
+import { ListPagination, useListPagination } from "@/features/dashboard/list-pagination";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { formatMobile } from "@/lib/phone";
 import { cn } from "@/lib/utils";
@@ -76,13 +76,17 @@ function SortableHeader({
 // where a call gets logged and status/requirement updated.
 export function TelecallerLeadsView() {
   const router = useRouter();
-  const { activeLine } = useLine();
   const { items, loading, error, reload } = useTelecallerLeads();
   const [filters, setFilters] = React.useState<TelecallerLeadFilters>(DEFAULT_TELECALLER_LEAD_FILTERS);
   const [sort, setSort] = React.useState<TelecallerLeadSort>(DEFAULT_TELECALLER_LEAD_SORT);
 
   const filtered = React.useMemo(() => filterTelecallerLeads(items, filters), [items, filters]);
   const sorted = React.useMemo(() => sortTelecallerLeads(filtered, sort), [filtered, sort]);
+  const { page, pageItems, setPage } = useListPagination(sorted);
+
+  React.useEffect(() => {
+    setPage(0);
+  }, [filters, sort, setPage]);
 
   const filtersActive =
     filters.search !== "" || filters.status !== "all" || filters.followUpFrom !== "" || filters.followUpTo !== "";
@@ -98,7 +102,6 @@ export function TelecallerLeadsView() {
   return (
     <DashboardPage>
       <DashboardHeader
-        eyebrow={activeLine === "real_estate" ? "Real Estate pipeline" : "Loans pipeline"}
         title="Leads"
         description="Leads assigned to you. Open one to log a call."
       />
@@ -124,6 +127,7 @@ export function TelecallerLeadsView() {
               aria-label="Search leads"
               placeholder="Name or mobile"
               value={filters.search}
+              maxLength={100}
               onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
             />
             <Select value={filters.status} onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}>
@@ -200,7 +204,7 @@ export function TelecallerLeadsView() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sorted.map((lead) => (
+                    {pageItems.map((lead) => (
                       <tr
                         key={lead.id}
                         role="link"
@@ -233,7 +237,7 @@ export function TelecallerLeadsView() {
                         <td className="px-5 py-4 text-text-secondary">{formatDateTime(lead.next_follow_up_at)}</td>
                         <td className="px-3 py-4">
                           <ChevronRight
-                            className="h-4 w-4 text-text-secondary/60 transition-all group-hover:translate-x-0.5 group-hover:text-brand-cta"
+                            className="h-4 w-4 text-text-secondary/60 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-brand-cta motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
                             aria-hidden="true"
                           />
                         </td>
@@ -242,6 +246,12 @@ export function TelecallerLeadsView() {
                   </tbody>
                 </table>
               </div>
+              <ListPagination
+                page={page}
+                total={sorted.length}
+                onPageChange={setPage}
+                label="Assigned leads pages"
+              />
             </DashboardPanel>
           )}
         </>
