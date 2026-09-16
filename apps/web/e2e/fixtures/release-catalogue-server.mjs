@@ -6,6 +6,16 @@ const PORT = 4311;
 const UPDATED_AT = "2026-08-30T00:00:00Z";
 // Opt-in layout fixtures. Default remains the empty CMS/fallback scenario.
 const publishedBanners = process.argv.includes("--published-banners");
+const sponsor = process.argv.includes("--sponsor");
+const sponsorFixture = {
+  id: "40000000-0000-4000-8000-000000000004",
+  title: "A little planning. A bigger possibility.",
+  subtitle: "Explore financial options for the plans that matter to you.",
+  image_url: "/banner-templates/homepage_ad/personal-finance.webp",
+  cta_label: "Explore options",
+  deep_link: "/loans",
+  rera_verified: false,
+};
 const bannerFixtures = [
   { id: "40000000-0000-4000-8000-000000000001", title: "Explore financial options", subtitle: "Synthetic published campaign with unchanged bundled artwork.", image_url: "/banner-templates/financial_services/personal-loan.webp", cta_label: "Explore loans", deep_link: "/loans", rera_verified: false },
   { id: "40000000-0000-4000-8000-000000000002", title: "Find a home that fits", subtitle: "Synthetic property campaign for responsive verification.", image_url: "/banner-templates/properties/villas.webp", cta_label: "Explore properties", deep_link: "/real-estate", rera_verified: true },
@@ -98,7 +108,10 @@ const server = createServer((request, response) => {
     return;
   }
   if (url.pathname === "/api/v1/public/banners") {
-    json(response, 200, { banners: publishedBanners && url.searchParams.get("placement") !== "homepage_ad" ? bannerFixtures : [] });
+    const banners = url.searchParams.get("placement") === "homepage_ad"
+      ? (sponsor ? [sponsorFixture] : [])
+      : (publishedBanners ? bannerFixtures : []);
+    json(response, 200, { banners });
     return;
   }
   if (url.pathname === "/api/v1/public/properties") {

@@ -2,6 +2,40 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — homepage sponsor curtain reveal** (2026-09-16), on
+`feat/auth-actions-footer`. Only the ad above the homepage banners and its
+shared CMS preview change. Royal-burgundy gradient curtains open automatically
+over 800ms, once per document; reload replays, client navigation and motion-
+preference changes do not. The user's final direction removes close/playback
+controls. Campaign links and disclosure remain, artwork is visible on mobile,
+and CMS/reduced-motion views show the completed ad. No API, contract, dependency,
+campaign eligibility or hero-carousel changes are included.
+
+Fresh verification: web lint, typecheck, 707 unit tests across 108 files, the
+env-free production build and 17 Chromium journeys pass. Browser checks include
+320/390/768/1440px, reload/navigation, keyboard interruption, reduced motion,
+unavailable hydration, failed images and long copy. Production CSS traces at
+1440/390px with 4x CPU throttling each sample 48 frames (maximum intervals
+16.7/16.8ms), zero reveal CLS, zero layout/paint events during motion and no
+remaining animations. Desktop/mobile finished and intermediate screenshots were
+inspected; design/Apple and code review found no change-owned defects.
+
+Lighthouse 13.4.1 smoke runs (one/profile, synthetic catalogue and local
+nginx-equivalent gzip) report desktop performance 99, LCP 806ms, TBT 79ms,
+CLS 0.00004; mobile performance 65, LCP 4182ms, TBT 931ms, CLS 0.
+Accessibility/best-practices/SEO score 100 in both. Whole-page mobile
+performance/LCP/TBT still miss the existing budgets; these are single lab
+samples, not a matched before/after study or field evidence. The separate SEO
+checker reports the unchanged root-canonical trailing-slash mismatch and missing
+Open Graph image (2 failures); SSR copy, H1, FAQ data and 19 internal destinations
+pass. No whole-page speed or complete SEO pass is claimed. Other browser engines
+and real devices remain unverified.
+
+Reviews: [Upstream PR #305](https://github.com/brollysolutions/client1/pull/305) and [origin PR #11](https://github.com/vamshisaideep9/client1/pull/11)
+Next priority: existing mobile homepage performance and metadata gaps, followed
+by the outstanding release evidence. Requirement coverage and release status
+remain unchanged.
+
 **Implemented — collapsed sidebar branding** (2026-09-15), on
 `feat/auth-actions-footer`. The collapsed Client rail uses the original
 transparent DD symbol in white, centered above the expand control. Expanded

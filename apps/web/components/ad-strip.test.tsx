@@ -14,19 +14,13 @@ const SPONSOR: HeroBanner = {
 };
 
 describe("AdStrip", () => {
-  it("labels itself as sponsored and offers a dismiss control", () => {
+  it("labels itself as sponsored with no dismiss or playback controls", () => {
     const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} />);
     expect(markup).toContain('aria-label="Sponsored"');
     expect(markup).toContain('data-layout="ad-strip"');
-    expect(markup).toContain('data-presentation="split-sponsor-card"');
-    expect(markup).toContain("h-[152px]");
-    expect(markup).toContain("hidden shrink-0 sm:block");
-    expect(markup).toContain("sm:aspect-video");
-    expect(markup).toContain("lg:w-[341px]");
-    expect(markup).toContain("object-contain");
-    expect(markup).toContain("sponsor-accent-sweep");
+    expect(markup).toContain('data-presentation="curtain-sponsor-card"');
     expect(markup).toContain("Sponsored");
-    expect(markup).toContain('aria-label="Dismiss sponsored message"');
+    expect(markup).not.toContain("<button");
   });
 
   it("renders the sponsor's copy, artwork and internal CTA", () => {
@@ -44,6 +38,15 @@ describe("AdStrip", () => {
     expect(markup).not.toMatch(/<h[1-6][\s>]/);
   });
 
+  it("server-renders readable copy and decorative curtains without hiding the ad", () => {
+    const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} />);
+    expect(markup).toContain('data-reveal="curtain"');
+    expect(markup).toContain('aria-hidden="true" class="sponsor-curtain sponsor-curtain-left"');
+    expect(markup).toContain('aria-hidden="true" class="sponsor-curtain sponsor-curtain-right"');
+    expect(markup).not.toContain('aria-hidden="true" data-layout');
+    expect(markup).toContain(SPONSOR.subtitle);
+  });
+
   it("shows one sponsor with no carousel affordances", () => {
     // Only one sponsor runs at a time -- the successor waits in the CMS
     // replacement queue -- so there is nothing to rotate between and no
@@ -59,11 +62,13 @@ describe("AdStrip", () => {
     const markup = renderToStaticMarkup(<AdStrip banner={bare} />);
     expect(markup).toContain("A sponsor with no call to action");
     expect(markup).not.toContain("<a ");
+    expect(markup).not.toContain("<img ");
   });
 
   it("can render the exact CMS composition without an interactive dismiss control", () => {
-    const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} dismissible={false} />);
-    expect(markup).toContain('data-presentation="split-sponsor-card"');
+    const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} animate={false} />);
+    expect(markup).toContain('data-presentation="curtain-sponsor-card"');
+    expect(markup).toContain('data-reveal="none"');
     expect(markup).not.toContain('aria-label="Dismiss sponsored message"');
   });
 });

@@ -79,7 +79,7 @@ export function BannerPreview({
   if (placement === "homepage_ad") {
     return (
       <PublicPreviewChrome>
-        <AdStrip banner={value} dismissible={false} />
+        <AdStrip banner={value} animate={false} />
       </PublicPreviewChrome>
     );
   }
