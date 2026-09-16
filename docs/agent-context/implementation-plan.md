@@ -89,7 +89,7 @@ Open Graph image (2 failures); SSR copy, H1, FAQ data and 19 internal destinatio
 pass. No whole-page speed or complete SEO pass is claimed. Other browser engines
 and real devices remain unverified.
 
-Reviews: <!-- SPONSOR_REVEAL_PRS -->
+Reviews: [Upstream PR #305](https://github.com/brollysolutions/client1/pull/305) and [origin PR #11](https://github.com/vamshisaideep9/client1/pull/11)
 Next priority: existing mobile homepage performance and metadata gaps, followed
 by the outstanding release evidence. Requirement coverage and release status
 remain unchanged.
