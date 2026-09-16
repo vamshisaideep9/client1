@@ -2,6 +2,37 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — complete static homepage sponsor card** (2026-09-16),
+on `feat/auth-actions-footer`. Replaces the former curtain reveal with an
+uncropped 16:9 image, burgundy headline/CTA, clear Sponsored disclosure and a
+restrained static tint, border and shadow. Mobile stacks artwork above the copy;
+desktop groups the copy and CTA beside it. Campaign content remains CMS-driven.
+The user-requested fuller description is in the opt-in sponsor preview fixture.
+Missing preview menu entries were traced to six-product fixture data: the new
+`--full-catalogue` option supplies all 16 existing service types. Default release
+data remains six products; production publication rules are unchanged.
+
+Fresh verification: lint, typecheck, 706 unit tests (108 files), env-free Next
+production build and 16 Playwright cases pass. Browser/Apple Design review covers
+320/390/768/1440px, full-image framing, pre-hydration content, reduced motion,
+keyboard activation/focus, reload/navigation, failed images, long copy and all
+16 desktop/mobile menu entries. No actionable source/design review findings.
+Lighthouse 13.4.1 smoke (one run/profile, synthetic full catalogue and local gzip):
+desktop performance 98, LCP 956ms, TBT 93ms, CLS 0.00004; mobile performance 59,
+LCP 4471ms, TBT 1320ms, CLS 0.00006, with a slow-CPU warning. Accessibility,
+best-practices and SEO score 100 in both profiles. Existing mobile performance,
+LCP and TBT targets remain unmet; no field-speed improvement is claimed.
+The SEO checker retains two baseline findings (root canonical slash comparison
+and missing og:image); SSR content, H1, FAQ data and 19 internal paths pass.
+Full JavaScript-disabled navigation remains limited by the existing route-level
+streaming boundary; the ad works before app hydration. Windows standalone copy
+still warns about a symlink; local preview runs. Other browser engines, Linux
+packaging, live-backend journeys and field vitals are unverified. No API, schema,
+dependency or requirement-coverage change. Next: existing mobile speed and
+production release-evidence work.
+
+Review: [Upstream PR #306](https://github.com/brollysolutions/client1/pull/306) and [origin PR #12](https://github.com/vamshisaideep9/client1/pull/12)
+
 **Implemented — homepage sponsor curtain reveal** (2026-09-16), on
 `feat/auth-actions-footer`. Only the ad above the homepage banners and its
 shared CMS preview change. Royal-burgundy gradient curtains open automatically

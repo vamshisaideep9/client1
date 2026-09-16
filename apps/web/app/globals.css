@@ -418,51 +418,6 @@
 .section-scroll-cue-second {
   animation: sectionScrollCueSecond 1.8s ease-in-out 0.18s infinite;
 }
-/* Ad-only reveal: static painted folds travel on two transform layers. The
-   final pose is the base style, so completion needs no JS or retained fill
-   layer. Fail open for reduced motion, CMS previews and unsupported animation. */
-.sponsor-curtain { display: none; }
-@keyframes sponsorCurtainLeft {
-  from { transform: translateX(0); }
-  to { transform: translateX(-101%); }
-}
-@keyframes sponsorCurtainRight {
-  from { transform: translateX(0); }
-  to { transform: translateX(101%); }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .sponsor-stage[data-reveal="curtain"] > .sponsor-curtain {
-    display: block;
-    position: absolute;
-    inset-block: 0;
-    width: calc(50% + 1px);
-    pointer-events: none;
-    background-color: #761f3f;
-    background-image: repeating-linear-gradient(90deg,
-      rgb(0 0 0 / 16%) 0,
-      rgb(255 255 255 / 7%) 12px,
-      transparent 25px,
-      rgb(0 0 0 / 20%) 39px,
-      rgb(255 255 255 / 4%) 48px),
-      linear-gradient(110deg, #3d1027, #761f3f 35%, #ab4961 65%, #55132d);
-    animation-duration: 800ms;
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-    animation-fill-mode: backwards;
-  }
-  .sponsor-curtain-left {
-    left: 0;
-    transform: translateX(-101%);
-    animation-name: sponsorCurtainLeft;
-  }
-  .sponsor-curtain-right {
-    right: 0;
-    transform: translateX(101%);
-    animation-name: sponsorCurtainRight;
-  }
-  /* Works before hydration too; the component remembers focus so blurring
-     cannot restart the reveal. These layers never intercept pointer input. */
-  .sponsor-stage:focus-within > .sponsor-curtain { visibility: hidden; }
-}
 @media (prefers-reduced-motion: reduce) {
   .scroll-cue-bob,
   .section-scroll-cue-first,

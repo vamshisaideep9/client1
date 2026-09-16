@@ -18,7 +18,7 @@ describe("AdStrip", () => {
     const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} />);
     expect(markup).toContain('aria-label="Sponsored"');
     expect(markup).toContain('data-layout="ad-strip"');
-    expect(markup).toContain('data-presentation="curtain-sponsor-card"');
+    expect(markup).toContain('data-presentation="static-sponsor-card"');
     expect(markup).toContain("Sponsored");
     expect(markup).not.toContain("<button");
   });
@@ -38,13 +38,13 @@ describe("AdStrip", () => {
     expect(markup).not.toMatch(/<h[1-6][\s>]/);
   });
 
-  it("server-renders readable copy and decorative curtains without hiding the ad", () => {
+  it("server-renders the complete ad without reveal layers or state", () => {
     const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} />);
-    expect(markup).toContain('data-reveal="curtain"');
-    expect(markup).toContain('aria-hidden="true" class="sponsor-curtain sponsor-curtain-left"');
-    expect(markup).toContain('aria-hidden="true" class="sponsor-curtain sponsor-curtain-right"');
-    expect(markup).not.toContain('aria-hidden="true" data-layout');
+    expect(markup).not.toContain("data-reveal");
+    expect(markup).not.toContain("sponsor-curtain");
+    expect(markup).not.toContain("<canvas");
     expect(markup).toContain(SPONSOR.subtitle);
+    expect(markup).toContain('href="/loans#home-loan"');
   });
 
   it("shows one sponsor with no carousel affordances", () => {
@@ -63,12 +63,5 @@ describe("AdStrip", () => {
     expect(markup).toContain("A sponsor with no call to action");
     expect(markup).not.toContain("<a ");
     expect(markup).not.toContain("<img ");
-  });
-
-  it("can render the exact CMS composition without an interactive dismiss control", () => {
-    const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} animate={false} />);
-    expect(markup).toContain('data-presentation="curtain-sponsor-card"');
-    expect(markup).toContain('data-reveal="none"');
-    expect(markup).not.toContain('aria-label="Dismiss sponsored message"');
   });
 });
