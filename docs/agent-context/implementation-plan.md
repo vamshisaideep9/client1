@@ -89,7 +89,7 @@ packaging, live-backend journeys and field vitals are unverified. No API, schema
 dependency or requirement-coverage change. Next: existing mobile speed and
 production release-evidence work.
 
-Review: <!-- SPONSOR_HIGHLIGHT_PRS -->
+Review: [Upstream PR #306](https://github.com/brollysolutions/client1/pull/306) and [origin PR #12](https://github.com/vamshisaideep9/client1/pull/12)
 
 **Implemented — homepage sponsor curtain reveal** (2026-09-16), on
 `feat/auth-actions-footer`. Only the ad above the homepage banners and its
