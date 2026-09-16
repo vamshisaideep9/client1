@@ -7,10 +7,11 @@ const UPDATED_AT = "2026-08-30T00:00:00Z";
 // Opt-in layout fixtures. Default remains the empty CMS/fallback scenario.
 const publishedBanners = process.argv.includes("--published-banners");
 const sponsor = process.argv.includes("--sponsor");
+const fullCatalogue = process.argv.includes("--full-catalogue");
 const sponsorFixture = {
   id: "40000000-0000-4000-8000-000000000004",
   title: "A little planning. A bigger possibility.",
-  subtitle: "Explore financial options for the plans that matter to you.",
+  subtitle: "A new home, higher education or the next step for your business. Explore loans, cards and insurance in one place, understand your options, and find the right starting point for your plans.",
   image_url: "/banner-templates/homepage_ad/personal-finance.webp",
   cta_label: "Explore options",
   deep_link: "/loans",
@@ -31,7 +32,23 @@ const PRODUCT_ROWS = [
   ["10000000-0000-4000-8000-000000000006", "travel-insurance", "Travel Insurance", "insurance"],
 ];
 
-const products = PRODUCT_ROWS.map(([id, slug, label, category]) => ({
+// The default six-product release scenario stays deterministic. Visual review
+// can opt into all 16 existing service types without changing live publication.
+const completeRows = [
+  ...PRODUCT_ROWS,
+  ["10000000-0000-4000-8000-000000000007", "loan-against-property", "Loan Against Property", "loan"],
+  ["10000000-0000-4000-8000-000000000008", "car-loan", "Car Loan", "loan"],
+  ["10000000-0000-4000-8000-000000000009", "vehicle-loan", "Vehicle Loan", "loan"],
+  ["10000000-0000-4000-8000-000000000010", "education-loan", "Education Loan", "loan"],
+  ["10000000-0000-4000-8000-000000000011", "school-funding", "School Funding", "loan"],
+  ["10000000-0000-4000-8000-000000000012", "secured-loans", "Secured Loans", "loan"],
+  ["10000000-0000-4000-8000-000000000013", "od-and-dod", "OD and DOD", "loan"],
+  ["10000000-0000-4000-8000-000000000014", "project-funding", "Project Funding", "loan"],
+  ["10000000-0000-4000-8000-000000000015", "life-insurance", "Life Insurance", "insurance"],
+  ["10000000-0000-4000-8000-000000000016", "property-insurance", "Property Insurance", "insurance"],
+];
+
+const products = (fullCatalogue ? completeRows : PRODUCT_ROWS).map(([id, slug, label, category]) => ({
   id,
   slug,
   label,
