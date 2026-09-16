@@ -28,9 +28,10 @@ describe("CMS previews", () => {
     expect(markup).toContain("h-[clamp(14rem,36vw,32.5rem)]");
   });
 
-  it("uses the exact split sponsor card for homepage ad previews", () => {
+  it("uses the completed sponsor card for homepage ad previews", () => {
     const markup = renderToStaticMarkup(<BannerPreview context="public" placement="homepage_ad" banner={{ banner_type: "default", title: "Plan your next move", subtitle: "Sponsored by a verified partner", cta_label: "Explore", deep_link: "/loans", image_url: "/banner-templates/homepage_ad/personal-finance.webp" }} />);
-    expect(markup).toContain('data-presentation="split-sponsor-card"');
+    expect(markup).toContain('data-presentation="curtain-sponsor-card"');
+    expect(markup).toContain('data-reveal="none"');
     expect(markup).toContain("personal-finance.webp");
     expect(markup).not.toContain('aria-label="Dismiss sponsored message"');
   });
