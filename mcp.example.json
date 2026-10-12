@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@0.0.83",
+        "--headless",
+        "--isolated",
+        "--output-dir",
+        ".playwright-mcp"
+      ]
+    },
+    "postgres": {
+      "command": "uvx",
+      "args": [
+        "--with",
+        "mcp<2",
+        "postgres-mcp==0.3.0",
+        "--access-mode=restricted"
+      ],
+      "env": {
+        "DATABASE_URI": "${MCP_DATABASE_URI:-postgresql://app:app@localhost:5432/app}"
+      }
+    },
+    "next-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "next-devtools-mcp@0.4.0"
+      ]
+    }
+  }
+}
