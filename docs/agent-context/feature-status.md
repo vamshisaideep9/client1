@@ -29,7 +29,7 @@ details await confirmation, and listings/provider options are clearly
 illustrative. Next: approve final contact/content data and continue existing
 production release-evidence work. This is a review artifact, not a deployment.
 
-Review: <!-- CLIENT_DRAFT_PRS -->
+Review: [Upstream PR #307](https://github.com/brollysolutions/client1/pull/307) and [origin PR #13](https://github.com/vamshisaideep9/client1/pull/13)
 
 **Implemented — complete static homepage sponsor card** (2026-09-16),
 on `feat/auth-actions-footer`. Replaces the former curtain reveal with an
