@@ -2,6 +2,35 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — self-contained public client draft** (2026-10-12), on
+`feat/public-client-draft`. The standalone HTML reuses the public React pages,
+all 16 financial service pages, six illustrative property details and all 18
+calculator engines: 53 navigable views, including legal/help/contact pages and
+the homepage sponsor. CSS, JavaScript, artwork and fonts are embedded (8.5 MiB,
+76 assets). Hash navigation, filters, calculator edits and CSV/Excel downloads
+work offline. Forms disclose that nothing is submitted; accounts, dashboards,
+uploads, OTPs and live API clients are excluded. No environment files are read.
+Native development now defaults to localhost:8000; explicit API_INTERNAL_URL
+and the production Docker default remain supported. The normal application
+still requires a running API; offline fixtures are export-only.
+
+Fresh verification: lint, typecheck, 714 unit tests across 110 files, the env-free
+Next production build and six offline Chromium tests pass. Browser coverage
+visits all 53 views, edits every calculator, checks exports/history/forms and
+responsive layouts at 320/390/768/1440px. Desktop/mobile screenshots and the
+loopback preview were inspected; no console errors or backend requests occurred.
+Code/security/design/SEO review found no actionable change-owned defects. The
+draft has noindex and a CSP blocking HTTP resources and form submissions.
+No new dependencies, API/schema changes or requirement-coverage changes.
+
+Other browser engines, live-backend journeys and production deployment remain
+unverified; no new Lighthouse or field-performance claim is made. Contact
+details await confirmation, and listings/provider options are clearly
+illustrative. Next: approve final contact/content data and continue existing
+production release-evidence work. This is a review artifact, not a deployment.
+
+Review: <!-- CLIENT_DRAFT_PRS -->
+
 **Implemented — complete static homepage sponsor card** (2026-09-16),
 on `feat/auth-actions-footer`. Replaces the former curtain reveal with an
 uncropped 16:9 image, burgundy headline/CTA, clear Sponsored disclosure and a

@@ -20,7 +20,12 @@ if (typeof window !== "undefined") {
   throw new Error("lib/api/server.ts is server-only and must not be imported by client code.");
 }
 
-const SERVER_BASE_URL = (process.env.API_INTERNAL_URL ?? "http://api:8000").replace(/\/$/, "");
+// Native `pnpm dev` uses the host-published API port. Compose explicitly sets
+// API_INTERNAL_URL; production retains its internal Docker service default.
+const SERVER_BASE_URL = (
+  process.env.API_INTERNAL_URL ??
+  (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "http://api:8000")
+).replace(/\/$/, "");
 
 const REQUEST_TIMEOUT_MS = 5_000;
 
