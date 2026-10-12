@@ -61,7 +61,7 @@ default, not permission to skip the pre-implementation announcement.
 ## Prioritized active backlog
 
 **Implemented — production audit remediation** (2026-10-12),
-on `security/production-audit`; <!-- PRODUCTION_AUDIT_PR -->. Reviewed authentication,
+on `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308). Reviewed authentication,
 role/object/business-line isolation, RLS, uploads, payout/webhook settlement,
 PII handling, public web behavior, dependencies and delivery configuration.
 Remediated OTP concurrency, payout reversal ordering, SMTP exception PII,

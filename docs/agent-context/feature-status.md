@@ -3,7 +3,7 @@
 Status: **Derived living implementation ledger**
 
 **Implemented — production audit remediation** (2026-10-12),
-branch `security/production-audit`; <!-- PRODUCTION_AUDIT_PR -->.
+branch `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308).
 OTP budgets and consumption are atomic across concurrent verification/resends.
 Payout settlement locks the current row and cannot recreate credit after a
 reversal. SMTP failures no longer log provider-echoed PII. Browser response-body
