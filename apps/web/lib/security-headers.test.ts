@@ -8,6 +8,13 @@ function asRecord(headers: ReturnType<typeof buildSecurityHeaders>) {
 }
 
 describe("browser security headers", () => {
+  it("permits private video playback only from the configured storage origin", () => {
+    const policy = asRecord(buildSecurityHeaders({ production: true, assetHost: "https://storage.example.test/public" }))["Content-Security-Policy"];
+    expect(policy.split("; ").find((directive) => directive.startsWith("media-src"))).toBe(
+      "media-src 'self' https://storage.example.test",
+    );
+  });
+
   it("allows signed browser uploads only to the configured storage origin", () => {
     const policy = asRecord(buildSecurityHeaders({ production: true, assetHost: "https://storage.example.test/public" }))["Content-Security-Policy"];
     const connect = policy.split("; ").find((directive) => directive.startsWith("connect-src"));
