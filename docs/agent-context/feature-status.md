@@ -2,6 +2,35 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — production audit remediation** (2026-10-12),
+branch `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308).
+OTP budgets and consumption are atomic across concurrent verification/resends.
+Payout settlement locks the current row and cannot recreate credit after a
+reversal. SMTP failures no longer log provider-echoed PII. Browser response-body
+failures return the existing unavailable result; server fetch preserves Next's
+dynamic-render signals and defaults to localhost only in development. The media
+CSP permits private video on the configured storage origin. Published runtime
+and development dependency fixes are locked, including Next 15.5.27 and Vitest
+4.1.11. Existing roles, RLS, publication filters and financial contracts remain.
+
+Fresh local evidence: lint/typecheck, 714 web tests, production compilation,
+11 release Chromium tests, the actual-response CSP probe, 208 infrastructure
+tests (one platform skip), API lint/format, fresh migrations, one migration head
+and unchanged OpenAPI pass. OTP and payout concurrency regressions were reproduced
+before remediation and pass afterward. The linked PR records the full API and
+Linux standalone CI results; partial local API runs are not passing evidence.
+Windows standalone output needed a local dependency junction after a symlink
+permission warning. Python's production/full dependency scans and Node's
+production scan are clean. The full Node audit still reports development-only
+`braces@3.0.3` (GHSA-vfj7-8cjw-p6xm), used solely by Next's ESLint glob chain;
+the suggested 3.0.4 is unpublished and no advisory is suppressed.
+
+Requirement coverage is unchanged. Next priority: require the linked CI gates,
+human review and existing production environment/capacity/recovery evidence
+before deployment. No live provider or customer-data operations were performed.
+The self-contained public HTML stays a separate local deliverable; earlier
+upstream #307 and origin #13 are closed unmerged. This task has one upstream PR.
+
 **Implemented — complete static homepage sponsor card** (2026-09-16),
 on `feat/auth-actions-footer`. Replaces the former curtain reveal with an
 uncropped 16:9 image, burgundy headline/CTA, clear Sponsored disclosure and a
