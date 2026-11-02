@@ -3,7 +3,8 @@
 Status: **Derived living implementation ledger**
 
 **Implemented — development droplet deployment overlay** (2026-11-02),
-branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`.
+branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;
+[PR #309](https://github.com/brollysolutions/client1/pull/309).
 `infra/dev-droplet/` runs the existing development stack on one DigitalOcean
 droplet: PostgreSQL, Redis and PgBouncer publish no host port; API, web and
 MinIO bind only to `127.0.0.1` behind host Caddy; credentials are freshly
