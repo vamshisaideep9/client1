@@ -1,0 +1,43 @@
+# Host Caddy for the development droplet. See README.md for installation.
+#
+# Values come from /etc/caddy/dev-droplet.env (a systemd drop-in loads it):
+#   DEV_DOMAIN        app host, e.g. dev.example.com
+#   DEV_FILES_DOMAIN  object-storage host, e.g. files.dev.example.com
+#   DEV_ALLOWED_IPS   space-separated team IPs/CIDRs allowed to use the site
+#   DEV_DROPLET_IP    the droplet's own public IPv4 (server-side image fetches)
+#
+# Access is IP-allowlisted because the development stack can hold demo accounts
+# with published passwords. Ports 80/443 stay open to the internet only so
+# Let's Encrypt can validate; every non-allowlisted request receives 403.
+# Do not use basic auth here: the app's own Authorization: Bearer header and
+# presigned upload requests conflict with it.
+#
+# Each site uses `route` so directives run in the written order. Without it,
+# Caddy's default ordering runs `handle` before `respond`, and the allowlist
+# would never be reached.
+
+{$DEV_DOMAIN} {
+	route {
+		@outsiders not remote_ip {$DEV_ALLOWED_IPS}
+		respond @outsiders 403
+
+		header X-Robots-Tag "noindex, nofollow"
+
+		reverse_proxy /api/* 127.0.0.1:8000
+		reverse_proxy 127.0.0.1:3001
+	}
+}
+
+{$DEV_FILES_DOMAIN} {
+	route {
+		# 172.16.0.0/12 covers the Docker bridge networks; the droplet IP covers
+		# next/image fetching banner images through the public hostname.
+		@outsiders not remote_ip {$DEV_ALLOWED_IPS} {$DEV_DROPLET_IP} 172.16.0.0/12
+		respond @outsiders 403
+
+		header X-Robots-Tag "noindex, nofollow"
+
+		# Caddy preserves the Host header, so presigned signatures still verify.
+		reverse_proxy 127.0.0.1:9000
+	}
+}
