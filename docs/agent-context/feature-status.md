@@ -14,7 +14,9 @@ long-running service restarts after reboot. Caddy answers 403 to clients
 outside the IP allowlist before any proxying, and the droplet checks out only
 `apps/api`, `apps/web`, `apps/media-runtime` and `infra/dev-droplet`. Because
 `ENV=development` returns one-time codes in API responses by design, that
-allowlist is the host's access boundary and the runbook says so.
+allowlist is the host's access boundary and the runbook says so. Hosts are
+`dev.dhanadhara.com` and `files.dev.dhanadhara.com`; the apex and `www` stay
+reserved for production.
 
 Fresh local evidence: 7 new overlay tests pass, including executing
 `init-env.sh`; the three-file stack renders with Docker Compose 5.4.0 to

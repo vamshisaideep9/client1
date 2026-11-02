@@ -67,7 +67,7 @@ DigitalOcean droplet for team review: a Compose overlay that removes every
 datastore port and binds only the three proxied ports to loopback, fresh
 generated credentials instead of committed dev defaults, public HTTPS origins,
 reboot restart policies, an IP-allowlisted host Caddy, and a sparse-checkout
-runbook. Non-goals: production topology, real customer/KYC data, application,
+runbook for `dev.dhanadhara.com` / `files.dev.dhanadhara.com`. Non-goals: production topology, real customer/KYC data, application,
 API, schema, contract or dependency changes. Model/effort: High, because the
 change sets proxy trust, CORS and network exposure on an internet-facing host.
 

@@ -1,8 +1,8 @@
 # Host Caddy for the development droplet. See README.md for installation.
 #
 # Values come from /etc/caddy/dev-droplet.env (a systemd drop-in loads it):
-#   DEV_DOMAIN        app host, e.g. dev.example.com
-#   DEV_FILES_DOMAIN  object-storage host, e.g. files.dev.example.com
+#   DEV_DOMAIN        app host: dev.dhanadhara.com
+#   DEV_FILES_DOMAIN  object-storage host: files.dev.dhanadhara.com
 #   DEV_ALLOWED_IPS   space-separated team IPs/CIDRs allowed to use the site
 #   DEV_DROPLET_IP    the droplet's own public IPv4 (server-side image fetches)
 #

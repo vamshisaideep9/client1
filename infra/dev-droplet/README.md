@@ -26,8 +26,10 @@ tests, contracts, and tooling stay off the server.
 - Cloud Firewall inbound: TCP 22 from your IP only; TCP 80 and 443 from
   anywhere so Let's Encrypt can validate. Caddy returns 403 to every address
   outside the allowlist. Nothing else is opened.
-- DNS `A` records for the app host (for example `dev.example.com`) and the
-  files host (for example `files.dev.example.com`) pointing at the droplet.
+- DNS `A` records for the app host `dev.dhanadhara.com` and the files host
+  `files.dev.dhanadhara.com` pointing at the droplet. The apex
+  `dhanadhara.com` and `www` stay reserved for production; never point them
+  at this server.
 
 ## 2. Prepare the host (as root, once)
 
@@ -72,8 +74,8 @@ Cone mode also keeps the root files, which include the two compose files.
 ```bash
 cd /opt/dhanadhara
 infra/dev-droplet/init-env.sh \
-  --domain dev.example.com \
-  --files-domain files.dev.example.com \
+  --domain dev.dhanadhara.com \
+  --files-domain files.dev.dhanadhara.com \
   --droplet-ip "$(ip -4 -o addr show dev eth0 | awk '{print $4}' | cut -d/ -f1 | head -n1)" \
   --allow-ip 203.0.113.10 --allow-ip 198.51.100.0/24
 ```
@@ -121,7 +123,7 @@ sudo ss -tlnp | grep -E ':(5432|5433|6379|8000|3001|9000|9001)\b'
 ```
 
 Only `127.0.0.1:8000`, `127.0.0.1:3001`, and `127.0.0.1:9000` should appear.
-From an allowlisted machine, `https://dev.example.com` loads; from any other
+From an allowlisted machine, `https://dev.dhanadhara.com` loads; from any other
 network it returns 403.
 
 ## 8. Create the first users
