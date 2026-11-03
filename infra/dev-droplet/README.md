@@ -64,10 +64,12 @@ Use a read-only deploy key for the private repository.
 sudo install -d -o deploy -g deploy /opt/dhanadhara
 git clone --filter=blob:none --sparse --branch main <repo-ssh-url> /opt/dhanadhara
 cd /opt/dhanadhara
-git sparse-checkout set apps/api apps/web apps/media-runtime infra/dev-droplet
+git sparse-checkout set --cone apps/api apps/web apps/media-runtime infra/dev-droplet
 ```
 
 Cone mode also keeps the root files, which include the two compose files.
+Keep `--cone`: before Git 2.37 (Ubuntu 22.04 ships 2.34), `set` otherwise uses
+non-cone patterns and drops the root compose files.
 
 ## 4. Generate fresh configuration
 
