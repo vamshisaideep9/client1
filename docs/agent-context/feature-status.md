@@ -17,9 +17,9 @@ outside the IP allowlist before any proxying, and the droplet checks out only
 `ENV=development` returns one-time codes in API responses by design, that
 allowlist is the host's access boundary and the runbook says so. Hosts are
 `dev.dhanadhara.com` and `files.dev.dhanadhara.com`; the apex and `www` stay
-reserved for production. The runbook's sparse checkout passes `--cone`
-explicitly: Git 2.34 on the Ubuntu 22.04 droplet otherwise used non-cone
-patterns and dropped the root compose files (observed on the real host).
+reserved for production. The runbook's sparse checkout runs
+`init --cone` before `set`: on the real Ubuntu 22.04 droplet, Git 2.34 kept
+non-cone patterns (even with `set --cone`) and dropped the root compose files.
 
 Fresh local evidence: 7 new overlay tests pass, including executing
 `init-env.sh`; the three-file stack renders with Docker Compose 5.4.0 to

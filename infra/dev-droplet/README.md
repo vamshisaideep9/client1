@@ -64,12 +64,14 @@ Use a read-only deploy key for the private repository.
 sudo install -d -o deploy -g deploy /opt/dhanadhara
 git clone --filter=blob:none --sparse --branch main <repo-ssh-url> /opt/dhanadhara
 cd /opt/dhanadhara
-git sparse-checkout set --cone apps/api apps/web apps/media-runtime infra/dev-droplet
+git sparse-checkout init --cone
+git sparse-checkout set apps/api apps/web apps/media-runtime infra/dev-droplet
+git config core.sparseCheckoutCone && ls   # expect "true" and docker-compose*.yml
 ```
 
 Cone mode also keeps the root files, which include the two compose files.
-Keep `--cone`: before Git 2.37 (Ubuntu 22.04 ships 2.34), `set` otherwise uses
-non-cone patterns and drops the root compose files.
+Run `init --cone` first: Git 2.34 (Ubuntu 22.04) left non-cone patterns in
+place even with `set --cone` and dropped the root compose files.
 
 ## 4. Generate fresh configuration
 
