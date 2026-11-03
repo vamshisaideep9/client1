@@ -60,17 +60,30 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**Implemented — development droplet deployment overlay** (2026-11-02),
-branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;
-[PR #309](https://github.com/brollysolutions/client1/pull/309).
-Adds `infra/dev-droplet/` so the existing development stack can run on one
-DigitalOcean droplet for team review: a Compose overlay that removes every
-datastore port and binds only the three proxied ports to loopback, fresh
-generated credentials instead of committed dev defaults, public HTTPS origins,
-reboot restart policies, an IP-allowlisted host Caddy, and a sparse-checkout
-runbook for `dev.dhanadhara.com` / `files.dev.dhanadhara.com`. Non-goals: production topology, real customer/KYC data, application,
-API, schema, contract or dependency changes. Model/effort: High, because the
-change sets proxy trust, CORS and network exposure on an internet-facing host.
+**Implemented — production audit remediation** (2026-10-12),
+on `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308). Reviewed authentication,
+role/object/business-line isolation, RLS, uploads, payout/webhook settlement,
+PII handling, public web behavior, dependencies and delivery configuration.
+Remediated OTP concurrency, payout reversal ordering, SMTP exception PII,
+frontend body-read failures, swallowed Next control flow and blocked storage
+video. Updated vulnerable production and development dependencies. No migration,
+API contract, permission model, production catalogue defaults or visual redesign.
+
+Verification: 714 web tests, lint/typecheck, production compilation, 11 release
+browser cases, actual-response CSP enforcement, 208 infrastructure tests (one
+platform skip), API lint/format, fresh migrations and unchanged OpenAPI pass.
+Focused OTP/payout regressions fail before their fixes and pass afterward.
+Final full API and Linux standalone gate evidence is recorded on the linked PR;
+interrupted or partial local runs are not counted as passes. Windows packaging
+needed a local junction for browser testing. Python dependency scans (production
+and full) and the Node production scan are clean. One development-only braces
+advisory remains because no patched release is published; details and reachability
+are recorded in the PR and feature ledger, without suppressing the audit.
+
+The HTML handoff remains local and its prior PRs are closed unmerged. Next:
+require final PR checks and human review, then satisfy existing deployment,
+provider, capacity and recovery gates. This audit does not authorize deployment
+or real payments, and does not guarantee the absence of every possible defect.
 
 **Implemented — complete static homepage sponsor card** (2026-09-16),
 on `feat/auth-actions-footer`. Replaces the former curtain reveal with an
