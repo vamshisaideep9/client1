@@ -80,7 +80,9 @@ export function buildSecurityHeaders({
     `connect-src ${connectSources.join(" ")}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
-    "media-src 'self'",
+    // Approved private loan videos use short-lived URLs on the same trusted
+    // storage origin as uploads. Authorization remains at the signed URL/API.
+    `media-src ${["'self'", assetOrigin].filter(Boolean).join(" ")}`,
     ...(production ? ["upgrade-insecure-requests"] : []),
   ];
 
