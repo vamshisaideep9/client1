@@ -4,16 +4,22 @@
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml \
 #     -f infra/dev-droplet/compose.droplet.yml up -d
 #
-# It runs the development build (ENV=development, hot reload, MinIO) behind the
-# host Caddy proxy in ./Caddyfile. It is NOT a production topology; production
-# uses docker-compose.prod.example.yml and its launch gates.
+# It runs the development build (ENV=development, hot reload) behind the host
+# Caddy proxy in ./Caddyfile. It is NOT a production topology; production uses
+# docker-compose.prod.example.yml and its launch gates.
+#
+# Object storage is deliberately absent: MinIO no longer publishes the
+# minio/minio and minio/mc images, so the droplet runs without it. File
+# uploads, managed media and banner images do not work on this host; every
+# database-backed journey does.
 #
 # Invariants (scripts/tests/test_dev_droplet.py enforces them):
-#   - no datastore publishes a host port; only the three ports Caddy proxies are
-#     published, and only on 127.0.0.1 (Docker bypasses ufw for published ports);
+#   - no datastore publishes a host port; only the API and web ports that Caddy
+#     proxies are published, and only on 127.0.0.1 (Docker bypasses ufw);
+#   - MinIO and its bucket initialiser never start, and nothing depends on them;
 #   - every long-running service restarts after a reboot;
 #   - credentials come from the repository-root .env written by init-env.sh, so
-#     none of the committed dev defaults (app/app, minioadmin) are used.
+#     the committed app/app database default is never used.
 #
 # Requires Docker Compose v2.24+ for the !reset / !override tags.
 
@@ -22,11 +28,6 @@ x-droplet-api-env: &droplet-api-env
   LOG_LEVEL: info
   SECRET_KEY: ${DEV_SECRET_KEY?run infra/dev-droplet/init-env.sh first}
   DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD?run infra/dev-droplet/init-env.sh first}@pgbouncer:5432/${POSTGRES_DB:-app}
-  SPACES_ACCESS_KEY: ${SPACES_ACCESS_KEY?run infra/dev-droplet/init-env.sh first}
-  SPACES_SECRET_KEY: ${SPACES_SECRET_KEY?run infra/dev-droplet/init-env.sh first}
-  # Presigned upload/download URLs go to the browser, so they must use the
-  # public HTTPS files host that Caddy forwards (Host preserved) to MinIO.
-  SPACES_PUBLIC_ENDPOINT_URL: https://${DEV_FILES_DOMAIN?run infra/dev-droplet/init-env.sh first}
   ALLOWED_ORIGINS: '["https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}"]'
   PUBLIC_WEB_ORIGIN: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
   # Caddy is the single proxy in front of the API and replaces any client-sent
@@ -48,18 +49,25 @@ services:
   clamav:
     restart: unless-stopped
 
+  # Only started with an explicit `--profile object-storage`, which the
+  # droplet never uses (the images are no longer published).
   minio:
-    ports: !override
-      - "127.0.0.1:9000:9000"
-    environment:
-      MINIO_API_CORS_ALLOW_ORIGIN: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
-      # The admin console (port 9001) is not needed on the droplet.
-      MINIO_BROWSER: "off"
-    restart: unless-stopped
+    profiles: ["object-storage"]
+    ports: !reset []
+  minio-init:
+    profiles: ["object-storage"]
 
   api:
     ports: !override
       - "127.0.0.1:8000:8000"
+    # Same as docker-compose.yml without the MinIO dependency.
+    depends_on: !override
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
     environment:
       <<: *droplet-api-env
 
@@ -74,9 +82,6 @@ services:
       # Same-origin: Caddy routes /api/* to the API on the app host.
       NEXT_PUBLIC_API_BASE_URL: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
       NEXT_PUBLIC_SITE_URL: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
-      # Adds the files host to next/image remotePatterns and to the CSP
-      # img/media/connect sources used by direct browser uploads.
-      NEXT_PUBLIC_ASSET_HOST: https://${DEV_FILES_DOMAIN?run infra/dev-droplet/init-env.sh first}
       # Polling exists only for the Windows bind mount; Linux has inotify.
       WATCHPACK_POLLING: "false"
       CHOKIDAR_USEPOLLING: "false"

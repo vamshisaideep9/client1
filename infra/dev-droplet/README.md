@@ -11,13 +11,19 @@ What this directory adds:
 
 | File | Purpose |
 | --- | --- |
-| `compose.droplet.yml` | Removes datastore ports, binds the proxied ports to `127.0.0.1`, injects fresh credentials and public HTTPS origins, and adds restart policies. |
+| `compose.droplet.yml` | Removes datastore ports, disables MinIO, binds the proxied ports to `127.0.0.1`, injects fresh credentials and public HTTPS origins, and adds restart policies. |
 | `Caddyfile` | Host HTTPS proxy with automatic certificates and an IP allowlist. |
 | `init-env.sh` | Writes the repository-root `.env` with fresh random credentials. |
 | `dc.sh` | `docker compose` with the three files in the right order. |
 
 The droplet checks out only the paths the stack needs (sparse checkout); docs,
 tests, contracts, and tooling stay off the server.
+
+**No object storage.** MinIO no longer publishes the `minio/minio` and
+`minio/mc` images, so the droplet runs without it. Sign-in, dashboards, leads,
+forms, and every other database-backed journey work. File uploads (KYC and
+loan documents, property and campaign media, task documents) and banner
+images do not.
 
 ## 1. Create the droplet
 
@@ -26,10 +32,9 @@ tests, contracts, and tooling stay off the server.
 - Cloud Firewall inbound: TCP 22 from your IP only; TCP 80 and 443 from
   anywhere so Let's Encrypt can validate. Caddy returns 403 to every address
   outside the allowlist. Nothing else is opened.
-- DNS `A` records for the app host `dev.dhanadhara.com` and the files host
-  `files.dev.dhanadhara.com` pointing at the droplet. The apex
-  `dhanadhara.com` and `www` stay reserved for production; never point them
-  at this server.
+- One DNS `A` record, `dev.dhanadhara.com`, pointing at the droplet (or its
+  reserved IP). The apex `dhanadhara.com` and `www` stay reserved for
+  production; never point them at this server.
 
 ## 2. Prepare the host (as root, once)
 
@@ -79,13 +84,11 @@ place even with `set --cone` and dropped the root compose files.
 cd /opt/dhanadhara
 infra/dev-droplet/init-env.sh \
   --domain dev.dhanadhara.com \
-  --files-domain files.dev.dhanadhara.com \
-  --droplet-ip "$(ip -4 -o addr show dev eth0 | awk '{print $4}' | cut -d/ -f1 | head -n1)" \
   --allow-ip 203.0.113.10 --allow-ip 198.51.100.0/24
 ```
 
-This writes `.env` (mode 600) with a new database password, MinIO keys, and JWT
-secret, and creates an empty `apps/api/.env.local` for optional API settings
+This writes `.env` (mode 600) with a new database password and JWT secret,
+and creates an empty `apps/api/.env.local` for optional API settings
 such as `EMAIL_ENABLED=true` with the `SMTP_*` values.
 
 `ENV=development` returns one-time codes in API responses by design, so testers
@@ -97,7 +100,7 @@ never remove it, and never point real users at this host.
 
 ```bash
 sudo install -m 0644 infra/dev-droplet/Caddyfile /etc/caddy/Caddyfile
-grep -E '^DEV_(DOMAIN|FILES_DOMAIN|ALLOWED_IPS|DROPLET_IP)=' .env \
+grep -E '^DEV_(DOMAIN|ALLOWED_IPS)=' .env \
   | sudo tee /etc/caddy/dev-droplet.env >/dev/null
 sudo chown root:caddy /etc/caddy/dev-droplet.env && sudo chmod 0640 /etc/caddy/dev-droplet.env
 sudo install -d /etc/systemd/system/caddy.service.d
@@ -126,7 +129,7 @@ for it, so allow a few minutes.
 sudo ss -tlnp | grep -E ':(5432|5433|6379|8000|3001|9000|9001)\b'
 ```
 
-Only `127.0.0.1:8000`, `127.0.0.1:3001`, and `127.0.0.1:9000` should appear.
+Only `127.0.0.1:8000` and `127.0.0.1:3001` should appear.
 From an allowlisted machine, `https://dev.dhanadhara.com` loads; from any other
 network it returns 403.
 
@@ -143,8 +146,10 @@ Optionally load the synthetic demo dataset (`docs/demo-data.md`). Its accounts
 use published passwords, so only do this while the allowlist is enforced:
 
 ```bash
-infra/dev-droplet/dc.sh exec -T api uv run python -m app.scripts.seed_demo --verify
+infra/dev-droplet/dc.sh exec -T api uv run python -m app.scripts.seed_demo --verify --skip-media
 ```
+
+`--skip-media` is required here because there is no object storage.
 
 ## Updating
 
@@ -158,6 +163,6 @@ changes, run `infra/dev-droplet/dc.sh up -d --build api scheduler web`.
 
 ## Starting fresh again
 
-`infra/dev-droplet/dc.sh down -v` deletes every volume (database, MinIO,
+`infra/dev-droplet/dc.sh down -v` deletes every volume (database and ClamAV
 signatures). Then `rm .env` and repeat step 4 onward. Re-copy Caddy's
 environment file in step 5 if a host value changed.

@@ -77,7 +77,7 @@ class DevDropletComposeTests(unittest.TestCase):
     def test_every_published_port_is_removed_or_loopback_only(self) -> None:
         published = {name for name, lines in self.base.items() if port_entries(lines)[0] is not None}
         self.assertTrue(published, "base compose should publish development ports")
-        loopback_only = {"minio": {"127.0.0.1:9000:9000"}, "api": {"127.0.0.1:8000:8000"}, "web": {"127.0.0.1:3001:3000"}}
+        loopback_only = {"api": {"127.0.0.1:8000:8000"}, "web": {"127.0.0.1:3001:3000"}}
         for name in published:
             with self.subTest(service=name):
                 header, items = port_entries(self.droplet.get(name, []))
@@ -88,9 +88,24 @@ class DevDropletComposeTests(unittest.TestCase):
                     self.assertEqual(header, "!reset []")
                     self.assertEqual(items, [])
 
+    def test_object_storage_never_starts_and_nothing_waits_for_it(self) -> None:
+        # minio/minio and minio/mc are no longer published; the droplet must
+        # not try to pull or depend on them.
+        for name in ("minio", "minio-init"):
+            with self.subTest(service=name):
+                self.assertIn('profiles: ["object-storage"]', "\n".join(self.droplet[name]))
+        api = "\n".join(self.droplet["api"])
+        self.assertIn("depends_on: !override", api)
+        self.assertNotIn("minio", api)
+        for name, lines in {**self.base, **self.dev}.items():
+            if name in ("minio", "minio-init", "api"):
+                continue
+            with self.subTest(dependent=name):
+                self.assertNotRegex("\n".join(lines), r"^\s+minio:\s*$")
+
     def test_long_running_services_restart_after_reboot(self) -> None:
         for name in self.base:
-            if name == "minio-init":
+            if name in ("minio", "minio-init"):
                 continue
             with self.subTest(service=name):
                 self.assertTrue(
@@ -105,7 +120,7 @@ class DevDropletComposeTests(unittest.TestCase):
             for line in (DROPLET / "compose.droplet.yml").read_text(encoding="utf-8").splitlines()
             if not line.lstrip().startswith("#")
         )
-        for variable in ("DEV_SECRET_KEY", "POSTGRES_PASSWORD", "SPACES_ACCESS_KEY", "SPACES_SECRET_KEY"):
+        for variable in ("DEV_SECRET_KEY", "POSTGRES_PASSWORD", "DEV_DOMAIN"):
             with self.subTest(variable=variable):
                 self.assertIn(f"${{{variable}?", overlay)
         self.assertNotIn("minioadmin", overlay)
@@ -121,7 +136,8 @@ class DevDropletCaddyTests(unittest.TestCase):
     def test_every_site_denies_non_allowlisted_clients_first(self) -> None:
         caddyfile = (DROPLET / "Caddyfile").read_text(encoding="utf-8")
         sites = re.findall(r"^(\{\$DEV_[A-Z_]+\}) \{\n(.*?)^\}", caddyfile, re.MULTILINE | re.DOTALL)
-        self.assertEqual([site for site, _ in sites], ["{$DEV_DOMAIN}", "{$DEV_FILES_DOMAIN}"])
+        self.assertEqual([site for site, _ in sites], ["{$DEV_DOMAIN}"])
+        self.assertNotIn(":9000", caddyfile)
         for site, body in sites:
             with self.subTest(site=site):
                 directives = [
@@ -157,10 +173,6 @@ class DevDropletInitEnvTests(unittest.TestCase):
             "infra/dev-droplet/init-env.sh",
             "--domain",
             "dev.example.com",
-            "--files-domain",
-            "files.dev.example.com",
-            "--droplet-ip",
-            "192.0.2.10",
         ]
         for value in allow:
             args += ["--allow-ip", value]
@@ -176,11 +188,11 @@ class DevDropletInitEnvTests(unittest.TestCase):
         )
         self.assertEqual(env["DEV_DOMAIN"], "dev.example.com")
         self.assertEqual(env["DEV_ALLOWED_IPS"], '"203.0.113.10 198.51.100.0/24"')
-        secrets = [env[key] for key in ("POSTGRES_PASSWORD", "SPACES_SECRET_KEY", "DEV_SECRET_KEY")]
+        secrets = [env[key] for key in ("POSTGRES_PASSWORD", "DEV_SECRET_KEY")]
         for value in secrets:
             self.assertRegex(value, r"^[0-9a-f]{64}$")
-        self.assertEqual(len(set(secrets)), 3)
-        self.assertRegex(env["SPACES_ACCESS_KEY"], r"^[0-9a-f]{24}$")
+        self.assertEqual(len(set(secrets)), 2)
+        self.assertNotIn("SPACES_ACCESS_KEY", env)
         self.assertTrue((self.root / "apps/api/.env.local").exists())
 
         before = (self.root / ".env").read_bytes()
