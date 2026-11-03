@@ -1,4 +1,5 @@
-# Reviewed 2026-08-31; keep the readable release beside the immutable manifest.
+# Reviewed 2026-11-04 (Alpine package pins); keep the readable release beside
+# the immutable manifest.
 FROM alpine:3.23@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -19,10 +20,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # The runtime gets no application source, dependency environment, credentials,
 # persistent volume, or public port in the documented Compose topology.
 RUN apk add --no-cache --upgrade \
-    "python3=3.12.14-r0" \
+    "python3=3.12.16-r0" \
     "ffmpeg=8.0.1-r1" \
-    "libcrypto3=3.5.8-r0" \
-    "libssl3=3.5.8-r0" \
+    "libcrypto3=3.5.9-r0" \
+    "libssl3=3.5.9-r0" \
     "sqlite-libs=3.53.4-r0" \
     && addgroup -S -g 10001 media \
     && adduser -S -D -H -u 10001 -G media media

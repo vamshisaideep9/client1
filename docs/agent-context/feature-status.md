@@ -16,7 +16,11 @@ decision, 2026-11-03): `minio/minio` and `minio/mc` are no longer published on
 Docker Hub or quay.io, so the first droplet `up` failed to pull them. Uploads,
 managed media and banner images do not work there; database-backed journeys
 do. The local dev stack is unchanged but cannot pull those images on a fresh
-machine either. Caddy answers 403 to clients
+machine either. The first droplet build also exposed vanished Alpine pins; the
+API and media-runtime images now pin `libcrypto3`/`libssl3` 3.5.9-r0 and
+`python3` 3.12.16-r0, verified by fresh builds and a healthy media runtime.
+The production-only `infra/docker/runtime/` wrappers remain on the stale pins
+until the production image-release process refreshes them. Caddy answers 403 to clients
 outside the IP allowlist before any proxying, and the droplet checks out only
 `apps/api`, `apps/web`, `apps/media-runtime` and `infra/dev-droplet`. Because
 `ENV=development` returns one-time codes in API responses by design, that
