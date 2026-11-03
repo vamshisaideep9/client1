@@ -130,8 +130,8 @@ class ProductionRuntimeContractTests(unittest.TestCase):
             "7bff3c3776ec467fc1437960f2c469d8beb30f536a6465a3350c647ccd260ec2 AS uv-bin",
             dockerfile,
         )
-        self.assertIn('"libcrypto3=3.5.8-r0"', dockerfile)
-        self.assertIn('"libssl3=3.5.8-r0"', dockerfile)
+        self.assertIn('"libcrypto3=3.5.9-r0"', dockerfile)
+        self.assertIn('"libssl3=3.5.9-r0"', dockerfile)
         self.assertIn('"sqlite-libs=3.53.4-r0"', dockerfile)
         self.assertNotIn("apt-get", dockerfile)
         self.assertIn('ENV PATH="/app/.venv/bin:${PATH}"', production_stage)
@@ -145,7 +145,7 @@ class ProductionRuntimeContractTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn('"PyJWT[crypto]>=2.10.1,<3"', pyproject)
+        self.assertIn('"PyJWT[crypto]>=2.15.0,<3"', pyproject)
         self.assertNotIn("python-jose", pyproject)
         self.assertNotIn("from jose", security_source)
         self.assertIn("from jwt import PyJWTError as JWTError", security_source)
@@ -359,10 +359,10 @@ class ProductionRuntimeContractTests(unittest.TestCase):
             "fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40",
             dockerfile,
         )
-        self.assertIn('"python3=3.12.14-r0"', dockerfile)
+        self.assertIn('"python3=3.12.16-r0"', dockerfile)
         self.assertIn('"ffmpeg=8.0.1-r1"', dockerfile)
-        self.assertIn('"libcrypto3=3.5.8-r0"', dockerfile)
-        self.assertIn('"libssl3=3.5.8-r0"', dockerfile)
+        self.assertIn('"libcrypto3=3.5.9-r0"', dockerfile)
+        self.assertIn('"libssl3=3.5.9-r0"', dockerfile)
         self.assertIn('"sqlite-libs=3.53.4-r0"', dockerfile)
         self.assertNotIn("apt-get", dockerfile)
         self.assertIn("MEDIA_TRANSCODE_TIMEOUT_SECONDS=180", dockerfile)

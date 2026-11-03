@@ -822,13 +822,25 @@ async def settle_from_webhook(
         return
     async with AsyncSessionLocal() as db:
         payout = await db.scalar(
-            select(Payout).where(
+            select(Payout)
+            .where(
                 Payout.provider == provider,
                 Payout.gateway_payout_id == gateway_payout_id,
             )
+            .with_for_update()
         )
         if payout is None:
             logger.warning("payout.webhook_unmatched gateway_payout_id=%s", gateway_payout_id)
+            return
+
+        # Serialize the state read with settlement. A failure/reversal that read
+        # INITIATED before another transaction paid must re-read PAID before
+        # deciding whether to ignore the event or post its compensating debit.
+        # Keep our accounting state REVERSED even if its notification preceded
+        # PAID. A late processed event must not recreate a credit. RazorpayX
+        # Current accounts may subsequently label a reversal "failed"; that
+        # does not undo the return of funds or release the obligation again.
+        if payout.status == PayoutStatus.REVERSED:
             return
 
         if target == PayoutStatus.PAID:
