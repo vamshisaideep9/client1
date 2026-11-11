@@ -6033,6 +6033,10 @@ export interface components {
             template_id?: string | null;
             /** Title */
             title: string;
+            /** Video Media Asset Id */
+            video_media_asset_id?: string | null;
+            /** Youtube Url */
+            youtube_url?: string | null;
         };
         /** BannerImageUploadRequest */
         BannerImageUploadRequest: {
@@ -6137,6 +6141,12 @@ export interface components {
             updated_at: string;
             /** Version */
             version: number;
+            /** Video Media Asset Id */
+            video_media_asset_id?: string | null;
+            /** Video Url */
+            video_url?: string | null;
+            /** Youtube Video Id */
+            youtube_video_id?: string | null;
         };
         /**
          * BannerStatus
@@ -6218,6 +6228,10 @@ export interface components {
             template_id?: string | null;
             /** Title */
             title?: string | null;
+            /** Video Media Asset Id */
+            video_media_asset_id?: string | null;
+            /** Youtube Url */
+            youtube_url?: string | null;
         };
         /** BookmarkCreate */
         BookmarkCreate: {
@@ -6298,7 +6312,7 @@ export interface components {
              * Content Type
              * @enum {string}
              */
-            content_type: "image/jpeg" | "image/png" | "image/webp";
+            content_type: "image/jpeg" | "image/png" | "image/webp" | "video/mp4";
             /** Object Key */
             object_key: string;
             /** Source Reference */
@@ -6311,7 +6325,7 @@ export interface components {
              * Usage Type
              * @enum {string}
              */
-            usage_type: "homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign";
+            usage_type: "homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign" | "banner_video";
         };
         /** CampaignMediaListResponse */
         CampaignMediaListResponse: {
@@ -6386,7 +6400,7 @@ export interface components {
              * Content Type
              * @enum {string}
              */
-            content_type: "image/jpeg" | "image/png" | "image/webp";
+            content_type: "image/jpeg" | "image/png" | "image/webp" | "video/mp4";
             /** Filename */
             filename: string;
         };
@@ -8889,6 +8903,10 @@ export interface components {
             subtitle: string | null;
             /** Title */
             title: string;
+            /** Video Url */
+            video_url?: string | null;
+            /** Youtube Video Id */
+            youtube_video_id?: string | null;
         };
         /** PublicContentBlockListResponse */
         PublicContentBlockListResponse: {
@@ -15008,7 +15026,7 @@ export interface operations {
         parameters: {
             query?: {
                 active_only?: boolean;
-                usage_type?: ("homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign") | null;
+                usage_type?: ("homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign" | "banner_video") | null;
                 business_line?: ("loans" | "real_estate" | "both") | null;
             };
             header?: never;

@@ -5118,6 +5118,30 @@
             "minLength": 1,
             "title": "Title",
             "type": "string"
+          },
+          "video_media_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Media Asset Id"
+          },
+          "youtube_url": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Url"
           }
         },
         "required": [
@@ -5468,6 +5492,40 @@
           "version": {
             "title": "Version",
             "type": "integer"
+          },
+          "video_media_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Media Asset Id"
+          },
+          "video_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Url"
+          },
+          "youtube_video_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Video Id"
           }
         },
         "required": [
@@ -5814,6 +5872,30 @@
               }
             ],
             "title": "Title"
+          },
+          "video_media_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Media Asset Id"
+          },
+          "youtube_url": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Url"
           }
         },
         "title": "BannerUpdate",
@@ -6067,7 +6149,8 @@
             "enum": [
               "image/jpeg",
               "image/png",
-              "image/webp"
+              "image/webp",
+              "video/mp4"
             ],
             "title": "Content Type",
             "type": "string"
@@ -6112,7 +6195,8 @@
               "sponsor",
               "dashboard_banner",
               "dashboard_offer",
-              "campaign"
+              "campaign",
+              "banner_video"
             ],
             "title": "Usage Type",
             "type": "string"
@@ -6389,7 +6473,8 @@
             "enum": [
               "image/jpeg",
               "image/png",
-              "image/webp"
+              "image/webp",
+              "video/mp4"
             ],
             "title": "Content Type",
             "type": "string"
@@ -14058,6 +14143,28 @@
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "video_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Url"
+          },
+          "youtube_video_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Video Id"
           }
         },
         "required": [
@@ -27341,7 +27448,8 @@
                     "sponsor",
                     "dashboard_banner",
                     "dashboard_offer",
-                    "campaign"
+                    "campaign",
+                    "banner_video"
                   ],
                   "type": "string"
                 },

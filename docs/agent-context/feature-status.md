@@ -31,6 +31,17 @@ existence and business line, rejects client-supplied titles, and snapshots
 `interest_title` for the Agent and telecaller views. No migration. The product
 picker relies on the API's active-product filter (fixes a type error).
 The interest picker is registered as a mutation form surface.
+Stack 5, `feat/banner-video`: additive migration `c3e5a7b9d1f4` adds
+`youtube_video_id` (11-character id, pattern-checked), `video_media_asset_id`
+(RESTRICT) and `video_key` (canonical public MP4 key) to `banners`, with
+single-source and public-placement-only checks, and the `banner_video` Media
+Library usage type. MP4 uploads (20 MB, 30 s) go through the existing scan +
+isolated transcode + rescan pipeline. Home, Financial Services, Properties and
+sponsor banners render a click-to-play youtube-nocookie facade or a muted MP4
+loop with a pause control, reduced-motion/Save-Data handling and carousel
+autoplay hold. CSP adds only `frame-src https://www.youtube-nocookie.com` and
+`img-src https://i.ytimg.com`. Video changes follow the existing draft and
+maker-checker approval flow.
 
 **Implemented — development droplet deployment overlay** (2026-11-02),
 branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;

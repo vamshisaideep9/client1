@@ -7,6 +7,7 @@ import { ChevronDown, ShieldCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ResponsiveArtwork } from "@/components/responsive-artwork";
+import { BannerVideo } from "@/components/banner-video";
 import {
   Carousel,
   CarouselContent,
@@ -46,6 +47,8 @@ export function HeroCarousel({
   const [count, setCount] = useState(0);
   const [interactionPaused, setInteractionPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  // True while a banner video plays, so a running video is never slid away.
+  const [videoPlaying, setVideoPlaying] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -62,7 +65,11 @@ export function HeroCarousel({
     setCount(api.scrollSnapList().length);
     setSelected(api.selectedScrollSnap());
 
-    const onSelect = () => setSelected(api.selectedScrollSnap());
+    const onSelect = () => {
+      setSelected(api.selectedScrollSnap());
+      // The newly selected slide reports its own video state.
+      setVideoPlaying(false);
+    };
     api.on("select", onSelect);
     api.on("reInit", onSelect);
 
@@ -98,7 +105,7 @@ export function HeroCarousel({
   useEffect(() => {
     if (!api || banners.length <= 1) return;
 
-    if (reducedMotion || interactionPaused) return;
+    if (reducedMotion || interactionPaused || videoPlaying) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
 
@@ -119,7 +126,7 @@ export function HeroCarousel({
       clearTimeout(timeoutId);
       api.off("select", schedule);
     };
-  }, [api, banners.length, interactionPaused, reducedMotion]);
+  }, [api, banners.length, interactionPaused, reducedMotion, videoPlaying]);
 
   // Embla with zero slides is undefined behavior; the page never intends to
   // pass zero (it falls back to FALLBACK_HERO_BANNERS), but this is
@@ -183,7 +190,20 @@ export function HeroCarousel({
                 >
                   {/* Media layer: real landscape image fills the card; otherwise
                       a cream placeholder that matches the NavBar (no gray seam). */}
-                  {banner.image ? (
+                  {banner.youtubeId || banner.videoUrl ? (
+                    // Video replaces the artwork; the artwork becomes its poster.
+                    // Stacked under the copy on phones, the right-hand panel
+                    // (where artwork sits) from sm up.
+                    <BannerVideo
+                      youtubeId={banner.youtubeId}
+                      videoUrl={banner.videoUrl}
+                      poster={banner.image}
+                      title={banner.title}
+                      active={isSelected && interactive}
+                      onPlayingChange={isSelected ? setVideoPlaying : undefined}
+                      className="mx-5 mt-5 aspect-video rounded-xl sm:absolute sm:inset-y-0 sm:right-0 sm:z-10 sm:m-0 sm:aspect-auto sm:w-[56%] sm:rounded-none"
+                    />
+                  ) : banner.image ? (
                     <>
                     {!loadedImages.has(banner.image) && <Skeleton data-banner-loading aria-hidden="true" className="absolute inset-y-0 right-0 hidden w-3/5 rounded-none sm:block [mask-image:linear-gradient(to_right,transparent,black_60%)]" />}
                     <ResponsiveArtwork
