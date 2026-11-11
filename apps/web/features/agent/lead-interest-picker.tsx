@@ -170,7 +170,8 @@ export function LeadInterestPicker({
     if (businessLine !== "loans") return;
     let active = true;
     void getLoanTypes().then((res) => {
-      if (active && res.ok) setProducts(res.data.filter((p) => p.active));
+      // The API already returns only active, configured products.
+      if (active && res.ok) setProducts(res.data);
     });
     return () => {
       active = false;

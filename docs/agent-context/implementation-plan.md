@@ -93,7 +93,8 @@ rows), a one-time lifecycle timeline and the referrer's own bonus. Agents pick
 a published property (real estate) or active product (loans) in Introduce Lead
 and confirm it from a details-and-fees popup; the API validates the key set,
 existence and business line, rejects client-supplied titles, and snapshots
-`interest_title` for the Agent and telecaller views. No migration.
+`interest_title` for the Agent and telecaller views. No migration. The product
+picker relies on the API's active-product filter (fixes a type error).
 
 **Implemented — production audit remediation** (2026-10-12),
 on `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308). Reviewed authentication,
