@@ -112,6 +112,10 @@ their parent stack branches. The owner withdrew the glass finish, so
 `feat/land-batch-no-glass` lands stacks 2-5 on `main` together with the public
 navbar no-wrap fix (1280-1535 px) and the wider callback dialog (42rem); #316
 and mirror #21 (which carried glass) are superseded.
+#316 was nevertheless merged into `main` with the glass finish; this branch
+merges `main` with the `ours` strategy, so landing it removes all glass styling
+(backdrop, glass cards, buttons, dropdowns, body marker, Button data hooks) while
+keeping the batch features. The sticky property search bar is solid as well.
 
 **Implemented — production audit remediation** (2026-10-12),
 on `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308). Reviewed authentication,
