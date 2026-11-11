@@ -7,7 +7,7 @@ import type { TrustPoint } from "@/lib/products";
 
 export function TrustStrip({ points }: { points: TrustPoint[] }) {
   return (
-    <div className="relative mt-14 overflow-hidden rounded-2xl border border-[var(--nav-border)] bg-[var(--nav-tint)]/40 shadow-md">
+    <div className="glass relative mt-14 overflow-hidden rounded-2xl border border-[var(--nav-border)] shadow-md">
       <div
         aria-hidden
         className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-transparent via-brand-blue to-transparent"

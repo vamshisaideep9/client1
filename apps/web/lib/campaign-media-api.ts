@@ -62,6 +62,10 @@ export async function deleteCampaignMedia(id: string): Promise<ApiResponse<undef
 
 export const CAMPAIGN_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
 export const CAMPAIGN_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
+// Banner videos: MP4 only (the isolated processor transcodes to MP4). The API
+// re-checks size and enforces the 30-second duration cap after upload.
+export const CAMPAIGN_VIDEO_ACCEPT = "video/mp4";
+export const CAMPAIGN_VIDEO_MAX_BYTES = 20 * 1024 * 1024;
 
 /**
  * Presign, upload, then register one artwork file.

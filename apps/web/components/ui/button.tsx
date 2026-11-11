@@ -46,6 +46,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button";
     return (
       <Comp
+        // Styling hooks for scoped themes (the public glass finish in
+        // globals.css). They do not change the variant classes.
+        data-slot="button"
+        data-variant={variant ?? "default"}
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}

@@ -50,7 +50,15 @@ export function PropertyBrowser({
   return (
     <div className="space-y-6">
       {header}
-      {searchBar}
+      {/* Pinned under the 4rem app header so search, sort and filters stay
+          reachable while scrolling long result grids. The translucent backing
+          keeps cards from showing through the controls. */}
+      <div
+        data-sticky="property-search"
+        className="glass-strong sticky top-16 z-10 -mx-2 rounded-b-2xl border-b px-2 py-3"
+      >
+        {searchBar}
+      </div>
 
       {active ? (
         resultCount === 0 ? (

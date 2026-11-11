@@ -48,7 +48,9 @@ async def send_email(to: str, subject: str, body: str) -> bool:
         logger.info("email.sent to=%s subject=%s", mask_email(to), subject)
         return True
     except Exception as exc:  # delivery failure must not break the auth flow
-        logger.warning("email.failed to=%s error=%s", mask_email(to), exc)
+        # SMTP exceptions can embed the full recipient and provider-echoed
+        # message content, defeating the masked address above.
+        logger.warning("email.failed to=%s error_type=%s", mask_email(to), type(exc).__name__)
         return False
 
 

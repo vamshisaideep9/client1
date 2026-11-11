@@ -21,7 +21,7 @@ export function EarnHero() {
             </h1>
             <p className="mt-5 max-w-2xl text-lg text-[var(--nav-text)] sm:text-xl">
               Become a partner and earn commission on the deals you bring. Or refer
-              friends and earn cashback when their property purchase or loan goes
+              friends and earn a referral bonus when their property purchase or loan goes
               through. Both are free.
             </p>
             <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">

@@ -94,11 +94,11 @@ export const AGENT_FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: "Do I need to become a partner to refer someone?",
-    a: "No. Any registered user gets a referral code and earns cashback. Partners earn commission on the deals they work.",
+    a: "No. Any registered user gets a referral code and earns a referral bonus. Partners earn commission on the deals they work.",
   },
   {
-    q: "How does referral cashback work?",
-    a: "Share your referral code. When your referral's purchase or loan goes through, you get cashback via Razorpay or cheque.",
+    q: "How does the referral bonus work?",
+    a: "Share your referral code. When your referral's purchase or loan goes through, you get a referral bonus via Razorpay or cheque.",
   },
 ];
 
@@ -144,7 +144,7 @@ export const REAL_ESTATE_FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: "Do I pay for the property through the platform?",
-    a: "No, never. Token, booking, and purchase payments go directly between you and the seller or builder. The only money that moves through us is referral cashback or partner payouts.",
+    a: "No, never. Token, booking, and purchase payments go directly between you and the seller or builder. The only money that moves through us is referral bonuses or partner payouts.",
   },
   {
     q: "How does the booking and token process work?",
