@@ -51,6 +51,7 @@ public header, sticky search/filter bars, property and provider cards, the
 sponsor card and the lead dialog, over soft sky `glass-backdrop` sections.
 Dashboards are unchanged. No animation added.
 The services toolbar keeps its `bg-surface` token as the solid fallback.
+The callback (lead) dialog used by the Home page widens to 42rem on desktop.
 
 **Implemented — development droplet deployment overlay** (2026-11-02),
 branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;

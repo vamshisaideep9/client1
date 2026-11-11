@@ -116,6 +116,7 @@ public header, sticky search/filter bars, property and provider cards, the
 sponsor card and the lead dialog, over soft sky `glass-backdrop` sections.
 Dashboards are unchanged. No animation added.
 The services toolbar keeps its `bg-surface` token as the solid fallback.
+The callback (lead) dialog used by the Home page widens to 42rem on desktop.
 
 **Implemented — production audit remediation** (2026-10-12),
 on `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308). Reviewed authentication,
