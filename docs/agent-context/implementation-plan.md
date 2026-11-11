@@ -60,6 +60,43 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In progress — public UI quick wins** (stack 1 of 6 for the 2026-11-11
+product batch), branch `feat/public-ui-quick-wins` from `upstream/main`
+`966c48b`. Sponsored-card dismissal, one-per-row provider offers, compact
+property campaigns without "Open in Dhanadhara", sticky property search,
+"referral bonus" public copy, a Compound Interest calculator, wider
+loan-calculator limits (34% rate, 35 years, 80% LAP LTV, 5% balance-transfer
+fee) and copy-deterred legal pages. Web only; no API, schema, permission or
+contract change. Stacked follow-ups: share/refer links, property developer
+field and bookmark suggestions, referral/agent lead detail, banner video, and a
+public glass finish. Recommended: Opus / high.
+The Compound Interest island is registered as a calculator form surface.
+
+**Implemented — production audit remediation** (2026-10-12),
+on `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308). Reviewed authentication,
+role/object/business-line isolation, RLS, uploads, payout/webhook settlement,
+PII handling, public web behavior, dependencies and delivery configuration.
+Remediated OTP concurrency, payout reversal ordering, SMTP exception PII,
+frontend body-read failures, swallowed Next control flow and blocked storage
+video. Updated vulnerable production and development dependencies. No migration,
+API contract, permission model, production catalogue defaults or visual redesign.
+
+Verification: 714 web tests, lint/typecheck, production compilation, 11 release
+browser cases, actual-response CSP enforcement, 208 infrastructure tests (one
+platform skip), API lint/format, fresh migrations and unchanged OpenAPI pass.
+Focused OTP/payout regressions fail before their fixes and pass afterward.
+Final full API and Linux standalone gate evidence is recorded on the linked PR;
+interrupted or partial local runs are not counted as passes. Windows packaging
+needed a local junction for browser testing. Python dependency scans (production
+and full) and the Node production scan are clean. One development-only braces
+advisory remains because no patched release is published; details and reachability
+are recorded in the PR and feature ledger, without suppressing the audit.
+
+The HTML handoff remains local and its prior PRs are closed unmerged. Next:
+require final PR checks and human review, then satisfy existing deployment,
+provider, capacity and recovery gates. This audit does not authorize deployment
+or real payments, and does not guarantee the absence of every possible defect.
+
 **Implemented — complete static homepage sponsor card** (2026-09-16),
 on `feat/auth-actions-footer`. Replaces the former curtain reveal with an
 uncropped 16:9 image, burgundy headline/CTA, clear Sponsored disclosure and a
@@ -1924,6 +1961,9 @@ The backlog builds on these delivered foundations:
 
 | Date | Change | Evidence |
 | --- | --- | --- |
+| 2026-11-03 | Development droplet: MinIO disabled (user decision) after `minio/minio` and `minio/mc` proved unpublished on Docker Hub and quay.io; the API no longer waits for it, the files host and its Caddy site, droplet IP and MinIO credentials are removed, and the runbook marks uploads and media as unavailable there. Local dev compose unchanged; replacing object storage for fresh machines is a separate decision. | Droplet `up` pull failure; `docker manifest inspect` on both registries; `scripts/tests/test_dev_droplet.py` (8 pass); Compose 5.4.0 render (8 services, loopback 8000/3001 only); Caddy 2.6.2 adapt (403 first); [PR #309](https://github.com/brollysolutions/client1/pull/309). |
+| 2026-11-03 | Development droplet runbook: sparse checkout now runs `init --cone` before `set`, because Git 2.34 (Ubuntu 22.04) kept non-cone patterns even with `set --cone` and dropped the root compose files. | Observed and confirmed on the real droplet (`core.sparseCheckoutCone=true`, root compose files present); [PR #309](https://github.com/brollysolutions/client1/pull/309). |
+| 2026-11-02 | Added the development droplet deployment overlay (`infra/dev-droplet/`): loopback-only proxied ports, no datastore ports, fresh generated credentials, IP-allowlisted host Caddy, and sparse-checkout runbook. Development data only. | [PR #309](https://github.com/brollysolutions/client1/pull/309); `scripts/tests/test_dev_droplet.py` (7 pass); Docker Compose 5.4.0 render; Caddy 2.6.2 adapt with allowlist-first route order. |
 | 2026-09-02 | Corrected the merged registry record: the six Dhanadhara runtime packages exist and deny anonymous access, so deletion and republication are unnecessary. The private runtime publication gate is complete; the next engineering step is a new exact-candidate freeze and rehearsal, while host capacity and external/human launch gates remain open. | [PR #289](https://github.com/brollysolutions/client1/pull/289); raw no-`Authorization` GHCR token requests return HTTP 401 for all six pull scopes and HTTP 200 for a known-public control, authenticated pulls resolve the six recorded OCI-index digests, retained post-publication scan/SBOM hashes and counts match, and all 45 repository script tests pass with one expected Windows POSIX-resource skip. No registry mutation, deployment, credential disclosure, application-code change, or GO decision occurred. |
 | 2026-09-02 | Added PII-minimized, read-only platform-Admin oversight of submitted credit-card and insurance enquiries, closing the final FR-2.2 registry visibility gap and moving the 79-requirement implementation ledger to 100%. | [PR #287](https://github.com/brollysolutions/client1/pull/287); explicit-column no-store API/contract/UI projection, 12 coverage-contract tests, 10 focused PostgreSQL authorization/RLS tests, deterministic contracts, API Ruff/format and one head, 7+11 tracking tests, web lint/typecheck/610 tests, authenticated desktop/mobile Playwright, and a strict Linux 94-route image. The full API run completes 1,946 passes / 4 unrelated failures; isolated rerun passes the transient DNS/reporting cases and reproduces the known media-environment and polluted-catalogue baselines. Applicant identifiers, form data, provider snapshots/references, contact data, and financial facts remain outside the Admin query and response; no mutation, migration, export, or Client/staff behavior changed. Security, design/accessibility, and maintainer review find no change-owned issue. |
 | 2026-09-02 | Added safe read-only platform-Admin oversight of persisted field-visibility overrides, closing the `field_visibility_config` read gap while leaving `financial_service_enquiries` as the remaining FR-2.2 visibility gap. | [PR #286](https://github.com/brollysolutions/client1/pull/286); minimized no-store API/contract/UI projection, 21 focused PostgreSQL authorization/registry tests, API Ruff/format and one head, deterministic generated contracts, web lint/typecheck/609 tests, focused authenticated Admin Playwright, strict Linux 94-route production image, and security/design/diff review. The full API run's three failures are unrelated baselines; no field-visibility mutation, migration, runtime-default, contact-data, or cross-role behavior changed. |
