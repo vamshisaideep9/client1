@@ -53,6 +53,7 @@ const PARSERS = {
   city: parseAsString,
   locality: parseAsString,
   pincode: parseAsString,
+  developer: parseAsString,
   sort: parseAsStringLiteral(SORT_VALUES),
 };
 
@@ -73,6 +74,7 @@ function toPropertyFilters(state: Values<typeof PARSERS>): PropertyFilters {
     city: state.city ?? undefined,
     locality: state.locality ?? undefined,
     pincode: state.pincode ?? undefined,
+    developer: state.developer ?? undefined,
     sort: (state.sort ?? undefined) as SortOrder | undefined,
   };
 }

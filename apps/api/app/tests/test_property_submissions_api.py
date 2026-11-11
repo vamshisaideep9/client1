@@ -226,6 +226,38 @@ async def test_panorama_is_ready_and_published_with_approved_property(
 
 
 @pytest.mark.asyncio
+async def test_developer_name_is_published_with_the_approved_property(
+    client: AsyncClient,
+) -> None:
+    _, mobile = await full_registration(client, lines=["real_estate"])
+    uid = await _auth_user_uuid(mobile)
+    created = await client.post(
+        "/api/v1/property-submissions",
+        json={**_payload(uid), "developer_name": "  My  Home "},
+        headers={"Authorization": f"Bearer {_agent_token(uid)}"},
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["developer_name"] == "My Home"
+
+    admin_headers = {"Authorization": f"Bearer {_admin_token(uid)}"}
+    await _review_rera(client, created.json()["id"], admin_headers)
+    approved = await client.post(
+        f"/api/v1/property-submissions/{created.json()['id']}/approve",
+        headers=admin_headers,
+    )
+    assert approved.status_code == 200, approved.text
+    property_id = approved.json()["approved_property_id"]
+
+    authed = await client.get(f"/api/v1/properties/{property_id}", headers=admin_headers)
+    assert authed.json()["developer_name"] == "My Home"
+    public_detail = await client.get(f"/api/v1/public/properties/{property_id}")
+    assert public_detail.json()["developer_name"] == "My Home"
+    public_list = await client.get("/api/v1/public/properties")
+    listed = next(item for item in public_list.json()["properties"] if item["id"] == property_id)
+    assert listed["developer_name"] == "My Home"
+
+
+@pytest.mark.asyncio
 async def test_panorama_presign_uses_image_cap(client: AsyncClient) -> None:
     _, mobile = await full_registration(client, lines=["real_estate"])
     uid = await _auth_user_uuid(mobile)

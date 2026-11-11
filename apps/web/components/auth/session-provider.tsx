@@ -10,6 +10,7 @@ import {
   type StaffFeature,
   type UserRole,
 } from "@/lib/auth";
+import { rememberBookmarkedIds } from "@/lib/bookmark-cache";
 import { rememberOwnReferralCode } from "@/lib/referral-share";
 import { getMyReferral } from "@/lib/referrals-api";
 
@@ -118,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const clear = React.useCallback(() => {
     setSessionState(null);
     setSessionHint(false);
+    rememberBookmarkedIds(null);
     rememberOwnReferralCode(null);
   }, []);
 
