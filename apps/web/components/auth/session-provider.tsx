@@ -10,6 +10,8 @@ import {
   type StaffFeature,
   type UserRole,
 } from "@/lib/auth";
+import { rememberOwnReferralCode } from "@/lib/referral-share";
+import { getMyReferral } from "@/lib/referrals-api";
 
 // The access token lives in memory only (never localStorage) so an XSS payload
 // can't read it. A hard reload loses it, then re-hydrates from the httponly
@@ -116,7 +118,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const clear = React.useCallback(() => {
     setSessionState(null);
     setSessionHint(false);
+    rememberOwnReferralCode(null);
   }, []);
+
+  // Cache a signed-in client's own referral code so public share buttons
+  // (which render outside this provider) can add ?ref= to loan and property
+  // links. Runs once per signed-in role, not on every token rotation.
+  const sessionRole = session?.role ?? null;
+  React.useEffect(() => {
+    if (sessionRole !== "client") {
+      if (sessionRole !== null) rememberOwnReferralCode(null);
+      return;
+    }
+    let active = true;
+    void getMyReferral().then((res) => {
+      if (!active) return;
+      rememberOwnReferralCode(res.ok && res.data.eligible ? res.data.code : null);
+    });
+    return () => {
+      active = false;
+    };
+  }, [sessionRole]);
 
   // Register the 401 refresher (once). When any authed call 401s, the client
   // wrapper calls this to rotate the token via the refresh cookie and retries.

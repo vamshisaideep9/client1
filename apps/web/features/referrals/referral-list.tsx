@@ -23,11 +23,14 @@ export const STATUS_STYLE: Record<string, string> = {
   void: "bg-destructive/10 text-destructive",
 };
 
+// A referral rewards only the referred person's first completed loan or
+// property deal (services/referrals.record_conversion). Once a bonus is earned
+// the link is closed, and later transactions by that person pay nothing.
 export const STATUS_LABEL: Record<string, string> = {
   pending: "Pending",
   converted: "Converted",
-  accrued: "Bonus accrued",
-  paid: "Paid",
+  accrued: "Bonus earned, referral closed",
+  paid: "Bonus paid, referral closed",
   void: "Not eligible",
 };
 

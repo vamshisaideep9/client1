@@ -4,6 +4,7 @@ import { ProviderLogo } from "@/components/provider-logo";
 import Link from "next/link";
 
 import { LeadDialog } from "@/components/lead-dialog";
+import { ShareActions } from "@/components/share-actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -276,6 +277,10 @@ export function FinancialProviderOptions({ product, query: offerQuery, offers: p
                           triggerVariant="outline"
                           origin="provider-offer-card"
                           href={contactHref({ line: "loans", product: `${product.label} - ${offer.provider.name}` })}
+                        />
+                        <ShareActions
+                          path={`${financialServiceHref(product.slug)}#providers`}
+                          title={`${offer.offer_name} from ${offer.provider.name}`}
                         />
                       </div>
                     </Card>

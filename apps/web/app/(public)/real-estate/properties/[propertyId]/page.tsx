@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PhoneCall } from "lucide-react";
 
 import { PropertyDetailView } from "@/components/property-detail-view";
+import { ShareActions } from "@/components/share-actions";
 import type { SimilarPropertyCardData } from "@/components/similar-properties-panel";
 import { Button } from "@/components/ui/button";
 import { contactHref } from "@/lib/leads";
@@ -129,6 +130,11 @@ export default async function PublicPropertyPage({ params }: PageProps) {
                 Contact team
               </Link>
             </Button>
+            <ShareActions
+              className="col-span-2 lg:col-span-1"
+              path={`/real-estate/properties/${property.id}`}
+              title={`${property.title}, ${property.location}`}
+            />
           </>
         }
       />

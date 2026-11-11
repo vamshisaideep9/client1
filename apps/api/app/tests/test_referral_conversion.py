@@ -351,6 +351,60 @@ async def test_idempotent_against_double_call(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_second_transaction_after_reward_pays_nothing(client: AsyncClient) -> None:
+    """One referrer may reward one referred person once. After the first
+    successful transaction accrues the bonus, the edge is closed: a later loan
+    disbursal or property close by the same referred person (a different
+    transaction, even on the other business line) must not accrue again."""
+    _, mobile_a = await full_registration(client, lines=["loans", "real_estate"])
+    uid_a = await _auth_user_uuid(mobile_a)
+    referral_id, referred_uuid = await _seed_pending_referral(uid_a)
+    await _seed_config("loans", "500", {}, created_by_uuid=uid_a)
+    await _seed_config("real_estate", "900", {}, created_by_uuid=uid_a)
+
+    await referrals.record_conversion(
+        referred_auth_user_uuid=uuid.UUID(referred_uuid),
+        business_line="loans",
+        ref_type="loan_application",
+        ref_uuid=uuid.uuid4(),
+    )
+    first = await _get_referral(referral_id)
+    assert first["conversion_status"] == "accrued"
+    assert first["bonus_amount_paise"] == 50000
+
+    for business_line, ref_type in (
+        ("loans", "loan_application"),
+        ("real_estate", "property_deal"),
+    ):
+        await referrals.record_conversion(
+            referred_auth_user_uuid=uuid.UUID(referred_uuid),
+            business_line=business_line,
+            ref_type=ref_type,
+            ref_uuid=uuid.uuid4(),
+        )
+
+    after = await _get_referral(referral_id)
+    assert after["conversion_status"] == "accrued"
+    assert after["bonus_amount_paise"] == 50000
+    assert after["business_line"] == "loans"
+    assert after["converted_ref_uuid"] == first["converted_ref_uuid"]
+    assert await _notification_count(uid_a) == 1
+
+    import app.db.session as _session_mod
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        rows = await db.scalar(
+            text(
+                "SELECT count(*) FROM referrals"
+                " WHERE referrer_auth_user_uuid = :referrer"
+                " AND referred_auth_user_uuid = :referred"
+            ),
+            {"referrer": uid_a, "referred": referred_uuid},
+        )
+    assert rows == 1
+
+
+@pytest.mark.asyncio
 async def test_no_active_config_records_reason_without_amount(client: AsyncClient) -> None:
     _, mobile_a = await full_registration(client, lines=["loans"])
     uid_a = await _auth_user_uuid(mobile_a)

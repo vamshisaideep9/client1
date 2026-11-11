@@ -6,6 +6,13 @@ Status: **Derived living implementation ledger**
 `feat/public-ui-quick-wins` from `upstream/main` `966c48b`; stack 1 of 6 for
 the 2026-11-11 product batch. Web only; requirement coverage unchanged.
 The Compound Interest island is registered as a calculator form surface.
+Stack 2, `feat/share-refer-links`: Share and Refer on public and dashboard
+property cards, property detail, provider offers and loan service pages; shared
+links carry the signed-in client's own `?ref=` code (cached after login, cleared
+on logout), public pages remember an incoming code for the session, and
+registration falls back to it. Regression test proves a second transaction by an
+already-rewarded referred person pays nothing; the list labels earned and paid
+referrals as closed. No API, schema or contract change.
 
 **Implemented — development droplet deployment overlay** (2026-11-02),
 branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;
