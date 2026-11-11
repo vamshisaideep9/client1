@@ -71,6 +71,13 @@ contract change. Stacked follow-ups: share/refer links, property developer
 field and bookmark suggestions, referral/agent lead detail, banner video, and a
 public glass finish. Recommended: Opus / high.
 The Compound Interest island is registered as a calculator form surface.
+Stack 2, `feat/share-refer-links`: Share and Refer on public and dashboard
+property cards, property detail, provider offers and loan service pages; shared
+links carry the signed-in client's own `?ref=` code (cached after login, cleared
+on logout), public pages remember an incoming code for the session, and
+registration falls back to it. Regression test proves a second transaction by an
+already-rewarded referred person pays nothing; the list labels earned and paid
+referrals as closed. No API, schema or contract change.
 
 **Implemented — production audit remediation** (2026-10-12),
 on `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308). Reviewed authentication,
