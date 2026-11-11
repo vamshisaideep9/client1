@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 
 import { LeadDialog } from "@/components/lead-dialog";
+import { ShareActions } from "@/components/share-actions";
 import {
   Card,
   CardContent,
@@ -26,7 +27,7 @@ import type { PropertyListing } from "@/lib/properties";
 export function PropertyCard({ listing }: { listing: PropertyListing }) {
   const detailHref = `/real-estate/properties/${listing.id}`;
   return (
-    <Card className="flex h-full w-[280px] shrink-0 flex-col gap-0 overflow-hidden pt-0 sm:w-[300px]">
+    <Card className="glass flex h-full w-[280px] shrink-0 flex-col gap-0 overflow-hidden pt-0 sm:w-[300px]">
       <Link
         href={detailHref}
         aria-label={`View ${listing.title}`}
@@ -100,6 +101,7 @@ export function PropertyCard({ listing }: { listing: PropertyListing }) {
             propertyRef: listing.id,
           })}
         />
+        <ShareActions path={detailHref} title={`${listing.title}, ${listing.location}`} />
       </CardFooter>
     </Card>
   );

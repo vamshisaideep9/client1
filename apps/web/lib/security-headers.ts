@@ -33,6 +33,9 @@ function trustedOrigin(
   return parsed.origin;
 }
 
+export const YOUTUBE_EMBED_ORIGIN = "https://www.youtube-nocookie.com";
+export const YOUTUBE_THUMBNAIL_ORIGIN = "https://i.ytimg.com";
+
 export function buildSecurityHeaders({
   production,
   strictPublicConfig = false,
@@ -57,7 +60,10 @@ export function buildSecurityHeaders({
   const connectSources = ["'self'", apiOrigin, assetOrigin, ...(production ? [] : ["http://localhost:9000", "ws:", "wss:"])].filter(
     (source): source is string => Boolean(source),
   );
-  const imageSources = ["'self'", "data:", "blob:", assetOrigin].filter(
+  // Public banner videos may embed YouTube, but only through the privacy-
+  // enhanced host and only as a click-to-play facade whose poster comes from
+  // YouTube's thumbnail CDN (components/banner-video.tsx). Exact hosts only.
+  const imageSources = ["'self'", "data:", "blob:", assetOrigin, YOUTUBE_THUMBNAIL_ORIGIN].filter(
     (source): source is string => Boolean(source),
   );
   const scriptSources = [
@@ -71,7 +77,7 @@ export function buildSecurityHeaders({
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "frame-src 'none'",
+    `frame-src ${YOUTUBE_EMBED_ORIGIN}`,
     "object-src 'none'",
     `script-src ${scriptSources.join(" ")}`,
     "style-src 'self' 'unsafe-inline'",

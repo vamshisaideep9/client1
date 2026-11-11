@@ -71,6 +71,67 @@ contract change. Stacked follow-ups: share/refer links, property developer
 field and bookmark suggestions, referral/agent lead detail, banner video, and a
 public glass finish. Recommended: Opus / high.
 The Compound Interest island is registered as a calculator form surface.
+Stack 2, `feat/share-refer-links`: Share and Refer on public and dashboard
+property cards, property detail, provider offers and loan service pages; shared
+links carry the signed-in client's own `?ref=` code (cached after login, cleared
+on logout), public pages remember an incoming code for the session, and
+registration falls back to it. Regression test proves a second transaction by an
+already-rewarded referred person pays nothing; the list labels earned and paid
+referrals as closed. No API, schema or contract change.
+Stack 3, `feat/property-developer-suggestions`: additive migration
+`b7d9f1a3c5e2` adds nullable `developer_name` to `properties` and
+`property_submissions` (table-wide grants and row-level RLS unchanged) with a
+lower-case index; submit/edit forms, approval copy, authenticated and public
+reads, regenerated contracts, a Developer facet plus a name field in the Filters
+sheet, a Developers suggestion group and search haystack. Home shows "Suggested
+for you" from the public catalog ranked against locally cached bookmark ids
+(ids only, session-hint gated, cleared on logout).
+Stack 4, `feat/referral-lead-detail`: each client referral row opens a detail
+dialog with what converted (listing title/location/type or loan product label
+only, resolved through a bypass read constrained to the caller's RLS-visible
+rows), a one-time lifecycle timeline and the referrer's own bonus. Agents pick
+a published property (real estate) or active product (loans) in Introduce Lead
+and confirm it from a details-and-fees popup; the API validates the key set,
+existence and business line, rejects client-supplied titles, and snapshots
+`interest_title` for the Agent and telecaller views. No migration. The product
+picker relies on the API's active-product filter (fixes a type error).
+The interest picker is registered as a mutation form surface.
+Stack 5, `feat/banner-video`: additive migration `c3e5a7b9d1f4` adds
+`youtube_video_id` (11-character id, pattern-checked), `video_media_asset_id`
+(RESTRICT) and `video_key` (canonical public MP4 key) to `banners`, with
+single-source and public-placement-only checks, and the `banner_video` Media
+Library usage type. MP4 uploads (20 MB, 30 s) go through the existing scan +
+isolated transcode + rescan pipeline. Home, Financial Services, Properties and
+sponsor banners render a click-to-play youtube-nocookie facade or a muted MP4
+loop with a pause control, reduced-motion/Save-Data handling and carousel
+autoplay hold. CSP adds only `frame-src https://www.youtube-nocookie.com` and
+`img-src https://i.ytimg.com`. Video changes follow the existing draft and
+maker-checker approval flow.
+Stack 6, `feat/public-glass-finish`: the public navbar no longer wraps link
+or button labels on 1280-1535 px laptop widths (no-wrap labels, tighter `xl`
+spacing restored at `2xl`, `auto | 1fr | auto` grid until `2xl`). Glass tokens
+and `glass` / `glass-strong` utilities (solid fallback without
+backdrop-filter, for reduced transparency and forced colors) are applied to the
+public header, sticky search/filter bars, property and provider cards, the
+sponsor card and the lead dialog, over soft sky `glass-backdrop` sections.
+Dashboards are unchanged. No animation added.
+The services toolbar keeps its `bg-surface` token as the solid fallback.
+The callback (lead) dialog used by the Home page widens to 42rem on desktop.
+Glass made visible after owner review: public pages now sit on a fixed ambient
+backdrop (sky, navy, gold and indigo orbs), `--nav-bg` is transparent inside the
+public scope, panes are 50-62% white with an 18-24px blur and bright edges, and
+glass extends to service, feature, calculator, FAQ and trust cards. Browser
+check at 1366 px confirms frosted header/toolbar over colour; navbar stays on
+one line.
+Buttons and dropdowns join the glass finish: navy buttons become tinted glass,
+outline buttons clear glass, ghost buttons a glass hover pill; nav mega-menus,
+popovers, selects, menus and the mobile navigation sheet are frosted. A body
+marker set only on public pages scopes portalled surfaces; `Button` gains inert
+`data-slot`/`data-variant` hooks. 731 web tests and typecheck pass.
+Dropdowns are frosted rather than see-through (92% white, 32px blur) after
+owner review. The header glass moved to a `::before` layer: a header with its own
+backdrop-filter is a backdrop root, so the nested mega-menu could not blur the
+page and text showed through it.
 
 **Implemented — production audit remediation** (2026-10-12),
 on `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308). Reviewed authentication,

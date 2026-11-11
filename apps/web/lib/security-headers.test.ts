@@ -81,6 +81,13 @@ describe("browser security headers", () => {
     expect(headers["Content-Security-Policy"]).toContain(
       "img-src 'self' data: blob: https://assets.dhanadhara.example",
     );
+    // Banner videos: only the privacy-enhanced YouTube embed host may be
+    // framed, and only its thumbnail CDN is added to images.
+    expect(headers["Content-Security-Policy"]).toContain(
+      "frame-src https://www.youtube-nocookie.com;",
+    );
+    expect(headers["Content-Security-Policy"]).not.toContain("frame-src *");
+    expect(headers["Content-Security-Policy"]).toContain("https://i.ytimg.com");
     expect(() =>
       buildSecurityHeaders({ production: true, apiBaseUrl: "javascript:alert(1)" }),
     ).toThrow(/HTTP/);

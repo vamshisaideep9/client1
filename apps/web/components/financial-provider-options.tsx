@@ -4,6 +4,7 @@ import { ProviderLogo } from "@/components/provider-logo";
 import Link from "next/link";
 
 import { LeadDialog } from "@/components/lead-dialog";
+import { ShareActions } from "@/components/share-actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -106,7 +107,7 @@ export function FinancialProviderOptions({ product, query: offerQuery, offers: p
   const sort = offerQuery.sort ?? "recommended";
   const pageCount = Math.max(1, Math.ceil(offers.total / offers.page_size));
   return (
-      <section id="providers" className="scroll-mt-20 bg-[var(--nav-bg)] px-4 py-16 sm:px-6 lg:px-8">
+      <section id="providers" className="glass-backdrop scroll-mt-20 px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-3xl">
             <h2 className="font-heading text-3xl font-semibold text-foreground sm:text-4xl">
@@ -118,7 +119,7 @@ export function FinancialProviderOptions({ product, query: offerQuery, offers: p
             </p>
           </div>
 
-          <form key={JSON.stringify(offerQuery)} action={`${financialServiceHref(product.slug)}#providers`} method="get" className="mt-8 rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <form key={JSON.stringify(offerQuery)} action={`${financialServiceHref(product.slug)}#providers`} method="get" className="glass mt-8 rounded-2xl border p-5">
             <div className="grid gap-4 lg:grid-cols-[1fr_14rem_14rem_auto] lg:items-end">
               <div className="grid gap-1.5">
                 <Label htmlFor="provider-search">Search providers</Label>
@@ -234,7 +235,7 @@ export function FinancialProviderOptions({ product, query: offerQuery, offers: p
                   <li key={offer.id}>
                     <Card
                       data-layout="provider-offer-row"
-                      className="grid gap-0 overflow-hidden py-0 lg:grid-cols-[17rem_minmax(0,1fr)_15rem]"
+                      className="glass grid gap-0 overflow-hidden py-0 lg:grid-cols-[17rem_minmax(0,1fr)_15rem]"
                     >
                       <div className="flex items-center gap-4 border-b border-border px-5 py-5 lg:flex-col lg:items-start lg:justify-center lg:border-b-0 lg:border-r">
                         <ProviderLogo url={offer.provider.logo_url} sizes="96px" className="h-14 w-24 shrink-0" />
@@ -276,6 +277,10 @@ export function FinancialProviderOptions({ product, query: offerQuery, offers: p
                           triggerVariant="outline"
                           origin="provider-offer-card"
                           href={contactHref({ line: "loans", product: `${product.label} - ${offer.provider.name}` })}
+                        />
+                        <ShareActions
+                          path={`${financialServiceHref(product.slug)}#providers`}
+                          title={`${offer.offer_name} from ${offer.provider.name}`}
                         />
                       </div>
                     </Card>
