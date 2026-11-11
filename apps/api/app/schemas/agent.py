@@ -28,10 +28,40 @@ class AgentHomeResponse(BaseModel):
     counts_by_status: dict[str, int]
 
 
+_AGENT_REQUIREMENT_KEYS = {"notes", "property_id", "product_slug"}
+
+
 class AgentLeadCreate(BaseModel):
     mobile: Annotated[str, Field(pattern=r"^\+[1-9]\d{6,14}$")]
     name: Annotated[str | None, Field(default=None, max_length=100)] = None
+    # Agent-authored context: free-text notes plus, optionally, the one listing
+    # (real estate) or product (loans) the person is interested in. The service
+    # confirms the chosen item exists, is published, and matches the Agent's
+    # business line, then records its title for the telecaller.
     requirement: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def _known_requirement_shape(self) -> AgentLeadCreate:
+        if self.requirement is None:
+            return self
+        unknown = set(self.requirement) - _AGENT_REQUIREMENT_KEYS
+        if unknown:
+            raise ValueError("Requirement may only contain notes, property_id or product_slug.")
+        notes = self.requirement.get("notes")
+        if notes is not None and (not isinstance(notes, str) or len(notes) > 1000):
+            raise ValueError("Requirement notes must be text of at most 1000 characters.")
+        property_id = self.requirement.get("property_id")
+        if property_id is not None:
+            try:
+                UUID(str(property_id))
+            except ValueError as exc:
+                raise ValueError("Requirement property_id must be a property id.") from exc
+        slug = self.requirement.get("product_slug")
+        if slug is not None and (not isinstance(slug, str) or not 0 < len(slug) <= 80):
+            raise ValueError("Requirement product_slug must be a product identifier.")
+        if property_id is not None and slug is not None:
+            raise ValueError("Choose either a property or a loan product, not both.")
+        return self
 
 
 class AgentLeadUpdate(BaseModel):

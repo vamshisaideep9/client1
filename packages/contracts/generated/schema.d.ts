@@ -9276,6 +9276,31 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /**
+         * ReferralConvertedItem
+         * @description What a referral converted on, for the referrer's own activity detail.
+         *
+         *     Deliberately limited to catalogue facts: the property listing's public
+         *     title/location/type, or the loan product label. Never a deal value, loan
+         *     amount, quoted price, status note, or anything about the referred person.
+         *     ``property_id`` is set only while the listing is still published, so the
+         *     web app can link to the public page without exposing withdrawn listings.
+         */
+        ReferralConvertedItem: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "property" | "loan";
+            /** Location */
+            location?: string | null;
+            /** Property Id */
+            property_id?: string | null;
+            /** Property Type */
+            property_type?: string | null;
+            /** Title */
+            title: string;
+        };
         /** ReferralListResponse */
         ReferralListResponse: {
             /** Referrals */
@@ -9359,6 +9384,7 @@ export interface components {
             conversion_status: string;
             /** Converted At */
             converted_at: string | null;
+            converted_item?: components["schemas"]["ReferralConvertedItem"] | null;
             /**
              * Created At
              * Format: date-time
