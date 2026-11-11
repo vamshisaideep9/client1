@@ -70,6 +70,7 @@ fee) and copy-deterred legal pages. Web only; no API, schema, permission or
 contract change. Stacked follow-ups: share/refer links, property developer
 field and bookmark suggestions, referral/agent lead detail, banner video, and a
 public glass finish. Recommended: Opus / high.
+The Compound Interest island is registered as a calculator form surface.
 
 **Implemented — production audit remediation** (2026-10-12),
 on `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308). Reviewed authentication,

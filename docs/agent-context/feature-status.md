@@ -5,6 +5,7 @@ Status: **Derived living implementation ledger**
 **In progress — public UI quick wins** (2026-11-11), branch
 `feat/public-ui-quick-wins` from `upstream/main` `966c48b`; stack 1 of 6 for
 the 2026-11-11 product batch. Web only; requirement coverage unchanged.
+The Compound Interest island is registered as a calculator form surface.
 
 **Implemented — development droplet deployment overlay** (2026-11-02),
 branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;
