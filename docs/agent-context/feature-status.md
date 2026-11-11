@@ -50,6 +50,7 @@ backdrop-filter, for reduced transparency and forced colors) are applied to the
 public header, sticky search/filter bars, property and provider cards, the
 sponsor card and the lead dialog, over soft sky `glass-backdrop` sections.
 Dashboards are unchanged. No animation added.
+The services toolbar keeps its `bg-surface` token as the solid fallback.
 
 **Implemented — development droplet deployment overlay** (2026-11-02),
 branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;
