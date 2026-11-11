@@ -66,7 +66,7 @@ export function AdStrip({
     >
       <div
         className={cn(
-          "relative grid overflow-hidden rounded-xl border border-[#761f3f]/35 glass shadow-[0_4px_18px_rgb(118_31_63_/_0.1)] sm:rounded-2xl",
+          "relative grid overflow-hidden rounded-xl border border-[#761f3f]/35 bg-[linear-gradient(110deg,#ffffff_35%,#fcf2f5)] shadow-[0_4px_18px_rgb(118_31_63_/_0.1)] sm:rounded-2xl",
           (banner.image || hasVideo) && "sm:grid-cols-[minmax(0,38%)_minmax(0,1fr)] lg:grid-cols-[minmax(0,32%)_minmax(0,1fr)]",
         )}
       >

@@ -107,7 +107,7 @@ export default async function RealEstatePage({
         }
         beforeJourney={
           <>
-            <div className="glass-backdrop relative w-full border-t border-[var(--nav-border)] py-20 sm:py-24 lg:py-28">
+            <div className="relative w-full border-t border-[var(--nav-border)] bg-[var(--nav-bg)] py-20 sm:py-24 lg:py-28">
               <PropertyDoodles />
               <div className="relative z-10 space-y-16 sm:space-y-20">
                 {selectedSubtype && visibleListings.length > 0 ? (

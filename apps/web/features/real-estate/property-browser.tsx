@@ -55,7 +55,7 @@ export function PropertyBrowser({
           keeps cards from showing through the controls. */}
       <div
         data-sticky="property-search"
-        className="glass-strong sticky top-16 z-10 -mx-2 rounded-b-2xl border-b px-2 py-3"
+        className="sticky top-16 z-10 -mx-2 rounded-b-2xl border-b border-border/60 bg-background px-2 py-3"
       >
         {searchBar}
       </div>

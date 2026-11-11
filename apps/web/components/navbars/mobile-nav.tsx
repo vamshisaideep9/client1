@@ -37,7 +37,6 @@ export function MobileNav({ items }: { items: readonly NavItem[] }) {
         </Button>
       </SheetTrigger>
       <SheetContent
-        data-slot="public-mobile-nav"
         side="right"
         aria-describedby={undefined}
         className="flex w-full flex-col gap-6 overflow-y-auto overscroll-contain pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-16 sm:max-w-xs"

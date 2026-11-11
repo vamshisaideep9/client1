@@ -112,7 +112,7 @@ function FaqCard({
 }) {
   const isLg = size === "lg";
   return (
-    <div className="glass overflow-hidden rounded-2xl border border-[var(--nav-border)] bg-surface shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-[var(--nav-border)] bg-surface shadow-sm">
       {items.map((item, index) => (
         <details
           key={item.q}

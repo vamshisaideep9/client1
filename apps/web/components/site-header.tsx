@@ -41,7 +41,7 @@ export function SiteHeader({ products = [] }: { products?: readonly PublicServic
   return (
     <header
       className={cn(
-        "glass-header sticky top-0 z-40 border-b border-[var(--nav-border)] transition-shadow duration-300 motion-reduce:transition-none",
+        "sticky top-0 z-40 border-b border-[var(--nav-border)] bg-[var(--nav-bg)] transition-shadow duration-300 motion-reduce:transition-none",
         scrolled && "shadow-sm"
       )}
     >

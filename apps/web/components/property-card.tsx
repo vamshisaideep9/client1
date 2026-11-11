@@ -27,7 +27,7 @@ import type { PropertyListing } from "@/lib/properties";
 export function PropertyCard({ listing }: { listing: PropertyListing }) {
   const detailHref = `/real-estate/properties/${listing.id}`;
   return (
-    <Card className="glass flex h-full w-[280px] shrink-0 flex-col gap-0 overflow-hidden pt-0 sm:w-[300px]">
+    <Card className="flex h-full w-[280px] shrink-0 flex-col gap-0 overflow-hidden pt-0 sm:w-[300px]">
       <Link
         href={detailHref}
         aria-label={`View ${listing.title}`}

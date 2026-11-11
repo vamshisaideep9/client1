@@ -107,31 +107,15 @@ loop with a pause control, reduced-motion/Save-Data handling and carousel
 autoplay hold. CSP adds only `frame-src https://www.youtube-nocookie.com` and
 `img-src https://i.ytimg.com`. Video changes follow the existing draft and
 maker-checker approval flow.
-Stack 6, `feat/public-glass-finish`: the public navbar no longer wraps link
-or button labels on 1280-1535 px laptop widths (no-wrap labels, tighter `xl`
-spacing restored at `2xl`, `auto | 1fr | auto` grid until `2xl`). Glass tokens
-and `glass` / `glass-strong` utilities (solid fallback without
-backdrop-filter, for reduced transparency and forced colors) are applied to the
-public header, sticky search/filter bars, property and provider cards, the
-sponsor card and the lead dialog, over soft sky `glass-backdrop` sections.
-Dashboards are unchanged. No animation added.
-The services toolbar keeps its `bg-surface` token as the solid fallback.
-The callback (lead) dialog used by the Home page widens to 42rem on desktop.
-Glass made visible after owner review: public pages now sit on a fixed ambient
-backdrop (sky, navy, gold and indigo orbs), `--nav-bg` is transparent inside the
-public scope, panes are 50-62% white with an 18-24px blur and bright edges, and
-glass extends to service, feature, calculator, FAQ and trust cards. Browser
-check at 1366 px confirms frosted header/toolbar over colour; navbar stays on
-one line.
-Buttons and dropdowns join the glass finish: navy buttons become tinted glass,
-outline buttons clear glass, ghost buttons a glass hover pill; nav mega-menus,
-popovers, selects, menus and the mobile navigation sheet are frosted. A body
-marker set only on public pages scopes portalled surfaces; `Button` gains inert
-`data-slot`/`data-variant` hooks. 731 web tests and typecheck pass.
-Dropdowns are frosted rather than see-through (92% white, 32px blur) after
-owner review. The header glass moved to a `::before` layer: a header with its own
-backdrop-filter is a backdrop root, so the nested mega-menu could not blur the
-page and text showed through it.
+Delivery (2026-11-11): only stack 1 reached `main` (#310); #311-#315 merged into
+their parent stack branches. The owner withdrew the glass finish, so
+`feat/land-batch-no-glass` lands stacks 2-5 on `main` together with the public
+navbar no-wrap fix (1280-1535 px) and the wider callback dialog (42rem); #316
+and mirror #21 (which carried glass) are superseded.
+#316 was nevertheless merged into `main` with the glass finish; this branch
+merges `main` with the `ours` strategy, so landing it removes all glass styling
+(backdrop, glass cards, buttons, dropdowns, body marker, Button data hooks) while
+keeping the batch features. The sticky property search bar is solid as well.
 
 **Implemented — production audit remediation** (2026-10-12),
 on `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308). Reviewed authentication,

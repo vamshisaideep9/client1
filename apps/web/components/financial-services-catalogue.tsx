@@ -21,7 +21,7 @@ function ServiceCard({ product }: { product: ServiceDirectoryItem }) {
   return (
     <article
       id={product.id}
-      className="glass group relative flex h-full scroll-mt-64 flex-col overflow-hidden rounded-2xl border border-[var(--nav-border)] bg-surface shadow-sm transition-[border-color,box-shadow] duration-150 hover:border-brand-cta hover:shadow-md motion-reduce:transition-none"
+      className="group relative flex h-full scroll-mt-64 flex-col overflow-hidden rounded-2xl border border-[var(--nav-border)] bg-surface shadow-sm transition-[border-color,box-shadow] duration-150 hover:border-brand-cta hover:shadow-md motion-reduce:transition-none"
     >
       {product.legacyAnchorId ? (
         <span id={product.legacyAnchorId} className="absolute top-0 scroll-mt-64" />
@@ -122,7 +122,7 @@ export function FinancialServicesCatalogue({
             ))}
           </div>
         ) : (
-          <div className="glass rounded-2xl border border-dashed border-[var(--nav-border)] bg-surface px-6 py-14 text-center">
+          <div className="rounded-2xl border border-dashed border-[var(--nav-border)] bg-surface px-6 py-14 text-center">
             <h3 className="font-heading text-xl font-semibold text-foreground">
               No services match these filters
             </h3>

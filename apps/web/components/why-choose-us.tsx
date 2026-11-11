@@ -144,7 +144,7 @@ export function WhyChooseUs() {
           {/* Supporting cards */}
           {BENEFITS.map((item) => (
             <li key={item.title}>
-              <article className="glass group flex h-full flex-col rounded-2xl border border-[var(--nav-border)] bg-surface p-6 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+              <article className="group flex h-full flex-col rounded-2xl border border-[var(--nav-border)] bg-surface p-6 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
                 <IconChip icon={item.icon} />
                 <h3 className="mt-5 font-heading text-base font-semibold text-foreground">
                   {item.title}
@@ -161,7 +161,7 @@ export function WhyChooseUs() {
             height comes purely from its own content instead of the bento
             grid's auto-rows-fr (which would stretch it to match the tall
             anchor row). Sits between the grid and the closing CTA band. */}
-        <article className="glass mt-5 flex flex-col gap-3 rounded-2xl border border-[var(--nav-border)] bg-surface px-6 py-6 shadow-sm sm:flex-row sm:items-center sm:gap-6">
+        <article className="mt-5 flex flex-col gap-3 rounded-2xl border border-[var(--nav-border)] bg-surface px-6 py-6 shadow-sm sm:flex-row sm:items-center sm:gap-6">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-brand-link">
             <Gift className="h-4 w-4" aria-hidden />
           </span>

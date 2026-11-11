@@ -106,7 +106,7 @@ export function ProductPage({
       {/* Header */}
       <section
         id="page-overview"
-        className={cn("relative w-full scroll-mt-16 overflow-hidden", businessLine === "loans" ? "bg-brand-cta-tint/35" : "bg-surface-sky/35")}
+        className={cn("relative w-full scroll-mt-16 overflow-hidden", businessLine === "loans" ? "bg-brand-cta-tint" : "bg-surface-sky")}
       >
         {heroBackdrop ? (
           <>

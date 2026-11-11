@@ -59,7 +59,7 @@ export function HomeSuggestedProperties({ listings }: { listings: PropertyListin
   return (
     <section
       aria-labelledby="home-suggested-heading"
-      className="glass-backdrop border-b border-[var(--nav-border)] px-4 py-12 sm:px-6 sm:py-14 lg:px-8"
+      className="border-b border-[var(--nav-border)] bg-[var(--nav-bg)] px-4 py-12 sm:px-6 sm:py-14 lg:px-8"
     >
       <div className="mx-auto max-w-7xl">
         <div className="flex flex-wrap items-end justify-between gap-4">
