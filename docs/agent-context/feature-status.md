@@ -42,6 +42,11 @@ loop with a pause control, reduced-motion/Save-Data handling and carousel
 autoplay hold. CSP adds only `frame-src https://www.youtube-nocookie.com` and
 `img-src https://i.ytimg.com`. Video changes follow the existing draft and
 maker-checker approval flow.
+Delivery (2026-11-11): only stack 1 reached `main` (#310); #311-#315 merged into
+their parent stack branches. The owner withdrew the glass finish, so
+`feat/land-batch-no-glass` lands stacks 2-5 on `main` together with the public
+navbar no-wrap fix (1280-1535 px) and the wider callback dialog (42rem); #316
+and mirror #21 (which carried glass) are superseded.
 
 **Implemented — development droplet deployment overlay** (2026-11-02),
 branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;
