@@ -28,6 +28,7 @@ from app.schemas.commissions import AgentEarningsResponse
 from app.services import commissions
 from app.services.agent import (
     AgentProfileNotFound,
+    InvalidLeadInterest,
     InvalidStatusFilter,
     LeadCaptureFailed,
     LeadCaptureUnavailable,
@@ -131,6 +132,11 @@ async def create_lead(
         raise HTTPException(
             status.HTTP_409_CONFLICT,
             "This mobile number is already linked to an existing enquiry.",
+        ) from exc
+    except InvalidLeadInterest as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Choose a published property or product from your business line.",
         ) from exc
     modes = await effective_modes(db, FieldTargetRole.AGENT)
     return _to_agent_lead_read(lead, modes)

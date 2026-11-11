@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Bookmark, Check, MapPin, Scale } from "lucide-react";
 import { toast } from "sonner";
 
+import { ShareActions } from "@/components/share-actions";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBookmarks, useCompare } from "@/features/real-estate/store";
 import type { REListing } from "@/lib/real-estate";
@@ -133,8 +134,13 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
         </p>
       </CardContent>
 
-      <CardFooter className="shrink-0 px-4 pb-4 pt-0">
+      <CardFooter className="flex shrink-0 flex-col gap-2 px-4 pb-4 pt-0">
         <PropertyPreviewDialog listing={listing} />
+        {/* Shares the public listing page so recipients need no account. */}
+        <ShareActions
+          path={`/real-estate/properties/${listing.id}`}
+          title={`${listing.title}, ${listing.locality}`}
+        />
       </CardFooter>
     </Card>
   );

@@ -568,3 +568,23 @@ def test_stored_links_accept_already_built_models() -> None:
         {"url": "https://youtu.be/walkthrough", "platform": "youtube"},
         {"url": "https://www.facebook.com/listing/posts/one", "platform": "facebook"},
     ]
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("  My   Home  Group ", "My Home Group"),
+        ("   ", None),
+        (None, None),
+    ],
+)
+def test_developer_name_is_collapsed_and_blank_is_none(
+    raw: str | None, expected: str | None
+) -> None:
+    parsed = SubmissionCreate.model_validate({**_payload([_asset(0)]), "developer_name": raw})
+    assert parsed.developer_name == expected
+
+
+def test_developer_name_is_bounded() -> None:
+    with pytest.raises(ValidationError):
+        SubmissionCreate.model_validate({**_payload([_asset(0)]), "developer_name": "x" * 121})

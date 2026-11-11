@@ -26,12 +26,12 @@ const AMOUNT_MIN = 100000;
 const AMOUNT_MAX = 50000000;
 const AMOUNT_STEP = 50000;
 const RATE_MIN = 5;
-const RATE_MAX = 24;
+const RATE_MAX = 34;
 const RATE_STEP = 0.05;
 const MONTHS_MIN = 12;
-const MONTHS_MAX = 360;
+const MONTHS_MAX = 420;
 const FEE_MIN = 0;
-const FEE_MAX = 3;
+const FEE_MAX = 5;
 const FEE_STEP = 0.05;
 
 function clamp(value: number, min: number, _max: number): number {
