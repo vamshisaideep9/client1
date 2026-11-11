@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 // own hover — NavigationMenuList also sets `group`, which would otherwise fire
 // every link's underline when any sibling is hovered.
 const linkClass =
-  "pressable group/navlink inline-flex h-9 flex-row items-center rounded-md px-3 text-base font-medium text-[var(--nav-text)] transition-colors hover:bg-transparent hover:text-brand-link focus:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)]";
+  "pressable group/navlink inline-flex h-9 flex-row items-center whitespace-nowrap rounded-md px-2 text-[15px] font-medium 2xl:px-3 2xl:text-base text-[var(--nav-text)] transition-colors hover:bg-transparent hover:text-brand-link focus:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)]";
 
 export function SiteHeader({ products = [] }: { products?: readonly PublicServiceLink[] }) {
   const items = publicNavItems(products);
@@ -41,14 +41,14 @@ export function SiteHeader({ products = [] }: { products?: readonly PublicServic
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 border-b border-[var(--nav-border)] bg-[var(--nav-bg)] transition-shadow duration-300 motion-reduce:transition-none",
+        "glass-strong sticky top-0 z-40 border-b border-[var(--nav-border)] transition-shadow duration-300 motion-reduce:transition-none",
         scrolled && "shadow-sm"
       )}
     >
       {/* Full-bleed 3-column grid (equal 1fr flanks) keeps the nav dead-centered
           on the bar while the actions sit flush against the page's right edge
           (only the page gutter padding separates them from the corner). */}
-      <div className="grid h-16 w-full grid-cols-[1fr_auto_1fr] items-center px-4 sm:px-6 lg:px-8">
+      <div className="grid h-16 w-full grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 sm:px-6 lg:px-8 xl:grid-cols-[auto_minmax(0,1fr)_auto] 2xl:grid-cols-[1fr_auto_1fr]">
         <Logo className="col-start-1 justify-self-start" />
 
         <NavigationMenu className="col-start-2 hidden min-w-0 justify-self-center xl:flex">
@@ -83,7 +83,7 @@ export function SiteHeader({ products = [] }: { products?: readonly PublicServic
                       }
                     }}
                     className={cn(
-                      "group/nav-trigger text-base text-[var(--nav-text)]",
+                      "group/nav-trigger whitespace-nowrap px-2 text-[15px] text-[var(--nav-text)] 2xl:px-4 2xl:text-base",
                       isActive && "text-brand-link",
                     )}
                   >
@@ -205,26 +205,26 @@ export function SiteHeader({ products = [] }: { products?: readonly PublicServic
         </NavigationMenu>
 
         <div className="col-start-3 flex items-center gap-2 justify-self-end">
-          <div className="hidden items-center gap-2 xl:flex">
+          <div className="hidden shrink-0 items-center gap-1.5 xl:flex 2xl:gap-2">
             <Button
               asChild
               variant="ghost"
               size="sm"
-              className="font-geist text-base text-[var(--nav-text)] hover:bg-[var(--nav-tint)] hover:text-brand-link focus-visible:ring-ring"
+              className="font-geist whitespace-nowrap px-2.5 text-[15px] text-[var(--nav-text)] hover:bg-[var(--nav-tint)] 2xl:px-3 2xl:text-base hover:text-brand-link focus-visible:ring-ring"
             >
               <Link href="/login" prefetch={false}>Login</Link>
             </Button>
             <Button
               asChild
               size="sm"
-              className="font-geist bg-[var(--nav-primary)] text-base text-white shadow-sm transition-colors hover:bg-[var(--nav-primary-hover)] focus-visible:ring-ring"
+              className="font-geist whitespace-nowrap bg-[var(--nav-primary)] px-2.5 text-[15px] text-white 2xl:px-3 2xl:text-base shadow-sm transition-colors hover:bg-[var(--nav-primary-hover)] focus-visible:ring-ring"
             >
               <Link href="/register" prefetch={false}>Register</Link>
             </Button>
             <Button
               asChild
               size="sm"
-              className="font-geist bg-[var(--nav-primary)] text-base text-white shadow-sm transition-colors hover:bg-[var(--nav-primary-hover)] focus-visible:ring-ring"
+              className="font-geist whitespace-nowrap bg-[var(--nav-primary)] px-2.5 text-[15px] text-white 2xl:px-3 2xl:text-base shadow-sm transition-colors hover:bg-[var(--nav-primary-hover)] focus-visible:ring-ring"
             >
               <Link
                 href="/contact"

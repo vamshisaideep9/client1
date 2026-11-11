@@ -202,7 +202,7 @@ export function FinancialServicesFilters({
         apply(text);
       }}
       // Solid white chrome keeps search and categories legible over the results.
-      className="sticky top-16 z-30 mt-8 border-y border-border bg-surface shadow-sm sm:mt-10"
+      className="glass-strong sticky top-16 z-30 mt-8 border-y border-border sm:mt-10"
     >
       {/* Preserves the active category when the form falls back to a plain
           GET submission (no JS). With JS, onSubmit takes over first. */}

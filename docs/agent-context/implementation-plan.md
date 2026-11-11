@@ -107,6 +107,14 @@ loop with a pause control, reduced-motion/Save-Data handling and carousel
 autoplay hold. CSP adds only `frame-src https://www.youtube-nocookie.com` and
 `img-src https://i.ytimg.com`. Video changes follow the existing draft and
 maker-checker approval flow.
+Stack 6, `feat/public-glass-finish`: the public navbar no longer wraps link
+or button labels on 1280-1535 px laptop widths (no-wrap labels, tighter `xl`
+spacing restored at `2xl`, `auto | 1fr | auto` grid until `2xl`). Glass tokens
+and `glass` / `glass-strong` utilities (solid fallback without
+backdrop-filter, for reduced transparency and forced colors) are applied to the
+public header, sticky search/filter bars, property and provider cards, the
+sponsor card and the lead dialog, over soft sky `glass-backdrop` sections.
+Dashboards are unchanged. No animation added.
 
 **Implemented — production audit remediation** (2026-10-12),
 on `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308). Reviewed authentication,

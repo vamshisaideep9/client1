@@ -211,7 +211,7 @@ export function LeadDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="glass-strong">
         <DialogHeader>
           <DialogTitle className="font-heading">{title ?? line.title}</DialogTitle>
           <DialogDescription>

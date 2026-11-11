@@ -781,3 +781,68 @@
     padding: 0 !important;
   }
 }
+
+/* Glass finish for public chrome and cards (2026-11-11 product batch).
+   Translucent white over the sky/navy palette with a soft blur and a light
+   inner highlight. Text always sits on >= 82% opaque white, so navy copy keeps
+   its contrast. Falls back to a solid surface when backdrop-filter is missing
+   or the visitor asks for reduced transparency, and in forced-colors mode. */
+:root {
+  --glass-bg: rgb(255 255 255 / 0.72);
+  --glass-bg-strong: rgb(255 255 255 / 0.84);
+  --glass-border: rgb(255 255 255 / 0.65);
+  --glass-edge: rgb(15 39 84 / 0.08);
+  --glass-blur: 14px;
+  --glass-shadow: 0 8px 32px rgb(15 39 84 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.7);
+}
+
+@utility glass {
+  background-color: var(--glass-bg) !important;
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+}
+
+@utility glass-strong {
+  background-color: var(--glass-bg-strong) !important;
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(1.5);
+  backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(1.5);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  .glass-strong {
+    background-color: var(--color-surface, #fff) !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-strong {
+    background-color: var(--color-surface, #fff) !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .glass,
+  .glass-strong {
+    background-color: Canvas !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+}
+
+/* Soft sky gradient behind glass surfaces on public pages, so the blur has
+   something to refract instead of reading as flat white. */
+.glass-backdrop {
+  background:
+    radial-gradient(60rem 30rem at 10% -10%, rgb(125 211 252 / 0.25), transparent 60%),
+    radial-gradient(50rem 28rem at 110% 10%, rgb(15 39 84 / 0.08), transparent 60%),
+    var(--nav-bg);
+}
