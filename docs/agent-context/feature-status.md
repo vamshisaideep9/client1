@@ -30,6 +30,7 @@ and confirm it from a details-and-fees popup; the API validates the key set,
 existence and business line, rejects client-supplied titles, and snapshots
 `interest_title` for the Agent and telecaller views. No migration. The product
 picker relies on the API's active-product filter (fixes a type error).
+The interest picker is registered as a mutation form surface.
 
 **Implemented — development droplet deployment overlay** (2026-11-02),
 branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;
