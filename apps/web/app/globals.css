@@ -782,34 +782,64 @@
   }
 }
 
-/* Glass finish for public chrome and cards (2026-11-11 product batch).
-   Translucent white over the sky/navy palette with a soft blur and a light
-   inner highlight. Text always sits on >= 82% opaque white, so navy copy keeps
-   its contrast. Falls back to a solid surface when backdrop-filter is missing
-   or the visitor asks for reduced transparency, and in forced-colors mode. */
+/* Glass finish for public pages (2026-11-11 product batch).
+   Glass only reads as glass when something colourful sits behind it, so public
+   pages get a fixed ambient backdrop (soft sky, navy and brand-gold orbs) and
+   their sections stop painting the flat sky fill (--nav-bg is transparent inside
+   .public-glass). Panes are translucent white with a bright edge, an inner top
+   highlight and a strong blur; navy text stays above 7:1 on them. Falls back to
+   solid white without backdrop-filter, for reduced transparency, and in forced
+   colors. Dashboards and auth pages are untouched. */
 :root {
-  --glass-bg: rgb(255 255 255 / 0.72);
-  --glass-bg-strong: rgb(255 255 255 / 0.84);
-  --glass-border: rgb(255 255 255 / 0.65);
-  --glass-edge: rgb(15 39 84 / 0.08);
-  --glass-blur: 14px;
-  --glass-shadow: 0 8px 32px rgb(15 39 84 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.7);
+  --glass-bg: rgb(255 255 255 / 0.5);
+  --glass-bg-strong: rgb(255 255 255 / 0.62);
+  --glass-border: rgb(255 255 255 / 0.75);
+  --glass-blur: 18px;
+  --glass-shadow:
+    0 10px 40px rgb(15 39 84 / 0.12),
+    0 1px 2px rgb(15 39 84 / 0.06),
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 -1px 0 rgb(255 255 255 / 0.25);
 }
 
 @utility glass {
   background-color: var(--glass-bg) !important;
-  border-color: var(--glass-edge);
+  border-color: var(--glass-border) !important;
   box-shadow: var(--glass-shadow);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
 }
 
 @utility glass-strong {
   background-color: var(--glass-bg-strong) !important;
-  border-color: var(--glass-edge);
-  box-shadow: var(--glass-shadow);
-  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(1.5);
-  backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(1.5);
+  border-color: var(--glass-border) !important;
+  box-shadow: 0 8px 30px rgb(15 39 84 / 0.1), inset 0 -1px 0 rgb(255 255 255 / 0.6);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(1.9);
+  backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(1.9);
+}
+
+/* Public scope: sections become see-through so the ambient backdrop shows. */
+.public-glass {
+  --nav-bg: transparent;
+  position: relative;
+  isolation: isolate;
+  background-color: var(--color-surface-sky);
+}
+
+/* Fixed, decorative, never interactive. Orbs are large blurred gradients so
+   they read as colour fields, not shapes. */
+.ambient-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(42rem 32rem at 8% 12%, rgb(56 189 248 / 0.42), transparent 62%),
+    radial-gradient(38rem 30rem at 92% 18%, rgb(30 58 138 / 0.28), transparent 64%),
+    radial-gradient(36rem 28rem at 78% 88%, rgb(250 204 21 / 0.30), transparent 62%),
+    radial-gradient(40rem 30rem at 18% 92%, rgb(129 140 248 / 0.26), transparent 64%),
+    linear-gradient(160deg, #eaf5fd 0%, #f4f8ff 45%, #eef3fb 100%);
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -836,13 +866,14 @@
     backdrop-filter: none;
     box-shadow: none;
   }
+  .ambient-backdrop {
+    display: none;
+  }
 }
 
-/* Soft sky gradient behind glass surfaces on public pages, so the blur has
-   something to refract instead of reading as flat white. */
+/* Kept for sections that want an extra local tint over the backdrop. */
 .glass-backdrop {
   background:
-    radial-gradient(60rem 30rem at 10% -10%, rgb(125 211 252 / 0.25), transparent 60%),
-    radial-gradient(50rem 28rem at 110% 10%, rgb(15 39 84 / 0.08), transparent 60%),
-    var(--nav-bg);
+    radial-gradient(50rem 26rem at 12% 0%, rgb(56 189 248 / 0.14), transparent 60%),
+    radial-gradient(44rem 24rem at 100% 20%, rgb(30 58 138 / 0.08), transparent 60%);
 }

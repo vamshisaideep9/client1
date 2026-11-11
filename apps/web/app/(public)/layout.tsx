@@ -13,7 +13,10 @@ export const dynamic = "force-dynamic";
 export default async function PublicLayout({ children }: { children: ReactNode }) {
   const products = (await getPublishedServiceProducts()).map(({ slug, label, category }) => ({ slug, label, category }));
   return (
-    <>
+    // Glass scope: an ambient colour backdrop behind see-through sections, so
+    // glass panes (header, sticky bars, cards, dialogs) visibly refract it.
+    <div className="public-glass">
+      <div aria-hidden="true" className="ambient-backdrop" />
       <a
         href="#main-content"
         className="fixed left-4 top-4 z-[100] -translate-y-24 rounded-md bg-brand-navy px-4 py-2 text-sm font-semibold text-white shadow-lg transition-transform focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 motion-reduce:transition-none"
@@ -27,6 +30,6 @@ export default async function PublicLayout({ children }: { children: ReactNode }
         {children}
       </main>
       <SiteFooter products={products} />
-    </>
+    </div>
   );
 }

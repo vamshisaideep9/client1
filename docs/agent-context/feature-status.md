@@ -52,6 +52,12 @@ sponsor card and the lead dialog, over soft sky `glass-backdrop` sections.
 Dashboards are unchanged. No animation added.
 The services toolbar keeps its `bg-surface` token as the solid fallback.
 The callback (lead) dialog used by the Home page widens to 42rem on desktop.
+Glass made visible after owner review: public pages now sit on a fixed ambient
+backdrop (sky, navy, gold and indigo orbs), `--nav-bg` is transparent inside the
+public scope, panes are 50-62% white with an 18-24px blur and bright edges, and
+glass extends to service, feature, calculator, FAQ and trust cards. Browser
+check at 1366 px confirms frosted header/toolbar over colour; navbar stays on
+one line.
 
 **Implemented — development droplet deployment overlay** (2026-11-02),
 branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;
