@@ -78,6 +78,14 @@ on logout), public pages remember an incoming code for the session, and
 registration falls back to it. Regression test proves a second transaction by an
 already-rewarded referred person pays nothing; the list labels earned and paid
 referrals as closed. No API, schema or contract change.
+Stack 3, `feat/property-developer-suggestions`: additive migration
+`b7d9f1a3c5e2` adds nullable `developer_name` to `properties` and
+`property_submissions` (table-wide grants and row-level RLS unchanged) with a
+lower-case index; submit/edit forms, approval copy, authenticated and public
+reads, regenerated contracts, a Developer facet plus a name field in the Filters
+sheet, a Developers suggestion group and search haystack. Home shows "Suggested
+for you" from the public catalog ranked against locally cached bookmark ids
+(ids only, session-hint gated, cleared on logout).
 
 **Implemented — production audit remediation** (2026-10-12),
 on `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308). Reviewed authentication,

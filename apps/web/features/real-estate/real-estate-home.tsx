@@ -106,6 +106,9 @@ export function RealEstateHome() {
   function pickPincode(value: string) {
     goToExplore(`pincode=${encodeURIComponent(value)}`);
   }
+  function pickDeveloper(value: string) {
+    goToExplore(`developer=${encodeURIComponent(value)}`);
+  }
   function pickSubtype(value: RESubtype) {
     goToExplore(`subtypes=${value}`);
   }
@@ -192,6 +195,7 @@ export function RealEstateHome() {
               onPickPincode={pickPincode}
               onPickSubtype={pickSubtype}
               onPickProperty={pickProperty}
+              onPickDeveloper={pickDeveloper}
             />
           </PopoverContent>
         </Popover>

@@ -1601,6 +1601,18 @@
               }
             ]
           },
+          "developer_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
           "furnishing": {
             "anyOf": [
               {
@@ -13244,6 +13256,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "developer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
           "furnishing": {
             "anyOf": [
               {
@@ -14426,6 +14449,17 @@
               }
             ]
           },
+          "developer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
           "furnishing": {
             "anyOf": [
               {
@@ -14669,6 +14703,17 @@
         "properties": {
           "category": {
             "$ref": "#/components/schemas/PropertyCategory"
+          },
+          "developer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
           },
           "id": {
             "format": "uuid",
@@ -16461,6 +16506,18 @@
               }
             ]
           },
+          "developer_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
           "furnishing": {
             "anyOf": [
               {
@@ -16867,6 +16924,17 @@
             ],
             "title": "Details Version"
           },
+          "developer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
           "furnishing": {
             "anyOf": [
               {
@@ -17223,6 +17291,18 @@
                 "type": "null"
               }
             ]
+          },
+          "developer_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
           },
           "furnishing": {
             "anyOf": [

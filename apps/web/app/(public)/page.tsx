@@ -11,10 +11,12 @@ import { HowItWorks } from "@/components/how-it-works";
 import { LineSplit } from "@/components/line-split";
 import { PartnerCta } from "@/components/partner-cta";
 import { WhyChooseUs } from "@/components/why-choose-us";
+import { HomeSuggestedProperties } from "@/features/real-estate/home-suggested-properties";
 import { FALLBACK_HERO_BANNERS } from "@/lib/banners";
 import { faqPageJsonLd, HOME_FAQ_ITEMS } from "@/lib/faq";
 import { getHeroBanners } from "@/lib/public-banners";
 import { getPublicContentBlockBySlug } from "@/lib/public-content-blocks";
+import { getPublicListings } from "@/lib/public-properties";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 // The hero is the one CMS surface with an explicit starts_at/ends_at contract
@@ -66,10 +68,14 @@ export default async function Home() {
   // never throws (see lib/public-banners.ts), and we deliberately don't
   // distinguish the two here either -- FALLBACK_HERO_BANNERS is what renders
   // in either case, so the homepage is never blank.
-  const [liveBanners, adBanners, closingBlock] = await Promise.all([
+  const [liveBanners, adBanners, closingBlock, publicListings] = await Promise.all([
     getHeroBanners(),
     getHeroBanners("homepage_ad"),
     getPublicContentBlockBySlug("homepage-closing"),
+    // Same ISR-cached catalog read as /real-estate. Suggestions are computed in
+    // the browser from locally cached bookmark ids, so this HTML stays the same
+    // for every visitor.
+    getPublicListings(),
   ]);
   const banners = liveBanners.length > 0 ? liveBanners : FALLBACK_HERO_BANNERS;
 
@@ -92,6 +98,7 @@ export default async function Home() {
           hero stays flush against the sticky header. */}
       {adBanners.length > 0 ? <AdStrip banner={adBanners[0]} /> : null}
       <HeroCarousel banners={banners} />
+      <HomeSuggestedProperties listings={publicListings} />
       {/* Floating natural-color finance doodles overlay the real-estate band and the
           WhyChooseUs bento (lg+, pointer-events-none), hugging the outer gutters. */}
       <div className="relative">
