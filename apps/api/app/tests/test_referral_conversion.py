@@ -322,6 +322,14 @@ async def test_property_deal_closed_accrues_referral(client: AsyncClient) -> Non
     assert row["business_line"] == "real_estate"
     assert await _notification_count(uid_a) == 1
 
+    # Activity detail: the referrer sees which listing converted, but only
+    # catalogue facts -- never the deal value or anything about the person.
+    item = row["converted_item"]
+    assert item["kind"] == "property"
+    assert item["title"]
+    assert set(item) == {"kind", "title", "location", "property_type", "property_id"}
+    assert "price" not in str(item).lower()
+
 
 # ---------------------------------------------------------------------------
 # Accrual-reason branches — direct service calls (D7-D12)

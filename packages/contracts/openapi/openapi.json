@@ -15283,6 +15283,63 @@
         "title": "ReferralBonusConfigUpdate",
         "type": "object"
       },
+      "ReferralConvertedItem": {
+        "description": "What a referral converted on, for the referrer's own activity detail.\n\nDeliberately limited to catalogue facts: the property listing's public\ntitle/location/type, or the loan product label. Never a deal value, loan\namount, quoted price, status note, or anything about the referred person.\n``property_id`` is set only while the listing is still published, so the\nweb app can link to the public page without exposing withdrawn listings.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "property",
+              "loan"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "property_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Type"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "title"
+        ],
+        "title": "ReferralConvertedItem",
+        "type": "object"
+      },
       "ReferralListResponse": {
         "properties": {
           "referrals": {
@@ -15445,6 +15502,16 @@
               }
             ],
             "title": "Converted At"
+          },
+          "converted_item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReferralConvertedItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "created_at": {
             "format": "date-time",

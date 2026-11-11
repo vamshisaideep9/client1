@@ -145,6 +145,14 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
       </DashboardPanel>
 
       <DashboardPanel title="Requirement">
+        {typeof (lead.requirement as Record<string, unknown> | null)?.interest_title === "string" ? (
+          <p className="mb-3 text-sm">
+            <span className="text-text-secondary">Interested in: </span>
+            <span className="font-medium text-text-primary">
+              {String((lead.requirement as Record<string, unknown>).interest_title)}
+            </span>
+          </p>
+        ) : null}
         {editable ? (
           <form className="space-y-3" onSubmit={(e) => void onSave(e)}>
             <div>

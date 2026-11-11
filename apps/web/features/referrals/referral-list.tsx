@@ -4,6 +4,7 @@ import { Users } from "lucide-react";
 
 import { formatPaise } from "@/lib/format";
 import { ListPagination, useListPagination } from "@/features/dashboard/list-pagination";
+import { ReferralDetailDialog } from "@/features/referrals/referral-detail-dialog";
 import type { Referral } from "@/lib/referrals-api";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +72,7 @@ export function ReferralList({ referrals, embedded = false }: { referrals: Refer
             <th className="px-5 py-3 font-medium">Status</th>
             <th className="px-5 py-3 font-medium">Bonus</th>
             <th className="hidden px-5 py-3 font-medium sm:table-cell">Date</th>
+            <th className="px-5 py-3 font-medium"><span className="sr-only">Details</span></th>
           </tr>
         </thead>
         <tbody>
@@ -78,6 +80,11 @@ export function ReferralList({ referrals, embedded = false }: { referrals: Refer
             <tr key={r.id} className="border-b border-border last:border-0">
               <td className="px-5 py-4 font-medium text-text-primary">
                 {r.referred_mobile_masked}
+                {r.converted_item ? (
+                  <span className="mt-0.5 block text-xs font-normal text-text-secondary [overflow-wrap:anywhere]">
+                    {r.converted_item.title}
+                  </span>
+                ) : null}
               </td>
               <td className="hidden px-5 py-4 text-text-secondary sm:table-cell">
                 {r.business_line ? (LINE_LABEL[r.business_line] ?? r.business_line) : "-"}
@@ -97,6 +104,9 @@ export function ReferralList({ referrals, embedded = false }: { referrals: Refer
               </td>
               <td className="hidden px-5 py-4 text-text-secondary sm:table-cell">
                 {formatDate(r.converted_at ?? r.created_at)}
+              </td>
+              <td className="px-3 py-4 text-right">
+                <ReferralDetailDialog referral={r} />
               </td>
             </tr>
           ))}
