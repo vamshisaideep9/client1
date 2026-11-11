@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ExternalLink, PhoneCall } from "lucide-react";
+import { PhoneCall } from "lucide-react";
 
 import { PropertyDetailView } from "@/components/property-detail-view";
 import type { SimilarPropertyCardData } from "@/components/similar-properties-panel";
@@ -69,7 +69,6 @@ export default async function PublicPropertyPage({ params }: PageProps) {
   }
 
   const property = result.data;
-  const dashboardHref = `/dashboard/properties/${property.id}`;
   const propertyJsonLd = {
     "@context": "https://schema.org",
     "@type": "Residence",
@@ -128,13 +127,6 @@ export default async function PublicPropertyPage({ params }: PageProps) {
               >
                 <PhoneCall className="h-4 w-4" aria-hidden />
                 Contact team
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="min-h-11 w-full border-[var(--nav-primary)] text-brand-link hover:bg-[var(--nav-tint)] hover:text-[var(--nav-primary-hover)]">
-              <Link href={dashboardHref}>
-                <ExternalLink className="h-4 w-4" aria-hidden />
-                <span className="sm:hidden">Open app</span>
-                <span className="hidden sm:inline">Open in Dhanadhara</span>
               </Link>
             </Button>
           </>

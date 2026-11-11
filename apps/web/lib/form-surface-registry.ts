@@ -26,6 +26,7 @@ export const FORM_SURFACE_REGISTRY = {
   "components/auth/set-password-form.tsx": "mutation",
   "components/financial-provider-options.tsx": "filter",
   "components/calculators/islands/balance-transfer-calculator.tsx": "calculator",
+  "components/calculators/islands/compound-interest-calculator.tsx": "calculator",
   "components/calculators/islands/credit-card-emi-calculator.tsx": "calculator",
   "components/calculators/islands/credit-card-payoff-calculator.tsx": "calculator",
   "components/calculators/islands/down-payment-planner-calculator.tsx": "calculator",

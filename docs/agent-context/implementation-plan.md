@@ -60,6 +60,18 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In progress — public UI quick wins** (stack 1 of 6 for the 2026-11-11
+product batch), branch `feat/public-ui-quick-wins` from `upstream/main`
+`966c48b`. Sponsored-card dismissal, one-per-row provider offers, compact
+property campaigns without "Open in Dhanadhara", sticky property search,
+"referral bonus" public copy, a Compound Interest calculator, wider
+loan-calculator limits (34% rate, 35 years, 80% LAP LTV, 5% balance-transfer
+fee) and copy-deterred legal pages. Web only; no API, schema, permission or
+contract change. Stacked follow-ups: share/refer links, property developer
+field and bookmark suggestions, referral/agent lead detail, banner video, and a
+public glass finish. Recommended: Opus / high.
+The Compound Interest island is registered as a calculator form surface.
+
 **Implemented — production audit remediation** (2026-10-12),
 on `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308). Reviewed authentication,
 role/object/business-line isolation, RLS, uploads, payout/webhook settlement,
