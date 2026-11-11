@@ -63,6 +63,10 @@ outline buttons clear glass, ghost buttons a glass hover pill; nav mega-menus,
 popovers, selects, menus and the mobile navigation sheet are frosted. A body
 marker set only on public pages scopes portalled surfaces; `Button` gains inert
 `data-slot`/`data-variant` hooks. 731 web tests and typecheck pass.
+Dropdowns are frosted rather than see-through (92% white, 32px blur) after
+owner review. The header glass moved to a `::before` layer: a header with its own
+backdrop-filter is a backdrop root, so the nested mega-menu could not blur the
+page and text showed through it.
 
 **Implemented — development droplet deployment overlay** (2026-11-02),
 branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;
