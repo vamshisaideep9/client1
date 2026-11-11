@@ -29,12 +29,17 @@ export function HeroCarousel({
   variant = "hero",
   label = "Highlights",
   interactive = true,
+  compact = false,
 }: {
   banners: HeroBanner[];
   variant?: "hero" | "section";
   label?: string;
   interactive?: boolean;
+  // Section variant only: a shorter band for pages (Properties) where the
+  // campaign must not push the listings below the fold.
+  compact?: boolean;
 }) {
+  const isCompact = variant === "section" && compact;
   const [api, setApi] = useState<CarouselApi>();
   const [selected, setSelected] = useState(0);
   const [loadedImages, setLoadedImages] = useState<Set<string>>(() => new Set());
@@ -171,7 +176,9 @@ export function HeroCarousel({
                     "relative w-full overflow-hidden bg-[var(--nav-bg)]",
                     variant === "hero"
                       ? "min-h-[24rem] sm:h-[calc(100svh-4rem)] sm:min-h-[420px]"
-                      : "min-h-[16rem] sm:h-[clamp(14rem,36vw,32.5rem)]",
+                      : isCompact
+                        ? "min-h-[12rem] sm:h-[clamp(10rem,22vw,18rem)]"
+                        : "min-h-[16rem] sm:h-[clamp(14rem,36vw,32.5rem)]",
                   )}
                 >
                   {/* Media layer: real landscape image fills the card; otherwise
@@ -205,7 +212,9 @@ export function HeroCarousel({
                       "relative flex min-h-[inherit] items-center sm:h-full",
                       variant === "hero"
                         ? "px-5 py-16 sm:px-16 sm:py-10 lg:px-28"
-                        : "px-5 pb-16 pt-8 sm:px-24 sm:py-6 lg:px-28 lg:py-8",
+                        : isCompact
+                          ? "px-5 pb-12 pt-6 sm:px-24 sm:py-4 lg:px-28 lg:py-5"
+                          : "px-5 pb-16 pt-8 sm:px-24 sm:py-6 lg:px-28 lg:py-8",
                     )}
                   >
                     <div
@@ -226,7 +235,9 @@ export function HeroCarousel({
                           "font-heading font-semibold text-[var(--nav-text)]",
                           variant === "hero"
                             ? "break-words text-3xl sm:text-4xl lg:text-5xl"
-                            : "break-words text-2xl sm:line-clamp-2 lg:text-4xl",
+                            : isCompact
+                              ? "break-words text-xl sm:line-clamp-2 lg:text-3xl"
+                              : "break-words text-2xl sm:line-clamp-2 lg:text-4xl",
                         )}
                       >
                         {banner.title}

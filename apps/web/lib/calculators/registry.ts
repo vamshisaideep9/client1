@@ -1,6 +1,6 @@
 import type { CalculatorDef, CalculatorFaq, CalculatorSlug } from "./types";
 
-// Single source of truth for all 18 calculators. Drives the hub, each route's
+// Single source of truth for all 19 calculators. Drives the hub, each route's
 // metadata + JSON-LD, internal links, the FAQ accordions, and the lead CTA.
 // Copy rules (apps/web/CLAUDE.md): rupee only, no em/en dashes, short humanized
 // sentences. SEO copy (title/meta/intro/howItWorks/faq) is written to India
@@ -151,12 +151,12 @@ export const CALCULATORS: CalculatorDef[] = [
       "Calculate how much loan you can get against a property you own and the EMI on a loan against property, based on the property value, LTV, rate, and tenure.",
     keywords: ["loan against property calculator", "lap calculator", "lap emi calculator", "mortgage loan calculator"],
     intro:
-      "Use this loan against property calculator to see how much you can borrow against a property you own and the EMI on it. A loan against property (LAP) typically funds 50 to 70 percent of the market value at a lower rate than an unsecured loan.",
+      "Use this loan against property calculator to see how much you can borrow against a property you own and the EMI on it. A loan against property (LAP) typically funds 50 to 80 percent of the market value at a lower rate than an unsecured loan.",
     howItWorks:
       "The maximum loan is your loan-to-value (LTV) ratio times the property's market value.\n\n```\nMax loan = LTV x Property value\n```\n\n**Example:** a ₹1 crore property at a 60% LTV supports a loan of up to ₹60 lakh.\n\nThat amount, at your interest rate and tenure, gives the EMI on a reducing balance, exactly as any other loan. Lenders also check your income, so your final sanction is the lower of the LTV limit and your repayment capacity.",
     heroArt: `${ART}/loan-against-property.svg`,
     faq: [
-      { q: "How much loan can I get against my property?", a: "Usually 50 to 70 percent of the market value, depending on the lender, the property type, and your income and repayment capacity. Enter your property value above to see the amount and the EMI." },
+      { q: "How much loan can I get against my property?", a: "Usually 50 to 80 percent of the market value, depending on the lender, the property type, and your income and repayment capacity. Enter your property value above to see the amount and the EMI." },
       { q: "Is a loan against property a secured loan?", a: "Yes. It is secured by mortgaging a property you own, which is why the lender charges a lower rate than an unsecured personal loan. The property stays yours and you continue to use it while you repay." },
       { q: "Is LAP cheaper than a personal loan?", a: "Yes. Because it is secured against your property the interest rate is generally lower than an unsecured personal loan, though still a little above a pure home loan." },
       { q: "Can I get a loan against property with a low CIBIL score?", a: "It is possible because the property is collateral, but a low score usually means a lower sanctioned amount or a higher interest rate. A score above 750 gets you the best terms." },
@@ -430,6 +430,37 @@ export const CALCULATORS: CalculatorDef[] = [
       heading: "Comparing loan offers?",
       text: "Leave your number and our loans team will call you back with reducing balance quotes you can compare properly.",
       triggerLabel: "Get honest quotes",
+      submitLabel: "Request callback",
+    },
+  },
+  {
+    slug: "compound-interest",
+    group: "loans",
+    businessLine: "loans",
+    navLabel: "Compound Interest",
+    cardSummary: "See how a lump sum and monthly additions grow with compound interest over time.",
+    h1: "Compound Interest Calculator",
+    title: "Compound Interest Calculator: Maturity Value & Yearly Growth",
+    metaDescription:
+      "Free compound interest calculator for India. Enter the principal, rate, time period and compounding frequency, add an optional monthly amount, and see the maturity value and yearly growth.",
+    keywords: ["compound interest calculator", "compound interest calculator india", "fd compound interest calculator", "quarterly compounding calculator", "monthly compound interest calculator"],
+    intro:
+      "Use this compound interest calculator to see how your money grows when interest is earned on interest. Enter the amount, the yearly rate, the time period and how often interest is added, plus an optional monthly addition, to see the maturity value, the interest earned and a year by year table.",
+    howItWorks:
+      "Compound interest adds each period's interest to the balance, so the next period earns interest on a bigger amount.\n\n```\nA = P x (1 + r / n)^(n x t)\n```\n\n- **P** is the principal you invest\n- **r** is the yearly interest rate as a decimal\n- **n** is how many times a year interest is added\n- **t** is the time in years\n\nMonthly additions are added at the end of each month and grow at the same effective rate.\n\n**Example:** ₹1 lakh at 8% compounded quarterly for 10 years grows to about ₹2.21 lakh.",
+    faq: [
+      { q: "What is compound interest?", a: "Compound interest is interest earned on both your original amount and the interest already added to it. Over long periods it grows much faster than simple interest, which is earned only on the original amount." },
+      { q: "How is compound interest calculated?", a: "A = P x (1 + r/n)^(n x t), where P is the principal, r the yearly rate as a decimal, n the number of times interest is added each year, and t the number of years. The interest earned is A minus P." },
+      { q: "Does compounding frequency matter?", a: "Yes, a little. At the same yearly rate, monthly compounding earns slightly more than quarterly, which earns more than yearly, because interest starts earning interest sooner." },
+      { q: "How often do Indian bank FDs compound?", a: "Most bank fixed deposits in India compound quarterly. Check your bank's terms, since some deposits pay out interest instead of adding it back, which removes the compounding effect." },
+      { q: "Is the result before or after tax?", a: "Before tax. Interest on fixed deposits and most savings products is taxable at your slab rate, so the amount you actually keep is lower." },
+    ],
+    relatedSlugs: ["emi", "prepayment", "down-payment-planner", "property-appreciation"],
+    leadOrigin: "calculator-compound-interest",
+    leadCta: {
+      heading: "Planning a bigger financial goal?",
+      text: "Leave your number and our team will call you back to talk through loans and options that fit your plan.",
+      triggerLabel: "Talk to our team",
       submitLabel: "Request callback",
     },
   },
