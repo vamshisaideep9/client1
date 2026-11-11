@@ -86,6 +86,15 @@ export const ARTWORK_SURFACES: Record<ArtworkUsageType, ArtworkSurface> = {
     aspectClass: "aspect-[2/1]",
     composition: "Leave generous margins so the same image survives several crops.",
   },
+  banner_video: {
+    usageType: "banner_video",
+    label: "Banner video",
+    description: "Short muted MP4 loop for a public banner (up to 30 seconds, 20 MB)",
+    width: 1280,
+    height: 720,
+    aspectClass: "aspect-video",
+    composition: "Plays muted on a loop, so make it readable without sound. Use the banner artwork as its poster.",
+  },
 };
 
 /** Rendering order for the library and the picker: public surfaces first. */
@@ -96,6 +105,7 @@ export const ARTWORK_SURFACE_ORDER: readonly ArtworkUsageType[] = [
   "dashboard_banner",
   "dashboard_offer",
   "campaign",
+  "banner_video",
 ];
 
 /**

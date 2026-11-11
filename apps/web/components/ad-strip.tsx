@@ -8,6 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, X } from "lucide-react";
 
+import { BannerVideo } from "@/components/banner-video";
 import { Button } from "@/components/ui/button";
 import { CLOSE_BUTTON_CLASS } from "@/components/ui/close-button";
 import type { HeroBanner } from "@/lib/banners";
@@ -54,6 +55,8 @@ export function AdStrip({
 
   if (dismissed) return null;
 
+  const hasVideo = Boolean(banner.youtubeId || banner.videoUrl);
+
   return (
     <section
       aria-label="Sponsored"
@@ -64,7 +67,7 @@ export function AdStrip({
       <div
         className={cn(
           "relative grid overflow-hidden rounded-xl border border-[#761f3f]/35 bg-[linear-gradient(110deg,#ffffff_35%,#fcf2f5)] shadow-[0_4px_18px_rgb(118_31_63_/_0.1)] sm:rounded-2xl",
-          banner.image && "sm:grid-cols-[minmax(0,38%)_minmax(0,1fr)] lg:grid-cols-[minmax(0,32%)_minmax(0,1fr)]",
+          (banner.image || hasVideo) && "sm:grid-cols-[minmax(0,38%)_minmax(0,1fr)] lg:grid-cols-[minmax(0,32%)_minmax(0,1fr)]",
         )}
       >
         {dismissible ? (
@@ -83,7 +86,17 @@ export function AdStrip({
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         ) : null}
-        {banner.image ? (
+        {hasVideo ? (
+          <div className="flex items-center justify-center bg-[#761f3f]/[0.04] p-3 sm:p-4">
+            <BannerVideo
+              youtubeId={banner.youtubeId}
+              videoUrl={banner.videoUrl}
+              poster={banner.image}
+              title={banner.title}
+              className="aspect-video w-full rounded-lg"
+            />
+          </div>
+        ) : banner.image ? (
           <div className="flex items-center justify-center bg-[#761f3f]/[0.04] p-3 sm:p-4">
             <div className="relative aspect-video w-full overflow-hidden rounded-lg">
               {failedImage !== banner.image ? (
