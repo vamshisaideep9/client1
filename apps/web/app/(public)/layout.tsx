@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { AnnouncementBanner } from "@/components/announcement-banner";
 import { SiteFooter } from "@/components/site-footer";
+import { PublicSurfaceMarker } from "@/components/public-surface-marker";
 import { ReferralCapture } from "@/components/referral-capture";
 import { SiteHeader } from "@/components/site-header";
 import { getPublishedServiceProducts } from "@/lib/financial-catalog";
@@ -23,6 +24,7 @@ export default async function PublicLayout({ children }: { children: ReactNode }
       >
         Skip to main content
       </a>
+      <PublicSurfaceMarker />
       <ReferralCapture />
       <AnnouncementBanner />
       <SiteHeader products={products} />

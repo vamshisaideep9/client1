@@ -58,6 +58,11 @@ public scope, panes are 50-62% white with an 18-24px blur and bright edges, and
 glass extends to service, feature, calculator, FAQ and trust cards. Browser
 check at 1366 px confirms frosted header/toolbar over colour; navbar stays on
 one line.
+Buttons and dropdowns join the glass finish: navy buttons become tinted glass,
+outline buttons clear glass, ghost buttons a glass hover pill; nav mega-menus,
+popovers, selects, menus and the mobile navigation sheet are frosted. A body
+marker set only on public pages scopes portalled surfaces; `Button` gains inert
+`data-slot`/`data-variant` hooks. 731 web tests and typecheck pass.
 
 **Implemented — development droplet deployment overlay** (2026-11-02),
 branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;
