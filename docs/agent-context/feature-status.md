@@ -15,7 +15,9 @@ guard now pins the retired sample number rather than the default.
 `organizationJsonLd()`; JSON-LD is escaped with `jsonLdScript`. Stacks 3-4:
 titles/H1/meta and homepage copy, then loan-page content and insurance unpublish.
 Evidence: targeted Vitest 17/17 (site, organization/About, footer, footer links),
-typecheck and lint pass.
+typecheck and lint pass; full Vitest on `7652f33` was 751/752, the one failure
+being the missing `/about` loading-fallback registration, now added
+(loading coverage 20/20).
 
 **Implemented — brand chrome: original logo, caption, white sidebar, trust
 lines** (2026-11-12; [PR #319](https://github.com/brollysolutions/client1/pull/319),

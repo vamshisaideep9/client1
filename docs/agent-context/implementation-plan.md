@@ -67,6 +67,7 @@ with FinancialService, BreadcrumbList and FAQPage JSON-LD, Organization node on
 Home. Web only; no API, schema, permission or contract change. Next: stack 3
 (46 titles/H1/meta, homepage copy, insurance wording) and stack 4 (loan-page
 content migration and insurance unpublish). Recommended: Opus 5.5 / high.
+Evidence is recorded in `feature-status.md`.
 
 **Implemented — brand chrome** (2026-11-12;
 [PR #319](https://github.com/brollysolutions/client1/pull/319), mirror #24), branch
