@@ -4,7 +4,7 @@ Status: **Derived living implementation ledger**
 
 **In progress — development seed expansion and lender policy catalogue**
 (2026-11-12), branch `feat/dev-seed-roster-lender-policy` from `upstream/main`
-`07cf748`. Development-only seed scripts; requirement coverage unchanged and no
+`07cf748`; [PR #318](https://github.com/brollysolutions/client1/pull/318) (mirror vamshisaideep9/client1#23). Development-only seed scripts; requirement coverage unchanged and no
 API, schema, permission or contract change. `seed_dev_roster` adds 14 role
 accounts (2 Clients; 2 Agents, Telecallers and Employees per line) with
 one-time generated passwords and 10 published listings. `seed_lender_policy`
