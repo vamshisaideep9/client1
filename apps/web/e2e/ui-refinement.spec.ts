@@ -69,8 +69,10 @@ test("the homepage shares one sky section colour and all page families share nav
       return Object.fromEntries(["--background", "--nav-bg", "--nav-tint", "--color-brand-cta-tint", "--muted", "--primary", "--nav-primary", "--color-brand-cta", "--color-dash-rail"].map((name) => [name, style.getPropertyValue(name).trim().toLowerCase()]));
     });
     for (const [name, value] of Object.entries(palette)) {
-      const action = ["--primary", "--nav-primary", "--color-brand-cta", "--color-dash-rail"].includes(name);
-      expect(value, `${route}: ${name}`).toBe(action ? "#293681" : "#f0f7fc");
+      const action = ["--primary", "--nav-primary", "--color-brand-cta"].includes(name);
+      // The dashboard rail is white in the light theme; actions stay navy.
+      if (name === "--color-dash-rail") expect(value, `${route}: ${name}`).toBe("#ffffff");
+      else expect(value, `${route}: ${name}`).toBe(action ? "#293681" : "#f0f7fc");
     }
   }
 });

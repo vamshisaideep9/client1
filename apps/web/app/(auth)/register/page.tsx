@@ -40,7 +40,11 @@ import {
 } from "@/lib/auth";
 import type { ServiceLine } from "@/lib/auth";
 import { formatMobile, isValidMobile, toE164 } from "@/lib/phone";
-import { isValidReferralCodeFormat, normalizeReferralCode } from "@/lib/referral-share";
+import {
+  isValidReferralCodeFormat,
+  normalizeReferralCode,
+  readIncomingReferral,
+} from "@/lib/referral-share";
 import {
   dashboardReturnTo,
   isPropertyReturnTo,
@@ -205,7 +209,9 @@ function RegisterPageContent() {
     }
     // Fresh start only — a resumed mid-wizard session never shows step 0
     // again, so a ?ref= on that reload would have nowhere to apply.
-    const ref = searchParams.get("ref");
+    // A shared loan or property link may have carried the code earlier in
+    // this browser session (components/referral-capture.tsx).
+    const ref = searchParams.get("ref") ?? readIncomingReferral();
     if (ref) {
       const normalized = normalizeReferralCode(ref);
       setDetails((d) => ({ ...d, referralCode: normalized }));

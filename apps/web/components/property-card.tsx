@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 
 import { LeadDialog } from "@/components/lead-dialog";
+import { ShareActions } from "@/components/share-actions";
 import {
   Card,
   CardContent,
@@ -100,6 +101,7 @@ export function PropertyCard({ listing }: { listing: PropertyListing }) {
             propertyRef: listing.id,
           })}
         />
+        <ShareActions path={detailHref} title={`${listing.title}, ${listing.location}`} />
       </CardFooter>
     </Card>
   );

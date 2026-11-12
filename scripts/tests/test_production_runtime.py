@@ -145,7 +145,7 @@ class ProductionRuntimeContractTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn('"PyJWT[crypto]>=2.10.1,<3"', pyproject)
+        self.assertIn('"PyJWT[crypto]>=2.15.0,<3"', pyproject)
         self.assertNotIn("python-jose", pyproject)
         self.assertNotIn("from jose", security_source)
         self.assertIn("from jwt import PyJWTError as JWTError", security_source)

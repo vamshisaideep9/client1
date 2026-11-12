@@ -5,14 +5,24 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useAuth } from "@/components/auth/session-provider";
 import { MobileInput } from "@/components/auth/mobile-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { LeadInterestPicker, type LeadInterest } from "@/features/agent/lead-interest-picker";
 import { DashboardFormPage, DashboardFormSection } from "@/features/dashboard/dashboard-ui";
 import { introduceAgentLead } from "@/lib/agent-api";
 import { isValidMobile, toE164 } from "@/lib/phone";
+
+function buildRequirement(notes: string, interest: LeadInterest) {
+  const requirement: Record<string, string> = {};
+  if (notes.trim()) requirement.notes = notes.trim();
+  if (interest?.kind === "property") requirement.property_id = interest.propertyId;
+  if (interest?.kind === "product") requirement.product_slug = interest.productSlug;
+  return Object.keys(requirement).length ? requirement : null;
+}
 
 export function AgentIntroduceLeadForm() {
   const router = useRouter();
@@ -23,6 +33,12 @@ export function AgentIntroduceLeadForm() {
   const [notes, setNotes] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [mobileError, setMobileError] = React.useState<string | null>(null);
+  const [interest, setInterest] = React.useState<LeadInterest>(null);
+  const { session } = useAuth();
+  const businessLine =
+    session?.businessLine === "loans" || session?.businessLine === "real_estate"
+      ? session.businessLine
+      : null;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,7 +52,7 @@ export function AgentIntroduceLeadForm() {
     const res = await introduceAgentLead({
       mobile: toE164(mobile),
       name: name.trim() || null,
-      requirement: notes.trim() ? { notes: notes.trim() } : null,
+      requirement: buildRequirement(notes, interest),
     });
     setSaving(false);
     if (res.ok) {
@@ -93,6 +109,7 @@ export function AgentIntroduceLeadForm() {
         </DashboardFormSection>
 
         <DashboardFormSection title="Requirement" description="Optional — help the telecaller follow up faster.">
+          <LeadInterestPicker businessLine={businessLine} value={interest} onChange={setInterest} />
           <div>
             <Label htmlFor="notes">What are they looking for?</Label>
             <Textarea

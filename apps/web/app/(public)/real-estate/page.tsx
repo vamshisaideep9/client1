@@ -102,7 +102,7 @@ export default async function RealEstatePage({
         heroPlant="/illustrations/heroes/real-estate.svg"
         beforeHero={
           banners.length > 0 ? (
-            <HeroCarousel banners={banners} variant="section" label="Property campaigns" />
+            <HeroCarousel banners={banners} variant="section" label="Property campaigns" compact />
           ) : null
         }
         beforeJourney={
