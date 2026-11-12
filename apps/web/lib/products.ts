@@ -337,7 +337,7 @@ export const RE_TRUST: TrustPoint[] = [
   {
     icon: FileCheck,
     label: "Paperwork sorted early",
-    note: "We check every document before you see the listing.",
+    note: "RERA and title documents are reviewed before a listing goes live.",
   },
 ];
 

@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 
 import { FOOTER_COLUMNS, LEGAL_LINKS } from "@/components/footer-links";
 import { Logo } from "@/components/logo";
-import { SITE_CONTACT, SITE_NAME, TRUST_LINES } from "@/lib/site";
+import { BUSINESS_FACTS, SITE_CONTACT, SITE_NAME, TRUST_LINES } from "@/lib/site";
 import type { PublicServiceLink } from "@/components/navbars/financial-services-menu";
 
 // Server-rendered navigation with native office disclosure on small screens.
@@ -77,7 +77,12 @@ export function SiteFooter({ products = [] }: { products?: readonly PublicServic
         </div>
 
         <div className="flex flex-col gap-3 border-t border-border pt-5 text-xs text-text-secondary sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <p>&copy; {year} {SITE_NAME}. All rights reserved.</p>
+          <div className="space-y-1">
+            <p>&copy; {year} {SITE_NAME}. All rights reserved.</p>
+            <p>
+              {BUSINESS_FACTS.businessType} of {BUSINESS_FACTS.proprietor} · Udyam {BUSINESS_FACTS.udyamNumber}
+            </p>
+          </div>
           <nav aria-label="Legal" className="flex flex-wrap items-center gap-x-5">
             {LEGAL_LINKS.map((link) => (
               <Link key={link.href} href={link.href} className="inline-flex min-h-11 items-center rounded-sm py-2 hover:text-brand-link focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">

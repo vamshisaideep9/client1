@@ -60,7 +60,36 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — brand chrome** (2026-11-12), branch
+**In progress — loan-page content and insurance unpublish** (2026-11-12),
+branch `feat/loan-pages-content-insurance-unpublish`, stack 4 of 4 stacked on
+PR #321. Data-only migration `d4f6a8c0e2b5` (client Home/Personal Loan copy on
+untouched seed rows; insurance unpublished), loan-page SEO map and drafted guide
+sections. Next priority after delivery: merge the stack in order (#319, #320,
+#321, this), redeploy the dev droplet so the real contact defaults and
+migration apply, then confirm the open compliance questions (TS RERA agent
+number, IRDAI or licensed tie-up, card issuers, lender agreements).
+Recommended: Opus 5.5 / high. Evidence is recorded in `feature-status.md`.
+
+**Implemented — public titles, H1s, meta and homepage copy** (2026-11-12;
+[PR #321](https://github.com/brollysolutions/client1/pull/321), mirror #26),
+branch `feat/seo-titles-homepage-copy`, stack 3 of 4 stacked on PR #320.
+Titles sheet v2 for 13 static pages and 18 calculators, homepage copy and
+visible H1, insurance wording removed from public hubs. Web only. Next: stack 4
+(loan-page SEO map, rich sections, content migration and insurance unpublish).
+Recommended: Opus 5.5 / high. Evidence is recorded in `feature-status.md`.
+
+**Implemented — client facts and About page** (2026-11-12;
+[PR #320](https://github.com/brollysolutions/client1/pull/320), mirror #25), branch
+`feat/client-facts-copy-seo`, stack 2 of 4 stacked on PR #319. Real public
+contact defaults, `BUSINESS_FACTS`, footer proprietor/Udyam line, `/about`
+with FinancialService, BreadcrumbList and FAQPage JSON-LD, Organization node on
+Home. Web only; no API, schema, permission or contract change. Next: stack 3
+(46 titles/H1/meta, homepage copy, insurance wording) and stack 4 (loan-page
+content migration and insurance unpublish). Recommended: Opus 5.5 / high.
+Evidence is recorded in `feature-status.md`.
+
+**Implemented — brand chrome** (2026-11-12;
+[PR #319](https://github.com/brollysolutions/client1/pull/319), mirror #24), branch
 `feat/brand-logo-sidebar-trust-lines` from `upstream/main` `07cf748`. The
 original-colour logo replaces every white/inverted logo, a "Wealth & Growth"
 caption is baked into the generated wordmark artwork, the dashboard sidebar

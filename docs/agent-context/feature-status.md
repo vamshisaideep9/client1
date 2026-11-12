@@ -2,8 +2,63 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — brand chrome: original logo, caption, white sidebar, trust
-lines** (2026-11-12), branch `feat/brand-logo-sidebar-trust-lines` from
+**In progress — loan-page content and insurance unpublish** (2026-11-12),
+branch `feat/loan-pages-content-insurance-unpublish`, stack 4 of 4 on
+`feat/seo-titles-homepage-copy`. API data migration plus web; requirement
+coverage unchanged. Recommended: Opus 5.5 / high (xhigh for the migration
+review). Additive data-only migration `d4f6a8c0e2b5` (single head) writes the
+client-approved Home Loan and Personal Loan summary, description, highlights,
+eligibility, documents and FAQ only where the untouched 73f4c2a91d6e seed copy
+remains, so Admin edits survive; it unpublishes the four insurance products and
+clears `homepage_featured` with them (`ck_loan_types_homepage_featured_is_public`).
+No DDL, grant, RLS or contract change. Web: `FINANCIAL_SERVICE_SEO` gives the
+16 catalogue slugs their supplied title, description and H1 (label/summary
+fallback); `FINANCIAL_SERVICE_SECTIONS` renders the drafted RBI LTV table,
+rate factors, borrowing limits and steps for Home and Personal Loan; loan
+Service schema is scoped to Hyderabad and Telangana. Evidence: API tests in a
+`python:3.13` container on the compose network (the API image's pinned Alpine
+packages no longer resolve) 31 passed, 0 skipped, including the TEMP-table
+migration test (seed rows updated, Admin-edited rows untouched, idempotent,
+insurance unpublished and unfeatured, downgrade restores); API ruff check and
+format pass; `alembic heads` = `d4f6a8c0e2b5`; web loan-page and metadata
+tests 55/55, typecheck and lint pass.
+
+**Implemented — public titles, H1s, meta and homepage copy** (2026-11-12;
+[PR #321](https://github.com/brollysolutions/client1/pull/321), mirror
+vamshisaideep9/client1#26), branch `feat/seo-titles-homepage-copy`, stack 3 of 4 on
+`feat/client-facts-copy-seo`. Web only; requirement coverage unchanged.
+Recommended: Opus 5.5 / high. The supplied titles, H1s and meta descriptions
+(sheet v2) are applied to 13 static public pages and 18 calculators;
+compound-interest gets a shortened branded title. Calculator pages keep
+appending `| Dhanadhara`; every rendered title is unique and at most 60
+characters. Home gets a visible H1 intro band, the drafted loans/property bands,
+a 4-step "How it works", partner copy and 5 FAQs; insurance wording leaves Home,
+`/loans` and the fallback hero; property copy says title documents are
+reviewed and recommends the buyer's own lawyer. "Cookie Notice" becomes
+"Cookie Policy". Privacy and Terms keep their proper-noun H1s.
+
+**Implemented — client facts and About page** (2026-11-12;
+[PR #320](https://github.com/brollysolutions/client1/pull/320), mirror
+vamshisaideep9/client1#25), branch
+`feat/client-facts-copy-seo`, stack 2 of 4 on `feat/brand-logo-sidebar-trust-lines`.
+Web only; requirement coverage unchanged. Recommended: Opus 5.5 / high. Contact
+defaults are now the client-confirmed public details (+91 90100 53010,
+dhanadhara@gmail.com, Monday to Saturday 10 AM to 6 PM with Sunday closed, APHB
+Colony, Vikarabad); env overrides and the production guard remain, and the
+guard now pins the retired sample number rather than the default.
+`BUSINESS_FACTS` (proprietorship of R Rohini, Udyam UDYAM-TS-28-0042986, 2026,
+5 advisors, English/Hindi/Telugu) feeds the footer, a new `/about` page
+(sitemap and footer link) and a FinancialService node on Home and About built by
+`organizationJsonLd()`; JSON-LD is escaped with `jsonLdScript`. Stacks 3-4:
+titles/H1/meta and homepage copy, then loan-page content and insurance unpublish.
+Evidence: targeted Vitest 17/17 (site, organization/About, footer, footer links),
+typecheck and lint pass; full Vitest on `7652f33` was 751/752, the one failure
+being the missing `/about` loading-fallback registration, now added
+(loading coverage 20/20).
+
+**Implemented — brand chrome: original logo, caption, white sidebar, trust
+lines** (2026-11-12; [PR #319](https://github.com/brollysolutions/client1/pull/319),
+mirror vamshisaideep9/client1#24), branch `feat/brand-logo-sidebar-trust-lines` from
 `upstream/main` `07cf748`. Web only (plus the email logo height); requirement
 coverage unchanged. Recommended: Opus 5.5 / high. Generated lockups carry a
 "Wealth & Growth" caption (960x232 horizontal, 960x930 stacked); every white

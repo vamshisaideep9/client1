@@ -20,9 +20,9 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: "Properties: Buy or Rent Verified Property in India",
+  title: "Flats, Villas & Plots for Sale in Hyderabad | Dhanadhara",
   description:
-    "Buy or rent verified flats, plots, villas, and commercial spaces with trusted partners. See what is available and how we guide you from first visit to final paperwork.",
+    "Flats, villas, plots, resale, rentals and commercial property in Hyderabad. Every listing is RERA-checked and site-visited before it goes live.",
   keywords: [
     "buy property",
     "rent property",
@@ -36,9 +36,9 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/real-estate" },
   openGraph: {
-    title: "Properties: Buy or Rent Verified Property in India",
+    title: "Flats, Villas & Plots for Sale in Hyderabad | Dhanadhara",
     description:
-      "Verified properties and trusted partners in one place, with one point of contact guiding you from first visit to final paperwork.",
+      "Flats, villas, plots, resale, rentals and commercial property in Hyderabad. Every listing is RERA-checked and site-visited before it goes live.",
     type: "website",
   },
 };
@@ -96,8 +96,8 @@ export default async function RealEstatePage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(realEstateJsonLd) }}
       />
       <ProductPage
-        title="Buy your property with confidence"
-        intro="From flats and plots to offices and shops, we bring only verified listings and trusted partners together in one place. We stay with you at every step, from the first visit until you hold the keys."
+        title="Verified flats, villas and plots for sale in Hyderabad"
+        intro="Flats, villas, plots, resale homes, rentals and commercial space in Hyderabad. Before a listing goes live, we check its RERA registration, review its title documents, visit the site and complete KYC on the builder or seller. We still recommend a title check by your own lawyer before you pay a token amount."
         heroDoodles
         heroPlant="/illustrations/heroes/real-estate.svg"
         beforeHero={
