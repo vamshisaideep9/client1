@@ -2,7 +2,13 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — public UI quick wins** (2026-11-11), branch
+**In progress — brand chrome: original logo, caption, white sidebar, trust
+lines** (2026-11-12), branch `feat/brand-logo-sidebar-trust-lines` from
+`upstream/main` `07cf748`. Web only; requirement coverage unchanged.
+Recommended: Opus 5.5 / high.
+
+**Implemented — public UI quick wins** (2026-11-11; landed on `main` with
+[PR #317](https://github.com/brollysolutions/client1/pull/317)), branch
 `feat/public-ui-quick-wins` from `upstream/main` `966c48b`; stack 1 of 6 for
 the 2026-11-11 product batch. Web only; requirement coverage unchanged.
 The Compound Interest island is registered as a calculator form surface.

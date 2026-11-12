@@ -65,7 +65,7 @@ def branded_email(to: str, subject: str, body: str) -> EmailMessage:
         '<!doctype html><html lang="en"><body style="margin:0;background:#f3f3ee;'
         'font-family:Arial,sans-serif;color:#20242e"><main style="max-width:600px;'
         'margin:auto;padding:32px;background:white">'
-        '<img src="cid:dhanadhara-logo" alt="Dhanadhara" width="240" height="44" '
+        '<img src="cid:dhanadhara-logo" alt="Dhanadhara" width="240" height="58" '
         'style="display:block;max-width:100%;height:auto;margin-bottom:28px">'
         f'<h1 style="font-size:22px">{escape(subject)}</h1>'
         '<div style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6">'

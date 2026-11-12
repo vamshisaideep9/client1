@@ -60,7 +60,19 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — public UI quick wins** (stack 1 of 6 for the 2026-11-11
+**In progress — brand chrome** (2026-11-12), branch
+`feat/brand-logo-sidebar-trust-lines` from `upstream/main` `07cf748`. The
+original-colour logo replaces every white/inverted logo, a "Wealth & Growth"
+caption is baked into the generated wordmark artwork, the dashboard sidebar
+rail becomes white (#FFFFFF) with navy text, the public footer becomes light,
+and the trust line is context-aware (loans line on loan pages, a property line
+on property pages, both elsewhere). Web only; no API, schema, permission or
+contract change. Follow-up: `feat/client-facts-copy-seo` (client facts, titles,
+H1s and meta for 46 URLs, /about, page copy, Organization JSON-LD, insurance
+unpublish). Recommended: Opus 5.5 / high.
+
+**Implemented — public UI quick wins** (landed on `main` with
+[PR #317](https://github.com/brollysolutions/client1/pull/317); stack 1 of 6 for the 2026-11-11
 product batch), branch `feat/public-ui-quick-wins` from `upstream/main`
 `966c48b`. Sponsored-card dismissal, one-per-row provider offers, compact
 property campaigns without "Open in Dhanadhara", sticky property search,
