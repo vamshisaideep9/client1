@@ -31,8 +31,8 @@ export type HeroBanner = {
 export const FALLBACK_HERO_BANNERS: HeroBanner[] = [
   {
     id: "loans",
-    title: "Loans, cards, and insurance that fit you",
-    subtitle: "All kinds of loans, credit cards, and insurance, matched to what you need.",
+    title: "Loans and credit cards that fit you",
+    subtitle: "Home, personal, business and more, matched with banks and NBFCs. Free for customers.",
     cta: { label: "Explore loans", href: "/loans" },
   },
   {

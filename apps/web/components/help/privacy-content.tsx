@@ -56,7 +56,7 @@ export function PrivacyContent({ dashboard = false }: { dashboard?: boolean }) {
               href={dashboard ? "/dashboard/cookies" : "/cookies"}
               className="font-medium text-brand-link underline underline-offset-4"
             >
-              Cookie Notice
+              Cookie Policy
             </Link>{" "}
             lists each cookie and the separate browser storage used by the
             website.

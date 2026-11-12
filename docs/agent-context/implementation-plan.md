@@ -60,7 +60,15 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — client facts and About page** (2026-11-12), branch
+**In progress — public titles, H1s, meta and homepage copy** (2026-11-12),
+branch `feat/seo-titles-homepage-copy`, stack 3 of 4 stacked on PR #320.
+Titles sheet v2 for 13 static pages and 18 calculators, homepage copy and
+visible H1, insurance wording removed from public hubs. Web only. Next: stack 4
+(loan-page SEO map, rich sections, content migration and insurance unpublish).
+Recommended: Opus 5.5 / high. Evidence is recorded in `feature-status.md`.
+
+**Implemented — client facts and About page** (2026-11-12;
+[PR #320](https://github.com/brollysolutions/client1/pull/320), mirror #25), branch
 `feat/client-facts-copy-seo`, stack 2 of 4 stacked on PR #319. Real public
 contact defaults, `BUSINESS_FACTS`, footer proprietor/Udyam line, `/about`
 with FinancialService, BreadcrumbList and FAQPage JSON-LD, Organization node on

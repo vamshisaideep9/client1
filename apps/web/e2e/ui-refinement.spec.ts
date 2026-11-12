@@ -482,7 +482,7 @@ for (const width of [320, 390, 768]) {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/calculators\/emi$/);
     await expect(drawer).toHaveCount(0);
-    await expect(page.getByRole("heading", { level: 1, name: "EMI Calculator", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Home loan EMI calculator", exact: true })).toBeVisible();
     await page.locator("header").getByRole("button", { name: "Open menu", exact: true }).click();
     await expect(page.getByRole("dialog").locator("summary").filter({ hasText: "Calculators" })).toHaveAttribute("aria-current", "page");
     await expect(page.getByRole("dialog").getByRole("link", { name: "Health Insurance Cover", exact: true })).toBeVisible();

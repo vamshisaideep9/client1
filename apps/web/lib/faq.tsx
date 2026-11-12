@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 
 // Single source of truth for public-page FAQ copy (home, loans, real estate,
 // earn-with-us). `a` is always plain text so every page can build FAQPage
@@ -19,43 +18,28 @@ export function faqPageJsonLd(items: FaqItem[]) {
   };
 }
 
+// Homepage FAQ (client drafts, 2026-11-12). The same array feeds the
+// visible FAQ and the FAQPage JSON-LD.
 export const HOME_FAQ_ITEMS: FaqItem[] = [
   {
-    q: "Is the platform free to use?",
-    a: "Yes. There's no charge to borrowers or buyers for using the platform, comparing offers, or getting matched with a partner.",
+    q: "Is Dhanadhara a bank?",
+    a: "No. Dhanadhara does not lend money. We connect you with banks, housing finance companies and NBFCs, and the lender you choose approves the loan, sets the interest rate and pays out the money.",
   },
   {
-    q: "How do you verify partners and listings?",
-    a: "Every lender, partner, and listing goes through a KYC check before it reaches you, so you're never dealing with someone unverified.",
+    q: "Do I pay Dhanadhara any fee?",
+    a: "No. Our service is free for customers at every stage, from enquiry to disbursal. The lender may charge its own processing fee, which appears in its loan offer before you accept.",
   },
   {
-    q: "Do you cover both loans and real estate?",
-    a: "Yes. You can compare loan offers and browse verified homes in the same place, with the same team supporting you.",
+    q: "Which areas do you serve?",
+    a: "We arrange loans for customers in Hyderabad and across Telangana, and list property in Hyderabad only. Our office is in Vikarabad, and the whole process runs online, so you never need to visit.",
   },
   {
-    q: "What happens after I leave my number?",
-    a: "One of our team calls you back to understand what you need and connect you with the right lender or partner.",
+    q: "Can I apply with a low CIBIL score?",
+    a: "Yes, you can enquire. Each lender sets its own minimum credit score, and whether it approves you, and at what rate, is its decision. A lower score usually means fewer offers and a higher interest rate.",
   },
   {
-    q: "Will you sell my number to anyone?",
-    a: "No. We never sell or share your number. It's only used to call you back about your own enquiry.",
-  },
-  {
-    q: "How do I become a partner?",
-    a: "Visit our Earn with Us page to see the requirements and apply. We verify your KYC, and once you're approved you can start earning commission.",
-    aRich: (
-      <>
-        Visit our{" "}
-        <Link
-          href="/earn-with-us"
-          className="font-medium text-[var(--nav-primary)] underline underline-offset-4"
-        >
-          Earn with Us
-        </Link>{" "}
-        page to see the requirements and apply. We verify your KYC, and once
-        you&apos;re approved you can start earning commission.
-      </>
-    ),
+    q: "Do I need to visit your office?",
+    a: "No. You submit your details, upload documents and track progress online through your Dhanadhara account. An advisor calls you during working hours to guide each step until disbursal.",
   },
 ];
 
@@ -152,7 +136,7 @@ export const REAL_ESTATE_FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: "Do you check the legal side of a property?",
-    a: "We verify RERA registration and guide you through the title and document checks before you commit. For high value purchases we also recommend an independent legal review, and we help you arrange one.",
+    a: "Before a listing goes live, we check its RERA registration, review its title documents, visit the site and complete KYC on the builder or seller. We still recommend a title check by your own lawyer before you pay a token amount.",
   },
   {
     q: "Can you also arrange the home loan?",
