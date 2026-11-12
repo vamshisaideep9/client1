@@ -4818,6 +4818,8 @@ export interface components {
             /** City */
             city: string;
             construction_status?: components["schemas"]["ConstructionStatus"] | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing?: components["schemas"]["Furnishing"] | null;
             /** @default sale */
             listing_intent: components["schemas"]["ListingIntent"];
@@ -6031,6 +6033,10 @@ export interface components {
             template_id?: string | null;
             /** Title */
             title: string;
+            /** Video Media Asset Id */
+            video_media_asset_id?: string | null;
+            /** Youtube Url */
+            youtube_url?: string | null;
         };
         /** BannerImageUploadRequest */
         BannerImageUploadRequest: {
@@ -6135,6 +6141,12 @@ export interface components {
             updated_at: string;
             /** Version */
             version: number;
+            /** Video Media Asset Id */
+            video_media_asset_id?: string | null;
+            /** Video Url */
+            video_url?: string | null;
+            /** Youtube Video Id */
+            youtube_video_id?: string | null;
         };
         /**
          * BannerStatus
@@ -6216,6 +6228,10 @@ export interface components {
             template_id?: string | null;
             /** Title */
             title?: string | null;
+            /** Video Media Asset Id */
+            video_media_asset_id?: string | null;
+            /** Youtube Url */
+            youtube_url?: string | null;
         };
         /** BookmarkCreate */
         BookmarkCreate: {
@@ -6296,7 +6312,7 @@ export interface components {
              * Content Type
              * @enum {string}
              */
-            content_type: "image/jpeg" | "image/png" | "image/webp";
+            content_type: "image/jpeg" | "image/png" | "image/webp" | "video/mp4";
             /** Object Key */
             object_key: string;
             /** Source Reference */
@@ -6309,7 +6325,7 @@ export interface components {
              * Usage Type
              * @enum {string}
              */
-            usage_type: "homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign";
+            usage_type: "homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign" | "banner_video";
         };
         /** CampaignMediaListResponse */
         CampaignMediaListResponse: {
@@ -6384,7 +6400,7 @@ export interface components {
              * Content Type
              * @enum {string}
              */
-            content_type: "image/jpeg" | "image/png" | "image/webp";
+            content_type: "image/jpeg" | "image/png" | "image/webp" | "video/mp4";
             /** Filename */
             filename: string;
         };
@@ -8640,6 +8656,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing: components["schemas"]["Furnishing"] | null;
             /**
              * Id
@@ -8885,6 +8903,10 @@ export interface components {
             subtitle: string | null;
             /** Title */
             title: string;
+            /** Video Url */
+            video_url?: string | null;
+            /** Youtube Video Id */
+            youtube_video_id?: string | null;
         };
         /** PublicContentBlockListResponse */
         PublicContentBlockListResponse: {
@@ -9033,6 +9055,8 @@ export interface components {
             /** City */
             city: string;
             construction_status: components["schemas"]["ConstructionStatus"] | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing: components["schemas"]["Furnishing"] | null;
             /**
              * Id
@@ -9098,6 +9122,8 @@ export interface components {
          */
         PublicPropertyRead: {
             category: components["schemas"]["PropertyCategory"];
+            /** Developer Name */
+            developer_name?: string | null;
             /**
              * Id
              * Format: uuid
@@ -9268,6 +9294,31 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /**
+         * ReferralConvertedItem
+         * @description What a referral converted on, for the referrer's own activity detail.
+         *
+         *     Deliberately limited to catalogue facts: the property listing's public
+         *     title/location/type, or the loan product label. Never a deal value, loan
+         *     amount, quoted price, status note, or anything about the referred person.
+         *     ``property_id`` is set only while the listing is still published, so the
+         *     web app can link to the public page without exposing withdrawn listings.
+         */
+        ReferralConvertedItem: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "property" | "loan";
+            /** Location */
+            location?: string | null;
+            /** Property Id */
+            property_id?: string | null;
+            /** Property Type */
+            property_type?: string | null;
+            /** Title */
+            title: string;
+        };
         /** ReferralListResponse */
         ReferralListResponse: {
             /** Referrals */
@@ -9351,6 +9402,7 @@ export interface components {
             conversion_status: string;
             /** Converted At */
             converted_at: string | null;
+            converted_item?: components["schemas"]["ReferralConvertedItem"] | null;
             /**
              * Created At
              * Format: date-time
@@ -9792,6 +9844,8 @@ export interface components {
             /** City */
             city: string;
             construction_status?: components["schemas"]["ConstructionStatus"] | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing?: components["schemas"]["Furnishing"] | null;
             /** @default sale */
             listing_intent: components["schemas"]["ListingIntent"];
@@ -9905,6 +9959,8 @@ export interface components {
             };
             /** Details Version */
             details_version: number | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing: components["schemas"]["Furnishing"] | null;
             /**
              * Id
@@ -9998,6 +10054,8 @@ export interface components {
             /** City */
             city: string;
             construction_status?: components["schemas"]["ConstructionStatus"] | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing?: components["schemas"]["Furnishing"] | null;
             /** @default sale */
             listing_intent: components["schemas"]["ListingIntent"];
@@ -14968,7 +15026,7 @@ export interface operations {
         parameters: {
             query?: {
                 active_only?: boolean;
-                usage_type?: ("homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign") | null;
+                usage_type?: ("homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign" | "banner_video") | null;
                 business_line?: ("loans" | "real_estate" | "both") | null;
             };
             header?: never;
