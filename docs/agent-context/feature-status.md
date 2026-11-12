@@ -2,8 +2,26 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — brand chrome: original logo, caption, white sidebar, trust
-lines** (2026-11-12), branch `feat/brand-logo-sidebar-trust-lines` from
+**In progress — client facts and About page** (2026-11-12), branch
+`feat/client-facts-copy-seo`, stack 2 of 4 on `feat/brand-logo-sidebar-trust-lines`.
+Web only; requirement coverage unchanged. Recommended: Opus 5.5 / high. Contact
+defaults are now the client-confirmed public details (+91 90100 53010,
+dhanadhara@gmail.com, Monday to Saturday 10 AM to 6 PM with Sunday closed, APHB
+Colony, Vikarabad); env overrides and the production guard remain, and the
+guard now pins the retired sample number rather than the default.
+`BUSINESS_FACTS` (proprietorship of R Rohini, Udyam UDYAM-TS-28-0042986, 2026,
+5 advisors, English/Hindi/Telugu) feeds the footer, a new `/about` page
+(sitemap and footer link) and a FinancialService node on Home and About built by
+`organizationJsonLd()`; JSON-LD is escaped with `jsonLdScript`. Stacks 3-4:
+titles/H1/meta and homepage copy, then loan-page content and insurance unpublish.
+Evidence: targeted Vitest 17/17 (site, organization/About, footer, footer links),
+typecheck and lint pass; full Vitest on `7652f33` was 751/752, the one failure
+being the missing `/about` loading-fallback registration, now added
+(loading coverage 20/20).
+
+**Implemented — brand chrome: original logo, caption, white sidebar, trust
+lines** (2026-11-12; [PR #319](https://github.com/brollysolutions/client1/pull/319),
+mirror vamshisaideep9/client1#24), branch `feat/brand-logo-sidebar-trust-lines` from
 `upstream/main` `07cf748`. Web only (plus the email logo height); requirement
 coverage unchanged. Recommended: Opus 5.5 / high. Generated lockups carry a
 "Wealth & Growth" caption (960x232 horizontal, 960x930 stacked); every white
