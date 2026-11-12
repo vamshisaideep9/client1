@@ -60,7 +60,33 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — public UI quick wins** (stack 1 of 6 for the 2026-11-11
+**In progress — development seed expansion and lender policy catalogue**
+(2026-11-12), branch `feat/dev-seed-roster-lender-policy` from `upstream/main`
+`07cf748`. Development-only scripts; no API, schema, permission or contract
+change. `seed_dev_roster` adds 2 Clients (both lines, referral codes) plus 2
+Agents, 2 Telecallers and 2 Employees per line on `+91 9100000110-123`, each with
+a generated password printed once and never stored, and 10 published Hyderabad
+listings across all five categories; reruns skip existing rows and refuse
+foreign identities. `seed_lender_policy` replaces the provider catalogue from
+`data/lender_policy_2026_08.json`, a verbatim transcription of the user-supplied
+`Bank loan policy.xlsx` (13 product sheets, 136 normalised providers, 303
+offers after 2 exact duplicate rows) with the raw-to-provider mapping explicit in
+the file. It dry-runs by default (`--apply` commits), deletes offers for loan
+products and every product the workbook covers, keeps credit-card and
+life-insurance offers, reuses providers by name, deletes orphaned providers and
+only deactivates a provider that a loan application still references. Offers
+publish with the workbook's 2026-08-31 save date as `last_verified_at`; "case
+by case" cells surface as text and implausible cells (an LTV typed into the ROI
+row) are dropped. Secured Loans and Project Funding are absent from the workbook
+and are left without offers. Recommended: Opus / high. Next priority after
+delivery: run both seeders on the development droplet, then resume the open
+launch gates.
+
+**Delivered — 2026-11-11 product batch** via
+[PR #317](https://github.com/brollysolutions/client1/pull/317)
+(`feat/land-batch-no-glass`, merged as `07cf748`). Original brief:
+
+**Public UI quick wins** (stack 1 of 6 for the 2026-11-11
 product batch), branch `feat/public-ui-quick-wins` from `upstream/main`
 `966c48b`. Sponsored-card dismissal, one-per-row provider offers, compact
 property campaigns without "Open in Dhanadhara", sticky property search,
@@ -2006,6 +2032,7 @@ The backlog builds on these delivered foundations:
 
 | Date | Change | Evidence |
 | --- | --- | --- |
+| 2026-11-12 | Added development-only `seed_dev_roster` (14 role accounts with one-time generated passwords, 10 published listings) and `seed_lender_policy` (dry-run-by-default replacement of the provider catalogue from the user's `Bank loan policy.xlsx`, transcribed to `data/lender_policy_2026_08.json`: 13 products, 136 providers, 303 offers). No API, schema, permission or contract change. | Branch `feat/dev-seed-roster-lender-policy`; isolated Linux run on Postgres 18 / Redis 8 after `alembic upgrade head`: 33/33 new tests pass (parsers, data file, rolled-back catalogue replacement with deactivated referenced provider and preserved card offers, rolled-back roster creation, rerun and foreign-identity refusal); API Ruff and format pass on 522 files; exactly one head (`c3e5a7b9d1f4`); feature-tracking check passes. Unverified: the full API suite started but its result was lost when host memory pressure stopped log capture; CI runs it on the PR. |
 | 2026-11-03 | Development droplet: MinIO disabled (user decision) after `minio/minio` and `minio/mc` proved unpublished on Docker Hub and quay.io; the API no longer waits for it, the files host and its Caddy site, droplet IP and MinIO credentials are removed, and the runbook marks uploads and media as unavailable there. Local dev compose unchanged; replacing object storage for fresh machines is a separate decision. | Droplet `up` pull failure; `docker manifest inspect` on both registries; `scripts/tests/test_dev_droplet.py` (8 pass); Compose 5.4.0 render (8 services, loopback 8000/3001 only); Caddy 2.6.2 adapt (403 first); [PR #309](https://github.com/brollysolutions/client1/pull/309). |
 | 2026-11-03 | Development droplet runbook: sparse checkout now runs `init --cone` before `set`, because Git 2.34 (Ubuntu 22.04) kept non-cone patterns even with `set --cone` and dropped the root compose files. | Observed and confirmed on the real droplet (`core.sparseCheckoutCone=true`, root compose files present); [PR #309](https://github.com/brollysolutions/client1/pull/309). |
 | 2026-11-02 | Added the development droplet deployment overlay (`infra/dev-droplet/`): loopback-only proxied ports, no datastore ports, fresh generated credentials, IP-allowlisted host Caddy, and sparse-checkout runbook. Development data only. | [PR #309](https://github.com/brollysolutions/client1/pull/309); `scripts/tests/test_dev_droplet.py` (7 pass); Docker Compose 5.4.0 render; Caddy 2.6.2 adapt with allowlist-first route order. |
