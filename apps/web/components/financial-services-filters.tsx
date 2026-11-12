@@ -294,7 +294,7 @@ export function FinancialServicesFilters({
                   <span
                     className={cn(
                       "tabular-nums text-xs font-semibold",
-                      active ? "text-dash-foreground" : "text-text-secondary",
+                      active ? "text-white" : "text-text-secondary",
                     )}
                   >
                     {count}

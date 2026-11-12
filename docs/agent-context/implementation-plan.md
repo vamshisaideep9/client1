@@ -60,9 +60,21 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — development seed expansion and lender policy catalogue**
+**In progress — brand chrome** (2026-11-12), branch
+`feat/brand-logo-sidebar-trust-lines` from `upstream/main` `07cf748`. The
+original-colour logo replaces every white/inverted logo, a "Wealth & Growth"
+caption is baked into the generated wordmark artwork, the dashboard sidebar
+rail becomes white (#FFFFFF) with navy text, the public footer becomes light,
+and the trust line is context-aware (loans line on loan pages, a property line
+on property pages, both elsewhere). Web only; no API, schema, permission or
+contract change. Follow-up: `feat/client-facts-copy-seo` (client facts, titles,
+H1s and meta for 46 URLs, /about, page copy, Organization JSON-LD, insurance
+unpublish). Recommended: Opus 5.5 / high. Evidence and residual e2e notes are
+recorded in `feature-status.md`.
+
+**Implemented — development seed expansion and lender policy catalogue**
 (2026-11-12), branch `feat/dev-seed-roster-lender-policy` from `upstream/main`
-`07cf748`; [PR #318](https://github.com/brollysolutions/client1/pull/318) (mirror vamshisaideep9/client1#23). Development-only scripts; no API, schema, permission or contract
+`07cf748`; [PR #318](https://github.com/brollysolutions/client1/pull/318) (mirror vamshisaideep9/client1#23), merged as `1cead74`. Development-only scripts; no API, schema, permission or contract
 change. `seed_dev_roster` adds 2 Clients (both lines, referral codes) plus 2
 Agents, 2 Telecallers and 2 Employees per line on `+91 9100000110-123`, each with
 a generated password printed once and never stored, and 10 published Hyderabad

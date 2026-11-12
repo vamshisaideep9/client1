@@ -1,4 +1,4 @@
-import { SITE_NAME, TRUST_LINE } from "@/lib/brand";
+import { SITE_NAME, TRUST_LINES } from "@/lib/brand";
 
 type SiteEnvironment = Record<string, string | undefined>;
 
@@ -166,4 +166,4 @@ const siteConfig = resolveSiteConfig({
 
 export const SITE_URL = siteConfig.siteUrl;
 export const SITE_CONTACT = siteConfig.contact;
-export { SITE_NAME, TRUST_LINE };
+export { SITE_NAME, TRUST_LINES };
