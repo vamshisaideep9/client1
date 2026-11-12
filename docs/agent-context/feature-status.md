@@ -2,8 +2,30 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — public titles, H1s, meta and homepage copy** (2026-11-12),
-branch `feat/seo-titles-homepage-copy`, stack 3 of 4 on
+**In progress — loan-page content and insurance unpublish** (2026-11-12),
+branch `feat/loan-pages-content-insurance-unpublish`, stack 4 of 4 on
+`feat/seo-titles-homepage-copy`. API data migration plus web; requirement
+coverage unchanged. Recommended: Opus 5.5 / high (xhigh for the migration
+review). Additive data-only migration `d4f6a8c0e2b5` (single head) writes the
+client-approved Home Loan and Personal Loan summary, description, highlights,
+eligibility, documents and FAQ only where the untouched 73f4c2a91d6e seed copy
+remains, so Admin edits survive; it unpublishes the four insurance products and
+clears `homepage_featured` with them (`ck_loan_types_homepage_featured_is_public`).
+No DDL, grant, RLS or contract change. Web: `FINANCIAL_SERVICE_SEO` gives the
+16 catalogue slugs their supplied title, description and H1 (label/summary
+fallback); `FINANCIAL_SERVICE_SECTIONS` renders the drafted RBI LTV table,
+rate factors, borrowing limits and steps for Home and Personal Loan; loan
+Service schema is scoped to Hyderabad and Telangana. Evidence: API tests in a
+`python:3.13` container on the compose network (the API image's pinned Alpine
+packages no longer resolve) 31 passed, 0 skipped, including the TEMP-table
+migration test (seed rows updated, Admin-edited rows untouched, idempotent,
+insurance unpublished and unfeatured, downgrade restores); API ruff check and
+format pass; `alembic heads` = `d4f6a8c0e2b5`; web loan-page and metadata
+tests 55/55, typecheck and lint pass.
+
+**Implemented — public titles, H1s, meta and homepage copy** (2026-11-12;
+[PR #321](https://github.com/brollysolutions/client1/pull/321), mirror
+vamshisaideep9/client1#26), branch `feat/seo-titles-homepage-copy`, stack 3 of 4 on
 `feat/client-facts-copy-seo`. Web only; requirement coverage unchanged.
 Recommended: Opus 5.5 / high. The supplied titles, H1s and meta descriptions
 (sheet v2) are applied to 13 static public pages and 18 calculators;
