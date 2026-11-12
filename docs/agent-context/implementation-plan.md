@@ -60,7 +60,18 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — public titles, H1s, meta and homepage copy** (2026-11-12),
+**In progress — loan-page content and insurance unpublish** (2026-11-12),
+branch `feat/loan-pages-content-insurance-unpublish`, stack 4 of 4 stacked on
+PR #321. Data-only migration `d4f6a8c0e2b5` (client Home/Personal Loan copy on
+untouched seed rows; insurance unpublished), loan-page SEO map and drafted guide
+sections. Next priority after delivery: merge the stack in order (#319, #320,
+#321, this), redeploy the dev droplet so the real contact defaults and
+migration apply, then confirm the open compliance questions (TS RERA agent
+number, IRDAI or licensed tie-up, card issuers, lender agreements).
+Recommended: Opus 5.5 / high. Evidence is recorded in `feature-status.md`.
+
+**Implemented — public titles, H1s, meta and homepage copy** (2026-11-12;
+[PR #321](https://github.com/brollysolutions/client1/pull/321), mirror #26),
 branch `feat/seo-titles-homepage-copy`, stack 3 of 4 stacked on PR #320.
 Titles sheet v2 for 13 static pages and 18 calculators, homepage copy and
 visible H1, insurance wording removed from public hubs. Web only. Next: stack 4
