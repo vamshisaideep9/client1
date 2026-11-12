@@ -16,8 +16,8 @@ import { FALLBACK_HERO_BANNERS } from "@/lib/banners";
 import { faqPageJsonLd, HOME_FAQ_ITEMS } from "@/lib/faq";
 import { getHeroBanners } from "@/lib/public-banners";
 import { getPublicContentBlockBySlug } from "@/lib/public-content-blocks";
+import { jsonLdScript, organizationJsonLd } from "@/lib/organization-jsonld";
 import { getPublicListings } from "@/lib/public-properties";
-import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 // The hero is the one CMS surface with an explicit starts_at/ends_at contract
 // (docs/specs/public-banner-serving.md), so visitor-visible publish latency is
@@ -59,8 +59,7 @@ export const metadata: Metadata = {
 
 const homeFaqJsonLd = {
   "@context": "https://schema.org",
-  "@graph": [faqPageJsonLd(HOME_FAQ_ITEMS)],
-  publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+  "@graph": [organizationJsonLd(), faqPageJsonLd(HOME_FAQ_ITEMS)],
 };
 
 export default async function Home() {
@@ -83,7 +82,7 @@ export default async function Home() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeFaqJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(homeFaqJsonLd) }}
       />
       {/* Single crawlable H1 for the page. The hero and section headings are all
           H2s, so this gives the document a proper outline without changing the

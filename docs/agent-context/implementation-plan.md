@@ -60,7 +60,16 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — brand chrome** (2026-11-12), branch
+**In progress — client facts and About page** (2026-11-12), branch
+`feat/client-facts-copy-seo`, stack 2 of 4 stacked on PR #319. Real public
+contact defaults, `BUSINESS_FACTS`, footer proprietor/Udyam line, `/about`
+with FinancialService, BreadcrumbList and FAQPage JSON-LD, Organization node on
+Home. Web only; no API, schema, permission or contract change. Next: stack 3
+(46 titles/H1/meta, homepage copy, insurance wording) and stack 4 (loan-page
+content migration and insurance unpublish). Recommended: Opus 5.5 / high.
+
+**Implemented — brand chrome** (2026-11-12;
+[PR #319](https://github.com/brollysolutions/client1/pull/319), mirror #24), branch
 `feat/brand-logo-sidebar-trust-lines` from `upstream/main` `07cf748`. The
 original-colour logo replaces every white/inverted logo, a "Wealth & Growth"
 caption is baked into the generated wordmark artwork, the dashboard sidebar
