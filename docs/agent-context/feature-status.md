@@ -2,7 +2,22 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — client facts and About page** (2026-11-12), branch
+**In progress — public titles, H1s, meta and homepage copy** (2026-11-12),
+branch `feat/seo-titles-homepage-copy`, stack 3 of 4 on
+`feat/client-facts-copy-seo`. Web only; requirement coverage unchanged.
+Recommended: Opus 5.5 / high. The supplied titles, H1s and meta descriptions
+(sheet v2) are applied to 13 static public pages and 18 calculators;
+compound-interest gets a shortened branded title. Calculator pages keep
+appending `| Dhanadhara`; every rendered title is unique and at most 60
+characters. Home gets a visible H1 intro band, the drafted loans/property bands,
+a 4-step "How it works", partner copy and 5 FAQs; insurance wording leaves Home,
+`/loans` and the fallback hero; property copy says title documents are
+reviewed and recommends the buyer's own lawyer. "Cookie Notice" becomes
+"Cookie Policy". Privacy and Terms keep their proper-noun H1s.
+
+**Implemented — client facts and About page** (2026-11-12;
+[PR #320](https://github.com/brollysolutions/client1/pull/320), mirror
+vamshisaideep9/client1#25), branch
 `feat/client-facts-copy-seo`, stack 2 of 4 on `feat/brand-logo-sidebar-trust-lines`.
 Web only; requirement coverage unchanged. Recommended: Opus 5.5 / high. Contact
 defaults are now the client-confirmed public details (+91 90100 53010,
