@@ -121,6 +121,8 @@ export type PropertyFilters = {
   city?: string;
   locality?: string;
   pincode?: string;
+  /** Exact developer / builder brand, matched case-insensitively. */
+  developer?: string;
   sort?: SortOrder;
 };
 
@@ -139,6 +141,7 @@ const FACET_KEYS = [
   "city",
   "locality",
   "pincode",
+  "developer",
 ] as const;
 
 export function filterListings(listings: REListing[], filters: PropertyFilters): REListing[] {
@@ -168,8 +171,14 @@ export function filterListings(listings: REListing[], filters: PropertyFilters):
     if (filters.city && listing.city !== filters.city) return false;
     if (filters.locality && listing.locality !== filters.locality) return false;
     if (filters.pincode && listing.pincode !== filters.pincode) return false;
+    if (
+      filters.developer &&
+      listing.developerName?.toLowerCase() !== filters.developer.toLowerCase()
+    ) {
+      return false;
+    }
     if (query) {
-      const haystack = `${listing.title} ${listing.locality} ${listing.city} ${listing.pincode}`.toLowerCase();
+      const haystack = `${listing.title} ${listing.developerName ?? ""} ${listing.locality} ${listing.city} ${listing.pincode}`.toLowerCase();
       if (!haystack.includes(query)) return false;
     }
     return true;

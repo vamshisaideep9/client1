@@ -16,6 +16,10 @@ export type HeroBanner = {
   image?: string;
   reraVerified?: boolean;
   cta?: { label: string; href: string };
+  /** 11-character YouTube id; rendered as a privacy-enhanced click-to-play embed. */
+  youtubeId?: string;
+  /** Direct URL of a processed, public MP4 loop on the asset host. */
+  videoUrl?: string;
 };
 
 // Editorial fallback, not sample data. Rendered only when the CMS returns

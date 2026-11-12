@@ -135,6 +135,46 @@ class RedisCache:
         """Atomically consume a single-use value (Redis 6.2+ GETDEL)."""
         return await self._r.getdel(key)
 
+    async def store_otp(self, key: str, hashed: str, attempts: int, ttl: int) -> None:
+        """Publish one challenge and its budget together, including on resend."""
+        async with self._r.pipeline(transaction=True) as pipe:
+            pipe.set(key, hashed, ex=ttl)
+            pipe.set(f"{key}:attempts", attempts, ex=ttl)
+            await pipe.execute()
+
+    async def claim_otp_attempt(self, key: str) -> tuple[str, int] | None:
+        """Reserve a guess before hashing; -1 means the budget is exhausted."""
+        result = await self._r.eval(
+            """
+            local hashed = redis.call('GET', KEYS[1])
+            if not hashed then return nil end
+            local remaining = tonumber(redis.call('GET', KEYS[2]) or '0')
+            if remaining <= 0 then return {hashed, -1} end
+            return {hashed, redis.call('DECR', KEYS[2])}
+            """,
+            2,
+            key,
+            f"{key}:attempts",
+        )
+        return (result[0], int(result[1])) if result else None
+
+    async def consume_otp(self, key: str, hashed: str, *related_keys: str) -> bool:
+        """Only one verifier of this exact generation may consume the code."""
+        return bool(
+            await self._r.eval(
+                """
+                if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
+                redis.call('DEL', unpack(KEYS))
+                return 1
+                """,
+                2 + len(related_keys),
+                key,
+                f"{key}:attempts",
+                *related_keys,
+                hashed,
+            )
+        )
+
     async def set(self, key: str, value: Any, ttl: int) -> None:
         await self._r.set(key, str(value), ex=ttl)
 

@@ -76,6 +76,13 @@ function buildChips(filters: PropertyFilters, setFilters: (patch: Partial<Proper
   if (filters.city) {
     chips.push({ key: "city", label: filters.city, onRemove: () => setFilters({ city: undefined }) });
   }
+  if (filters.developer) {
+    chips.push({
+      key: "developer",
+      label: `Developer: ${filters.developer}`,
+      onRemove: () => setFilters({ developer: undefined }),
+    });
+  }
 
   chips.push(
     ...arrayChips(
@@ -225,6 +232,14 @@ export function PropertySearchBar({
     setOpen(false);
     setFilters({ pincode: value, q: undefined, locality: undefined, city: undefined });
   }
+  // A developer is a facet: it narrows to every listing by that brand across
+  // localities, independent of the free-text box.
+  function pickDeveloper(value: string) {
+    syncingFromFilters.current = true;
+    setText("");
+    setOpen(false);
+    setFilters({ developer: value, q: undefined, locality: undefined, city: undefined, pincode: undefined });
+  }
   function pickProperty(title: string) {
     syncingFromFilters.current = true;
     setText(title);
@@ -309,7 +324,7 @@ export function PropertySearchBar({
                   // The placeholder is an example, not a label: it truncates on
                   // narrow viewports and disappears once the user types.
                   aria-label="Search properties"
-                  placeholder="Search by locality, city, PIN code, or property name..."
+                  placeholder="Search by property, developer, locality, city, or PIN..."
                   // CommandInput's own built-in icon is hidden: SearchFieldIcon
                   // above is the one leading icon this field shows.
                   wrapperClassName="h-full min-w-0 flex-1 border-b-0 px-3 [&>svg]:hidden"
@@ -349,6 +364,7 @@ export function PropertySearchBar({
                 onPickPincode={pickPincode}
                 onPickSubtype={pickSubtype}
                 onPickProperty={pickProperty}
+                onPickDeveloper={pickDeveloper}
               />
             </PopoverContent>
           </Popover>

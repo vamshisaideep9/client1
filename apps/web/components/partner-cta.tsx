@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LeadDialog } from "@/components/lead-dialog";
 
 // Home "Earn with Us" teaser: two earning tracks, agent commission and user
-// referral cashback, as a single split editorial band, content on the left, a
+// referral bonus, as a single split editorial band, content on the left, a
 // Storyset illustration on the right (earn-with-us.svg, shared with the full
 // /earn-with-us page; recolored to our blue/navy palette, ₹ swapped in for
 // the $ glyph; credit in site-footer). Recruits agents for BOTH lines; agents
@@ -53,7 +53,7 @@ export function PartnerCta() {
                 <p className="text-base text-foreground sm:text-lg">
                   <span className="font-semibold">Refer and earn.</span>{" "}
                   Share your referral code. When a friend buys a property or
-                  closes a loan, you get cashback.
+                  closes a loan, you get a referral bonus.
                 </p>
               </li>
             </ul>
