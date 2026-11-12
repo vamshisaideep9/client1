@@ -35,15 +35,16 @@ for (const role of ["client", "admin", "sub_admin", "agent", "employee", "teleca
     } else {
       await expect(logo).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
       const horizontal = logo.locator('img[src*="logo-horizontal.png"]');
-      await expect(horizontal).toHaveCSS("filter", "brightness(0) invert(1)");
-      await expect(horizontal).toHaveCSS("width", "192px");
+      await expect(horizontal).toHaveCSS("filter", "none");
+      await expect(horizontal).toHaveCSS("width", "176px");
       await expect(horizontal).toHaveCSS("opacity", "1");
       await expect(sidebar.getByRole("button", { name: /sidebar/ })).toHaveCount(0);
     }
     const scroller = sidebar.locator("[data-sidebar-scroll]");
     await expect(scroller).toHaveCSS("scrollbar-width", "thin");
     await page.mouse.move(1300, 820);
-    await expect(scroller).toHaveCSS("scrollbar-color", "rgba(149, 204, 221, 0.35) rgba(0, 0, 0, 0)");
+    // Muted grey thumb at 40% on the white rail.
+    await expect(scroller).toHaveCSS("scrollbar-color", "color(srgb 0.360784 0.360784 0.360784 / 0.4) rgba(0, 0, 0, 0)");
     for (const width of [320, 390, 768]) {
       await page.setViewportSize({ width, height: 568 });
       await page.getByRole("button", { name: "Open menu", exact: true }).click();
@@ -54,10 +55,10 @@ for (const role of ["client", "admin", "sub_admin", "agent", "employee", "teleca
       // Check its resting treatment separately from the intended hover feedback.
       await page.mouse.move(width - 2, 566);
       await expect(mobileLogo).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-      await expect(mobileLogo.locator('img[src*="logo-horizontal.png"]')).toHaveCSS("filter", "brightness(0) invert(1)");
+      await expect(mobileLogo.locator('img[src*="logo-horizontal.png"]')).toHaveCSS("filter", "none");
       await mobileLogo.hover();
       await expect(mobileLogo).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-      await expect(mobileLogo.locator('img[src*="logo-horizontal.png"]')).toHaveCSS("filter", "brightness(0) invert(1)");
+      await expect(mobileLogo.locator('img[src*="logo-horizontal.png"]')).toHaveCSS("filter", "none");
       await page.mouse.move(width - 2, 566);
       await page.screenshot({ path: testInfo.outputPath(`${role}-${width}.png`), animations: "disabled" });
       await drawer.getByRole("button", { name: "Close", exact: true }).click();

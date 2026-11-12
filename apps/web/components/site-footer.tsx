@@ -24,7 +24,7 @@ export function SiteFooter({ products = [] }: { products?: readonly PublicServic
   );
 
   return (
-    <footer className="w-full border-t border-border bg-surface text-text-primary">
+    <footer className="w-full border-t border-border bg-surface text-text-primary dark:bg-surface-sky">
       <div className="mx-auto max-w-7xl px-4 pb-6 pt-10 sm:px-6 sm:pb-8 sm:pt-14 lg:px-8">
         <div className="flex flex-col items-start justify-between gap-5 border-b border-border pb-8 sm:flex-row sm:items-center sm:gap-12 sm:pb-10">
           <Logo className="w-52 sm:w-52" sizes="208px" />

@@ -69,7 +69,8 @@ and the trust line is context-aware (loans line on loan pages, a property line
 on property pages, both elsewhere). Web only; no API, schema, permission or
 contract change. Follow-up: `feat/client-facts-copy-seo` (client facts, titles,
 H1s and meta for 46 URLs, /about, page copy, Organization JSON-LD, insurance
-unpublish). Recommended: Opus 5.5 / high.
+unpublish). Recommended: Opus 5.5 / high. Evidence and residual e2e notes are
+recorded in `feature-status.md`.
 
 **Implemented — public UI quick wins** (landed on `main` with
 [PR #317](https://github.com/brollysolutions/client1/pull/317); stack 1 of 6 for the 2026-11-11

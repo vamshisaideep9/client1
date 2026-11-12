@@ -4,8 +4,19 @@ Status: **Derived living implementation ledger**
 
 **In progress — brand chrome: original logo, caption, white sidebar, trust
 lines** (2026-11-12), branch `feat/brand-logo-sidebar-trust-lines` from
-`upstream/main` `07cf748`. Web only; requirement coverage unchanged.
-Recommended: Opus 5.5 / high.
+`upstream/main` `07cf748`. Web only (plus the email logo height); requirement
+coverage unchanged. Recommended: Opus 5.5 / high. Generated lockups carry a
+"Wealth & Growth" caption (960x232 horizontal, 960x930 stacked); every white
+logo treatment is gone (dark themes still lighten the artwork); the dashboard
+rail is #FFFFFF with navy text and the dark theme keeps its navy rail; action
+hover no longer aliases the rail token; the footer is light; the trust banner
+is a left-to-right ticker showing the lender line on `/loans*`, a property line
+on `/real-estate*` and both elsewhere. Evidence (2026-11-12): web lint and
+typecheck pass; Vitest 744/745 with one unrelated banner-asset timeout under
+load that passes alone (5/5); API brand tests 8/8; production build passes in
+a clean worktree with `output: "standalone"` disabled there only (Windows
+symlink EPERM); affected e2e against that build surfaced stale navy-rail
+assertions and a dark footer/closer colour clash, both fixed.
 
 **Implemented — public UI quick wins** (2026-11-11; landed on `main` with
 [PR #317](https://github.com/brollysolutions/client1/pull/317)), branch
