@@ -18,8 +18,23 @@ a clean worktree with `output: "standalone"` disabled there only (Windows
 symlink EPERM); affected e2e against that build surfaced stale navy-rail
 assertions and a dark footer/closer colour clash, both fixed.
 
-**Implemented — public UI quick wins** (2026-11-11; landed on `main` with
-[PR #317](https://github.com/brollysolutions/client1/pull/317)), branch
+**Implemented — development seed expansion and lender policy catalogue**
+(2026-11-12), branch `feat/dev-seed-roster-lender-policy` from `upstream/main`
+`07cf748`; [PR #318](https://github.com/brollysolutions/client1/pull/318) (mirror vamshisaideep9/client1#23), merged as `1cead74`. Development-only seed scripts; requirement coverage unchanged and no
+API, schema, permission or contract change. `seed_dev_roster` adds 14 role
+accounts (2 Clients; 2 Agents, Telecallers and Employees per line) with
+one-time generated passwords and 10 published listings. `seed_lender_policy`
+replaces the development provider catalogue with 303 offers from 136 providers
+transcribed from the user's `Bank loan policy.xlsx` (as of 2026-08-31),
+dry-run by default, preserving credit-card/life-insurance offers and any
+provider a loan application references. Evidence: see the change log row in
+`implementation-plan.md` dated 2026-11-12.
+
+**Delivered — 2026-11-11 product batch** via
+[PR #317](https://github.com/brollysolutions/client1/pull/317), merged as
+`07cf748`. Original record:
+
+**Public UI quick wins** (2026-11-11), branch
 `feat/public-ui-quick-wins` from `upstream/main` `966c48b`; stack 1 of 6 for
 the 2026-11-11 product batch. Web only; requirement coverage unchanged.
 The Compound Interest island is registered as a calculator form surface.
