@@ -3,7 +3,8 @@
 Status: **Derived living implementation ledger**
 
 **In progress — staff dashboard feedback batch, PR C: personal analytics**
-(2026-11-14), branch `feat/staff-analytics` stacked on PR B (#332). Item 7.
+(2026-11-14; PR #333, mirror #37, open for review), branch `feat/staff-analytics`
+stacked on PR B (#332). Item 7.
 - API: `GET /api/v1/me/analytics?days=` (clamped to 7/30/90; 422 outside
   1-365). Role and every filter come from the session: Telecaller (own calls
   and assigned leads), Employee (own tasks), Agent (leads they introduced,

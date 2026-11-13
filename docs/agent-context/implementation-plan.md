@@ -61,7 +61,8 @@ default, not permission to skip the pre-implementation announcement.
 ## Prioritized active backlog
 
 **In progress — staff dashboard feedback batch, PR C: personal analytics**
-(2026-11-14), branch `feat/staff-analytics` stacked on PR B (#332). Item 7.
+(2026-11-14; PR #333, mirror #37, open for review), branch `feat/staff-analytics`
+stacked on PR B (#332). Item 7.
 New `GET /api/v1/me/analytics?days=7|30|90` builds the caller's own KPIs,
 day-by-day trend (India Standard Time days), category breakdowns and funnel
 for Telecaller (calls by outcome, connect rate, interest, applications by
