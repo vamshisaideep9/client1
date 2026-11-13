@@ -9,18 +9,21 @@ import { cn } from "@/lib/utils";
 // Shared calculator link card: a plain Lucide icon, label and summary.
 // Used by the hub grid and the related-calculators grid so the two never drift.
 // `compact` trims padding and hides the footer link for the denser related grid.
+// `href` lets the signed-in dashboard open its own copy of the calculator.
 export function CalculatorCard({
   def,
   compact = false,
+  href,
 }: {
   def: CalculatorDef;
   compact?: boolean;
+  href?: string;
 }) {
   const Icon = calculatorIcon(def.slug);
 
   return (
     <Link
-      href={`/calculators/${def.slug}`}
+      href={href ?? `/calculators/${def.slug}`}
       className={cn(
         "group flex h-full flex-col rounded-2xl border border-[var(--nav-border)] bg-card transition-[border-color,box-shadow] duration-150 hover:border-brand-cta hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none",
         compact ? "p-5" : "p-6",

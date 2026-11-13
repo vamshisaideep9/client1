@@ -825,6 +825,111 @@
         "title": "AdminLeadDetailsPatch",
         "type": "object"
       },
+      "AdminLeadDetailsRead": {
+        "description": "Admin view: also what the client applied for and when.",
+        "properties": {
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "editable_fields": {
+            "items": {
+              "enum": [
+                "name",
+                "requirement.notes"
+              ],
+              "type": "string"
+            },
+            "title": "Editable Fields",
+            "type": "array"
+          },
+          "field_owners": {
+            "additionalProperties": {
+              "enum": [
+                "agent",
+                "client",
+                "telecaller",
+                "admin",
+                "system",
+                "unclaimed",
+                "legacy_locked"
+              ],
+              "type": "string"
+            },
+            "title": "Field Owners",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/LeadRequestSummary"
+            },
+            "title": "Requests",
+            "type": "array"
+          },
+          "requirement": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requirement"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "assigned",
+              "working",
+              "converted",
+              "closed",
+              "released"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "business_line",
+          "status",
+          "name",
+          "requirement",
+          "field_owners",
+          "editable_fields",
+          "updated_at",
+          "requests"
+        ],
+        "title": "AdminLeadDetailsRead",
+        "type": "object"
+      },
       "AdminLeadRead": {
         "properties": {
           "business_line": {
@@ -1600,6 +1705,18 @@
                 "type": "null"
               }
             ]
+          },
+          "developer_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
           },
           "furnishing": {
             "anyOf": [
@@ -4153,6 +4270,169 @@
         "title": "AgriculturalLandDetails",
         "type": "object"
       },
+      "AnalyticsBreakdown": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BreakdownItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "share",
+              "ranked"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "unit": {
+            "default": "count",
+            "enum": [
+              "count",
+              "percent",
+              "hours",
+              "rupees"
+            ],
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "description",
+          "kind",
+          "items"
+        ],
+        "title": "AnalyticsBreakdown",
+        "type": "object"
+      },
+      "AnalyticsFunnel": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/FunnelStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "steps"
+        ],
+        "title": "AnalyticsFunnel",
+        "type": "object"
+      },
+      "AnalyticsKpi": {
+        "properties": {
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "count",
+              "percent",
+              "hours",
+              "rupees"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value",
+          "unit"
+        ],
+        "title": "AnalyticsKpi",
+        "type": "object"
+      },
+      "AnalyticsTrend": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/TrendPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/TrendSeries"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "series",
+          "points"
+        ],
+        "title": "AnalyticsTrend",
+        "type": "object"
+      },
       "AudienceLocationCircle": {
         "additionalProperties": false,
         "properties": {
@@ -5106,6 +5386,30 @@
             "minLength": 1,
             "title": "Title",
             "type": "string"
+          },
+          "video_media_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Media Asset Id"
+          },
+          "youtube_url": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Url"
           }
         },
         "required": [
@@ -5456,6 +5760,40 @@
           "version": {
             "title": "Version",
             "type": "integer"
+          },
+          "video_media_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Media Asset Id"
+          },
+          "video_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Url"
+          },
+          "youtube_video_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Video Id"
           }
         },
         "required": [
@@ -5802,6 +6140,30 @@
               }
             ],
             "title": "Title"
+          },
+          "video_media_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Media Asset Id"
+          },
+          "youtube_url": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Url"
           }
         },
         "title": "BannerUpdate",
@@ -5935,6 +6297,29 @@
         "title": "BookmarkRead",
         "type": "object"
       },
+      "BreakdownItem": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value"
+        ],
+        "title": "BreakdownItem",
+        "type": "object"
+      },
       "BroadcastAudience": {
         "enum": [
           "admins",
@@ -6055,7 +6440,8 @@
             "enum": [
               "image/jpeg",
               "image/png",
-              "image/webp"
+              "image/webp",
+              "video/mp4"
             ],
             "title": "Content Type",
             "type": "string"
@@ -6100,7 +6486,8 @@
               "sponsor",
               "dashboard_banner",
               "dashboard_offer",
-              "campaign"
+              "campaign",
+              "banner_video"
             ],
             "title": "Usage Type",
             "type": "string"
@@ -6377,7 +6764,8 @@
             "enum": [
               "image/jpeg",
               "image/png",
-              "image/webp"
+              "image/webp",
+              "video/mp4"
             ],
             "title": "Content Type",
             "type": "string"
@@ -6486,6 +6874,56 @@
           "confirm_password"
         ],
         "title": "ChangePasswordRequest",
+        "type": "object"
+      },
+      "ClientHistoryLead": {
+        "description": "One lead (journey) of the same client, with this Telecaller's calls.",
+        "properties": {
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/LeadActivityRead"
+            },
+            "title": "Activities",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "lead_id": {
+            "format": "uuid",
+            "title": "Lead Id",
+            "type": "string"
+          },
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/LeadRequestSummary"
+            },
+            "title": "Requests",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "assigned",
+              "working",
+              "converted",
+              "closed",
+              "released"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lead_id",
+          "status",
+          "created_at",
+          "requests",
+          "activities"
+        ],
+        "title": "ClientHistoryLead",
         "type": "object"
       },
       "ClientProfileSummary": {
@@ -7713,7 +8151,7 @@
           "notes": {
             "anyOf": [
               {
-                "maxLength": 1000,
+                "maxLength": 10000,
                 "type": "string"
               },
               {
@@ -8520,6 +8958,29 @@
         "title": "FormSectionDefinition",
         "type": "object"
       },
+      "FunnelStep": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value"
+        ],
+        "title": "FunnelStep",
+        "type": "object"
+      },
       "Furnishing": {
         "enum": [
           "unfurnished",
@@ -8753,7 +9214,7 @@
           "notes": {
             "anyOf": [
               {
-                "maxLength": 1000,
+                "maxLength": 10000,
                 "type": "string"
               },
               {
@@ -8761,6 +9222,16 @@
               }
             ],
             "title": "Notes"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RequestRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -8837,6 +9308,16 @@
               }
             ],
             "title": "Notes"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RequestRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -8975,6 +9456,49 @@
           "updated_at"
         ],
         "title": "LeadDetailsRead",
+        "type": "object"
+      },
+      "LeadRequestSummary": {
+        "description": "One application/enquiry/visit/deal on a lead: what and when.",
+        "properties": {
+          "applied_at": {
+            "format": "date-time",
+            "title": "Applied At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "loan_application",
+              "financial_enquiry",
+              "property_enquiry",
+              "site_visit",
+              "property_deal"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "title",
+          "status",
+          "applied_at"
+        ],
+        "title": "LeadRequestSummary",
         "type": "object"
       },
       "LeadsReportResponse": {
@@ -13244,6 +13768,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "developer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
           "furnishing": {
             "anyOf": [
               {
@@ -14035,6 +14570,28 @@
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "video_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Url"
+          },
+          "youtube_video_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Video Id"
           }
         },
         "required": [
@@ -14426,6 +14983,17 @@
               }
             ]
           },
+          "developer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
           "furnishing": {
             "anyOf": [
               {
@@ -14669,6 +15237,17 @@
         "properties": {
           "category": {
             "$ref": "#/components/schemas/PropertyCategory"
+          },
+          "developer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
           },
           "id": {
             "format": "uuid",
@@ -15238,6 +15817,63 @@
         "title": "ReferralBonusConfigUpdate",
         "type": "object"
       },
+      "ReferralConvertedItem": {
+        "description": "What a referral converted on, for the referrer's own activity detail.\n\nDeliberately limited to catalogue facts: the property listing's public\ntitle/location/type, or the loan product label. Never a deal value, loan\namount, quoted price, status note, or anything about the referred person.\n``property_id`` is set only while the listing is still published, so the\nweb app can link to the public page without exposing withdrawn listings.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "property",
+              "loan"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "property_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Type"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "title"
+        ],
+        "title": "ReferralConvertedItem",
+        "type": "object"
+      },
       "ReferralListResponse": {
         "properties": {
           "referrals": {
@@ -15400,6 +16036,16 @@
               }
             ],
             "title": "Converted At"
+          },
+          "converted_item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReferralConvertedItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "created_at": {
             "format": "date-time",
@@ -15647,6 +16293,33 @@
           "converted_count"
         ],
         "title": "ReportSummary",
+        "type": "object"
+      },
+      "RequestRef": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "loan_application",
+              "financial_enquiry",
+              "property_enquiry",
+              "site_visit",
+              "property_deal"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "RequestRef",
         "type": "object"
       },
       "ReraApplicability": {
@@ -16143,6 +16816,60 @@
         "title": "StaffAccessListResponse",
         "type": "object"
       },
+      "StaffAnalyticsResponse": {
+        "properties": {
+          "breakdowns": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsBreakdown"
+            },
+            "title": "Breakdowns",
+            "type": "array"
+          },
+          "funnel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalyticsFunnel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kpis": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsKpi"
+            },
+            "title": "Kpis",
+            "type": "array"
+          },
+          "range_days": {
+            "title": "Range Days",
+            "type": "integer"
+          },
+          "role": {
+            "enum": [
+              "telecaller",
+              "employee",
+              "agent",
+              "sub_admin"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "trend": {
+            "$ref": "#/components/schemas/AnalyticsTrend"
+          }
+        },
+        "required": [
+          "role",
+          "range_days",
+          "kpis",
+          "trend",
+          "breakdowns"
+        ],
+        "title": "StaffAnalyticsResponse",
+        "type": "object"
+      },
       "StaffCreateRequest": {
         "properties": {
           "business_line": {
@@ -16460,6 +17187,18 @@
                 "type": "null"
               }
             ]
+          },
+          "developer_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
           },
           "furnishing": {
             "anyOf": [
@@ -16867,6 +17606,17 @@
             ],
             "title": "Details Version"
           },
+          "developer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
           "furnishing": {
             "anyOf": [
               {
@@ -17223,6 +17973,18 @@
                 "type": "null"
               }
             ]
+          },
+          "developer_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
           },
           "furnishing": {
             "anyOf": [
@@ -17638,7 +18400,7 @@
             "title": "Due At"
           },
           "notes": {
-            "maxLength": 1000,
+            "maxLength": 10000,
             "minLength": 1,
             "title": "Notes",
             "type": "string"
@@ -18085,12 +18847,84 @@
         "title": "TeamPerformanceSummary",
         "type": "object"
       },
+      "TelecallerClientHistoryResponse": {
+        "description": "Every journey of this client on this line that is assigned to the\ncaller, newest first. Calls are the caller's own (lead_activities_rls).",
+        "properties": {
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "leads": {
+            "items": {
+              "$ref": "#/components/schemas/ClientHistoryLead"
+            },
+            "title": "Leads",
+            "type": "array"
+          }
+        },
+        "required": [
+          "business_line",
+          "leads"
+        ],
+        "title": "TelecallerClientHistoryResponse",
+        "type": "object"
+      },
+      "TelecallerFinancialEnquiryRead": {
+        "description": "A credit-card or insurance request (outside the loan pipeline).",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "product_category": {
+            "title": "Product Category",
+            "type": "string"
+          },
+          "product_name": {
+            "title": "Product Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "product_name",
+          "product_category",
+          "status",
+          "submitted_at"
+        ],
+        "title": "TelecallerFinancialEnquiryRead",
+        "type": "object"
+      },
       "TelecallerFollowUpItem": {
         "properties": {
           "follow_up_at": {
             "format": "date-time",
             "title": "Follow Up At",
             "type": "string"
+          },
+          "latest_request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadRequestSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "lead_uuid": {
             "format": "uuid",
@@ -18167,6 +19001,14 @@
             "title": "Created At",
             "type": "string"
           },
+          "financial_enquiries": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TelecallerFinancialEnquiryRead"
+            },
+            "title": "Financial Enquiries",
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -18191,6 +19033,16 @@
               }
             ],
             "title": "Last Disposition"
+          },
+          "latest_request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadRequestSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "loan_applications": {
             "default": [],
@@ -18235,6 +19087,14 @@
             "title": "Property Deals",
             "type": "array"
           },
+          "property_enquiries": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TelecallerPropertyEnquiryRead"
+            },
+            "title": "Property Enquiries",
+            "type": "array"
+          },
           "requirement": {
             "anyOf": [
               {
@@ -18246,6 +19106,14 @@
               }
             ],
             "title": "Requirement"
+          },
+          "site_visits": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TelecallerSiteVisitRead"
+            },
+            "title": "Site Visits",
+            "type": "array"
           },
           "status": {
             "enum": [
@@ -18324,6 +19192,16 @@
               }
             ],
             "title": "Last Disposition"
+          },
+          "latest_request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadRequestSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "mobile": {
             "title": "Mobile",
@@ -18564,6 +19442,11 @@
             "title": "Loan Type Name",
             "type": "string"
           },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          },
           "processing_fee": {
             "anyOf": [
               {
@@ -18616,6 +19499,7 @@
           "loan_type_id",
           "loan_type_name",
           "status",
+          "opened_at",
           "txns"
         ],
         "title": "TelecallerLoanApplicationRead",
@@ -18650,6 +19534,11 @@
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
             "type": "string"
           },
           "price_quoted": {
@@ -18717,9 +19606,123 @@
           "property_location",
           "status",
           "site_visit_uuid",
+          "opened_at",
           "closed_at"
         ],
         "title": "TelecallerPropertyDealRead",
+        "type": "object"
+      },
+      "TelecallerPropertyEnquiryRead": {
+        "properties": {
+          "city": {
+            "title": "City",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "locality": {
+            "title": "Locality",
+            "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "property_ref": {
+            "title": "Property Ref",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "property_ref",
+          "title",
+          "locality",
+          "city",
+          "message",
+          "status",
+          "created_at"
+        ],
+        "title": "TelecallerPropertyEnquiryRead",
+        "type": "object"
+      },
+      "TelecallerSiteVisitRead": {
+        "properties": {
+          "city": {
+            "title": "City",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "locality": {
+            "title": "Locality",
+            "type": "string"
+          },
+          "preferred_date": {
+            "format": "date",
+            "title": "Preferred Date",
+            "type": "string"
+          },
+          "preferred_time_slot": {
+            "title": "Preferred Time Slot",
+            "type": "string"
+          },
+          "property_ref": {
+            "title": "Property Ref",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "property_ref",
+          "title",
+          "locality",
+          "city",
+          "preferred_date",
+          "preferred_time_slot",
+          "status",
+          "created_at"
+        ],
+        "title": "TelecallerSiteVisitRead",
         "type": "object"
       },
       "TransactionListResponse": {
@@ -18799,6 +19802,46 @@
         ],
         "title": "TransactionType",
         "type": "string"
+      },
+      "TrendPoint": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "day",
+          "values"
+        ],
+        "title": "TrendPoint",
+        "type": "object"
+      },
+      "TrendSeries": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "TrendSeries",
+        "type": "object"
       },
       "UnreadCountResponse": {
         "properties": {
@@ -21443,7 +22486,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LeadDetailsRead"
+                  "$ref": "#/components/schemas/AdminLeadDetailsRead"
                 }
               }
             },
@@ -27194,7 +28237,8 @@
                     "sponsor",
                     "dashboard_banner",
                     "dashboard_offer",
-                    "campaign"
+                    "campaign",
+                    "banner_video"
                   ],
                   "type": "string"
                 },
@@ -29560,6 +30604,58 @@
         "summary": "Get My Loan Officer Contact",
         "tags": [
           "loans"
+        ]
+      }
+    },
+    "/api/v1/me/analytics": {
+      "get": {
+        "operationId": "my_analytics_api_v1_me_analytics_get",
+        "parameters": [
+          {
+            "description": "Period in days (7, 30 or 90).",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Period in days (7, 30 or 90).",
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffAnalyticsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "My Analytics",
+        "tags": [
+          "analytics"
         ]
       }
     },
@@ -33834,6 +34930,55 @@
           }
         ],
         "summary": "Create Activity",
+        "tags": [
+          "telecaller"
+        ]
+      }
+    },
+    "/api/v1/telecaller/leads/{lead_id}/client-history": {
+      "get": {
+        "description": "All of this client's journeys on the line that are assigned to the\ncaller, each with its requests and the caller's own calls.",
+        "operationId": "client_history_api_v1_telecaller_leads__lead_id__client_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Lead Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelecallerClientHistoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Client History",
         "tags": [
           "telecaller"
         ]
