@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 
 import { LeadDialog } from "@/components/lead-dialog";
+import { ShareActions } from "@/components/share-actions";
 import {
   Card,
   CardContent,
@@ -52,7 +53,7 @@ export function PropertyCard({ listing }: { listing: PropertyListing }) {
             </span>
             {listing.listingIntent === "rent" ? (
               <span className="rounded-full bg-amber-100/95 px-2.5 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
-                For rent
+                For rent / lease
               </span>
             ) : null}
           </span>
@@ -100,6 +101,7 @@ export function PropertyCard({ listing }: { listing: PropertyListing }) {
             propertyRef: listing.id,
           })}
         />
+        <ShareActions path={detailHref} title={`${listing.title}, ${listing.location}`} />
       </CardFooter>
     </Card>
   );

@@ -94,6 +94,7 @@ describe("role-aware dashboard navigation", () => {
       "loan-officer",
       "client-transactions",
       "client-referrals",
+      "client-calculators",
     ]);
 
     expect(navKeys(context("client", null, "real_estate"))).toEqual([
@@ -106,6 +107,7 @@ describe("role-aware dashboard navigation", () => {
       "client-agent",
       "client-transactions",
       "client-referrals",
+      "client-calculators",
     ]);
   });
 
@@ -126,6 +128,7 @@ describe("role-aware dashboard navigation", () => {
     expect(navKeys(context("telecaller", "loans"))).toEqual([
       "home",
       "telecaller-leads",
+      "telecaller-calculators",
     ]);
     expect(navKeys(context("employee", "loans"))).toEqual([
       "home",
@@ -142,6 +145,7 @@ describe("role-aware dashboard navigation", () => {
     expect(navKeys(context("telecaller", "both", "loans"))).toEqual([
       "home",
       "telecaller-leads",
+      "telecaller-calculators",
     ]);
     expect(navKeys(context("employee", "both", "loans"))).toEqual([
       "home",

@@ -1,0 +1,27 @@
+# Host Caddy for the development droplet. See README.md for installation.
+#
+# Values come from /etc/caddy/dev-droplet.env (a systemd drop-in loads it):
+#   DEV_DOMAIN       app host: dev.dhanadhara.com
+#   DEV_ALLOWED_IPS  space-separated team IPs/CIDRs allowed to use the site
+#
+# Access is IP-allowlisted because the development stack returns one-time codes
+# in API responses and can hold demo accounts with published passwords. Ports
+# 80/443 stay open to the internet only so Let's Encrypt can validate; every
+# non-allowlisted request receives 403. Do not use basic auth here: the app's
+# own Authorization: Bearer header conflicts with it.
+#
+# `route` keeps directives in the written order. Without it, Caddy's default
+# ordering runs `handle` before `respond`, and the allowlist would never be
+# reached.
+
+{$DEV_DOMAIN} {
+	route {
+		@outsiders not remote_ip {$DEV_ALLOWED_IPS}
+		respond @outsiders 403
+
+		header X-Robots-Tag "noindex, nofollow"
+
+		reverse_proxy /api/* 127.0.0.1:8000
+		reverse_proxy 127.0.0.1:3001
+	}
+}
