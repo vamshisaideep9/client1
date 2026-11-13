@@ -2,7 +2,7 @@ import { Building2, Home, LandPlot, TreePine, Warehouse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { components } from "@contracts/generated/schema";
 
-import type { PropertyListing as BaseListing } from "@/lib/properties";
+import { listingSaleType, type PropertyListing as BaseListing, type SaleType } from "@/lib/properties";
 import { categoryArtwork } from "@/lib/property-artwork";
 import { listingPriceRupees } from "@/lib/property-budget";
 
@@ -104,11 +104,24 @@ export function populatedPropertyCategories(listings: REListing[]) {
 
 export type SortOrder = "relevance" | "price_asc" | "price_desc" | "newest";
 
+/** Age of a resale property, in whole years since completion. */
+export type AgeBand = "under_5" | "5_to_10" | "10_plus";
+
+export function ageBandOf(ageYears: number): AgeBand {
+  if (ageYears < 5) return "under_5";
+  if (ageYears < 10) return "5_to_10";
+  return "10_plus";
+}
+
 export type PropertyFilters = {
   q?: string;
   /** Sale vs rent/lease. Also scopes the price facet, whose ranges differ by an
    * order of magnitude between a sale price and a monthly rent. */
   intent?: components["schemas"]["ListingIntent"][];
+  /** New launch vs resale. Only sale listings can match. */
+  saleType?: SaleType[];
+  /** Age of property, mainly for resale homes. */
+  age?: AgeBand[];
   categories?: RECategory[];
   subtypes?: RESubtype[];
   bhk?: number[];
@@ -130,6 +143,8 @@ export type PropertyFilters = {
 
 const FACET_KEYS = [
   "intent",
+  "saleType",
+  "age",
   "categories",
   "subtypes",
   "bhk",
@@ -150,6 +165,11 @@ export function filterListings(listings: REListing[], filters: PropertyFilters):
   const query = filters.q?.trim().toLowerCase();
   return listings.filter((listing) => {
     if (filters.intent?.length && !filters.intent.includes(listing.listingIntent)) return false;
+    if (filters.saleType?.length) {
+      const saleType = listing.listingIntent === "sale" ? listingSaleType(listing.structuredDetails) : null;
+      if (!saleType || !filters.saleType.includes(saleType)) return false;
+    }
+    if (filters.age?.length && !filters.age.includes(ageBandOf(listing.ageYears))) return false;
     if (filters.categories?.length && !filters.categories.includes(listing.category)) return false;
     // Legacy rows carry no subtype. Asking for a subtype is a narrower question
     // than asking for its category, so an unclassified listing cannot answer it

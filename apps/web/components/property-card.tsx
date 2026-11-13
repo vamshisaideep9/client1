@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { contactHref } from "@/lib/leads";
-import type { PropertyListing } from "@/lib/properties";
+import { listingSaleType, type PropertyListing } from "@/lib/properties";
 
 // A single placeholder property card for the Properties catalog rows. Mirrors
 // the product-card visual system in components/product-page.tsx: an image band
@@ -54,6 +54,11 @@ export function PropertyCard({ listing }: { listing: PropertyListing }) {
             {listing.listingIntent === "rent" ? (
               <span className="rounded-full bg-amber-100/95 px-2.5 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
                 For rent / lease
+              </span>
+            ) : null}
+            {listing.listingIntent === "sale" && listingSaleType(listing.structuredDetails) === "resale" ? (
+              <span className="rounded-full bg-sky-100/95 px-2.5 py-1 text-xs font-semibold text-sky-900 ring-1 ring-sky-200">
+                Resale
               </span>
             ) : null}
           </span>

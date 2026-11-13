@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { ShareActions } from "@/components/share-actions";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBookmarks, useCompare } from "@/features/real-estate/store";
+import { listingSaleType } from "@/lib/properties";
 import type { REListing } from "@/lib/real-estate";
 import { isReraVerified, resolvePropertyArtwork } from "@/lib/property-artwork";
 import { cn } from "@/lib/utils";
@@ -99,6 +100,11 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
           {listing.listingIntent === "rent" ? (
             <span className="rounded-full bg-amber-100/95 px-2.5 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
               For rent / lease
+            </span>
+          ) : null}
+          {listing.listingIntent === "sale" && listingSaleType(listing.structuredDetails) === "resale" ? (
+            <span className="rounded-full bg-sky-100/95 px-2.5 py-1 text-xs font-semibold text-sky-900 ring-1 ring-sky-200">
+              Resale
             </span>
           ) : null}
         </span>

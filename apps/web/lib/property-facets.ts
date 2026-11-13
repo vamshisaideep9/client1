@@ -3,7 +3,9 @@
 // they stay in sync with lib/real-estate.ts without hand duplication.
 import type { components } from "@contracts/generated/schema";
 
+import type { SaleType } from "@/lib/properties";
 import {
+  type AgeBand,
   type Furnishing,
   type ListingStatus,
   type RECategory,
@@ -58,6 +60,21 @@ export const RE_SUBTYPE_VALUES = exhaustive<RESubtype>()([
 ] as const);
 
 export const STATUS_VALUES = exhaustive<ListingStatus>()(["ready", "under_construction"] as const);
+
+export const SALE_TYPE_VALUES = exhaustive<SaleType>()(["new_sale", "resale"] as const);
+
+export const AGE_BAND_VALUES = exhaustive<AgeBand>()(["under_5", "5_to_10", "10_plus"] as const);
+
+export const SALE_TYPE_OPTIONS: { value: SaleType; label: string }[] = [
+  { value: "new_sale", label: "New launch" },
+  { value: "resale", label: "Resale" },
+];
+
+export const AGE_BAND_OPTIONS: { value: AgeBand; label: string }[] = [
+  { value: "under_5", label: "Under 5 years" },
+  { value: "5_to_10", label: "5 to 10 years" },
+  { value: "10_plus", label: "10+ years" },
+];
 
 export const FURNISHING_VALUES = exhaustive<Furnishing>()([
   "unfurnished",

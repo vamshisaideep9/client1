@@ -21,6 +21,18 @@ export type PropertySubtype = NonNullable<
 >;
 export type PropertyMediaItem = components["schemas"]["PropertyMediaRead"];
 export type PropertyStructuredDetails = components["schemas"]["PublicPropertyRead"]["structured_details"];
+export type SaleType = components["schemas"]["SaleType"];
+
+/**
+ * New launch vs resale for a sale listing. The value lives inside the typed
+ * structured details (every detail shape that applies to a sale carries
+ * `sale_type`); rent listings and legacy rows without details return null.
+ */
+export function listingSaleType(details: object | null | undefined): SaleType | null {
+  if (!details || !("sale_type" in details)) return null;
+  const value = (details as { sale_type?: unknown }).sale_type;
+  return value === "new_sale" || value === "resale" ? value : null;
+}
 
 export type PropertyListing = {
   id: string;

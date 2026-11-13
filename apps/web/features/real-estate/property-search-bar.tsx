@@ -28,7 +28,9 @@ import { useDebounce } from "@/hooks/use-debounce";
 import {
   AMENITIES,
   BHK_OPTIONS,
+  AGE_BAND_OPTIONS,
   FURNISHING_OPTIONS,
+  SALE_TYPE_OPTIONS,
   SORT_OPTIONS,
   STATUS_OPTIONS,
   type SuggestionIndex,
@@ -89,6 +91,21 @@ function buildChips(filters: PropertyFilters, setFilters: (patch: Partial<Proper
       filters.categories,
       (v) => RE_CATEGORIES.find((c) => c.key === v)?.label ?? v,
       (next) => setFilters({ categories: next }),
+    ),
+  );
+  chips.push(
+    ...arrayChips(
+      filters.saleType,
+      (v) => SALE_TYPE_OPTIONS.find((o) => o.value === v)?.label ?? v,
+      (next) =>
+        setFilters(next?.includes("resale") ? { saleType: next } : { saleType: next, age: undefined }),
+    ),
+  );
+  chips.push(
+    ...arrayChips(
+      filters.age,
+      (v) => AGE_BAND_OPTIONS.find((o) => o.value === v)?.label ?? v,
+      (next) => setFilters({ age: next }),
     ),
   );
   chips.push(

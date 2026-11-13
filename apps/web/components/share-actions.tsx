@@ -7,7 +7,13 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { buildReferMessage, readOwnReferralCode, withReferral } from "@/lib/referral-share";
+import {
+  authHref,
+  buildReferMessage,
+  buildReferUrl,
+  readOwnReferralCode,
+  referReturnToFor,
+} from "@/lib/referral-share";
 import { cn } from "@/lib/utils";
 
 type Variant = "share" | "refer";
@@ -27,30 +33,35 @@ async function copyText(text: string): Promise<boolean> {
 
 // The share sheet behind both buttons. The native sheet is used when the
 // browser has one (mobile); otherwise a small menu offers WhatsApp, copy and
-// email. Every link carries the signed-in client's own ?ref= code when one is
-// cached, so a direct share is also a referral (items 5 and 10).
+// email.
+//
+// Share sends the plain public page, nothing else. Refer sends the client's
+// own code to Register (with a Log in link for existing users) and then on to
+// the referred page inside the dashboard.
 function ShareMenuButton({
   variant,
   path,
   title,
+  referReturnTo,
   className,
 }: {
   variant: Variant;
   path: string;
   title: string;
+  referReturnTo: string;
   className?: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const [payload, setPayload] = React.useState<{ url: string; text: string } | null>(null);
 
   function buildPayload() {
-    const code = readOwnReferralCode();
-    const url = withReferral(absoluteUrl(path), code);
-    const text =
-      variant === "refer" && code
-        ? buildReferMessage(title, url, code)
-        : `${title} on Dhanadhara: ${url}`;
-    return { url, text };
+    const code = variant === "refer" ? readOwnReferralCode() : null;
+    if (code) {
+      const url = buildReferUrl(window.location.origin, code, referReturnTo);
+      return { url, text: buildReferMessage(title, url, code) };
+    }
+    const url = absoluteUrl(path);
+    return { url, text: `${title} on Dhanadhara: ${url}` };
   }
 
   async function onClick(event: React.MouseEvent) {
@@ -134,15 +145,19 @@ function ShareMenuButton({
 export function ShareActions({
   path,
   title,
+  referReturnTo,
   className,
 }: {
   /** Site-relative path of the loan or property page, e.g. /loans/home-loan. */
   path: string;
   /** Human title used in the share text, e.g. "Sunny Homes, Gachibowli". */
   title: string;
+  /** Dashboard page a referred visitor opens after signing up; derived from `path` when omitted. */
+  referReturnTo?: string;
   className?: string;
 }) {
   const [hasCode, setHasCode] = React.useState(false);
+  const returnTo = referReturnTo ?? referReturnToFor(path);
 
   React.useEffect(() => {
     setHasCode(readOwnReferralCode() !== null);
@@ -150,12 +165,12 @@ export function ShareActions({
 
   return (
     <div className={cn("flex w-full gap-2", className)} data-share-actions="">
-      <ShareMenuButton variant="share" path={path} title={title} />
+      <ShareMenuButton variant="share" path={path} title={title} referReturnTo={returnTo} />
       {hasCode ? (
-        <ShareMenuButton variant="refer" path={path} title={title} />
+        <ShareMenuButton variant="refer" path={path} title={title} referReturnTo={returnTo} />
       ) : (
         <Button asChild variant="outline" size="sm" className="min-h-10 flex-1">
-          <Link href="/register" aria-label={`Sign up to refer ${title}`}>
+          <Link href={authHref("/register", { returnTo })} aria-label={`Sign up to refer ${title}`}>
             <Gift className="h-4 w-4" aria-hidden />
             Refer
           </Link>
