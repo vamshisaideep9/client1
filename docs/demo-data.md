@@ -16,8 +16,9 @@ through the existing local managed-upload paths, and then verifies every login
 and primary role API. It refuses to run unless `ENV=development`.
 
 Use `--credentials` to print the roster without writing data, or `--skip-media`
-when intentionally running without MinIO/ClamAV. A media skip is not proof that
-upload-backed UI works.
+when intentionally running without object storage or ClamAV. A media skip is not
+proof that upload-backed UI works. The development droplet writes demo media to
+its dedicated DigitalOcean Space (`infra/dev-droplet/README.md`, step 4b).
 
 ## Credentials
 

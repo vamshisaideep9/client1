@@ -138,6 +138,9 @@ export type SuggestionIndex = {
   localities: string[];
   cities: string[];
   pincodes: string[];
+  // Developer / builder brands present in the source, de-duplicated
+  // case-insensitively and keeping the first spelling seen.
+  developers: string[];
   // Subtypes actually present in this result ceiling, in RE_SUBTYPE_VALUES
   // order. Same discipline as localities/cities: never offer a facet that
   // cannot match anything in the current source.
@@ -146,6 +149,15 @@ export type SuggestionIndex = {
   priceBounds: { min: number; max: number };
   areaBounds: { min: number; max: number };
 };
+
+function uniqueDevelopers(listings: REListing[]): string[] {
+  const byKey = new Map<string, string>();
+  for (const listing of listings) {
+    const name = listing.developerName?.trim();
+    if (name && !byKey.has(name.toLowerCase())) byKey.set(name.toLowerCase(), name);
+  }
+  return Array.from(byKey.values()).sort((a, b) => a.localeCompare(b));
+}
 
 // Grouped, de-duplicated suggestion source for the search omnibox. Every value
 // is derived from the authenticated property API response supplied by callers.
@@ -157,6 +169,7 @@ export function buildSuggestionIndex(listings: REListing[]): SuggestionIndex {
     localities: Array.from(new Set(listings.map((l) => l.locality))).sort(),
     cities: Array.from(new Set(listings.map((l) => l.city))).sort(),
     pincodes: Array.from(new Set(listings.map((l) => l.pincode))).sort(),
+    developers: uniqueDevelopers(listings),
     subtypes: RE_SUBTYPE_VALUES.filter((value) => presentSubtypes.has(value)),
     properties: listings.map((l) => ({ id: l.id, title: l.title, locality: l.locality, city: l.city })),
     priceBounds: priceBounds(listings),

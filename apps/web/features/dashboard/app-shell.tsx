@@ -70,8 +70,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetContent
                   side="left"
-                  className="font-geist h-dvh w-64 border-white/15 bg-dash-rail p-0 text-dash-foreground"
-                  closeButtonClassName="z-10 text-dash-foreground hover:bg-dash-rail-hover focus-visible:ring-brand-sky"
+                  className="font-geist h-dvh w-64 border-dash-border bg-dash-rail p-0 text-dash-foreground"
+                  closeButtonClassName="z-10 text-dash-foreground hover:bg-dash-rail-hover focus-visible:ring-ring"
                   onCloseAutoFocus={(event) => {
                     event.preventDefault();
                     mobileTriggerRef.current?.focus();

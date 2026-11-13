@@ -130,6 +130,9 @@ class Settings(BaseSettings):
     MEDIA_PROCESS_BATCH_SIZE: int = 4
     MEDIA_VIDEO_MAX_UPLOAD_BYTES: int = 20 * 1024 * 1024
     LOAN_VIDEO_MAX_DURATION_SECONDS: int = 60
+    # Uploaded banner videos are short, muted loops; longer stories belong on
+    # YouTube, which banners can link by video id instead.
+    BANNER_VIDEO_MAX_DURATION_SECONDS: int = 30
     LOAN_VIDEO_MAX_PER_APPLICATION: int = 2
     TASK_FEEDBACK_MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     TASK_FEEDBACK_MAX_PER_TASK: int = 5
@@ -330,6 +333,14 @@ class Settings(BaseSettings):
             # network-level interception.
             if not self.SPACES_ENDPOINT_URL.startswith("https://"):
                 raise ValueError("SPACES_ENDPOINT_URL must use https:// outside development.")
+            # The public endpoint is the one actually handed to browsers, so
+            # an http override would reopen exactly the exposure above.
+            if self.SPACES_PUBLIC_ENDPOINT_URL and not self.SPACES_PUBLIC_ENDPOINT_URL.startswith(
+                "https://"
+            ):
+                raise ValueError(
+                    "SPACES_PUBLIC_ENDPOINT_URL must use https:// outside development."
+                )
         return self
 
     @model_validator(mode="after")

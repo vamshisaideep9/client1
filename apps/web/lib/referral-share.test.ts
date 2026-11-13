@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildReferMessage,
   buildRegisterUrl,
   buildWaMeUrl,
   isValidReferralCodeFormat,
   normalizeReferralCode,
+  withReferral,
 } from "@/lib/referral-share";
 
 describe("buildRegisterUrl()", () => {
@@ -68,5 +70,38 @@ describe("isValidReferralCodeFormat()", () => {
 
   it("rejects confusable letters (I/L/O/U), which normalize already removes", () => {
     expect(isValidReferralCodeFormat("ABILOU12")).toBe(false);
+  });
+});
+
+describe("withReferral()", () => {
+  it("adds ?ref= to an absolute URL before the hash", () => {
+    expect(withReferral("https://x.example/loans/home-loan#providers", "AB12CD34")).toBe(
+      "https://x.example/loans/home-loan?ref=AB12CD34#providers",
+    );
+  });
+
+  it("replaces an existing ref and keeps other parameters", () => {
+    expect(withReferral("https://x.example/p?ref=OLD00000&a=1", "AB12CD34")).toBe(
+      "https://x.example/p?ref=AB12CD34&a=1",
+    );
+  });
+
+  it("keeps relative paths relative", () => {
+    expect(withReferral("/real-estate/properties/1", "AB12CD34")).toBe(
+      "/real-estate/properties/1?ref=AB12CD34",
+    );
+  });
+
+  it("returns the URL unchanged without a code", () => {
+    expect(withReferral("https://x.example/p", null)).toBe("https://x.example/p");
+  });
+});
+
+describe("buildReferMessage()", () => {
+  it("names the item and the code", () => {
+    const message = buildReferMessage("Sunny Homes", "https://x.example/p?ref=AB12CD34", "AB12CD34");
+    expect(message).toContain("Sunny Homes");
+    expect(message).toContain("AB12CD34");
+    expect(message).toContain("https://x.example/p?ref=AB12CD34");
   });
 });
