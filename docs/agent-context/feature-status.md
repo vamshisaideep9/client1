@@ -2,8 +2,26 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — client feedback batch, PR A: dashboard and browse UI fixes**
-(2026-11-13), branch `feat/client-feedback-ui` from `upstream/main`
+**In progress — client feedback batch, PR B: Resale filter and Share / Refer
+links** (2026-11-13), branch `feat/resale-share-refer` stacked on PR A. Web
+only, no contract or schema change:
+- Resale: "New or resale" filter (from the existing `structured_details.sale_type`;
+  rent listings never match), an "Age of property" filter (under 5 / 5 to 10 /
+  10+ years) once Resale is chosen, filter chips, and a "Resale" badge on
+  dashboard and public property cards.
+- Share sends the plain public page, with no referral code.
+- Refer sends `/register?ref=CODE&return_to=/dashboard/properties/<id>`.
+  Register keeps a visible "Log in" link carrying the code and destination;
+  Login keeps them on its "Sign up" link and explains invite codes apply to new
+  accounts. An existing number on Register gets a "Log in" action instead of a
+  dead end. The latest link opened wins before sign-up; the captured code is
+  cleared after registering. `return_to` is still limited to `/dashboard`
+  paths by `dashboardReturnTo`; attribution, self-referral and first-claim
+  rules stay server-side and unchanged.
+Recommended: Opus 5.5 / high (auth redirect and referral attribution).
+
+**Implemented — client feedback batch, PR A: dashboard and browse UI fixes**
+(2026-11-13; PR #327, mirror #32, open for review), branch `feat/client-feedback-ui` from `upstream/main`
 `6f60cd8`. One of three stacked PRs for an 11-item client list (A: UI fixes,
 B: Resale filter + share/refer links, C: site-visit reschedule + party size).
 Lease/rent needed no work: `ListingIntent.rent` is already "Rent / Lease";

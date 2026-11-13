@@ -11,10 +11,12 @@ import {
 } from "nuqs";
 
 import {
+  AGE_BAND_VALUES,
   FURNISHING_VALUES,
   LISTING_INTENT_VALUES,
   RE_CATEGORY_VALUES,
   RE_SUBTYPE_VALUES,
+  SALE_TYPE_VALUES,
   SORT_VALUES,
   STATUS_VALUES,
 } from "@/lib/property-facets";
@@ -40,6 +42,8 @@ import {
 const PARSERS = {
   q: parseAsString,
   intent: parseAsArrayOf(parseAsStringLiteral(LISTING_INTENT_VALUES)),
+  saleType: parseAsArrayOf(parseAsStringLiteral(SALE_TYPE_VALUES)),
+  age: parseAsArrayOf(parseAsStringLiteral(AGE_BAND_VALUES)),
   categories: parseAsArrayOf(parseAsStringLiteral(RE_CATEGORY_VALUES)),
   subtypes: parseAsArrayOf(parseAsStringLiteral(RE_SUBTYPE_VALUES)),
   bhk: parseAsArrayOf(parseAsInteger),
@@ -69,6 +73,8 @@ function toPropertyFilters(state: Values<typeof PARSERS>): PropertyFilters {
   return {
     q: state.q ?? undefined,
     intent: (state.intent ?? undefined) as PropertyFilters["intent"],
+    saleType: (state.saleType ?? undefined) as PropertyFilters["saleType"],
+    age: (state.age ?? undefined) as PropertyFilters["age"],
     categories: (state.categories ?? undefined) as RECategory[] | undefined,
     subtypes: (state.subtypes ?? undefined) as RESubtype[] | undefined,
     bhk: state.bhk ?? undefined,

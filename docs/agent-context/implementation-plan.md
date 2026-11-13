@@ -60,8 +60,18 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — client feedback batch, PR A: dashboard and browse UI fixes**
-(2026-11-13), branch `feat/client-feedback-ui` from `upstream/main`
+**In progress — client feedback batch, PR B: Resale filter and Share / Refer
+links** (2026-11-13), branch `feat/resale-share-refer` stacked on
+`feat/client-feedback-ui`. Resale / new-launch and property-age filters
+with a Resale card badge (no migration: uses `structured_details.sale_type`);
+Share is a plain property link; Refer goes to Register with the code and a
+`return_to` dashboard property page, with Log in / Sign up cross-links that
+keep both. Server-side attribution and the `/dashboard`-only redirect rule are
+unchanged. Next: PR C site-visit reschedule (max 3) and number of visitors.
+Recommended: Opus 5.5 / high.
+
+**Implemented — client feedback batch, PR A: dashboard and browse UI fixes**
+(2026-11-13; PR #327, mirror #32, open for review), branch `feat/client-feedback-ui` from `upstream/main`
 `6f60cd8`. First of three stacked PRs for an 11-item client list. PR A
 (web only): Bookmark/Compare overlap on scroll, all 9 property subtypes on
 the client Real Estate dashboard home, ₹20 Cr budget slider with digits-only Min/Max
