@@ -47,6 +47,9 @@ x-droplet-api-env: &droplet-api-env
   # docker-compose.dev.yml points browsers at MinIO's localhost:9000. Empty
   # falls back to SPACES_ENDPOINT_URL, which browsers reach directly.
   SPACES_PUBLIC_ENDPOINT_URL: ""
+  # Spaces refuses bucket policies, so public/ objects are made readable with
+  # a per-object public-read ACL; everything else stays private.
+  SPACES_PUBLIC_OBJECT_ACL: "true"
 
 services:
   postgres:

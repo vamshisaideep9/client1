@@ -121,6 +121,8 @@ class DevDropletComposeTests(unittest.TestCase):
         # the droplet must clear it so presigned URLs use the Space itself.
         self.assertIn("localhost:9000", "\n".join(self.dev["api"]))
         self.assertRegex(anchor, r'(?m)^  SPACES_PUBLIC_ENDPOINT_URL: ""$')
+        # Spaces has no bucket policies; public/ reads come from object ACLs.
+        self.assertRegex(anchor, r'(?m)^  SPACES_PUBLIC_OBJECT_ACL: "true"$')
         self.assertNotRegex(text, r"digitaloceanspaces\.com")
         # The web CSP and image allowlist trust exactly the Space origin.
         self.assertIn(

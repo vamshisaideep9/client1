@@ -81,6 +81,29 @@ def test_apply_sets_cors_and_policy_on_the_bucket() -> None:
     )
 
 
+def test_apply_skips_bucket_policy_in_object_acl_mode() -> None:
+    client = MagicMock()
+    cs.apply_posture(client, bucket="b", origins=[_ORIGIN], bucket_policy=False)
+    client.put_bucket_cors.assert_called_once()
+    client.put_bucket_policy.assert_not_called()
+
+
+def test_verify_writes_probes_through_the_app_acl_rule() -> None:
+    client = MagicMock()
+    http, _ = _fake_http()
+
+    def acl_for(key: str) -> dict[str, str]:
+        return {"ACL": "public-read"} if key.startswith("public/") else {}
+
+    cs.verify_posture(
+        client, bucket="b", public_endpoint=_ENDPOINT, origin=_ORIGIN, http=http, acl_for=acl_for
+    )
+    acls = {c.kwargs["Key"]: c.kwargs.get("ACL") for c in client.put_object.call_args_list}
+    assert [acl for key, acl in acls.items() if key.startswith("public/")] == ["public-read"]
+    # The private probe and the `public` look-alike are written without one.
+    assert all(acl is None for key, acl in acls.items() if not key.startswith("public/"))
+
+
 def _fake_http(
     *,
     listing: int = 403,
