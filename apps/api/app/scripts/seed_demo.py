@@ -757,6 +757,7 @@ async def _seed_real_estate_workflows(
         Enquiry(
             id=demo_uuid("enquiry:new"),
             user_uuid=users["client"].id,
+            lead_uuid=leads["client-real-estate"].id,
             business_line="real_estate",
             property_ref=str(properties["villa"].id),
             title=properties["villa"].title,
@@ -770,6 +771,7 @@ async def _seed_real_estate_workflows(
         Enquiry(
             id=demo_uuid("enquiry:contacted"),
             user_uuid=users["client"].id,
+            lead_uuid=leads["client-real-estate"].id,
             business_line="real_estate",
             property_ref=str(properties["plot"].id),
             title=properties["plot"].title,
@@ -814,6 +816,7 @@ async def _seed_real_estate_workflows(
             visit = SiteVisit(
                 id=visit_id,
                 user_uuid=user.id,
+                lead_uuid=(leads["client-real-estate"].id if user is users["client"] else None),
                 business_line="real_estate",
                 property_ref=str(prop.id),
                 title=prop.title,

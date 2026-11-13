@@ -4050,6 +4050,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/telecaller/leads/{lead_id}/client-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Client History
+         * @description All of this client's journeys on the line that are assigned to the
+         *     caller, each with its requests and the caller's own calls.
+         */
+        get: operations["client_history_api_v1_telecaller_leads__lead_id__client_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/telecaller/leads/{lead_id}/property-deals": {
         parameters: {
             query?: never;
@@ -4532,6 +4553,46 @@ export interface components {
             notes?: string | null;
             /** Reason */
             reason: string;
+        };
+        /**
+         * AdminLeadDetailsRead
+         * @description Admin view: also what the client applied for and when.
+         */
+        AdminLeadDetailsRead: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** Editable Fields */
+            editable_fields: ("name" | "requirement.notes")[];
+            /** Field Owners */
+            field_owners: {
+                [key: string]: "agent" | "client" | "telecaller" | "admin" | "system" | "unclaimed" | "legacy_locked";
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string | null;
+            /** Requests */
+            requests: components["schemas"]["LeadRequestSummary"][];
+            /** Requirement */
+            requirement: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "assigned" | "working" | "converted" | "closed" | "released";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** AdminLeadRead */
         AdminLeadRead: {
@@ -6443,6 +6504,31 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /**
+         * ClientHistoryLead
+         * @description One lead (journey) of the same client, with this Telecaller's calls.
+         */
+        ClientHistoryLead: {
+            /** Activities */
+            activities: components["schemas"]["LeadActivityRead"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Lead Id
+             * Format: uuid
+             */
+            lead_id: string;
+            /** Requests */
+            requests: components["schemas"]["LeadRequestSummary"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "assigned" | "working" | "converted" | "closed" | "released";
+        };
         /** ClientProfileSummary */
         ClientProfileSummary: {
             /**
@@ -7295,6 +7381,7 @@ export interface components {
             interest_level?: ("hot" | "warm" | "cold") | null;
             /** Notes */
             notes?: string | null;
+            request?: components["schemas"]["RequestRef"] | null;
         };
         /** LeadActivityRead */
         LeadActivityRead: {
@@ -7324,6 +7411,7 @@ export interface components {
             lead_uuid: string;
             /** Notes */
             notes: string | null;
+            request?: components["schemas"]["RequestRef"] | null;
         };
         /** LeadDetailsPatch */
         LeadDetailsPatch: {
@@ -7366,6 +7454,31 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * LeadRequestSummary
+         * @description One application/enquiry/visit/deal on a lead: what and when.
+         */
+        LeadRequestSummary: {
+            /**
+             * Applied At
+             * Format: date-time
+             */
+            applied_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "loan_application" | "financial_enquiry" | "property_enquiry" | "site_visit" | "property_deal";
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
         };
         /** LeadsReportResponse */
         LeadsReportResponse: {
@@ -9499,6 +9612,19 @@ export interface components {
             /** Total Count */
             total_count: number;
         };
+        /** RequestRef */
+        RequestRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "loan_application" | "financial_enquiry" | "property_enquiry" | "site_visit" | "property_deal";
+        };
         /**
          * ReraApplicability
          * @enum {string}
@@ -10384,6 +10510,42 @@ export interface components {
             /** Loans Total */
             loans_total: number;
         };
+        /**
+         * TelecallerClientHistoryResponse
+         * @description Every journey of this client on this line that is assigned to the
+         *     caller, newest first. Calls are the caller's own (lead_activities_rls).
+         */
+        TelecallerClientHistoryResponse: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** Leads */
+            leads: components["schemas"]["ClientHistoryLead"][];
+        };
+        /**
+         * TelecallerFinancialEnquiryRead
+         * @description A credit-card or insurance request (outside the loan pipeline).
+         */
+        TelecallerFinancialEnquiryRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Product Category */
+            product_category: string;
+            /** Product Name */
+            product_name: string;
+            /** Status */
+            status: string;
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+        };
         /** TelecallerFollowUpItem */
         TelecallerFollowUpItem: {
             /**
@@ -10391,6 +10553,7 @@ export interface components {
              * Format: date-time
              */
             follow_up_at: string;
+            latest_request?: components["schemas"]["LeadRequestSummary"] | null;
             /**
              * Lead Uuid
              * Format: uuid
@@ -10425,12 +10588,18 @@ export interface components {
              */
             created_at: string;
             /**
+             * Financial Enquiries
+             * @default []
+             */
+            financial_enquiries: components["schemas"]["TelecallerFinancialEnquiryRead"][];
+            /**
              * Id
              * Format: uuid
              */
             id: string;
             /** Last Disposition */
             last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+            latest_request?: components["schemas"]["LeadRequestSummary"] | null;
             /**
              * Loan Applications
              * @default []
@@ -10447,10 +10616,20 @@ export interface components {
              * @default []
              */
             property_deals: components["schemas"]["TelecallerPropertyDealRead"][];
+            /**
+             * Property Enquiries
+             * @default []
+             */
+            property_enquiries: components["schemas"]["TelecallerPropertyEnquiryRead"][];
             /** Requirement */
             requirement?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Site Visits
+             * @default []
+             */
+            site_visits: components["schemas"]["TelecallerSiteVisitRead"][];
             /**
              * Status
              * @enum {string}
@@ -10486,6 +10665,7 @@ export interface components {
             id: string;
             /** Last Disposition */
             last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+            latest_request?: components["schemas"]["LeadRequestSummary"] | null;
             /** Mobile */
             mobile: string;
             /** Name */
@@ -10547,6 +10727,11 @@ export interface components {
             loan_type_id: string;
             /** Loan Type Name */
             loan_type_name: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
             /** Processing Fee */
             processing_fee?: string | null;
             /**
@@ -10570,6 +10755,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
             /** Price Quoted */
             price_quoted?: string | null;
             /** Property Location */
@@ -10585,6 +10775,61 @@ export interface components {
             status: "new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold";
             /** Status Reason */
             status_reason?: string | null;
+        };
+        /** TelecallerPropertyEnquiryRead */
+        TelecallerPropertyEnquiryRead: {
+            /** City */
+            city: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Locality */
+            locality: string;
+            /** Message */
+            message: string | null;
+            /** Property Ref */
+            property_ref: string;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+        };
+        /** TelecallerSiteVisitRead */
+        TelecallerSiteVisitRead: {
+            /** City */
+            city: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Locality */
+            locality: string;
+            /**
+             * Preferred Date
+             * Format: date
+             */
+            preferred_date: string;
+            /** Preferred Time Slot */
+            preferred_time_slot: string;
+            /** Property Ref */
+            property_ref: string;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
         };
         /** TransactionListResponse */
         TransactionListResponse: {
@@ -11912,7 +12157,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LeadDetailsRead"];
+                    "application/json": components["schemas"]["AdminLeadDetailsRead"];
                 };
             };
             /** @description Validation Error */
@@ -19212,6 +19457,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LeadActivityRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    client_history_api_v1_telecaller_leads__lead_id__client_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelecallerClientHistoryResponse"];
                 };
             };
             /** @description Validation Error */
