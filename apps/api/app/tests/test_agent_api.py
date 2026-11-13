@@ -677,3 +677,66 @@ async def test_non_agent_forbidden(client: AsyncClient) -> None:
 async def test_unauthenticated_rejected(client: AsyncClient) -> None:
     res = await client.get("/api/v1/agent/leads")
     assert res.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_introduce_lead_with_property_interest_records_its_title(
+    client: AsyncClient,
+) -> None:
+    from .test_property_deal_progress_api import _seed_property
+
+    property_id = await _seed_property()
+    auth_uuid, agent_uuid = await _seed_agent("real_estate")
+    token = _agent_token(auth_uuid, agent_uuid, "real_estate")
+    res = await client.post(
+        "/api/v1/agent/leads",
+        json={"mobile": unique_mobile(), "requirement": {"property_id": property_id}},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 201, res.text
+    requirement = res.json()["requirement"]
+    assert requirement["property_id"] == property_id
+    assert requirement["interest_title"].startswith("Deal Test Apartment")
+
+
+@pytest.mark.asyncio
+async def test_introduce_lead_rejects_interest_outside_agent_line(client: AsyncClient) -> None:
+    from .test_property_deal_progress_api import _seed_property
+
+    property_id = await _seed_property()
+    auth_uuid, agent_uuid = await _seed_agent("loans")
+    token = _agent_token(auth_uuid, agent_uuid)
+    res = await client.post(
+        "/api/v1/agent/leads",
+        json={"mobile": unique_mobile(), "requirement": {"property_id": property_id}},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 422, res.text
+
+
+@pytest.mark.asyncio
+async def test_introduce_lead_rejects_inactive_or_unknown_property(client: AsyncClient) -> None:
+    from .test_property_deal_progress_api import _seed_property
+
+    inactive_id = await _seed_property(active=False)
+    auth_uuid, agent_uuid = await _seed_agent("real_estate")
+    token = _agent_token(auth_uuid, agent_uuid, "real_estate")
+    for property_id in (inactive_id, str(uuid.uuid4())):
+        res = await client.post(
+            "/api/v1/agent/leads",
+            json={"mobile": unique_mobile(), "requirement": {"property_id": property_id}},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 422, res.text
+
+
+@pytest.mark.asyncio
+async def test_introduce_lead_rejects_client_supplied_interest_title(client: AsyncClient) -> None:
+    auth_uuid, agent_uuid = await _seed_agent("loans")
+    token = _agent_token(auth_uuid, agent_uuid)
+    res = await client.post(
+        "/api/v1/agent/leads",
+        json={"mobile": unique_mobile(), "requirement": {"interest_title": "Spoofed"}},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 422, res.text

@@ -72,6 +72,10 @@ class SiteVisit(Base):
     # site_visits in this table's migration) — always "real_estate" for this
     # table, stamped server-side only, never client-supplied.
     business_line: Mapped[str] = mapped_column(business_line_enum, nullable=False)
+    # The client's Real Estate lead at creation (migration e7a9c1b3d5f8).
+    lead_uuid: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("leads.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     property_ref: Mapped[str] = mapped_column(String(80), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     locality: Mapped[str] = mapped_column(String(120), nullable=False)

@@ -8,6 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.schemas.telecaller import LeadRequestSummary
+
 LeadDetailOwner = Literal[
     "agent", "client", "telecaller", "admin", "system", "unclaimed", "legacy_locked"
 ]
@@ -47,6 +49,12 @@ class LeadDetailsRead(BaseModel):
     field_owners: dict[str, LeadDetailOwner]
     editable_fields: list[Literal["name", "requirement.notes"]]
     updated_at: datetime
+
+
+class AdminLeadDetailsRead(LeadDetailsRead):
+    """Admin view: also what the client applied for and when."""
+
+    requests: list[LeadRequestSummary]
 
 
 class JourneyContactRead(BaseModel):

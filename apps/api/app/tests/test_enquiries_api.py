@@ -113,6 +113,27 @@ async def test_create_then_list_own_enquiry(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_enquiry_is_linked_to_the_clients_real_estate_lead(client: AsyncClient) -> None:
+    """The assigned Telecaller finds the enquiry through its lead."""
+    import app.db.session as _session_mod
+    from app.models.enquiry import Enquiry
+    from app.models.lead import Lead
+
+    token, _ = await full_registration(client, lines=["real_estate"])
+    created = await client.post(
+        "/api/v1/enquiries", headers={"Authorization": f"Bearer {token}"}, json=_payload()
+    )
+    assert created.status_code == 201, created.text
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        enquiry = await db.get(Enquiry, uuid.UUID(created.json()["id"]))
+        assert enquiry is not None and enquiry.lead_uuid is not None
+        lead = await db.get(Lead, enquiry.lead_uuid)
+        assert lead is not None
+        assert lead.business_line == "real_estate"
+
+
+@pytest.mark.asyncio
 async def test_other_client_cannot_see_enquiry(client: AsyncClient) -> None:
     owner_token, _ = await full_registration(client, lines=["real_estate"])
     await client.post(

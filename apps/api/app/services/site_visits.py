@@ -45,7 +45,7 @@ async def create_site_visit(
     if property_listing is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Property not found.")
     try:
-        await ensure_client_line_lead_for_user(
+        lead_uuid = await ensure_client_line_lead_for_user(
             auth_user_uuid=current_user.id,
             mobile=current_user.mobile,
             business_line="real_estate",
@@ -57,6 +57,7 @@ async def create_site_visit(
         ) from exc
     visit = SiteVisit(
         user_uuid=current_user.id,
+        lead_uuid=lead_uuid,
         business_line="real_estate",
         property_ref=str(property_listing.id),
         title=property_listing.title,

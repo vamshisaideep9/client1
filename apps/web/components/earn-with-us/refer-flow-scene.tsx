@@ -8,7 +8,7 @@ import { useEffect, useRef } from "react";
 // sync:
 //   A  Get your code   -> tap Copy, "Copied" pops
 //   B  Share it        -> code flies out to friends
-//   C  Get cashback    -> "Collect your rewards" -> coin burst + Razorpay /
+//   C  Get referral bonus -> "Collect your rewards" -> coin burst + Razorpay /
 //                         cheque + confetti celebration
 // All motion is CSS keyframes in globals.css (refer-* set); this file owns the
 // markup and the IntersectionObserver that adds `.is-playing` so the loop runs

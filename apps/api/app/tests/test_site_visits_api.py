@@ -105,6 +105,26 @@ async def test_list_empty_for_new_client(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_visit_is_linked_to_the_clients_real_estate_lead(client: AsyncClient) -> None:
+    import app.db.session as _session_mod
+    from app.models.lead import Lead
+    from app.models.site_visit import SiteVisit
+
+    token, _ = await full_registration(client, lines=["real_estate"])
+    created = await client.post(
+        "/api/v1/site-visits", headers={"Authorization": f"Bearer {token}"}, json=_payload()
+    )
+    assert created.status_code == 201, created.text
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        visit = await db.get(SiteVisit, uuid.UUID(created.json()["id"]))
+        assert visit is not None and visit.lead_uuid is not None
+        lead = await db.get(Lead, visit.lead_uuid)
+        assert lead is not None
+        assert lead.business_line == "real_estate"
+
+
+@pytest.mark.asyncio
 async def test_create_then_list_own_visit(client: AsyncClient) -> None:
     token, _ = await full_registration(client, lines=["real_estate"])
     headers = {"Authorization": f"Bearer {token}"}
