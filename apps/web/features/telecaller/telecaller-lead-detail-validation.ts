@@ -5,6 +5,7 @@ import {
   type FieldErrors,
   type ValidationError,
 } from "@/lib/form-validation";
+import { staffNoteLimitError } from "@/features/dashboard/long-note";
 
 export type LoanTransactionField = "bankName" | "amount" | "interestRate" | "txnDate";
 
@@ -61,7 +62,9 @@ export function validateFieldTask(
   now = new Date(),
 ): FieldErrors<FieldTaskField> {
   const errors: FieldErrors<FieldTaskField> = {
-    notes: requiredTextError(values.notes, "Task description", 1000),
+    notes:
+      requiredTextError(values.notes, "Task description") ??
+      staffNoteLimitError(values.notes, "Task description"),
     dueAt: futureLocalDateTimeError(values.dueAt, "Due date and time", { now }),
   };
 
@@ -78,8 +81,7 @@ export function validateCallLog(
 ): FieldErrors<CallLogField> {
   const errors: FieldErrors<CallLogField> = {
     followUpAt: futureLocalDateTimeError(values.followUpAt, "Follow-up date and time", { now }),
-    notes:
-      values.notes.length > 1000 ? "Notes must be 1000 characters or fewer." : undefined,
+    notes: staffNoteLimitError(values.notes),
   };
 
   return Object.fromEntries(
