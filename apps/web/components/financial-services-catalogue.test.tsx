@@ -124,17 +124,18 @@ describe("Financial Services public discovery", () => {
       </>,
     );
 
-    expect(markup).toContain("Loans, cards, and insurance that fit you");
-    expect(markup).toContain("Buy your property with confidence");
+    expect(markup).toContain("Loans for salaried and self-employed people");
+    expect(markup).toContain("Verified property in Hyderabad");
+    expect(markup).not.toMatch(/insurers|cards, and insurance/i);
     expect(markup).toContain("EMI Calculator");
     expect(markup).toContain("Loan Eligibility");
     expect(markup).toContain("Home Affordability");
     expect(markup).toContain("Stamp Duty");
     expect(markup).toContain('href="/calculators"');
-    expect(markup.indexOf("Loans, cards, and insurance that fit you")).toBeLessThan(
-      markup.indexOf("Buy your property with confidence"),
+    expect(markup.indexOf("Loans for salaried and self-employed people")).toBeLessThan(
+      markup.indexOf("Verified property in Hyderabad"),
     );
-    expect(markup.indexOf("Buy your property with confidence")).toBeLessThan(
+    expect(markup.indexOf("Verified property in Hyderabad")).toBeLessThan(
       markup.indexOf("Calculate before you decide"),
     );
     expect(markup).not.toContain("Free planning tools");

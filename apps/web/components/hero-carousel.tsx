@@ -7,6 +7,7 @@ import { ChevronDown, ShieldCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ResponsiveArtwork } from "@/components/responsive-artwork";
+import { BannerVideo } from "@/components/banner-video";
 import {
   Carousel,
   CarouselContent,
@@ -29,18 +30,25 @@ export function HeroCarousel({
   variant = "hero",
   label = "Highlights",
   interactive = true,
+  compact = false,
 }: {
   banners: HeroBanner[];
   variant?: "hero" | "section";
   label?: string;
   interactive?: boolean;
+  // Section variant only: a shorter band for pages (Properties) where the
+  // campaign must not push the listings below the fold.
+  compact?: boolean;
 }) {
+  const isCompact = variant === "section" && compact;
   const [api, setApi] = useState<CarouselApi>();
   const [selected, setSelected] = useState(0);
   const [loadedImages, setLoadedImages] = useState<Set<string>>(() => new Set());
   const [count, setCount] = useState(0);
   const [interactionPaused, setInteractionPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  // True while a banner video plays, so a running video is never slid away.
+  const [videoPlaying, setVideoPlaying] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -57,7 +65,11 @@ export function HeroCarousel({
     setCount(api.scrollSnapList().length);
     setSelected(api.selectedScrollSnap());
 
-    const onSelect = () => setSelected(api.selectedScrollSnap());
+    const onSelect = () => {
+      setSelected(api.selectedScrollSnap());
+      // The newly selected slide reports its own video state.
+      setVideoPlaying(false);
+    };
     api.on("select", onSelect);
     api.on("reInit", onSelect);
 
@@ -93,7 +105,7 @@ export function HeroCarousel({
   useEffect(() => {
     if (!api || banners.length <= 1) return;
 
-    if (reducedMotion || interactionPaused) return;
+    if (reducedMotion || interactionPaused || videoPlaying) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
 
@@ -114,7 +126,7 @@ export function HeroCarousel({
       clearTimeout(timeoutId);
       api.off("select", schedule);
     };
-  }, [api, banners.length, interactionPaused, reducedMotion]);
+  }, [api, banners.length, interactionPaused, reducedMotion, videoPlaying]);
 
   // Embla with zero slides is undefined behavior; the page never intends to
   // pass zero (it falls back to FALLBACK_HERO_BANNERS), but this is
@@ -171,12 +183,27 @@ export function HeroCarousel({
                     "relative w-full overflow-hidden bg-[var(--nav-bg)]",
                     variant === "hero"
                       ? "min-h-[24rem] sm:h-[calc(100svh-4rem)] sm:min-h-[420px]"
-                      : "min-h-[16rem] sm:h-[clamp(14rem,36vw,32.5rem)]",
+                      : isCompact
+                        ? "min-h-[12rem] sm:h-[clamp(10rem,22vw,18rem)]"
+                        : "min-h-[16rem] sm:h-[clamp(14rem,36vw,32.5rem)]",
                   )}
                 >
                   {/* Media layer: real landscape image fills the card; otherwise
                       a cream placeholder that matches the NavBar (no gray seam). */}
-                  {banner.image ? (
+                  {banner.youtubeId || banner.videoUrl ? (
+                    // Video replaces the artwork; the artwork becomes its poster.
+                    // Stacked under the copy on phones, the right-hand panel
+                    // (where artwork sits) from sm up.
+                    <BannerVideo
+                      youtubeId={banner.youtubeId}
+                      videoUrl={banner.videoUrl}
+                      poster={banner.image}
+                      title={banner.title}
+                      active={isSelected && interactive}
+                      onPlayingChange={isSelected ? setVideoPlaying : undefined}
+                      className="mx-5 mt-5 aspect-video rounded-xl sm:absolute sm:inset-y-0 sm:right-0 sm:z-10 sm:m-0 sm:aspect-auto sm:w-[56%] sm:rounded-none"
+                    />
+                  ) : banner.image ? (
                     <>
                     {!loadedImages.has(banner.image) && <Skeleton data-banner-loading aria-hidden="true" className="absolute inset-y-0 right-0 hidden w-3/5 rounded-none sm:block [mask-image:linear-gradient(to_right,transparent,black_60%)]" />}
                     <ResponsiveArtwork
@@ -205,7 +232,9 @@ export function HeroCarousel({
                       "relative flex min-h-[inherit] items-center sm:h-full",
                       variant === "hero"
                         ? "px-5 py-16 sm:px-16 sm:py-10 lg:px-28"
-                        : "px-5 pb-16 pt-8 sm:px-24 sm:py-6 lg:px-28 lg:py-8",
+                        : isCompact
+                          ? "px-5 pb-12 pt-6 sm:px-24 sm:py-4 lg:px-28 lg:py-5"
+                          : "px-5 pb-16 pt-8 sm:px-24 sm:py-6 lg:px-28 lg:py-8",
                     )}
                   >
                     <div
@@ -226,7 +255,9 @@ export function HeroCarousel({
                           "font-heading font-semibold text-[var(--nav-text)]",
                           variant === "hero"
                             ? "break-words text-3xl sm:text-4xl lg:text-5xl"
-                            : "break-words text-2xl sm:line-clamp-2 lg:text-4xl",
+                            : isCompact
+                              ? "break-words text-xl sm:line-clamp-2 lg:text-3xl"
+                              : "break-words text-2xl sm:line-clamp-2 lg:text-4xl",
                         )}
                       >
                         {banner.title}

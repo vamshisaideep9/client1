@@ -29,6 +29,7 @@ describe("buildSuggestionIndex", () => {
       localities: ["Live locality"],
       cities: ["Live city"],
       pincodes: ["123456"],
+      developers: [],
       subtypes: [],
       properties: [
         {
@@ -45,6 +46,7 @@ describe("buildSuggestionIndex", () => {
       localities: [],
       cities: [],
       pincodes: [],
+      developers: [],
       subtypes: [],
       properties: [],
       priceBounds: { min: 0, max: 500 },

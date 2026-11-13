@@ -99,6 +99,11 @@ describe("buildSubmissionPayload()", () => {
     expect(p.meta).toBeNull();
     expect(p.media).toEqual(MEDIA);
   });
+
+  it("sends a trimmed developer name, or null when blank", () => {
+    expect(buildSubmissionPayload({ ...VALID, developerName: "  My Home " }, MEDIA).developer_name).toBe("My Home");
+    expect(buildSubmissionPayload({ ...VALID, developerName: "   " }, MEDIA).developer_name).toBeNull();
+  });
 });
 
 describe("validateForm()", () => {

@@ -19,3 +19,4 @@ export * from "./health-cover";
 export * from "./balance-transfer";
 export * from "./flat-rate";
 export * from "./rent-vs-buy";
+export * from "./compound-interest";

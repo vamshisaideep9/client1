@@ -130,6 +130,9 @@ class Settings(BaseSettings):
     MEDIA_PROCESS_BATCH_SIZE: int = 4
     MEDIA_VIDEO_MAX_UPLOAD_BYTES: int = 20 * 1024 * 1024
     LOAN_VIDEO_MAX_DURATION_SECONDS: int = 60
+    # Uploaded banner videos are short, muted loops; longer stories belong on
+    # YouTube, which banners can link by video id instead.
+    BANNER_VIDEO_MAX_DURATION_SECONDS: int = 30
     LOAN_VIDEO_MAX_PER_APPLICATION: int = 2
     TASK_FEEDBACK_MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     TASK_FEEDBACK_MAX_PER_TASK: int = 5
@@ -284,6 +287,13 @@ class Settings(BaseSettings):
     SPACES_BUCKET: str = "task-documents"
     SPACES_ACCESS_KEY: str = "minioadmin"  # dev placeholder; real value in prod env
     SPACES_SECRET_KEY: str = "minioadmin"  # dev placeholder; real value in prod env
+    # DigitalOcean Spaces rejects bucket policies (403 even for a full-access
+    # key), so the `public/*` anonymous read that MinIO gets from its bucket
+    # policy is granted per object instead: every write to a `public/` key
+    # carries a `public-read` canned ACL. Keys outside `public/` never get an
+    # ACL and stay private. Off by default for local MinIO, which keeps using
+    # its `public/` bucket policy (docker-compose minio-init).
+    SPACES_PUBLIC_OBJECT_ACL: bool = False
 
     @model_validator(mode="after")
     def _guard_secret_key(self) -> "Settings":
@@ -330,6 +340,14 @@ class Settings(BaseSettings):
             # network-level interception.
             if not self.SPACES_ENDPOINT_URL.startswith("https://"):
                 raise ValueError("SPACES_ENDPOINT_URL must use https:// outside development.")
+            # The public endpoint is the one actually handed to browsers, so
+            # an http override would reopen exactly the exposure above.
+            if self.SPACES_PUBLIC_ENDPOINT_URL and not self.SPACES_PUBLIC_ENDPOINT_URL.startswith(
+                "https://"
+            ):
+                raise ValueError(
+                    "SPACES_PUBLIC_ENDPOINT_URL must use https:// outside development."
+                )
         return self
 
     @model_validator(mode="after")
