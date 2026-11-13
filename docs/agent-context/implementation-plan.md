@@ -60,7 +60,18 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — Spaces public reads via per-object ACL** (2026-11-13), branch
+**In progress — synthetic demo media for every media surface** (2026-11-13),
+branch `feat/demo-media-seed` from `upstream/main` `ab73217`. `seed_demo` adds
+Media Library artwork per surface plus a banner video, LIVE banners with image
+and video on public placements, offer artwork, property galleries with a 360
+panorama, pending-submission media, and a loan photo and video. Dev-only
+seed data; no schema, contract or permission change. Found while doing it:
+the API cannot reach `media-runtime` (only the scheduler joins
+`media-control`), so Sub Admin banner-video uploads fail. That bug is a
+separate follow-up, not part of this item. Recommended: Opus 5.5 / high.
+
+**Implemented — Spaces public reads via per-object ACL** (2026-11-13; merged as
+PR #325, mirror #30), branch
 `fix/spaces-public-object-acl` from `upstream/main` `b69edf0`. Live rollout
 found Spaces refuses bucket policies (403 even for a full-access key), so the
 `public/*` read the plan relied on never applied. `SPACES_PUBLIC_OBJECT_ACL`
