@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
+import { LongNoteField } from "@/features/dashboard/long-note-field";
 import { UserAvatar } from "@/components/user-avatar";
 import {
   DashboardBackLink,
@@ -354,11 +354,11 @@ export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
                 </div>
                 <div>
                   <Label htmlFor="lead-call-notes">Notes (optional)</Label>
-                  <Textarea
+                  <LongNoteField
                     id="lead-call-notes"
+                    counterId="lead-call-notes-count"
                     name="notes"
                     rows={3}
-                    maxLength={1000}
                     value={notes}
                     onChange={(e) => {
                       setNotes(e.target.value);

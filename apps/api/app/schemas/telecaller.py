@@ -53,11 +53,15 @@ CallDispositionLiteral = Literal[
 ]
 InterestLevelLiteral = Literal["hot", "warm", "cold"]
 
+# Staff working notes (call logs, field tasks) allow about 1500 words. The
+# columns are TEXT; this cap only bounds request size.
+STAFF_NOTE_MAX_CHARS = 10_000
+
 
 class LeadActivityCreate(BaseModel):
     disposition: CallDispositionLiteral
     interest_level: InterestLevelLiteral | None = None
-    notes: Annotated[str | None, Field(default=None, max_length=1000)] = None
+    notes: Annotated[str | None, Field(default=None, max_length=STAFF_NOTE_MAX_CHARS)] = None
     follow_up_at: datetime | None = None
 
     @model_validator(mode="after")
@@ -175,7 +179,10 @@ class TelecallerPropertyDealRead(BaseModel):
 class TaskCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    notes: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
+    notes: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=STAFF_NOTE_MAX_CHARS),
+    ]
     due_at: datetime | None = None
 
     @model_validator(mode="after")

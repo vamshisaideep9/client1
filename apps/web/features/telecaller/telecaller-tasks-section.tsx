@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FieldError, RequiredIndicator } from "@/components/ui/field-error";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { LongNoteField } from "@/features/dashboard/long-note-field";
 import { DashboardPanel } from "@/features/dashboard/dashboard-ui";
 import type { ApiResponse } from "@/lib/api/client";
 import { apiIssuesToFieldErrors, focusFirstInvalidField } from "@/lib/form-validation";
@@ -101,11 +101,11 @@ export function TelecallerTasksSection({
       <form ref={formRef} className="space-y-4" noValidate onSubmit={(e) => void onSubmit(e)}>
         <div>
           <Label htmlFor="task-notes">What&apos;s needed<RequiredIndicator /></Label>
-          <Textarea
+          <LongNoteField
             id="task-notes"
+            counterId="task-notes-count"
             name="task_notes"
             rows={2}
-            maxLength={1000}
             value={notes}
             onChange={(e) => {
               setNotes(e.target.value);

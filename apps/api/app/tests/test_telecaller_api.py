@@ -520,7 +520,46 @@ async def test_raise_task_notes_too_long_rejected(client: AsyncClient) -> None:
 
     res = await client.post(
         f"/api/v1/telecaller/leads/{lead_id}/tasks",
-        json={"notes": "x" * 1001},
+        json={"notes": "x" * 10_001},
         headers={"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"},
     )
     assert res.status_code == 422
+
+
+# About 1500 words of six characters each ("words ") is 9000 characters.
+_LONG_NOTE = ("words " * 1500).strip()
+
+
+@pytest.mark.asyncio
+async def test_call_log_accepts_1500_word_notes(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid)
+    headers = {"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"}
+
+    res = await client.post(
+        f"/api/v1/telecaller/leads/{lead_id}/activities",
+        json={"disposition": "busy", "notes": _LONG_NOTE},
+        headers=headers,
+    )
+    assert res.status_code == 201, res.text
+    assert res.json()["notes"] == _LONG_NOTE
+
+    too_long = await client.post(
+        f"/api/v1/telecaller/leads/{lead_id}/activities",
+        json={"disposition": "busy", "notes": "x" * 10_001},
+        headers=headers,
+    )
+    assert too_long.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_raise_task_accepts_1500_word_notes(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid)
+
+    res = await client.post(
+        f"/api/v1/telecaller/leads/{lead_id}/tasks",
+        json={"notes": _LONG_NOTE},
+        headers={"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"},
+    )
+    assert res.status_code == 201, res.text
