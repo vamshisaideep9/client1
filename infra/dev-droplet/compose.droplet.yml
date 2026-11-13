@@ -8,15 +8,18 @@
 # Caddy proxy in ./Caddyfile. It is NOT a production topology; production uses
 # docker-compose.prod.example.yml and its launch gates.
 #
-# Object storage is deliberately absent: MinIO no longer publishes the
-# minio/minio and minio/mc images, so the droplet runs without it. File
-# uploads, managed media and banner images do not work on this host; every
-# database-backed journey does.
+# Object storage is a dedicated DigitalOcean Space (README "Object storage"),
+# not MinIO: MinIO no longer publishes the minio/minio and minio/mc images.
+# The SPACES_* values are added to the repository-root .env by hand, never by
+# init-env.sh, and the bucket's CORS rule and public/*-only read policy are
+# applied with `app.scripts.configure_storage --apply --verify`.
 #
 # Invariants (scripts/tests/test_dev_droplet.py enforces them):
 #   - no datastore publishes a host port; only the API and web ports that Caddy
 #     proxies are published, and only on 127.0.0.1 (Docker bypasses ufw);
 #   - MinIO and its bucket initialiser never start, and nothing depends on them;
+#   - every storage setting is required, and browsers are pointed at the Space
+#     itself (the dev overlay's localhost:9000 public endpoint is cleared);
 #   - every long-running service restarts after a reboot;
 #   - credentials come from the repository-root .env written by init-env.sh, so
 #     the committed app/app database default is never used.
@@ -33,6 +36,17 @@ x-droplet-api-env: &droplet-api-env
   # Caddy is the single proxy in front of the API and replaces any client-sent
   # X-Forwarded-For, so the rightmost entry is the real peer.
   TRUST_PROXY_HEADERS: "true"
+  # Dedicated dev Space with a key scoped to it alone (README "Object
+  # storage"). Path-style URLs on the regional endpoint, so presigned uploads,
+  # public/ assets and the web CSP all share one exact origin.
+  SPACES_ENDPOINT_URL: ${SPACES_ENDPOINT_URL?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
+  SPACES_REGION: ${SPACES_REGION?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
+  SPACES_BUCKET: ${SPACES_BUCKET?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
+  SPACES_ACCESS_KEY: ${SPACES_ACCESS_KEY?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
+  SPACES_SECRET_KEY: ${SPACES_SECRET_KEY?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
+  # docker-compose.dev.yml points browsers at MinIO's localhost:9000. Empty
+  # falls back to SPACES_ENDPOINT_URL, which browsers reach directly.
+  SPACES_PUBLIC_ENDPOINT_URL: ""
 
 services:
   postgres:
@@ -82,6 +96,9 @@ services:
       # Same-origin: Caddy routes /api/* to the API on the app host.
       NEXT_PUBLIC_API_BASE_URL: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
       NEXT_PUBLIC_SITE_URL: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
+      # The Space origin: CSP connect/img/media-src, next/image remotePatterns
+      # and lib/allowed-asset-url.ts all trust exactly this origin.
+      NEXT_PUBLIC_ASSET_HOST: ${SPACES_ENDPOINT_URL?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
       # Polling exists only for the Windows bind mount; Linux has inotify.
       WATCHPACK_POLLING: "false"
       CHOKIDAR_USEPOLLING: "false"

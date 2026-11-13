@@ -2,7 +2,29 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — loan-page content and insurance unpublish** (2026-11-12),
+**In progress — DigitalOcean Spaces object storage for dev and production**
+(2026-11-13), branch `feat/spaces-object-storage`. Infra, API tooling and docs;
+requirement coverage unchanged; no upload-flow, schema, RLS or contract change.
+Recommended: Opus 5.5 / high. The dev droplet overlay now requires every
+`SPACES_*` value from `.env`, clears dev's `localhost:9000` public endpoint and
+passes the Space origin to web as `NEXT_PUBLIC_ASSET_HOST` (credentials reach
+only api and scheduler; MinIO stays profile-disabled). New
+`app.scripts.configure_storage` applies an exact-origin CORS rule and a
+`public/*`-only `s3:GetObject` policy, then probes anonymously: listing,
+private and `public`-look-alike objects denied, `public/` readable, untrusted
+origin refused; it emits the production evidence booleans. Outside development
+`SPACES_PUBLIC_ENDPOINT_URL` must also be https. Dev and production runbooks
+document Space creation, limited keys and the full-access fallback for
+`--apply`. Verified: boto3 1.43 presigns path-style on the regional endpoint;
+targeted API tests 90/90 in a `python:3.13` container on the compose network;
+droplet contract tests 9 passed (35 subtests); full API ruff check/format pass
+(526 files); rendered droplet compose shows correct env per service and fails
+on a missing `SPACES_*`. Full API pytest suite was still running at commit
+time with 5 failures in files this change does not touch; result is recorded
+on the PR. Live droplet rollout (`configure_storage --apply --verify`, demo
+media, browser upload) follows the PR.
+
+**Implemented — loan-page content and insurance unpublish** (2026-11-12; merged as PR #322),
 branch `feat/loan-pages-content-insurance-unpublish`, stack 4 of 4 on
 `feat/seo-titles-homepage-copy`. API data migration plus web; requirement
 coverage unchanged. Recommended: Opus 5.5 / high (xhigh for the migration

@@ -11,7 +11,7 @@ What this directory adds:
 
 | File | Purpose |
 | --- | --- |
-| `compose.droplet.yml` | Removes datastore ports, disables MinIO, binds the proxied ports to `127.0.0.1`, injects fresh credentials and public HTTPS origins, and adds restart policies. |
+| `compose.droplet.yml` | Removes datastore ports, replaces MinIO with a dedicated DigitalOcean Space, binds the proxied ports to `127.0.0.1`, injects fresh credentials and public HTTPS origins, and adds restart policies. |
 | `Caddyfile` | Host HTTPS proxy with automatic certificates and an IP allowlist. |
 | `init-env.sh` | Writes the repository-root `.env` with fresh random credentials. |
 | `dc.sh` | `docker compose` with the three files in the right order. |
@@ -19,11 +19,13 @@ What this directory adds:
 The droplet checks out only the paths the stack needs (sparse checkout); docs,
 tests, contracts, and tooling stay off the server.
 
-**No object storage.** MinIO no longer publishes the `minio/minio` and
-`minio/mc` images, so the droplet runs without it. Sign-in, dashboards, leads,
-forms, and every other database-backed journey work. File uploads (KYC and
-loan documents, property and campaign media, task documents) and banner
-images do not.
+**Object storage is a DigitalOcean Space, not MinIO.** MinIO no longer
+publishes the `minio/minio` and `minio/mc` images, so uploads (KYC and loan
+documents, property and campaign media, task documents) and banner images use
+a dedicated dev Space instead (step 4b). The Caddy allowlist does not cover the
+Space: anything under its `public/` prefix is world-readable and everything
+else needs a short-lived signed URL, so keep this environment on synthetic
+data only.
 
 ## 1. Create the droplet
 
@@ -96,6 +98,51 @@ can sign in without SMS or email delivery. Anyone who can reach the API can do
 the same, which is why the Caddy IP allowlist is this server's access boundary:
 never remove it, and never point real users at this host.
 
+## 4b. Create the dev Space and add its key
+
+In the DigitalOcean console (once per environment; production gets its own
+Space and key, see `infra/production-environment/README.md`):
+
+1. **Spaces Object Storage → Create**: region **BLR1**, a dev-only name such
+   as `dhanadhara-dev`, **Restrict File Listing**, CDN **off**. Assets are
+   served from the regional origin, which is the single origin the web CSP
+   and image allowlist trust.
+2. **Spaces Keys → Create**: **Limited access**, read/write to this Space
+   only. Never reuse the production key here.
+3. Append the values to the repository-root `.env` on the droplet by hand.
+   `init-env.sh` never writes them, and they must never be committed, pasted
+   into chat, or copied elsewhere:
+
+   ```bash
+   cat >>.env <<'EOF'
+   SPACES_ENDPOINT_URL=https://blr1.digitaloceanspaces.com
+   SPACES_REGION=blr1
+   SPACES_BUCKET=dhanadhara-dev
+   SPACES_ACCESS_KEY=<access key>
+   SPACES_SECRET_KEY=<secret key>
+   EOF
+   ```
+
+`dc.sh config --quiet` fails until all five are set. After the stack starts
+(step 6), apply and verify the bucket's CORS rule and `public/*`-only read
+policy:
+
+```bash
+infra/dev-droplet/dc.sh exec -T api uv run python -m app.scripts.configure_storage --apply --verify
+```
+
+It allows uploads only from `https://dev.dhanadhara.com`. Every check must
+print `true`: anonymous listing and private objects are denied, `public/`
+objects are readable, and an untrusted origin gets no CORS grant. Rerun it
+with `--verify` alone whenever you want to recheck.
+
+If `--apply` reports `AccessDenied`, the limited key may not be allowed to
+change bucket settings. Rerun only `--apply` once with a temporary
+full-access key, passed as `-e SPACES_ACCESS_KEY=… -e SPACES_SECRET_KEY=…` on
+that one `dc.sh exec`, and delete that key in the console straight away. Then
+run `--verify` with the normal limited key. Never store the full-access key in
+`.env`.
+
 ## 5. Configure Caddy
 
 ```bash
@@ -113,7 +160,7 @@ sudo systemctl status caddy --no-pager
 ## 6. Start the stack
 
 ```bash
-infra/dev-droplet/dc.sh config --quiet   # fails if .env is missing a value
+infra/dev-droplet/dc.sh config --quiet   # fails if .env is missing a value, including SPACES_*
 infra/dev-droplet/dc.sh up -d --build
 infra/dev-droplet/dc.sh ps               # wait until every service is healthy
 infra/dev-droplet/dc.sh logs -f web      # first start installs packages; wait for "Ready in"
@@ -146,10 +193,11 @@ Optionally load the synthetic demo dataset (`docs/demo-data.md`). Its accounts
 use published passwords, so only do this while the allowlist is enforced:
 
 ```bash
-infra/dev-droplet/dc.sh exec -T api uv run python -m app.scripts.seed_demo --verify --skip-media
+infra/dev-droplet/dc.sh exec -T api uv run python -m app.scripts.seed_demo --verify
 ```
 
-`--skip-media` is required here because there is no object storage.
+Demo media is written to the dev Space, so run `configure_storage` (step 4b)
+first.
 
 ## Updating
 

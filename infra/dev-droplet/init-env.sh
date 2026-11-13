@@ -83,3 +83,4 @@ api_env="$root/apps/api/.env.local"
 [[ -e $api_env ]] || : >"$api_env"
 
 echo "Wrote $env_file with fresh credentials."
+echo "Next: append the dev Space's SPACES_* block to $env_file by hand (README step 4b)."

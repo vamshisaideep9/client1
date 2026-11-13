@@ -333,6 +333,14 @@ class Settings(BaseSettings):
             # network-level interception.
             if not self.SPACES_ENDPOINT_URL.startswith("https://"):
                 raise ValueError("SPACES_ENDPOINT_URL must use https:// outside development.")
+            # The public endpoint is the one actually handed to browsers, so
+            # an http override would reopen exactly the exposure above.
+            if self.SPACES_PUBLIC_ENDPOINT_URL and not self.SPACES_PUBLIC_ENDPOINT_URL.startswith(
+                "https://"
+            ):
+                raise ValueError(
+                    "SPACES_PUBLIC_ENDPOINT_URL must use https:// outside development."
+                )
         return self
 
     @model_validator(mode="after")
