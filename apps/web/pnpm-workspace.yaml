@@ -3,14 +3,21 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
 
-# Pin patched sharp for Next.js image optimization. 0.35.4 includes the libheif
-# fixes for GHSA-rgj7-g3m4-5g8c and retains the earlier libvips security fixes.
+# Pin patched sharp for Next.js image optimization, including the librsvg
+# fix in 0.35.5 for GHSA-wq5f-xc86-pv6w.
 overrides:
   # ExcelJS uses only uuid.v4; 11.1.1 retains its CJS interface and fixes
   # GHSA-w5hq-g745-h8pq. Patch legacy brace-expansion in its archive tools.
   'exceljs>uuid': '11.1.1'
-  'brace-expansion@^1.1.7': '1.1.18'
-  sharp: '0.35.4'
+  'brace-expansion@^1.1.7': '1.1.21'
+  'brace-expansion@^2.0.1': '2.1.7'
+  'brace-expansion@^5.0.0': '5.0.12'
+  js-yaml: '4.3.2'
+  # Keep the test transformer on the patched Vite 6 line supported by Vitest 4.
+  vite: '6.4.3'
+  sharp: '0.35.5'
+  # Indexed source-map offset DoS (GHSA-68fv-2mgg-jv7q).
+  source-map-js: '1.2.2'
   # postcss <8.5.10 (GHSA-qx2v-qp2m-jg93) pulled in transitively through next.
   # Patch-level bump, safe for the Tailwind v4 postcss pipeline.
   postcss: '>=8.5.10'

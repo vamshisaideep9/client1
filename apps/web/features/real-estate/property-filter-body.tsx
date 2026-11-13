@@ -9,9 +9,12 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Slider } from "@/components/ui/slider";
+import { formatBudgetRange } from "@/lib/property-budget";
+import { BudgetFacet } from "./budget-facet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { subtypeGroupsFor, visibleFacets } from "@/lib/property-facet-map";
 import { LISTING_INTENT_OPTIONS } from "@/lib/property-submit";
@@ -20,7 +23,6 @@ import {
   BHK_OPTIONS,
   FURNISHING_OPTIONS,
   STATUS_OPTIONS,
-  formatLakhs,
   type SuggestionIndex,
 } from "@/lib/property-facets";
 import {
@@ -35,7 +37,7 @@ import {
 // Sections that carry the most intent are open on mount; the long tail
 // (amenities, city, locality) starts collapsed so the sheet stays scannable at
 // 390px instead of running to several screens of scroll.
-const DEFAULT_OPEN = ["intent", "type", "subtype", "budget", "bedrooms"];
+const DEFAULT_OPEN = ["name", "intent", "type", "subtype", "budget", "bedrooms"];
 
 // Shell-agnostic grouped facet controls. Rendered inside PropertyFilterSheet;
 // kept separate so the facet set can be reused (e.g. in a future desktop
@@ -57,20 +59,11 @@ export function PropertyFilterBody({
   lockedCategory?: RECategory;
   suggestionIndex: SuggestionIndex;
 }) {
-  const priceRange = suggestionIndex.priceBounds;
   const areaRange = suggestionIndex.areaBounds;
-  const [priceDraft, setPriceDraft] = React.useState<[number, number]>([
-    filters.priceMin ?? priceRange.min,
-    filters.priceMax ?? priceRange.max,
-  ]);
   const [areaDraft, setAreaDraft] = React.useState<[number, number]>([
     filters.areaMin ?? areaRange.min,
     filters.areaMax ?? areaRange.max,
   ]);
-
-  React.useEffect(() => {
-    setPriceDraft([filters.priceMin ?? priceRange.min, filters.priceMax ?? priceRange.max]);
-  }, [filters.priceMin, filters.priceMax, priceRange.min, priceRange.max]);
 
   React.useEffect(() => {
     setAreaDraft([filters.areaMin ?? areaRange.min, filters.areaMax ?? areaRange.max]);
@@ -99,6 +92,40 @@ export function PropertyFilterBody({
 
   return (
     <Accordion type="multiple" defaultValue={DEFAULT_OPEN} className="w-full">
+      {/* Name first: buyers often know the project or the developer brand
+          ("My Home", "Sattva") and want every listing that carries it. */}
+      <FacetSection
+        value="name"
+        heading="Property or developer"
+        count={(filters.q?.trim() ? 1 : 0) + (filters.developer ? 1 : 0)}
+      >
+        <div className="grid gap-4">
+          <div className="grid gap-1.5">
+            <Label htmlFor="filter-property-name" className="text-text-primary">
+              Property or project name
+            </Label>
+            <Input
+              id="filter-property-name"
+              value={filters.q ?? ""}
+              maxLength={100}
+              onChange={(event) => setFilters({ q: event.target.value.slice(0, 100) || undefined })}
+              placeholder="e.g. My Home Bhooja"
+            />
+          </div>
+          {suggestionIndex.developers.length > 0 ? (
+            <div className="grid gap-1.5">
+              <span className="text-sm font-medium text-text-primary">Developer / builder</span>
+              <SearchableSelect
+                value={filters.developer}
+                onChange={(v) => setFilters({ developer: v })}
+                options={suggestionIndex.developers}
+                placeholder="Any developer"
+              />
+            </div>
+          ) : null}
+        </div>
+      </FacetSection>
+
       {/* First facet: sale and rent listings price on different scales, so
           narrowing intent is what makes the price facet below meaningful. */}
       <FacetSection value="intent" heading="Listing for" count={filters.intent?.length ?? 0}>
@@ -195,17 +222,16 @@ export function PropertyFilterBody({
         <FacetSection
           value="budget"
           heading="Budget"
-          summary={`${formatLakhs(priceDraft[0])} - ${formatLakhs(priceDraft[1])}`}
+          summary={
+            filters.budgetMin != null || filters.budgetMax != null
+              ? formatBudgetRange(filters.budgetMin, filters.budgetMax)
+              : undefined
+          }
         >
-          <Slider
-            value={priceDraft}
-            thumbLabels={["Minimum budget in lakhs", "Maximum budget in lakhs"]}
-            min={priceRange.min}
-            max={priceRange.max}
-            step={1}
-            onValueChange={(value) => setPriceDraft(value as [number, number])}
-            onValueCommit={(value) => setFilters({ priceMin: value[0], priceMax: value[1] })}
-            className="[&_[data-slot=slider-range]]:bg-brand-cta [&_[data-slot=slider-thumb]]:border-brand-cta"
+          <BudgetFacet
+            budgetMin={filters.budgetMin}
+            budgetMax={filters.budgetMax}
+            onCommit={(patch) => setFilters(patch)}
           />
         </FacetSection>
       ) : null}

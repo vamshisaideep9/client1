@@ -4,6 +4,7 @@ import type { components } from "@contracts/generated/schema";
 
 import type { PropertyListing as BaseListing } from "@/lib/properties";
 import { categoryArtwork } from "@/lib/property-artwork";
+import { listingPriceRupees } from "@/lib/property-budget";
 
 // Derived from the generated contract, never hand-declared: a category,
 // furnishing state, or construction status the backend adds later must surface
@@ -111,8 +112,9 @@ export type PropertyFilters = {
   categories?: RECategory[];
   subtypes?: RESubtype[];
   bhk?: number[];
-  priceMin?: number;
-  priceMax?: number;
+  /** Budget bounds in whole rupees (see lib/property-budget.ts). */
+  budgetMin?: number;
+  budgetMax?: number;
   areaMin?: number;
   areaMax?: number;
   status?: ListingStatus[];
@@ -121,6 +123,8 @@ export type PropertyFilters = {
   city?: string;
   locality?: string;
   pincode?: string;
+  /** Exact developer / builder brand, matched case-insensitively. */
+  developer?: string;
   sort?: SortOrder;
 };
 
@@ -129,8 +133,8 @@ const FACET_KEYS = [
   "categories",
   "subtypes",
   "bhk",
-  "priceMin",
-  "priceMax",
+  "budgetMin",
+  "budgetMax",
   "areaMin",
   "areaMax",
   "status",
@@ -139,6 +143,7 @@ const FACET_KEYS = [
   "city",
   "locality",
   "pincode",
+  "developer",
 ] as const;
 
 export function filterListings(listings: REListing[], filters: PropertyFilters): REListing[] {
@@ -156,8 +161,11 @@ export function filterListings(listings: REListing[], filters: PropertyFilters):
       return false;
     }
     if (filters.bhk?.length && !filters.bhk.includes(listing.bhk)) return false;
-    if (filters.priceMin != null && listing.priceLakhs < filters.priceMin) return false;
-    if (filters.priceMax != null && listing.priceLakhs > filters.priceMax) return false;
+    if (filters.budgetMin != null || filters.budgetMax != null) {
+      const rupees = listingPriceRupees(listing.priceLakhs);
+      if (filters.budgetMin != null && rupees < filters.budgetMin) return false;
+      if (filters.budgetMax != null && rupees > filters.budgetMax) return false;
+    }
     if (filters.areaMin != null && listing.areaSqft < filters.areaMin) return false;
     if (filters.areaMax != null && listing.areaSqft > filters.areaMax) return false;
     if (filters.status?.length && (!listing.status || !filters.status.includes(listing.status))) return false;
@@ -168,8 +176,14 @@ export function filterListings(listings: REListing[], filters: PropertyFilters):
     if (filters.city && listing.city !== filters.city) return false;
     if (filters.locality && listing.locality !== filters.locality) return false;
     if (filters.pincode && listing.pincode !== filters.pincode) return false;
+    if (
+      filters.developer &&
+      listing.developerName?.toLowerCase() !== filters.developer.toLowerCase()
+    ) {
+      return false;
+    }
     if (query) {
-      const haystack = `${listing.title} ${listing.locality} ${listing.city} ${listing.pincode}`.toLowerCase();
+      const haystack = `${listing.title} ${listing.developerName ?? ""} ${listing.locality} ${listing.city} ${listing.pincode}`.toLowerCase();
       if (!haystack.includes(query)) return false;
     }
     return true;

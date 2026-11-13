@@ -21,7 +21,7 @@
   /* Shared action colours across public, auth and dashboard surfaces. Legacy
      utility names resolve to the same navy action and pale sky highlight. */
   --color-brand-cta: var(--color-brand-navy);
-  --color-brand-cta-hover: var(--color-dash-rail-hover);
+  --color-brand-cta-hover: var(--color-action-hover);
   --color-brand-cta-deep: var(--color-brand-navy);
   --color-brand-cta-tint: var(--color-surface-sky);
 
@@ -37,7 +37,7 @@
   --color-chart-interest: #95CCDD;
 
   --color-cta: var(--color-brand-navy);
-  --color-cta-hover: var(--color-dash-rail-hover);
+  --color-cta-hover: var(--color-action-hover);
   --color-cta-soft: var(--color-surface-sky);
 
   --color-loans-accent: var(--color-brand-navy);
@@ -55,12 +55,18 @@
   --color-notice: #F3BB1B;
   --color-notice-foreground: #293681;
 
-  /* Navy navigation chrome, with sky feedback. Reading surfaces stay light;
-     business-line identity is still carried by labels, not status colors. */
-  --color-dash-rail: var(--color-brand-navy);
-  --color-dash-rail-hover: #374893;
-  --color-dash-foreground: #FFFFFF;
-  --color-dash-muted: var(--color-brand-sky);
+  /* Hover for navy actions (buttons, public nav primary). Independent of the
+     dashboard rail so the white rail never changes action feedback. */
+  --color-action-hover: #374893;
+
+  /* White dashboard navigation rail with navy text and pale-sky feedback in
+     the light theme; the dark theme keeps a deep-navy rail (see :root.dark).
+     Business-line identity is still carried by labels, not status colors. */
+  --color-dash-rail: var(--color-surface);
+  --color-dash-rail-hover: var(--color-surface-sky);
+  --color-dash-active: #E1EEF8;
+  --color-dash-foreground: var(--color-brand-navy);
+  --color-dash-muted: var(--color-text-secondary);
   --color-dash-border: var(--border);
 
   /* Letter-avatar palette (components/user-avatar). A user's tile colour is a
@@ -242,8 +248,12 @@
   --color-brand-heading: #D8E4FF;
   --color-brand-link: #B5CAFF;
   --color-chart-interest: #587089;
+  --color-action-hover: #26365B;
   --color-dash-rail: #111A39;
   --color-dash-rail-hover: #26365B;
+  --color-dash-active: var(--color-surface-sky);
+  --color-dash-foreground: #FFFFFF;
+  --color-dash-muted: var(--color-brand-sky);
   --color-success: #86D9A5;
   --color-warning: #F6C97A;
   --color-error: #FFAAA7;
@@ -281,7 +291,7 @@
 
 [data-slot="tabs-list"] { scrollbar-width: none; }
 [data-slot="tabs-list"]::-webkit-scrollbar { display: none; }
-[data-sidebar-scroll] { --scrollbar-thumb: rgb(149 204 221 / 35%); --scrollbar-hover: rgb(149 204 221 / 70%); }
+[data-sidebar-scroll] { --scrollbar-thumb: color-mix(in srgb, var(--color-dash-muted) 40%, transparent); --scrollbar-hover: color-mix(in srgb, var(--color-dash-muted) 75%, transparent); }
 [data-sidebar-scroll]::-webkit-scrollbar { width: 4px; }
 @media (forced-colors: active) {
   [data-slot="tabs-list"] { scrollbar-width: auto; }
@@ -289,8 +299,8 @@
 }
 
 .bg-dash-rail {
-  --scrollbar-thumb: var(--color-brand-sky);
-  --scrollbar-hover: var(--color-surface);
+  --scrollbar-thumb: var(--color-dash-muted);
+  --scrollbar-hover: var(--color-dash-foreground);
 }
 
 * {
@@ -314,7 +324,7 @@
   --nav-bg: var(--color-surface-sky);
   --nav-text: var(--color-brand-navy);
   --nav-primary: var(--color-brand-navy);
-  --nav-primary-hover: var(--color-dash-rail-hover);
+  --nav-primary-hover: var(--color-action-hover);
   --nav-tint: var(--color-surface-sky);
   --nav-border: var(--border);
 
@@ -498,16 +508,17 @@
   [class*="auth-anim"] { animation: none !important; }
 }
 
-/* Announcement ticker: single-line right-to-left scroll on small and tablet
-   screens. The message (icon + text) is duplicated in the markup; translateX(-50%)
-   advances exactly one copy for a seamless loop. Disabled + allowed to wrap under
-   reduced-motion. */
+/* Announcement ticker: single-line left-to-right scroll at every width. The
+   message (icon + text) is duplicated in the markup; moving from -50% to 0
+   advances exactly one copy for a seamless loop. The component sets
+   --marquee-duration from the number of lines so the speed stays constant.
+   Paused on hover; disabled + allowed to wrap under reduced-motion. */
 @keyframes announcement-marquee {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
 }
 .announcement-track {
-  animation: announcement-marquee 20s linear infinite;
+  animation: announcement-marquee var(--marquee-duration, 22s) linear infinite;
   will-change: transform;
 }
 .announcement-track:hover { animation-play-state: paused; }

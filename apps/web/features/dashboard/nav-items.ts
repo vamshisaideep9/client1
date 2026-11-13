@@ -27,6 +27,7 @@ const CAPABILITIES = {
   agent: { roles: ["agent"] },
   agentRealEstate: { roles: ["agent"], lines: ["real_estate"] },
   telecaller: { roles: ["telecaller"] },
+  calculators: { roles: ["client", "telecaller"] },
   employee: { roles: ["employee"] },
   employeeRealEstate: { roles: ["employee"], lines: ["real_estate"] },
   subAdmin: { roles: ["sub_admin"] },
@@ -190,6 +191,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     capability: "client",
     section: "workspace",
   },
+  {
+    key: "client-calculators",
+    label: "Calculators",
+    href: "/dashboard/calculators",
+    icon: DASHBOARD_ICONS.calculators,
+    capability: "client",
+    section: "workspace",
+  },
 
   // Agent, Telecaller, and Employee workspaces.
   {
@@ -197,6 +206,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Leads",
     href: "/dashboard/leads",
     icon: DASHBOARD_ICONS.leads,
+    capability: "telecaller",
+    section: "operations",
+  },
+  {
+    key: "telecaller-calculators",
+    label: "Calculators",
+    href: "/dashboard/calculators",
+    icon: DASHBOARD_ICONS.calculators,
     capability: "telecaller",
     section: "operations",
   },
@@ -508,6 +525,7 @@ export const DASHBOARD_ROUTE_RULES: readonly DashboardRouteRule[] = [
   { path: "/dashboard/media-library", exact: true, capabilities: ["subAdmin"] },
   { path: "/dashboard/bookmarks", exact: true, capabilities: ["clientRealEstate"] },
   { path: "/dashboard/broadcast", exact: true, capabilities: ["admin"] },
+  { path: "/dashboard/calculators", capabilities: ["calculators"] },
   { path: "/dashboard/commissions", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/compare", exact: true, capabilities: ["clientRealEstate"] },
   { path: "/dashboard/documents", exact: true, capabilities: ["clientLoans"] },

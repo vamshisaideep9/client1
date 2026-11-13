@@ -105,14 +105,6 @@ export const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: "newest", label: "Newest" },
 ];
 
-export function priceBounds(listings: REListing[]): { min: number; max: number } {
-  if (listings.length === 0) return { min: 0, max: 500 };
-  const values = listings.map((l) => l.priceLakhs);
-  const min = Math.floor(Math.min(...values));
-  const max = Math.ceil(Math.max(...values));
-  return min === max ? { min: 0, max: Math.max(max, 1) } : { min, max };
-}
-
 export function areaBounds(listings: REListing[]): { min: number; max: number } {
   const values = listings.map((l) => l.areaSqft).filter((v) => v > 0);
   if (values.length === 0) return { min: 0, max: 5000 };
@@ -121,31 +113,31 @@ export function areaBounds(listings: REListing[]): { min: number; max: number } 
   return min === max ? { min: 0, max: Math.max(max, 1) } : { min, max };
 }
 
-// Formats a lakh-denominated price for slider labels and chips: "₹50 L" below
-// a crore, "₹1.2 Cr" at or above it. Mirrors the "₹X L" / "₹X Cr" shape
-// already used by the display price strings in lib/real-estate.ts.
-export function formatLakhs(value: number): string {
-  if (value >= 100) {
-    const cr = value / 100;
-    return `₹${Number.isInteger(cr) ? cr : cr.toFixed(1)} Cr`;
-  }
-  return `₹${value} L`;
-}
-
 export type SuggestionGroup = { label: string; values: string[] };
 
 export type SuggestionIndex = {
   localities: string[];
   cities: string[];
   pincodes: string[];
+  // Developer / builder brands present in the source, de-duplicated
+  // case-insensitively and keeping the first spelling seen.
+  developers: string[];
   // Subtypes actually present in this result ceiling, in RE_SUBTYPE_VALUES
   // order. Same discipline as localities/cities: never offer a facet that
   // cannot match anything in the current source.
   subtypes: RESubtype[];
   properties: { id: string; title: string; locality: string; city: string }[];
-  priceBounds: { min: number; max: number };
   areaBounds: { min: number; max: number };
 };
+
+function uniqueDevelopers(listings: REListing[]): string[] {
+  const byKey = new Map<string, string>();
+  for (const listing of listings) {
+    const name = listing.developerName?.trim();
+    if (name && !byKey.has(name.toLowerCase())) byKey.set(name.toLowerCase(), name);
+  }
+  return Array.from(byKey.values()).sort((a, b) => a.localeCompare(b));
+}
 
 // Grouped, de-duplicated suggestion source for the search omnibox. Every value
 // is derived from the authenticated property API response supplied by callers.
@@ -157,9 +149,9 @@ export function buildSuggestionIndex(listings: REListing[]): SuggestionIndex {
     localities: Array.from(new Set(listings.map((l) => l.locality))).sort(),
     cities: Array.from(new Set(listings.map((l) => l.city))).sort(),
     pincodes: Array.from(new Set(listings.map((l) => l.pincode))).sort(),
+    developers: uniqueDevelopers(listings),
     subtypes: RE_SUBTYPE_VALUES.filter((value) => presentSubtypes.has(value)),
     properties: listings.map((l) => ({ id: l.id, title: l.title, locality: l.locality, city: l.city })),
-    priceBounds: priceBounds(listings),
     areaBounds: areaBounds(listings),
   };
 }
