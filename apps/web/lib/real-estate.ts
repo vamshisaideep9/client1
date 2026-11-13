@@ -4,6 +4,7 @@ import type { components } from "@contracts/generated/schema";
 
 import type { PropertyListing as BaseListing } from "@/lib/properties";
 import { categoryArtwork } from "@/lib/property-artwork";
+import { listingPriceRupees } from "@/lib/property-budget";
 
 // Derived from the generated contract, never hand-declared: a category,
 // furnishing state, or construction status the backend adds later must surface
@@ -111,8 +112,9 @@ export type PropertyFilters = {
   categories?: RECategory[];
   subtypes?: RESubtype[];
   bhk?: number[];
-  priceMin?: number;
-  priceMax?: number;
+  /** Budget bounds in whole rupees (see lib/property-budget.ts). */
+  budgetMin?: number;
+  budgetMax?: number;
   areaMin?: number;
   areaMax?: number;
   status?: ListingStatus[];
@@ -131,8 +133,8 @@ const FACET_KEYS = [
   "categories",
   "subtypes",
   "bhk",
-  "priceMin",
-  "priceMax",
+  "budgetMin",
+  "budgetMax",
   "areaMin",
   "areaMax",
   "status",
@@ -159,8 +161,11 @@ export function filterListings(listings: REListing[], filters: PropertyFilters):
       return false;
     }
     if (filters.bhk?.length && !filters.bhk.includes(listing.bhk)) return false;
-    if (filters.priceMin != null && listing.priceLakhs < filters.priceMin) return false;
-    if (filters.priceMax != null && listing.priceLakhs > filters.priceMax) return false;
+    if (filters.budgetMin != null || filters.budgetMax != null) {
+      const rupees = listingPriceRupees(listing.priceLakhs);
+      if (filters.budgetMin != null && rupees < filters.budgetMin) return false;
+      if (filters.budgetMax != null && rupees > filters.budgetMax) return false;
+    }
     if (filters.areaMin != null && listing.areaSqft < filters.areaMin) return false;
     if (filters.areaMax != null && listing.areaSqft > filters.areaMax) return false;
     if (filters.status?.length && (!listing.status || !filters.status.includes(listing.status))) return false;

@@ -99,6 +99,7 @@ export const FORM_SURFACE_REGISTRY = {
   "features/real-estate/listing-links-field.tsx": "composite",
   "features/real-estate/property-detail-fields.tsx": "composite",
   "features/real-estate/property-filter-body.tsx": "filter",
+  "features/real-estate/budget-facet.tsx": "filter",
   "features/real-estate/property-search-bar.tsx": "filter",
   "features/real-estate/property-select.tsx": "composite",
   "features/real-estate/real-estate-home.tsx": "filter",

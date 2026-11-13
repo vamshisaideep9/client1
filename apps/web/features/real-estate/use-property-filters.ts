@@ -43,6 +43,10 @@ const PARSERS = {
   categories: parseAsArrayOf(parseAsStringLiteral(RE_CATEGORY_VALUES)),
   subtypes: parseAsArrayOf(parseAsStringLiteral(RE_SUBTYPE_VALUES)),
   bhk: parseAsArrayOf(parseAsInteger),
+  // Whole rupees. `priceMin`/`priceMax` are the earlier whole-lakh keys, still
+  // read so shared and bookmarked links keep meaning the same budget.
+  budgetMin: parseAsInteger,
+  budgetMax: parseAsInteger,
   priceMin: parseAsInteger,
   priceMax: parseAsInteger,
   areaMin: parseAsInteger,
@@ -57,6 +61,10 @@ const PARSERS = {
   sort: parseAsStringLiteral(SORT_VALUES),
 };
 
+function lakhsToRupees(lakhs: number | null): number | undefined {
+  return lakhs == null ? undefined : lakhs * 100_000;
+}
+
 function toPropertyFilters(state: Values<typeof PARSERS>): PropertyFilters {
   return {
     q: state.q ?? undefined,
@@ -64,8 +72,8 @@ function toPropertyFilters(state: Values<typeof PARSERS>): PropertyFilters {
     categories: (state.categories ?? undefined) as RECategory[] | undefined,
     subtypes: (state.subtypes ?? undefined) as RESubtype[] | undefined,
     bhk: state.bhk ?? undefined,
-    priceMin: state.priceMin ?? undefined,
-    priceMax: state.priceMax ?? undefined,
+    budgetMin: state.budgetMin ?? lakhsToRupees(state.priceMin),
+    budgetMax: state.budgetMax ?? lakhsToRupees(state.priceMax),
     areaMin: state.areaMin ?? undefined,
     areaMax: state.areaMax ?? undefined,
     status: (state.status ?? undefined) as ListingStatus[] | undefined,
@@ -105,6 +113,11 @@ export function usePropertyFilters(opts: { source: REListing[]; lockedCategory?:
       const next: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(patch)) {
         next[key] = value === undefined ? null : value;
+      }
+      // Any budget write supersedes a legacy lakh-denominated link value.
+      if ("budgetMin" in patch || "budgetMax" in patch) {
+        next.priceMin = null;
+        next.priceMax = null;
       }
       setState(next as Parameters<typeof setState>[0]);
     },

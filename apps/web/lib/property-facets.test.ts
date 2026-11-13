@@ -39,7 +39,6 @@ describe("buildSuggestionIndex", () => {
           city: "Live city",
         },
       ],
-      priceBounds: { min: 0, max: 75 },
       areaBounds: { min: 0, max: 1100 },
     });
     expect(buildSuggestionIndex([])).toEqual({
@@ -49,7 +48,6 @@ describe("buildSuggestionIndex", () => {
       developers: [],
       subtypes: [],
       properties: [],
-      priceBounds: { min: 0, max: 500 },
       areaBounds: { min: 0, max: 5000 },
     });
   });

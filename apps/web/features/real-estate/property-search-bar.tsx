@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PropertyFilterSheet } from "@/features/real-estate/property-filter-sheet";
+import { formatBudgetRange } from "@/lib/property-budget";
 import { SuggestionsList, useSuggestionMatches } from "@/features/real-estate/property-suggestions";
 import {
   SEARCH_FIELD_BUTTON_MOTION_CLASS,
@@ -30,7 +31,6 @@ import {
   FURNISHING_OPTIONS,
   SORT_OPTIONS,
   STATUS_OPTIONS,
-  formatLakhs,
   type SuggestionIndex,
 } from "@/lib/property-facets";
 import { propertySubtypeOption } from "@/lib/property-taxonomy";
@@ -106,11 +106,11 @@ function buildChips(filters: PropertyFilters, setFilters: (patch: Partial<Proper
     ),
   );
 
-  if (filters.priceMin != null || filters.priceMax != null) {
+  if (filters.budgetMin != null || filters.budgetMax != null) {
     chips.push({
       key: "price",
-      label: `${formatLakhs(filters.priceMin ?? 0)} - ${formatLakhs(filters.priceMax ?? filters.priceMin ?? 0)}`,
-      onRemove: () => setFilters({ priceMin: undefined, priceMax: undefined }),
+      label: formatBudgetRange(filters.budgetMin, filters.budgetMax),
+      onRemove: () => setFilters({ budgetMin: undefined, budgetMax: undefined }),
     });
   }
   if (filters.areaMin != null || filters.areaMax != null) {

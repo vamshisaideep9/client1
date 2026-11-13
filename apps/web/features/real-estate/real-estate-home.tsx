@@ -9,10 +9,10 @@ import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Command, CommandInput } from "@/components/ui/command";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
-import { ExploreArtCard } from "@/features/dashboard/explore-cards";
 import { DASHBOARD_ICONS } from "@/features/dashboard/dashboard-icons";
 import { DashboardHeader, DashboardPage, MetricCard, MetricGrid } from "@/features/dashboard/dashboard-ui";
 import { SuggestionsList, useSuggestionMatches } from "@/features/real-estate/property-suggestions";
+import { PropertyTypeGrid } from "@/features/real-estate/property-type-grid";
 import {
   SEARCH_FIELD_BUTTON_MOTION_CLASS,
   SEARCH_FIELD_CLEAR_BUTTON_CLASS,
@@ -24,7 +24,7 @@ import { useEnquiries } from "@/features/real-estate/use-enquiries";
 import { useProperties } from "@/features/real-estate/use-properties";
 import { nextUpcomingVisit, useSiteVisits } from "@/features/real-estate/use-site-visits";
 import { buildSuggestionIndex } from "@/lib/property-facets";
-import { RE_CATEGORIES, type RESubtype } from "@/lib/real-estate";
+import { type RESubtype } from "@/lib/real-estate";
 import { cn } from "@/lib/utils";
 
 function formatShortDate(iso: string): string {
@@ -248,23 +248,9 @@ export function RealEstateHome() {
             View all
           </Link>
         </div>
-        {/* Navigation, not a filter -- no active/selected state and no live
-            counts (Explore's own per-category rows carry those). Illustrated
-            cards (ExploreArtCard, already established on the Explore/loans
-            hub) instead of plain pill buttons, so every property type reads
-            as an inviting destination rather than a filter toggle. */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {RE_CATEGORIES.map((category) => (
-            <ExploreArtCard
-              key={category.key}
-              href={`/dashboard/explore/${category.key}`}
-              title={category.label}
-              blurb={category.blurb}
-              illustration={category.illustration}
-              fallbackIcon={category.icon}
-            />
-          ))}
-        </div>
+        {/* Navigation, not a filter: every subtype, grouped, each opening
+            Explore for its category pre-filtered to that subtype. */}
+        <PropertyTypeGrid />
       </section>
     </DashboardPage>
   );

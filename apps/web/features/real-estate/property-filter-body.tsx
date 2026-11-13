@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Slider } from "@/components/ui/slider";
+import { formatBudgetRange } from "@/lib/property-budget";
+import { BudgetFacet } from "./budget-facet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { subtypeGroupsFor, visibleFacets } from "@/lib/property-facet-map";
 import { LISTING_INTENT_OPTIONS } from "@/lib/property-submit";
@@ -21,7 +23,6 @@ import {
   BHK_OPTIONS,
   FURNISHING_OPTIONS,
   STATUS_OPTIONS,
-  formatLakhs,
   type SuggestionIndex,
 } from "@/lib/property-facets";
 import {
@@ -58,20 +59,11 @@ export function PropertyFilterBody({
   lockedCategory?: RECategory;
   suggestionIndex: SuggestionIndex;
 }) {
-  const priceRange = suggestionIndex.priceBounds;
   const areaRange = suggestionIndex.areaBounds;
-  const [priceDraft, setPriceDraft] = React.useState<[number, number]>([
-    filters.priceMin ?? priceRange.min,
-    filters.priceMax ?? priceRange.max,
-  ]);
   const [areaDraft, setAreaDraft] = React.useState<[number, number]>([
     filters.areaMin ?? areaRange.min,
     filters.areaMax ?? areaRange.max,
   ]);
-
-  React.useEffect(() => {
-    setPriceDraft([filters.priceMin ?? priceRange.min, filters.priceMax ?? priceRange.max]);
-  }, [filters.priceMin, filters.priceMax, priceRange.min, priceRange.max]);
 
   React.useEffect(() => {
     setAreaDraft([filters.areaMin ?? areaRange.min, filters.areaMax ?? areaRange.max]);
@@ -230,17 +222,16 @@ export function PropertyFilterBody({
         <FacetSection
           value="budget"
           heading="Budget"
-          summary={`${formatLakhs(priceDraft[0])} - ${formatLakhs(priceDraft[1])}`}
+          summary={
+            filters.budgetMin != null || filters.budgetMax != null
+              ? formatBudgetRange(filters.budgetMin, filters.budgetMax)
+              : undefined
+          }
         >
-          <Slider
-            value={priceDraft}
-            thumbLabels={["Minimum budget in lakhs", "Maximum budget in lakhs"]}
-            min={priceRange.min}
-            max={priceRange.max}
-            step={1}
-            onValueChange={(value) => setPriceDraft(value as [number, number])}
-            onValueCommit={(value) => setFilters({ priceMin: value[0], priceMax: value[1] })}
-            className="[&_[data-slot=slider-range]]:bg-brand-cta [&_[data-slot=slider-thumb]]:border-brand-cta"
+          <BudgetFacet
+            budgetMin={filters.budgetMin}
+            budgetMax={filters.budgetMax}
+            onCommit={(patch) => setFilters(patch)}
           />
         </FacetSection>
       ) : null}
