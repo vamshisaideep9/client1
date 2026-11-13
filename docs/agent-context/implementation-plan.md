@@ -60,8 +60,23 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — client feedback batch, PR B: Resale filter and Share / Refer
-links** (2026-11-13), branch `feat/resale-share-refer` stacked on
+**In progress — staff dashboard feedback batch, PR A: shell quick wins**
+(2026-11-13), branch `feat/staff-shell-quick-wins` from `upstream/main`
+`5d69cde`. First of three stacked PRs for a 9-item telecaller/staff list.
+PR A: every role can collapse the desktop sidebar (staff start expanded and
+remember the choice on the device; Client unchanged), the telecaller
+add-transaction form becomes a responsive dialog (bank and date prefilled,
+₹ preview, card list on phones), a "N new leads/tasks have been assigned to
+you" toast for Telecallers and Employees from the existing notification feed,
+and staff notes raised to 1,500 words (10,000 characters; columns already
+TEXT). Next: PR B per-application lead workspace (enquiries, site visits and
+call logs linked to the lead and application, applied date and time, full-
+screen call log, client-wise own call history; migration + RLS); PR C staff
+analytics with Recharts; item 9 (sub-admin managers over teams) is a design
+brief for approval first. Recommended: Opus 5.5 / high.
+
+**Implemented — client feedback batch, PR B: Resale filter and Share / Refer
+links** (2026-11-13; merged as PR #329), branch `feat/resale-share-refer` stacked on
 `feat/client-feedback-ui`. Resale / new-launch and property-age filters
 with a Resale card badge (no migration: uses `structured_details.sale_type`);
 Share is a plain property link; Refer goes to Register with the code and a

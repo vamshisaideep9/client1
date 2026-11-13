@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
+import { LongNoteField } from "@/features/dashboard/long-note-field";
+import { staffNoteLimitError } from "@/features/dashboard/long-note";
 import { DashboardBackLink, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import type { ApiResponse } from "@/lib/api/client";
@@ -170,6 +171,11 @@ export function EmployeeTaskDetailView({ taskId }: { taskId: string }) {
       setNotesError("A note explaining the no-show is required.");
       return;
     }
+    const limitError = staffNoteLimitError(notes);
+    if (limitError) {
+      setNotesError(limitError);
+      return;
+    }
     setActingStatus(nextStatus ?? "notes");
     // Always send notes (even "") so clearing the field back to blank actually
     // reaches the backend — `|| undefined` would silently drop that intent.
@@ -263,9 +269,9 @@ export function EmployeeTaskDetailView({ taskId }: { taskId: string }) {
 
       <DashboardPanel title="Notes">
         {task.status === "cancelled" && <div className="mb-4"><ReopenTaskDialog taskId={task.id} onReopened={retry} /></div>}
-        <Textarea
+        <LongNoteField
+          counterId="employee-task-notes-count"
           rows={4}
-          maxLength={1000}
           value={notes}
           disabled={isTerminal}
           onChange={(e) => { setNotes(e.target.value); setNotesError(undefined); }}

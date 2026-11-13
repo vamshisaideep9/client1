@@ -7810,7 +7810,7 @@
           "notes": {
             "anyOf": [
               {
-                "maxLength": 1000,
+                "maxLength": 10000,
                 "type": "string"
               },
               {
@@ -8850,7 +8850,7 @@
           "notes": {
             "anyOf": [
               {
-                "maxLength": 1000,
+                "maxLength": 10000,
                 "type": "string"
               },
               {
@@ -17892,7 +17892,7 @@
             "title": "Due At"
           },
           "notes": {
-            "maxLength": 1000,
+            "maxLength": 10000,
             "minLength": 1,
             "title": "Notes",
             "type": "string"

@@ -8,6 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.schemas.telecaller import STAFF_NOTE_MAX_CHARS
+
 TaskTypeLiteral = Literal["document_collection", "property_visit", "background_check"]
 # 'unassigned' intentionally excluded: tasks_rls never surfaces an unassigned
 # task to an Employee before the automatic assignment service selects them.
@@ -48,7 +50,7 @@ class EmployeeTaskRead(BaseModel):
 
 class EmployeeTaskUpdate(BaseModel):
     status: TaskStatusLiteral | None = None
-    notes: Annotated[str | None, Field(default=None, max_length=1000)] = None
+    notes: Annotated[str | None, Field(default=None, max_length=STAFF_NOTE_MAX_CHARS)] = None
     outcome: BgCheckOutcomeLiteral | None = None
 
     @model_validator(mode="after")

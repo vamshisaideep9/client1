@@ -311,8 +311,16 @@ test.describe("role-aware dashboard navigation", () => {
           await expect(page.getByText("Loans workspace")).toHaveCount(0);
           await expect(page.getByText("Needs attention")).toHaveCount(0);
         } else {
-          await expect(expandSidebar).toHaveCount(0);
-          await expect(page.getByRole("button", { name: "Collapse sidebar" })).toHaveCount(0);
+          // Operational roles start expanded, may collapse, and keep the
+          // choice on this device across reloads.
+          const collapseSidebar = page.getByRole("button", { name: "Collapse sidebar" });
+          await expect(collapseSidebar).toBeVisible();
+          await collapseSidebar.click();
+          await expect(expandSidebar).toBeVisible();
+          await page.reload();
+          await expect(expandSidebar).toBeVisible();
+          await expandSidebar.click();
+          await expect(collapseSidebar).toBeVisible();
         }
         const navigation = page.locator('nav[aria-label="Workspace"]:visible');
         await expect(navigation).toBeVisible();

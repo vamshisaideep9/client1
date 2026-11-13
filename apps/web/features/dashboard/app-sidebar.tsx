@@ -32,9 +32,8 @@ function isActive(pathname: string, href: string): boolean {
   return href !== "/dashboard" && pathname.startsWith(`${href}/`);
 }
 
-// Role-aware workspace navigation. The Client may collapse it to an icon rail;
-// operational roles are always labeled on desktop, and the mobile drawer always
-// shows labels. The active item reads as a blue icon plus a left indicator bar.
+// Role-aware workspace navigation. Every role may collapse it to an icon rail
+// on desktop (names move into tooltips); the mobile drawer always shows labels. The active item reads as a blue icon plus a left indicator bar.
 export function AppSidebar({
   showLabels = false,
   expanded = false,

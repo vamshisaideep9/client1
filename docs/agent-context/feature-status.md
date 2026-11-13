@@ -2,8 +2,38 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — client feedback batch, PR B: Resale filter and Share / Refer
-links** (2026-11-13), branch `feat/resale-share-refer` stacked on PR A. Web
+**In progress — staff dashboard feedback batch, PR A: shell quick wins**
+(2026-11-13), branch `feat/staff-shell-quick-wins` from `upstream/main`
+`5d69cde`. Items 2, 3, 5 and 8 of a 9-item telecaller/staff list.
+Requirement coverage unchanged; no migration, RLS or new endpoint.
+- Sidebar: `shell-state.ts` no longer fixes operational roles. Every role
+  has the collapse toggle; staff default expanded and keep their choice in
+  guarded `localStorage`; the Client still starts collapsed each session.
+- Add transaction: `telecaller-add-txn-dialog.tsx` replaces the inline
+  four-column form (bank defaults to the application's bank, date to today,
+  ₹ prefix with exact and compact preview, % suffix, 44px buttons on phones);
+  the history table becomes a card list below `sm`.
+- Assignment toast: `AssignmentToaster` reads the caller's own notification
+  feed (no new API) and shows "N new leads/tasks have been assigned to you"
+  with a View action, once per notification per tab, refreshing every 2
+  minutes and on tab focus through a new silent `refreshNotifications`.
+- Notes: `STAFF_NOTE_MAX_CHARS = 10_000` for call-log notes, field-task notes
+  and Employee task notes (was 1,000 characters, about 170 words); the UI
+  limit is 1,500 words with a live counter and auto-growing field.
+Evidence (this session): telecaller + employee API tests 51 passed in a
+`python:3.13` container on the compose network; ruff check/format clean;
+OpenAPI diff is the three `maxLength` values only (generated TS unchanged);
+full web vitest 802 passed (form-surface registry updated for the new
+dialog and note field), `pnpm lint` and `tsc --noEmit` clean, production
+build passed in a clean `node:22-alpine` container (the Windows host build
+compiles and prerenders 110/110 pages but cannot write the standalone
+symlinks: EPERM); Playwright against the dev server: new
+`staff-shell-quick-wins.spec.ts` (toast, collapse persistence, dialog at
+360/768/1024/1440) plus `sidebar-chrome` and `sidebar-layout` passed.
+Recommended: Opus 5.5 / high.
+
+**Implemented — client feedback batch, PR B: Resale filter and Share / Refer
+links** (2026-11-13; merged as PR #329), branch `feat/resale-share-refer` stacked on PR A. Web
 only, no contract or schema change:
 - Resale: "New or resale" filter (from the existing `structured_details.sale_type`;
   rent listings never match), an "Age of property" filter (under 5 / 5 to 10 /

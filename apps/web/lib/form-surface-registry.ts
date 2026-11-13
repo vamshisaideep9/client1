@@ -85,6 +85,7 @@ export const FORM_SURFACE_REGISTRY = {
   "features/dashboard/documents-view.tsx": "mutation",
   "features/dashboard/filter-bar.tsx": "filter",
   "features/dashboard/financial-product-form.tsx": "composite",
+  "features/dashboard/long-note-field.tsx": "composite",
   "features/employee/employee-task-detail-view.tsx": "mutation",
   "features/employee/employee-task-document-panel.tsx": "mutation",
   "features/employee/employee-task-feedback-panel.tsx": "mutation",
@@ -118,9 +119,9 @@ export const FORM_SURFACE_REGISTRY = {
   "features/sub-admin/offers-view.tsx": "mutation",
   "features/sub-admin/property-campaign-select.tsx": "composite",
   "features/sub-admin/referral-config-form.tsx": "mutation",
+  "features/telecaller/telecaller-add-txn-dialog.tsx": "mutation",
   "features/telecaller/telecaller-lead-detail-view.tsx": "mutation",
   "features/telecaller/telecaller-leads-view.tsx": "filter",
-  "features/telecaller/telecaller-loan-apps-section.tsx": "mutation",
   "features/telecaller/telecaller-property-deals-section.tsx": "mutation",
   "features/telecaller/telecaller-tasks-section.tsx": "mutation",
 } as const satisfies Record<string, FormSurfaceKind>;

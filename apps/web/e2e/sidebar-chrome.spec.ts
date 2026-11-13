@@ -38,7 +38,20 @@ for (const role of ["client", "admin", "sub_admin", "agent", "employee", "teleca
       await expect(horizontal).toHaveCSS("filter", "none");
       await expect(horizontal).toHaveCSS("width", "176px");
       await expect(horizontal).toHaveCSS("opacity", "1");
-      await expect(sidebar.getByRole("button", { name: /sidebar/ })).toHaveCount(0);
+      // Operational roles start expanded and can collapse like the Client.
+      const collapse = sidebar.getByRole("button", { name: "Collapse sidebar" });
+      await expect(collapse).toBeVisible();
+      const toggle = (await collapse.boundingBox())!;
+      const expandedLogo = (await logo.boundingBox())!;
+      expect(expandedLogo.x + expandedLogo.width).toBeLessThanOrEqual(toggle.x + 1);
+      expect(toggle.width).toBeGreaterThanOrEqual(44);
+      await collapse.focus();
+      await page.keyboard.press("Enter");
+      const expand = sidebar.getByRole("button", { name: "Expand sidebar" });
+      await expect(expand).toBeFocused();
+      await expect(horizontal).toHaveCSS("opacity", "0");
+      await page.keyboard.press("Enter");
+      await expect(collapse).toBeFocused();
     }
     const scroller = sidebar.locator("[data-sidebar-scroll]");
     await expect(scroller).toHaveCSS("scrollbar-width", "thin");
