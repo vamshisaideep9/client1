@@ -64,7 +64,8 @@ default, not permission to skip the pre-implementation announcement.
 (2026-11-13), branch `feat/client-feedback-ui` from `upstream/main`
 `6f60cd8`. First of three stacked PRs for an 11-item client list. PR A
 (web only): Bookmark/Compare overlap on scroll, all 9 property subtypes on
-the client Real Estate dashboard home, ₹20 Cr budget slider with digits-only Min/Max
+the client Real Estate dashboard home (illustrated cards restored in
+follow-up `fix/property-type-cards`), ₹20 Cr budget slider with digits-only Min/Max
 fields (rupee URL state, legacy lakh keys still read), compact support-ticket
 dialog, dashboard calculators for Client and Telecaller, banner "2/4" counter.
 Lease is already covered by `ListingIntent.rent` ("Rent / Lease"). Next in the

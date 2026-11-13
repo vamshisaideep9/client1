@@ -1,15 +1,16 @@
-import Image from "next/image";
-import Link from "next/link";
 import React from "react";
 
+import { ExploreArtCard } from "@/features/dashboard/explore-cards";
+import { PROPERTY_SUBTYPE_ARTWORK } from "@/lib/property-artwork";
 import { PROPERTY_SUBTYPE_GROUPS, type PropertySubtypeOption } from "@/lib/property-taxonomy";
-import { cn } from "@/lib/utils";
+import { getRECategory } from "@/lib/real-estate";
 
-// Every property subtype on the client's Real Estate dashboard home, grouped as
-// in the public Properties menu and drawn with the same per-subtype miniatures
-// (public/illustrations/menu/properties). Each tile opens the signed-in Explore
-// page for the subtype's category, pre-filtered to that subtype, so bookmarks,
-// compare and enquiry stay in reach.
+// Every property subtype on the client's Real Estate dashboard home, grouped
+// as in the public Properties menu. Each card keeps the illustrated
+// ExploreArtCard treatment the category cards used (4:3 artwork from
+// PROPERTY_SUBTYPE_ARTWORK, title, one-line description, Explore footer) and
+// opens the signed-in Explore page for the subtype's category, pre-filtered to
+// that subtype, so bookmarks, compare and enquiry stay in reach.
 
 export function propertyTypeHref(item: Pick<PropertySubtypeOption, "value" | "category">): string {
   return `/dashboard/explore/${item.category}?subtypes=${item.value}`;
@@ -17,45 +18,41 @@ export function propertyTypeHref(item: Pick<PropertySubtypeOption, "value" | "ca
 
 const GROUP_LABEL: Record<string, string> = { Plots: "Plots & land" };
 
+const SUBTYPE_BLURB: Record<PropertySubtypeOption["value"], string> = {
+  individual_house: "Independent homes on their own plot.",
+  standalone_apartment: "Flats in a single building.",
+  gated_community_apartment: "Flats with shared amenities and security.",
+  villa: "Spacious homes in villa communities.",
+  plot: "Open plots ready to build on.",
+  farmland: "Farmland for cultivation or a weekend home.",
+  agriland: "Agricultural land for long-term holding.",
+  locked_space: "Lockable shops and offices.",
+  unlocked_space: "Open-plan commercial floor space.",
+};
+
 export function PropertyTypeGrid() {
   return (
-    <div className="grid gap-6 lg:grid-cols-[4fr_3fr_2fr]">
+    <div className="space-y-6">
       {PROPERTY_SUBTYPE_GROUPS.map((group) => (
-        <div key={group.heading} className="min-w-0">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+        <section key={group.heading} aria-label={GROUP_LABEL[group.heading] ?? group.heading}>
+          <h3 className="text-sm font-semibold text-text-secondary">
             {GROUP_LABEL[group.heading] ?? group.heading}
           </h3>
-          <ul
-            className={cn(
-              "mt-3 grid grid-cols-2 gap-3",
-              group.items.length === 4 && "sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4",
-              group.items.length === 3 && "sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3",
-              group.items.length === 2 && "sm:grid-cols-2",
-            )}
-          >
+          {/* One column template for every group, so cards line up in size
+              across Residential (4), Plots & land (3) and Commercial (2). */}
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {group.items.map((item) => (
-              <li key={item.value} className="min-w-0">
-                <Link
-                  href={propertyTypeHref(item)}
-                  className="group flex h-full flex-col items-center gap-2 rounded-2xl border border-border bg-card p-3 text-center transition duration-200 hover:-translate-y-0.5 hover:border-brand-cta hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-                >
-                  <Image
-                    src={`/illustrations/menu/properties/${item.value}.svg`}
-                    alt=""
-                    aria-hidden
-                    width={96}
-                    height={72}
-                    unoptimized
-                    className="h-[72px] w-24 transition-transform duration-200 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-                  />
-                  <span className="text-sm font-medium leading-snug text-text-primary group-hover:text-brand-link">
-                    {item.label}
-                  </span>
-                </Link>
-              </li>
+              <ExploreArtCard
+                key={item.value}
+                href={propertyTypeHref(item)}
+                title={item.label}
+                blurb={SUBTYPE_BLURB[item.value]}
+                illustration={PROPERTY_SUBTYPE_ARTWORK[item.value]}
+                fallbackIcon={getRECategory(item.category)!.icon}
+              />
             ))}
-          </ul>
-        </div>
+          </div>
+        </section>
       ))}
     </div>
   );

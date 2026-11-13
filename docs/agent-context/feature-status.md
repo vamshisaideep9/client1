@@ -14,6 +14,10 @@ contract or schema change:
   the card image now isolates its stacking context, and buttons are 44px.
 - Every property subtype (9, grouped Residential / Plots & land / Commercial)
   on the client Real Estate dashboard home (not the public site, per client).
+  Follow-up fix (2026-11-13, branch `fix/property-type-cards`): the tiles
+  went back to the illustrated ExploreArtCard treatment (per-subtype artwork
+  from `PROPERTY_SUBTYPE_ARTWORK`, one-line description, Explore footer)
+  after the client found the small menu icons looked worse than the old cards.
 - Budget filter: stepped slider to ₹20 Cr+ plus optional digits-only Min/Max
   rupee fields; filter state is now whole rupees (`budgetMin`/`budgetMax`),
   old `priceMin`/`priceMax` lakh links still read.
