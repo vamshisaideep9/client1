@@ -61,7 +61,8 @@ default, not permission to skip the pre-implementation announcement.
 ## Prioritized active backlog
 
 **In progress — staff dashboard feedback batch, PR A: shell quick wins**
-(2026-11-13), branch `feat/staff-shell-quick-wins` from `upstream/main`
+(2026-11-13; PR #331, mirror #35, open for review), branch
+`feat/staff-shell-quick-wins` from `upstream/main`
 `5d69cde`. First of three stacked PRs for a 9-item telecaller/staff list.
 PR A: every role can collapse the desktop sidebar (staff start expanded and
 remember the choice on the device; Client unchanged), the telecaller

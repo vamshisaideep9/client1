@@ -3,7 +3,8 @@
 Status: **Derived living implementation ledger**
 
 **In progress — staff dashboard feedback batch, PR A: shell quick wins**
-(2026-11-13), branch `feat/staff-shell-quick-wins` from `upstream/main`
+(2026-11-13; PR #331, mirror #35, open for review), branch
+`feat/staff-shell-quick-wins` from `upstream/main`
 `5d69cde`. Items 2, 3, 5 and 8 of a 9-item telecaller/staff list.
 Requirement coverage unchanged; no migration, RLS or new endpoint.
 - Sidebar: `shell-state.ts` no longer fixes operational roles. Every role
