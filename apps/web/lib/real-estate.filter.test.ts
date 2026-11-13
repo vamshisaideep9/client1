@@ -264,3 +264,56 @@ describe("intent facet", () => {
     expect(countActiveFilters({ intent: ["rent"] })).toBe(1);
   });
 });
+
+describe("sale type and age facets", () => {
+  const base = LISTINGS[0];
+  const newLaunch = {
+    ...base,
+    id: "new-launch",
+    ageYears: 0,
+    structuredDetails: { sale_type: "new_sale" },
+  } as unknown as REListing;
+  const resaleYoung = {
+    ...base,
+    id: "resale-young",
+    ageYears: 3,
+    structuredDetails: { sale_type: "resale" },
+  } as unknown as REListing;
+  const resaleOld = {
+    ...base,
+    id: "resale-old",
+    ageYears: 12,
+    structuredDetails: { sale_type: "resale" },
+  } as unknown as REListing;
+  // A rent listing never carries a sale type, even if stale details say so.
+  const rental = {
+    ...base,
+    id: "rental",
+    listingIntent: "rent",
+    ageYears: 3,
+    structuredDetails: { sale_type: "resale" },
+  } as unknown as REListing;
+  const legacy = { ...base, id: "legacy", structuredDetails: undefined } as REListing;
+  const pool = [newLaunch, resaleYoung, resaleOld, rental, legacy];
+  const ids = (list: REListing[]) => list.map((l) => l.id);
+
+  it("narrows to resale or new launch sale listings only", () => {
+    expect(ids(filterListings(pool, { saleType: ["resale"] }))).toEqual(["resale-young", "resale-old"]);
+    expect(ids(filterListings(pool, { saleType: ["new_sale"] }))).toEqual(["new-launch"]);
+    expect(ids(filterListings(pool, { saleType: ["new_sale", "resale"] }))).toEqual([
+      "new-launch",
+      "resale-young",
+      "resale-old",
+    ]);
+  });
+
+  it("buckets property age", () => {
+    expect(ids(filterListings(pool, { saleType: ["resale"], age: ["under_5"] }))).toEqual(["resale-young"]);
+    expect(ids(filterListings(pool, { saleType: ["resale"], age: ["10_plus"] }))).toEqual(["resale-old"]);
+    expect(ids(filterListings(pool, { age: ["5_to_10"] }))).toEqual([]);
+  });
+
+  it("counts both as active facets", () => {
+    expect(countActiveFilters({ saleType: ["resale"], age: ["under_5"] })).toBe(2);
+  });
+});

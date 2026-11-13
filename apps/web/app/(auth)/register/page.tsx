@@ -41,6 +41,9 @@ import {
 import type { ServiceLine } from "@/lib/auth";
 import { formatMobile, isValidMobile, toE164 } from "@/lib/phone";
 import {
+  authHref,
+  captureIncomingReferral,
+  clearIncomingReferral,
   isValidReferralCodeFormat,
   normalizeReferralCode,
   readIncomingReferral,
@@ -162,8 +165,6 @@ function RegisterPageContent() {
   const searchParams = useSearchParams();
   const returnTo = dashboardReturnTo(searchParams.get("return_to"));
   const propertyIntent = isPropertyReturnTo(returnTo);
-  const loginHref =
-    returnTo === "/dashboard" ? "/login" : `/login?return_to=${encodeURIComponent(returnTo)}`;
   const { setSession, isAuthenticated, isLoading } = useAuth();
   const [step, setStep] = React.useState(0);
 
@@ -193,6 +194,12 @@ function RegisterPageContent() {
   // Every field validates live once the user has left it once (on blur). Until
   // then we stay quiet so we don't nag mid-typing on a fresh field.
   const [touched, setTouched] = React.useState<Partial<Record<keyof Details, boolean>>>({});
+  // "Log in" keeps the code and the referred page, so an existing user still
+  // lands on what was shared and a new one can come back without losing it.
+  const loginHref = authHref("/login", {
+    code: isValidReferralCodeFormat(details.referralCode) ? details.referralCode : null,
+    returnTo,
+  });
 
   const hydrated = React.useRef(false);
   React.useEffect(() => {
@@ -211,6 +218,9 @@ function RegisterPageContent() {
     // again, so a ?ref= on that reload would have nowhere to apply.
     // A shared loan or property link may have carried the code earlier in
     // this browser session (components/referral-capture.tsx).
+    // The latest link wins: a ?ref= here replaces any code captured earlier
+    // in this browser session, and is kept for a round trip through Log in.
+    if (searchParams.get("ref")) captureIncomingReferral(window.location.search);
     const ref = searchParams.get("ref") ?? readIncomingReferral();
     if (ref) {
       const normalized = normalizeReferralCode(ref);
@@ -319,6 +329,13 @@ function RegisterPageContent() {
           description: result.data.otpHint,
         });
       }
+    } else if (result.status === 400 && /already registered/i.test(result.error ?? "")) {
+      // Referral codes only apply to new accounts; send an existing user to
+      // Log in with the destination intact instead of a dead end.
+      toast.error("This number already has an account.", {
+        description: "Log in to continue. Invite codes apply to new accounts only.",
+        action: { label: "Log in", onClick: () => router.push(loginHref) },
+      });
     } else {
       toast.error(result.error || "Couldn't start sign-up.", {
         description:
@@ -330,6 +347,7 @@ function RegisterPageContent() {
 
   function finishRegistration() {
     clearWizard();
+    clearIncomingReferral();
     router.replace(returnTo);
   }
 

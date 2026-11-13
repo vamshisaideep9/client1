@@ -104,14 +104,6 @@ export function readOwnReferralCode(): string | null {
   }
 }
 
-/** Append ?ref=CODE to a URL, replacing any existing ref parameter. */
-export function withReferral(url: string, code: string | null): string {
-  if (!code) return url;
-  const parsed = new URL(url, "http://placeholder.invalid");
-  parsed.searchParams.set("ref", code);
-  return url.startsWith("http") ? parsed.toString() : `${parsed.pathname}${parsed.search}${parsed.hash}`;
-}
-
 /**
  * Remember a referral code that arrived on a shared public link (?ref=CODE) for
  * the rest of the browser session, so the visitor can browse before signing up.
@@ -130,6 +122,15 @@ export function captureIncomingReferral(search: string): void {
   }
 }
 
+/** Forget the captured incoming code once it has been used to register. */
+export function clearIncomingReferral(): void {
+  try {
+    safeSession()?.removeItem(INCOMING_REFERRAL_CODE_KEY);
+  } catch {
+    /* blocked storage: nothing was stored */
+  }
+}
+
 export function readIncomingReferral(): string | null {
   const storage = safeSession();
   try {
@@ -138,6 +139,41 @@ export function readIncomingReferral(): string | null {
   } catch {
     return null;
   }
+}
+
+const PUBLIC_PROPERTY_PATH = /^\/real-estate\/properties\/([0-9a-f-]{36})(?:[?#].*)?$/i;
+
+/**
+ * Where a referred visitor lands after signing up or logging in. A property
+ * opens in the signed-in dashboard; anything else goes to the dashboard home.
+ * The value is still re-validated by dashboardReturnTo() on the auth pages,
+ * which only ever honours same-origin /dashboard paths.
+ */
+export function referReturnToFor(path: string): string {
+  const match = PUBLIC_PROPERTY_PATH.exec(path);
+  return match ? `/dashboard/properties/${match[1].toLowerCase()}` : "/dashboard";
+}
+
+/**
+ * Auth-page href that carries the referral code and the post-login
+ * destination, e.g. "/register?ref=AB12CD34&return_to=%2Fdashboard%2Fproperties%2F…".
+ * Used for Refer links and for the Login <-> Register cross-links, so a code
+ * and its property survive switching between the two forms.
+ */
+export function authHref(
+  page: "/register" | "/login",
+  { code, returnTo }: { code?: string | null; returnTo?: string | null },
+): string {
+  const params = new URLSearchParams();
+  if (code) params.set("ref", code);
+  if (returnTo && returnTo !== "/dashboard") params.set("return_to", returnTo);
+  const query = params.toString();
+  return query ? `${page}?${query}` : page;
+}
+
+/** Absolute Refer link: register with the code, then open the referred page. */
+export function buildReferUrl(origin: string, code: string, returnTo: string): string {
+  return `${origin.replace(/\/$/, "")}${authHref("/register", { code, returnTo })}`;
 }
 
 /** Message used by the Refer action for a specific loan or property. */
