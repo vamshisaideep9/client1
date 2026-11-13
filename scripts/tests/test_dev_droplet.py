@@ -103,6 +103,30 @@ class DevDropletComposeTests(unittest.TestCase):
             with self.subTest(dependent=name):
                 self.assertNotRegex("\n".join(lines), r"^\s+minio:\s*$")
 
+    def test_object_storage_is_a_required_space_reachable_by_browsers(self) -> None:
+        text = (DROPLET / "compose.droplet.yml").read_text(encoding="utf-8")
+        anchor = text.split("x-droplet-api-env:", 1)[1].split("\nservices:", 1)[0]
+        # Every storage setting must come from .env and fail loudly when
+        # missing -- never a committed endpoint, bucket, or credential.
+        for variable in (
+            "SPACES_ENDPOINT_URL",
+            "SPACES_REGION",
+            "SPACES_BUCKET",
+            "SPACES_ACCESS_KEY",
+            "SPACES_SECRET_KEY",
+        ):
+            with self.subTest(variable=variable):
+                self.assertRegex(anchor, rf"(?m)^  {variable}: \$\{{{variable}\?")
+        # docker-compose.dev.yml points browsers at MinIO's localhost:9000;
+        # the droplet must clear it so presigned URLs use the Space itself.
+        self.assertIn("localhost:9000", "\n".join(self.dev["api"]))
+        self.assertRegex(anchor, r'(?m)^  SPACES_PUBLIC_ENDPOINT_URL: ""$')
+        self.assertNotRegex(text, r"digitaloceanspaces\.com")
+        # The web CSP and image allowlist trust exactly the Space origin.
+        self.assertIn(
+            "NEXT_PUBLIC_ASSET_HOST: ${SPACES_ENDPOINT_URL?", "\n".join(self.droplet["web"])
+        )
+
     def test_long_running_services_restart_after_reboot(self) -> None:
         for name in self.base:
             if name in ("minio", "minio-init"):

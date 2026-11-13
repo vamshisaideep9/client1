@@ -86,6 +86,43 @@ counts, booleans, and manifest digests in the gate input.
 - Exercise slow-client, oversized-body, and request-rate bounds without using
   production customer traffic.
 
+### Object storage (DigitalOcean Spaces)
+
+Production uses its own Space and key, never the development droplet's.
+
+1. Create the Space in the production region with **Restrict File Listing**
+   on and CDN off. Assets are served from the regional origin, the only
+   origin the web CSP and image allowlist trust.
+2. Create a **Limited access** Spaces key with read/write to this Space only.
+   Store it in the approved secret manager, never in Git, an issue, a PR, or
+   chat.
+3. Supply `SPACES_ENDPOINT_URL` (the https regional origin, for example
+   `https://blr1.digitaloceanspaces.com`), `SPACES_REGION`, `SPACES_BUCKET`,
+   `SPACES_ACCESS_KEY` and `SPACES_SECRET_KEY` to `api` and `scheduler`
+   through `apps/api/.env.prod`. Leave `SPACES_PUBLIC_ENDPOINT_URL` unset.
+   The API refuses to boot with the MinIO placeholders or a non-https
+   endpoint.
+4. Build `web` with `NEXT_PUBLIC_ASSET_HOST` set to exactly the same origin
+   as `SPACES_ENDPOINT_URL`.
+5. With `PUBLIC_WEB_ORIGIN` and `ALLOWED_ORIGINS` set to the production web
+   origins, apply and verify the bucket posture from the running API
+   container:
+
+   ```bash
+   docker compose -f docker-compose.prod.example.yml exec -T api \
+     python -m app.scripts.configure_storage --apply --verify
+   ```
+
+   It sets an exact-origin CORS rule and a policy that grants anonymous
+   `s3:GetObject` on `public/*` only. It then probes anonymously and prints
+   `storage_listing_denied`, `public_object_prefix_only_verified` and
+   `private_object_anonymous_access_denied`, plus two CORS checks. Every value
+   must be `true`, and any failure exits non-zero. Record those booleans in the
+   gate input, and keep the full output in the restricted evidence store.
+   If the limited key cannot change bucket settings (`AccessDenied` on
+   `--apply`), apply once with a short-lived full-access key passed only to
+   that command. Revoke it immediately, then verify with the limited key.
+
 ## 3. Review runtime configuration without values
 
 The inventory must cover `postgres`, `redis`, `clamav`, `pgbouncer`,

@@ -60,8 +60,18 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — loan-page content and insurance unpublish** (2026-11-12),
-branch `feat/loan-pages-content-insurance-unpublish`, stack 4 of 4 stacked on
+**In progress — DigitalOcean Spaces object storage for dev and production**
+(2026-11-13), branch `feat/spaces-object-storage` from `upstream/main`
+`71dde5b`. Wire the dev droplet to a dedicated Space (required `SPACES_*`,
+empty public endpoint, `NEXT_PUBLIC_ASSET_HOST`), add
+`app.scripts.configure_storage` to apply exact-origin CORS plus a
+`public/*`-only read policy and verify anonymous listing/private reads are
+denied, require https storage origins outside development, and document the
+production Space runbook. No CDN, no upload-flow or contract change.
+Recommended: Opus 5.5 / high (uploads, credentials, CORS, public-read policy).
+
+**Implemented — loan-page content and insurance unpublish** (2026-11-12;
+merged as PR #322), branch `feat/loan-pages-content-insurance-unpublish`, stack 4 of 4 stacked on
 PR #321. Data-only migration `d4f6a8c0e2b5` (client Home/Personal Loan copy on
 untouched seed rows; insurance unpublished), loan-page SEO map and drafted guide
 sections. Next priority after delivery: merge the stack in order (#319, #320,
