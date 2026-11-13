@@ -833,7 +833,7 @@ test.describe("role-aware dashboard navigation", () => {
       await expect(homeMain.getByRole("link", { name: /Commercial/ })).toBeVisible();
       // Home no longer fetches the property catalog at all, so none of its
       // former catalog-browsing UI should appear here.
-      await expect(page.getByPlaceholder(/Search by locality, city, PIN code/)).toHaveCount(0);
+      await expect(page.getByPlaceholder(/Search by property, developer, locality/)).toHaveCount(0);
       await expect(page.getByRole("button", { name: /^Filters/ })).toHaveCount(0);
       await expect(page.getByText("No listings yet")).toHaveCount(0);
 

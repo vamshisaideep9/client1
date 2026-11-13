@@ -2,6 +2,241 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Spaces public reads via per-object ACL** (2026-11-13), branch
+`fix/spaces-public-object-acl`. On the live dev Space, CORS applied (200) but
+`put_bucket_policy` returned 403 for every policy shape, even with a
+full-access key; `public-read` object ACLs work with the app's limited key.
+New `SPACES_PUBLIC_OBJECT_ACL` (default off; MinIO keeps its bucket policy)
+adds a policy-signed `acl=public-read` to presigned POSTs for `public/` keys
+and `ACL=public-read` to `copy_object`/`put_object_bytes` for `public/`
+destinations; private and look-alike keys never get an ACL.
+`configure_storage` skips the bucket policy in this mode and writes its
+probes through `storage._public_acl`. Evidence: storage/configure/config tests
+101 passed, droplet contract tests 9 passed, API ruff clean. Live droplet
+verification is recorded on the PR.
+
+**Implemented — DigitalOcean Spaces object storage for dev and production**
+(2026-11-13; merged as PR #324, mirror #29), branch `feat/spaces-object-storage`. Infra, API tooling and docs;
+requirement coverage unchanged; no upload-flow, schema, RLS or contract change.
+Recommended: Opus 5.5 / high. The dev droplet overlay now requires every
+`SPACES_*` value from `.env`, clears dev's `localhost:9000` public endpoint and
+passes the Space origin to web as `NEXT_PUBLIC_ASSET_HOST` (credentials reach
+only api and scheduler; MinIO stays profile-disabled). New
+`app.scripts.configure_storage` applies an exact-origin CORS rule and a
+`public/*`-only `s3:GetObject` policy, then probes anonymously: listing,
+private and `public`-look-alike objects denied, `public/` readable, untrusted
+origin refused; it emits the production evidence booleans. Outside development
+`SPACES_PUBLIC_ENDPOINT_URL` must also be https. Dev and production runbooks
+document Space creation, limited keys and the full-access fallback for
+`--apply`. Verified: boto3 1.43 presigns path-style on the regional endpoint;
+targeted API tests 90/90 in a `python:3.13` container on the compose network;
+droplet contract tests 9 passed (35 subtests); full API ruff check/format pass
+(526 files); rendered droplet compose shows correct env per service and fails
+on a missing `SPACES_*`. Full API pytest suite was still running at commit
+time with 5 failures in files this change does not touch; result is recorded
+on the PR. Live droplet rollout (`configure_storage --apply --verify`, demo
+media, browser upload) follows the PR.
+
+**Implemented — loan-page content and insurance unpublish** (2026-11-12; merged as PR #322),
+branch `feat/loan-pages-content-insurance-unpublish`, stack 4 of 4 on
+`feat/seo-titles-homepage-copy`. API data migration plus web; requirement
+coverage unchanged. Recommended: Opus 5.5 / high (xhigh for the migration
+review). Additive data-only migration `d4f6a8c0e2b5` (single head) writes the
+client-approved Home Loan and Personal Loan summary, description, highlights,
+eligibility, documents and FAQ only where the untouched 73f4c2a91d6e seed copy
+remains, so Admin edits survive; it unpublishes the four insurance products and
+clears `homepage_featured` with them (`ck_loan_types_homepage_featured_is_public`).
+No DDL, grant, RLS or contract change. Web: `FINANCIAL_SERVICE_SEO` gives the
+16 catalogue slugs their supplied title, description and H1 (label/summary
+fallback); `FINANCIAL_SERVICE_SECTIONS` renders the drafted RBI LTV table,
+rate factors, borrowing limits and steps for Home and Personal Loan; loan
+Service schema is scoped to Hyderabad and Telangana. Evidence: API tests in a
+`python:3.13` container on the compose network (the API image's pinned Alpine
+packages no longer resolve) 31 passed, 0 skipped, including the TEMP-table
+migration test (seed rows updated, Admin-edited rows untouched, idempotent,
+insurance unpublished and unfeatured, downgrade restores); API ruff check and
+format pass; `alembic heads` = `d4f6a8c0e2b5`; web loan-page and metadata
+tests 55/55, typecheck and lint pass.
+
+**Implemented — public titles, H1s, meta and homepage copy** (2026-11-12;
+[PR #321](https://github.com/brollysolutions/client1/pull/321), mirror
+vamshisaideep9/client1#26), branch `feat/seo-titles-homepage-copy`, stack 3 of 4 on
+`feat/client-facts-copy-seo`. Web only; requirement coverage unchanged.
+Recommended: Opus 5.5 / high. The supplied titles, H1s and meta descriptions
+(sheet v2) are applied to 13 static public pages and 18 calculators;
+compound-interest gets a shortened branded title. Calculator pages keep
+appending `| Dhanadhara`; every rendered title is unique and at most 60
+characters. Home gets a visible H1 intro band, the drafted loans/property bands,
+a 4-step "How it works", partner copy and 5 FAQs; insurance wording leaves Home,
+`/loans` and the fallback hero; property copy says title documents are
+reviewed and recommends the buyer's own lawyer. "Cookie Notice" becomes
+"Cookie Policy". Privacy and Terms keep their proper-noun H1s.
+
+**Implemented — client facts and About page** (2026-11-12;
+[PR #320](https://github.com/brollysolutions/client1/pull/320), mirror
+vamshisaideep9/client1#25), branch
+`feat/client-facts-copy-seo`, stack 2 of 4 on `feat/brand-logo-sidebar-trust-lines`.
+Web only; requirement coverage unchanged. Recommended: Opus 5.5 / high. Contact
+defaults are now the client-confirmed public details (+91 90100 53010,
+dhanadhara@gmail.com, Monday to Saturday 10 AM to 6 PM with Sunday closed, APHB
+Colony, Vikarabad); env overrides and the production guard remain, and the
+guard now pins the retired sample number rather than the default.
+`BUSINESS_FACTS` (proprietorship of R Rohini, Udyam UDYAM-TS-28-0042986, 2026,
+5 advisors, English/Hindi/Telugu) feeds the footer, a new `/about` page
+(sitemap and footer link) and a FinancialService node on Home and About built by
+`organizationJsonLd()`; JSON-LD is escaped with `jsonLdScript`. Stacks 3-4:
+titles/H1/meta and homepage copy, then loan-page content and insurance unpublish.
+Evidence: targeted Vitest 17/17 (site, organization/About, footer, footer links),
+typecheck and lint pass; full Vitest on `7652f33` was 751/752, the one failure
+being the missing `/about` loading-fallback registration, now added
+(loading coverage 20/20).
+
+**Implemented — brand chrome: original logo, caption, white sidebar, trust
+lines** (2026-11-12; [PR #319](https://github.com/brollysolutions/client1/pull/319),
+mirror vamshisaideep9/client1#24), branch `feat/brand-logo-sidebar-trust-lines` from
+`upstream/main` `07cf748`. Web only (plus the email logo height); requirement
+coverage unchanged. Recommended: Opus 5.5 / high. Generated lockups carry a
+"Wealth & Growth" caption (960x232 horizontal, 960x930 stacked); every white
+logo treatment is gone (dark themes still lighten the artwork); the dashboard
+rail is #FFFFFF with navy text and the dark theme keeps its navy rail; action
+hover no longer aliases the rail token; the footer is light; the trust banner
+is a left-to-right ticker showing the lender line on `/loans*`, a property line
+on `/real-estate*` and both elsewhere. Evidence (2026-11-12): web lint and
+typecheck pass; Vitest 744/745 with one unrelated banner-asset timeout under
+load that passes alone (5/5); API brand tests 8/8; production build passes in
+a clean worktree with `output: "standalone"` disabled there only (Windows
+symlink EPERM); affected e2e against that build surfaced stale navy-rail
+assertions and a dark footer/closer colour clash, both fixed.
+
+**Implemented — development seed expansion and lender policy catalogue**
+(2026-11-12), branch `feat/dev-seed-roster-lender-policy` from `upstream/main`
+`07cf748`; [PR #318](https://github.com/brollysolutions/client1/pull/318) (mirror vamshisaideep9/client1#23), merged as `1cead74`. Development-only seed scripts; requirement coverage unchanged and no
+API, schema, permission or contract change. `seed_dev_roster` adds 14 role
+accounts (2 Clients; 2 Agents, Telecallers and Employees per line) with
+one-time generated passwords and 10 published listings. `seed_lender_policy`
+replaces the development provider catalogue with 303 offers from 136 providers
+transcribed from the user's `Bank loan policy.xlsx` (as of 2026-08-31),
+dry-run by default, preserving credit-card/life-insurance offers and any
+provider a loan application references. Evidence: see the change log row in
+`implementation-plan.md` dated 2026-11-12.
+
+**Delivered — 2026-11-11 product batch** via
+[PR #317](https://github.com/brollysolutions/client1/pull/317), merged as
+`07cf748`. Original record:
+
+**Public UI quick wins** (2026-11-11), branch
+`feat/public-ui-quick-wins` from `upstream/main` `966c48b`; stack 1 of 6 for
+the 2026-11-11 product batch. Web only; requirement coverage unchanged.
+The Compound Interest island is registered as a calculator form surface.
+Stack 2, `feat/share-refer-links`: Share and Refer on public and dashboard
+property cards, property detail, provider offers and loan service pages; shared
+links carry the signed-in client's own `?ref=` code (cached after login, cleared
+on logout), public pages remember an incoming code for the session, and
+registration falls back to it. Regression test proves a second transaction by an
+already-rewarded referred person pays nothing; the list labels earned and paid
+referrals as closed. No API, schema or contract change.
+Stack 3, `feat/property-developer-suggestions`: additive migration
+`b7d9f1a3c5e2` adds nullable `developer_name` to `properties` and
+`property_submissions` (table-wide grants and row-level RLS unchanged) with a
+lower-case index; submit/edit forms, approval copy, authenticated and public
+reads, regenerated contracts, a Developer facet plus a name field in the Filters
+sheet, a Developers suggestion group and search haystack. Home shows "Suggested
+for you" from the public catalog ranked against locally cached bookmark ids
+(ids only, session-hint gated, cleared on logout).
+Stack 4, `feat/referral-lead-detail`: each client referral row opens a detail
+dialog with what converted (listing title/location/type or loan product label
+only, resolved through a bypass read constrained to the caller's RLS-visible
+rows), a one-time lifecycle timeline and the referrer's own bonus. Agents pick
+a published property (real estate) or active product (loans) in Introduce Lead
+and confirm it from a details-and-fees popup; the API validates the key set,
+existence and business line, rejects client-supplied titles, and snapshots
+`interest_title` for the Agent and telecaller views. No migration. The product
+picker relies on the API's active-product filter (fixes a type error).
+The interest picker is registered as a mutation form surface.
+Stack 5, `feat/banner-video`: additive migration `c3e5a7b9d1f4` adds
+`youtube_video_id` (11-character id, pattern-checked), `video_media_asset_id`
+(RESTRICT) and `video_key` (canonical public MP4 key) to `banners`, with
+single-source and public-placement-only checks, and the `banner_video` Media
+Library usage type. MP4 uploads (20 MB, 30 s) go through the existing scan +
+isolated transcode + rescan pipeline. Home, Financial Services, Properties and
+sponsor banners render a click-to-play youtube-nocookie facade or a muted MP4
+loop with a pause control, reduced-motion/Save-Data handling and carousel
+autoplay hold. CSP adds only `frame-src https://www.youtube-nocookie.com` and
+`img-src https://i.ytimg.com`. Video changes follow the existing draft and
+maker-checker approval flow.
+Delivery (2026-11-11): only stack 1 reached `main` (#310); #311-#315 merged into
+their parent stack branches. The owner withdrew the glass finish, so
+`feat/land-batch-no-glass` lands stacks 2-5 on `main` together with the public
+navbar no-wrap fix (1280-1535 px) and the wider callback dialog (42rem); #316
+and mirror #21 (which carried glass) are superseded.
+#316 was nevertheless merged into `main` with the glass finish; this branch
+merges `main` with the `ours` strategy, so landing it removes all glass styling
+(backdrop, glass cards, buttons, dropdowns, body marker, Button data hooks) while
+keeping the batch features. The sticky property search bar is solid as well.
+
+**Implemented — development droplet deployment overlay** (2026-11-02),
+branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;
+[PR #309](https://github.com/brollysolutions/client1/pull/309).
+`infra/dev-droplet/` runs the existing development stack on one DigitalOcean
+droplet: PostgreSQL, Redis and PgBouncer publish no host port; API and web
+bind only to `127.0.0.1` behind host Caddy; credentials are freshly
+generated by `init-env.sh` (which refuses to overwrite or accept allow-all
+ranges) and Compose fails closed when one is missing; both API processes get
+the same HTTPS CORS/origin and trusted-proxy settings; every long-running
+service restarts after reboot. MinIO is disabled on the droplet (user
+decision, 2026-11-03): `minio/minio` and `minio/mc` are no longer published on
+Docker Hub or quay.io, so the first droplet `up` failed to pull them. Uploads,
+managed media and banner images do not work there; database-backed journeys
+do. The local dev stack is unchanged but cannot pull those images on a fresh
+machine either. Caddy answers 403 to clients
+outside the IP allowlist before any proxying, and the droplet checks out only
+`apps/api`, `apps/web`, `apps/media-runtime` and `infra/dev-droplet`. Because
+`ENV=development` returns one-time codes in API responses by design, that
+allowlist is the host's access boundary and the runbook says so. The only
+host is `dev.dhanadhara.com`; the apex and `www` stay reserved for
+production. The runbook's sparse checkout runs
+`init --cone` before `set`: on the real Ubuntu 22.04 droplet, Git 2.34 kept
+non-cone patterns (even with `set --cone`) and dropped the root compose files.
+
+Fresh local evidence: 7 new overlay tests pass, including executing
+`init-env.sh`; the three-file stack renders with Docker Compose 5.4.0 to
+the intended ports, restart policies and environment, and a missing secret
+aborts rendering. Caddy 2.6.2 (Ubuntu 24.04's packaged version) adapts the
+Caddyfile with the 403 rule first on both hosts; this caught and fixed a
+directive-order bypass where `handle` would have run before the allowlist.
+Not verified: a real droplet, DNS, certificate issuance and browser journeys.
+No application, API, schema, contract or dependency change; requirement
+coverage is unchanged. Development data only — production launch gates remain
+NO-GO.
+**Implemented — production audit remediation** (2026-10-12),
+branch `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308).
+OTP budgets and consumption are atomic across concurrent verification/resends.
+Payout settlement locks the current row and cannot recreate credit after a
+reversal. SMTP failures no longer log provider-echoed PII. Browser response-body
+failures return the existing unavailable result; server fetch preserves Next's
+dynamic-render signals and defaults to localhost only in development. The media
+CSP permits private video on the configured storage origin. Published runtime
+and development dependency fixes are locked, including Next 15.5.27 and Vitest
+4.1.11. Existing roles, RLS, publication filters and financial contracts remain.
+
+Fresh local evidence: lint/typecheck, 714 web tests, production compilation,
+11 release Chromium tests, the actual-response CSP probe, 208 infrastructure
+tests (one platform skip), API lint/format, fresh migrations, one migration head
+and unchanged OpenAPI pass. OTP and payout concurrency regressions were reproduced
+before remediation and pass afterward. The linked PR records the full API and
+Linux standalone CI results; partial local API runs are not passing evidence.
+Windows standalone output needed a local dependency junction after a symlink
+permission warning. Python's production/full dependency scans and Node's
+production scan are clean. The full Node audit still reports development-only
+`braces@3.0.3` (GHSA-vfj7-8cjw-p6xm), used solely by Next's ESLint glob chain;
+the suggested 3.0.4 is unpublished and no advisory is suppressed.
+
+Requirement coverage is unchanged. Next priority: require the linked CI gates,
+human review and existing production environment/capacity/recovery evidence
+before deployment. No live provider or customer-data operations were performed.
+The self-contained public HTML stays a separate local deliverable; earlier
+upstream #307 and origin #13 are closed unmerged. This task has one upstream PR.
+
 **Implemented — complete static homepage sponsor card** (2026-09-16),
 on `feat/auth-actions-footer`. Replaces the former curtain reveal with an
 uncropped 16:9 image, burgundy headline/CTA, clear Sponsored disclosure and a

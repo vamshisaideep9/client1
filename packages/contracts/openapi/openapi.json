@@ -1601,6 +1601,18 @@
               }
             ]
           },
+          "developer_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
           "furnishing": {
             "anyOf": [
               {
@@ -5106,6 +5118,30 @@
             "minLength": 1,
             "title": "Title",
             "type": "string"
+          },
+          "video_media_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Media Asset Id"
+          },
+          "youtube_url": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Url"
           }
         },
         "required": [
@@ -5456,6 +5492,40 @@
           "version": {
             "title": "Version",
             "type": "integer"
+          },
+          "video_media_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Media Asset Id"
+          },
+          "video_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Url"
+          },
+          "youtube_video_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Video Id"
           }
         },
         "required": [
@@ -5802,6 +5872,30 @@
               }
             ],
             "title": "Title"
+          },
+          "video_media_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Media Asset Id"
+          },
+          "youtube_url": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Url"
           }
         },
         "title": "BannerUpdate",
@@ -6055,7 +6149,8 @@
             "enum": [
               "image/jpeg",
               "image/png",
-              "image/webp"
+              "image/webp",
+              "video/mp4"
             ],
             "title": "Content Type",
             "type": "string"
@@ -6100,7 +6195,8 @@
               "sponsor",
               "dashboard_banner",
               "dashboard_offer",
-              "campaign"
+              "campaign",
+              "banner_video"
             ],
             "title": "Usage Type",
             "type": "string"
@@ -6377,7 +6473,8 @@
             "enum": [
               "image/jpeg",
               "image/png",
-              "image/webp"
+              "image/webp",
+              "video/mp4"
             ],
             "title": "Content Type",
             "type": "string"
@@ -13244,6 +13341,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "developer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
           "furnishing": {
             "anyOf": [
               {
@@ -14035,6 +14143,28 @@
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "video_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Url"
+          },
+          "youtube_video_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Video Id"
           }
         },
         "required": [
@@ -14426,6 +14556,17 @@
               }
             ]
           },
+          "developer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
           "furnishing": {
             "anyOf": [
               {
@@ -14669,6 +14810,17 @@
         "properties": {
           "category": {
             "$ref": "#/components/schemas/PropertyCategory"
+          },
+          "developer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
           },
           "id": {
             "format": "uuid",
@@ -15238,6 +15390,63 @@
         "title": "ReferralBonusConfigUpdate",
         "type": "object"
       },
+      "ReferralConvertedItem": {
+        "description": "What a referral converted on, for the referrer's own activity detail.\n\nDeliberately limited to catalogue facts: the property listing's public\ntitle/location/type, or the loan product label. Never a deal value, loan\namount, quoted price, status note, or anything about the referred person.\n``property_id`` is set only while the listing is still published, so the\nweb app can link to the public page without exposing withdrawn listings.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "property",
+              "loan"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "property_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Type"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "title"
+        ],
+        "title": "ReferralConvertedItem",
+        "type": "object"
+      },
       "ReferralListResponse": {
         "properties": {
           "referrals": {
@@ -15400,6 +15609,16 @@
               }
             ],
             "title": "Converted At"
+          },
+          "converted_item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReferralConvertedItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "created_at": {
             "format": "date-time",
@@ -16461,6 +16680,18 @@
               }
             ]
           },
+          "developer_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
           "furnishing": {
             "anyOf": [
               {
@@ -16867,6 +17098,17 @@
             ],
             "title": "Details Version"
           },
+          "developer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
           "furnishing": {
             "anyOf": [
               {
@@ -17223,6 +17465,18 @@
                 "type": "null"
               }
             ]
+          },
+          "developer_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
           },
           "furnishing": {
             "anyOf": [
@@ -27194,7 +27448,8 @@
                     "sponsor",
                     "dashboard_banner",
                     "dashboard_offer",
-                    "campaign"
+                    "campaign",
+                    "banner_video"
                   ],
                   "type": "string"
                 },

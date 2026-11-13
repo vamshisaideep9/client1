@@ -70,6 +70,7 @@ class SubmissionFacts(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     type: str = Field(min_length=1, max_length=40)
     location: str = Field(min_length=1, max_length=160)
+    developer_name: str | None = Field(default=None, max_length=120)
     meta: str | None = Field(default=None, max_length=120)
     category: PropertyCategory
     property_subtype: PropertySubtype
@@ -100,6 +101,15 @@ class SubmissionFacts(BaseModel):
     def _blank_rera_is_none(cls, value: object) -> object:
         if isinstance(value, str) and not value.strip():
             return None
+        return value
+
+    @field_validator("developer_name", mode="before")
+    @classmethod
+    def _normalize_developer_name(cls, value: object) -> object:
+        """Collapse internal whitespace; a blank name means "not provided"."""
+        if isinstance(value, str):
+            collapsed = " ".join(value.split())
+            return collapsed or None
         return value
 
     @field_validator("amenities")
@@ -262,6 +272,7 @@ class SubmissionRead(BaseModel):
     title: str
     type: str
     location: str
+    developer_name: str | None = None
     meta: str | None
     image: str | None
     category: PropertyCategory

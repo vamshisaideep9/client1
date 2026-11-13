@@ -26,6 +26,8 @@ export type PropertyListing = {
   id: string;
   title: string; // "2 BHK Apartment"
   location: string;
+  /** Developer / builder brand, e.g. "My Home". Optional; drives search and the Developer filter. */
+  developerName?: string;
   /** Pre-formatted display price. "₹45 L" for sale, "₹25,000/month" for rent. */
   price: string;
   /** Sale vs rent/lease. Drives the card badge and the browse filter. */
