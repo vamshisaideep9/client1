@@ -105,31 +105,12 @@ export const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: "newest", label: "Newest" },
 ];
 
-export function priceBounds(listings: REListing[]): { min: number; max: number } {
-  if (listings.length === 0) return { min: 0, max: 500 };
-  const values = listings.map((l) => l.priceLakhs);
-  const min = Math.floor(Math.min(...values));
-  const max = Math.ceil(Math.max(...values));
-  return min === max ? { min: 0, max: Math.max(max, 1) } : { min, max };
-}
-
 export function areaBounds(listings: REListing[]): { min: number; max: number } {
   const values = listings.map((l) => l.areaSqft).filter((v) => v > 0);
   if (values.length === 0) return { min: 0, max: 5000 };
   const min = Math.floor(Math.min(...values));
   const max = Math.ceil(Math.max(...values));
   return min === max ? { min: 0, max: Math.max(max, 1) } : { min, max };
-}
-
-// Formats a lakh-denominated price for slider labels and chips: "₹50 L" below
-// a crore, "₹1.2 Cr" at or above it. Mirrors the "₹X L" / "₹X Cr" shape
-// already used by the display price strings in lib/real-estate.ts.
-export function formatLakhs(value: number): string {
-  if (value >= 100) {
-    const cr = value / 100;
-    return `₹${Number.isInteger(cr) ? cr : cr.toFixed(1)} Cr`;
-  }
-  return `₹${value} L`;
 }
 
 export type SuggestionGroup = { label: string; values: string[] };
@@ -146,7 +127,6 @@ export type SuggestionIndex = {
   // cannot match anything in the current source.
   subtypes: RESubtype[];
   properties: { id: string; title: string; locality: string; city: string }[];
-  priceBounds: { min: number; max: number };
   areaBounds: { min: number; max: number };
 };
 
@@ -172,7 +152,6 @@ export function buildSuggestionIndex(listings: REListing[]): SuggestionIndex {
     developers: uniqueDevelopers(listings),
     subtypes: RE_SUBTYPE_VALUES.filter((value) => presentSubtypes.has(value)),
     properties: listings.map((l) => ({ id: l.id, title: l.title, locality: l.locality, city: l.city })),
-    priceBounds: priceBounds(listings),
     areaBounds: areaBounds(listings),
   };
 }

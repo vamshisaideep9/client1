@@ -346,6 +346,21 @@ export function HeroCarousel({
         </a>
       ) : null}
 
+      {/* Position counter ("2/4"). Top-right keeps it clear of the centred dots
+          (up to seven 44px targets span most of a phone's width), the section
+          scroll chevron and the mid-height arrows. Rendered from banners.length
+          so it is present in server HTML before Embla reports its snaps. The
+          dots already expose position to assistive tech, so this is visual. */}
+      {banners.length > 1 && (
+        <span
+          data-slide-counter
+          aria-hidden="true"
+          className="pointer-events-none absolute right-3 top-3 z-10 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold tabular-nums text-white sm:right-4 sm:top-4"
+        >
+          {`${selected + 1}/${banners.length}`}
+        </span>
+      )}
+
       {/* Large tap targets around compact dots; the mobile section banner also
           needs these because its arrows are hidden at that width. */}
       {count > 1 && (

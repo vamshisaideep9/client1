@@ -131,7 +131,7 @@ describe("filterListings()", () => {
       LISTINGS[3],
     ]);
     expect(filterListings(LISTINGS, { bhk: [2, 3] })).toEqual([LISTINGS[0], LISTINGS[1]]);
-    expect(filterListings(LISTINGS, { priceMin: 50, priceMax: 100 })).toEqual([
+    expect(filterListings(LISTINGS, { budgetMin: 50_00_000, budgetMax: 1_00_00_000 })).toEqual([
       LISTINGS[0],
       LISTINGS[4],
     ]);

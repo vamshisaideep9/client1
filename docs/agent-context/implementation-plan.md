@@ -60,7 +60,20 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — synthetic demo media for every media surface** (2026-11-13),
+**In progress — client feedback batch, PR A: dashboard and browse UI fixes**
+(2026-11-13), branch `feat/client-feedback-ui` from `upstream/main`
+`6f60cd8`. First of three stacked PRs for an 11-item client list. PR A
+(web only): Bookmark/Compare overlap on scroll, all 9 property subtypes on
+the client Real Estate dashboard home, ₹20 Cr budget slider with digits-only Min/Max
+fields (rupee URL state, legacy lakh keys still read), compact support-ticket
+dialog, dashboard calculators for Client and Telecaller, banner "2/4" counter.
+Lease is already covered by `ListingIntent.rent` ("Rent / Lease"). Next in the
+stack: PR B Resale filter + clean Share / Refer-to-register links; PR C
+site-visit reschedule (max 3) and number of visitors (migration + API).
+Recommended: Opus 5.5 / high.
+
+**Implemented — synthetic demo media for every media surface** (2026-11-13;
+merged as PR #326, mirror #31),
 branch `feat/demo-media-seed` from `upstream/main` `ab73217`. `seed_demo` adds
 Media Library artwork per surface plus a banner video, LIVE banners with image
 and video on public placements, offer artwork, property galleries with a 360

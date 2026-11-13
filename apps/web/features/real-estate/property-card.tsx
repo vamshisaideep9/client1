@@ -44,7 +44,10 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
         fluid ? "w-full" : "w-[280px] shrink-0 sm:w-[300px]",
       )}
     >
-      <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-loans-soft/50">
+      {/* `isolate` keeps the overlay z-indexes below inside this card. Without
+          it the action buttons joined the page stacking order and painted over
+          the sticky app header and search bar while scrolling. */}
+      <div className="relative isolate aspect-video w-full shrink-0 overflow-hidden bg-loans-soft/50">
         <Link
           href={`/dashboard/properties/${listing.id}`}
           aria-label={`View ${listing.title}`}
@@ -68,7 +71,7 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
             aria-pressed={bookmarked}
             title={bookmarked ? "Remove bookmark" : "Bookmark this property"}
             className={cn(
-              "grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-card/95 text-text-secondary shadow-sm ring-1 ring-border transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-card/95 text-text-secondary shadow-sm ring-1 ring-border transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               bookmarked && "text-brand-link",
             )}
           >
@@ -81,7 +84,7 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
             aria-pressed={inCompare}
             title={inCompare ? "Remove from compare" : "Add to compare"}
             className={cn(
-              "grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-card/95 text-text-secondary shadow-sm ring-1 ring-border transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-card/95 text-text-secondary shadow-sm ring-1 ring-border transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               inCompare && "text-brand-link",
             )}
           >
@@ -95,7 +98,7 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
           </span>
           {listing.listingIntent === "rent" ? (
             <span className="rounded-full bg-amber-100/95 px-2.5 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
-              For rent
+              For rent / lease
             </span>
           ) : null}
         </span>

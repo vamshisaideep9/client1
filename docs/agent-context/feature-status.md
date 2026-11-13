@@ -2,7 +2,30 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — synthetic demo media for every media surface** (2026-11-13),
+**In progress — client feedback batch, PR A: dashboard and browse UI fixes**
+(2026-11-13), branch `feat/client-feedback-ui` from `upstream/main`
+`6f60cd8`. One of three stacked PRs for an 11-item client list (A: UI fixes,
+B: Resale filter + share/refer links, C: site-visit reschedule + party size).
+Lease/rent needed no work: `ListingIntent.rent` is already "Rent / Lease";
+card badges now say "For rent / lease" consistently. PR A, web only, no
+contract or schema change:
+- Bookmark/Compare buttons painted over the sticky dashboard header and search
+  bar while scrolling (card overlay `z-20` joined the page stacking order);
+  the card image now isolates its stacking context, and buttons are 44px.
+- Every property subtype (9, grouped Residential / Plots & land / Commercial)
+  on the client Real Estate dashboard home (not the public site, per client).
+- Budget filter: stepped slider to ₹20 Cr+ plus optional digits-only Min/Max
+  rupee fields; filter state is now whole rupees (`budgetMin`/`budgetMax`),
+  old `priceMin`/`priceMax` lakh links still read.
+- Support ticket dialog: compact content-sized panel with status, topic,
+  message and a next-step line (resolution note stays staff-only).
+- Calculators inside the Client and Telecaller dashboards
+  (`/dashboard/calculators`), reusing the public registry and islands.
+- Banner position counter ("2/4") on Home, Financial Services and Properties.
+Recommended: Opus 5.5 / high.
+
+**Implemented — synthetic demo media for every media surface** (2026-11-13;
+merged as PR #326, mirror #31),
 branch `feat/demo-media-seed`. Development seed only; requirement coverage
 unchanged. New `app.scripts.demo_media` generates JPEG artwork per campaign
 surface, property photos and a 4096x2048 seamless equirectangular panorama
