@@ -2,7 +2,24 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — Spaces public reads via per-object ACL** (2026-11-13), branch
+**In progress — synthetic demo media for every media surface** (2026-11-13),
+branch `feat/demo-media-seed`. Development seed only; requirement coverage
+unchanged. New `app.scripts.demo_media` generates JPEG artwork per campaign
+surface, property photos and a 4096x2048 seamless equirectangular panorama
+with Pillow. A committed 74 KB synthetic MP4 (8 s, muted, H.264 from the
+media runtime's pinned FFmpeg 8.0.1) is the banner video. `seed_demo` adds
+idempotent, fixed-id rows: 6 artwork assets, 1 banner video asset, 5 LIVE
+banners (3 with video, none on the dashboard or the one-slot sponsor
+placement), artwork on the pending banner and the active offer, 3 photos plus
+1 panorama per demo property, 2 photos plus 1 panorama per pending submission,
+and a loan photo (sanitized on confirm) plus a loan video (queued for the
+scheduler/media-runtime pipeline). Unit tests check the generated media
+against the real artwork-spec, panorama, MP4-sniff and banner-placement rules.
+Known product bug found, not fixed here: API containers cannot resolve
+`media-runtime`, so `POST` banner-video uploads fail.
+
+**Implemented — Spaces public reads via per-object ACL** (2026-11-13; merged as
+PR #325, mirror #30), branch
 `fix/spaces-public-object-acl`. On the live dev Space, CORS applied (200) but
 `put_bucket_policy` returned 403 for every policy shape, even with a
 full-access key; `public-read` object ACLs work with the app's limited key.
