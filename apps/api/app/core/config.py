@@ -287,6 +287,13 @@ class Settings(BaseSettings):
     SPACES_BUCKET: str = "task-documents"
     SPACES_ACCESS_KEY: str = "minioadmin"  # dev placeholder; real value in prod env
     SPACES_SECRET_KEY: str = "minioadmin"  # dev placeholder; real value in prod env
+    # DigitalOcean Spaces rejects bucket policies (403 even for a full-access
+    # key), so the `public/*` anonymous read that MinIO gets from its bucket
+    # policy is granted per object instead: every write to a `public/` key
+    # carries a `public-read` canned ACL. Keys outside `public/` never get an
+    # ACL and stay private. Off by default for local MinIO, which keeps using
+    # its `public/` bucket policy (docker-compose minio-init).
+    SPACES_PUBLIC_OBJECT_ACL: bool = False
 
     @model_validator(mode="after")
     def _guard_secret_key(self) -> "Settings":

@@ -113,8 +113,10 @@ Production uses its own Space and key, never the development droplet's.
      python -m app.scripts.configure_storage --apply --verify
    ```
 
-   It sets an exact-origin CORS rule and a policy that grants anonymous
-   `s3:GetObject` on `public/*` only. It then probes anonymously and prints
+   It sets an exact-origin CORS rule. Spaces refuses bucket policies, so also
+   set `SPACES_PUBLIC_OBJECT_ACL=true` in `.env.prod`. The app then gives each
+   object under `public/` a `public-read` ACL and leaves every other key
+   private. The command probes anonymously, through that same ACL rule, and prints
    `storage_listing_denied`, `public_object_prefix_only_verified` and
    `private_object_anonymous_access_denied`, plus two CORS checks. Every value
    must be `true`, and any failure exits non-zero. Record those booleans in the

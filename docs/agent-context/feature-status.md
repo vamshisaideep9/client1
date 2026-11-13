@@ -2,8 +2,21 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — DigitalOcean Spaces object storage for dev and production**
-(2026-11-13), branch `feat/spaces-object-storage`. Infra, API tooling and docs;
+**In progress — Spaces public reads via per-object ACL** (2026-11-13), branch
+`fix/spaces-public-object-acl`. On the live dev Space, CORS applied (200) but
+`put_bucket_policy` returned 403 for every policy shape, even with a
+full-access key; `public-read` object ACLs work with the app's limited key.
+New `SPACES_PUBLIC_OBJECT_ACL` (default off; MinIO keeps its bucket policy)
+adds a policy-signed `acl=public-read` to presigned POSTs for `public/` keys
+and `ACL=public-read` to `copy_object`/`put_object_bytes` for `public/`
+destinations; private and look-alike keys never get an ACL.
+`configure_storage` skips the bucket policy in this mode and writes its
+probes through `storage._public_acl`. Evidence: storage/configure/config tests
+101 passed, droplet contract tests 9 passed, API ruff clean. Live droplet
+verification is recorded on the PR.
+
+**Implemented — DigitalOcean Spaces object storage for dev and production**
+(2026-11-13; merged as PR #324, mirror #29), branch `feat/spaces-object-storage`. Infra, API tooling and docs;
 requirement coverage unchanged; no upload-flow, schema, RLS or contract change.
 Recommended: Opus 5.5 / high. The dev droplet overlay now requires every
 `SPACES_*` value from `.env`, clears dev's `localhost:9000` public endpoint and

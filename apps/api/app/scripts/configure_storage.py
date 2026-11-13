@@ -6,9 +6,12 @@ A DigitalOcean Space needs the same two things set on the bucket itself:
 
   * a CORS rule, because browsers POST/PUT presigned uploads straight to the
     Space from the web origin (services/storage.py) -- exact origins only;
-  * a bucket policy granting anonymous s3:GetObject on `{bucket}/public/*`
-    and nothing else (no s3:ListBucket), so banner/property images render
-    while KYC and task documents stay behind short-lived signed URLs.
+  * anonymous read on `public/` and nothing else (no listing), so
+    banner/property images render while KYC and task documents stay behind
+    short-lived signed URLs. MinIO gets this from a bucket policy on
+    `{bucket}/public/*`. DigitalOcean Spaces refuses bucket policies (403
+    even for a full-access key), so with SPACES_PUBLIC_OBJECT_ACL=true the
+    app grants it per object instead and --apply sets only CORS.
 
 Create the Space in the DigitalOcean console first (file listing Restricted,
 CDN off) with a key scoped to that Space only, put the SPACES_* values in the
@@ -16,8 +19,9 @@ environment, then run inside the api container:
 
     uv run python -m app.scripts.configure_storage --apply --verify
 
---verify writes two throwaway probe objects, checks them with anonymous,
-unsigned HTTP requests against the browser-facing endpoint, deletes them, and
+--verify writes three throwaway probe objects through the app's ACL rule,
+checks them with anonymous, unsigned HTTP requests against the
+browser-facing endpoint, deletes them, and
 prints the production evidence booleans (infra/production-environment).
 Output never contains credentials. Exit status is non-zero on any failure.
 """
@@ -110,9 +114,15 @@ def build_public_read_policy(bucket: str) -> str:
     )
 
 
-def apply_posture(client: Any, *, bucket: str, origins: list[str]) -> None:
+def apply_posture(
+    client: Any, *, bucket: str, origins: list[str], bucket_policy: bool = True
+) -> None:
+    """CORS always; the `public/*` bucket policy only where the provider
+    supports one. DigitalOcean Spaces refuses bucket policies, so there
+    SPACES_PUBLIC_OBJECT_ACL grants the same read per object instead."""
     client.put_bucket_cors(Bucket=bucket, CORSConfiguration=build_cors_configuration(origins))
-    client.put_bucket_policy(Bucket=bucket, Policy=build_public_read_policy(bucket))
+    if bucket_policy:
+        client.put_bucket_policy(Bucket=bucket, Policy=build_public_read_policy(bucket))
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -138,8 +148,14 @@ def verify_posture(
     public_endpoint: str,
     origin: str,
     http: HttpCall = anonymous_request,
+    acl_for: Callable[[str], dict[str, str]] = lambda _key: {},
 ) -> dict[str, bool]:
-    """Probe the live bucket anonymously and return named pass/fail checks."""
+    """Probe the live bucket anonymously and return named pass/fail checks.
+
+    `acl_for` is the application's own per-key ACL rule (storage._public_acl),
+    so the probes are written exactly as real uploads are: the check covers
+    the boundary the app enforces, not just the bucket's static settings.
+    """
     bucket_url = f"{public_endpoint.rstrip('/')}/{quote(bucket)}"
     token = uuid.uuid4().hex
     private_key = f"private/{_PROBE_DIR}/{token}.txt"
@@ -150,7 +166,13 @@ def verify_posture(
     written: list[str] = []
     try:
         for key in (private_key, lookalike_key, public_key):
-            client.put_object(Bucket=bucket, Key=key, Body=_PROBE_BODY, ContentType="text/plain")
+            client.put_object(
+                Bucket=bucket,
+                Key=key,
+                Body=_PROBE_BODY,
+                ContentType="text/plain",
+                **acl_for(key),
+            )
             written.append(key)
 
         listing_status, _ = http("GET", f"{bucket_url}/?list-type=2", {})
@@ -224,12 +246,21 @@ def main(argv: list[str] | None = None) -> int:
     print(f"bucket={bucket} endpoint={urlsplit(public_endpoint).netloc} origins={origins}")
 
     try:
+        object_acl = settings.SPACES_PUBLIC_OBJECT_ACL
         if args.apply:
-            apply_posture(client, bucket=bucket, origins=origins)
-            print("applied: CORS rule and public/* read-only policy")
+            apply_posture(client, bucket=bucket, origins=origins, bucket_policy=not object_acl)
+            print(
+                "applied: CORS rule; public/ read via per-object ACL"
+                if object_acl
+                else "applied: CORS rule and public/* read-only policy"
+            )
         if args.verify:
             results = verify_posture(
-                client, bucket=bucket, public_endpoint=public_endpoint, origin=origins[0]
+                client,
+                bucket=bucket,
+                public_endpoint=public_endpoint,
+                origin=origins[0],
+                acl_for=storage._public_acl,
             )
             print(json.dumps(results, indent=2, sort_keys=True))
             if not all(results.values()):

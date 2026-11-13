@@ -123,9 +123,11 @@ Space and key, see `infra/production-environment/README.md`):
    EOF
    ```
 
-`dc.sh config --quiet` fails until all five are set. After the stack starts
-(step 6), apply and verify the bucket's CORS rule and `public/*`-only read
-policy:
+`dc.sh config --quiet` fails until all five are set. Spaces refuses bucket
+policies, so the overlay sets `SPACES_PUBLIC_OBJECT_ACL=true`: the app gives
+each object under `public/` a `public-read` ACL and leaves everything else
+private. After the stack starts (step 6), apply the bucket's CORS rule and
+verify the whole posture:
 
 ```bash
 infra/dev-droplet/dc.sh exec -T api uv run python -m app.scripts.configure_storage --apply --verify
