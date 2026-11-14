@@ -60,6 +60,16 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In progress — stale Agent lead test fixtures** (2026-11-14), branch
+`fix/agent-lead-stale-tests` stacked on PR #334. Six tests in
+`test_agent_api.py` and `test_lead_detail_ownership_api.py` posted Agent
+`requirement` keys (`k`, `injected`, `message`, `product`, `page`) that the
+allow-list added in `4d2acf0` rejects with 422. Request payloads now use the
+allowed `notes` key; the retry test seeds its system-owned `product` in the
+database; the claim test asserts the public message stays unclaimed. Test-only;
+the allow-list is unchanged. Evidence: the 6 pass; both files 37 passed; ruff
+clean. Recommended: Opus 5.5 / medium (test-only).
+
 **Implemented — agent dashboard refinements** (2026-11-14; PR #334, mirror #38, open for review), branch
 `feat/agent-dashboard-refinements` from `upstream/main` `a927f60`. Five
 client-requested Agent items: lead name required; expiry countdown replaced by
@@ -73,7 +83,7 @@ decision CS-017. Evidence is in `feature-status.md`. Deploy note: set
 `PAYOUT_DETAILS_ENCRYPTION_KEY` for api and scheduler before Agents can save
 payout details outside development. Known pre-existing failures: 6 Agent/lead
 ownership tests post requirement keys the schema has rejected since before
-this branch. Next: fix those stale tests; item 9 design brief (managers over
+this branch (fixed in the stacked `fix/agent-lead-stale-tests`). Next: item 9 design brief (managers over
 teams). Recommended: Opus 5.5 / high (migration, triggers, PII).
 
 **Implemented — staff dashboard feedback batch, PR C: personal analytics**

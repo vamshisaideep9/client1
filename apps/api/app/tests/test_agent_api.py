@@ -438,7 +438,7 @@ async def test_introduce_lead_cannot_mutate_assigned_cross_line_lead(client: Asy
     token = _agent_token(auth_uuid, agent_uuid)
     res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile, "name": "HIJACKED", "requirement": {"injected": "yes"}},
+        json={"mobile": mobile, "name": "HIJACKED", "requirement": {"notes": "injected"}},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 409
@@ -478,7 +478,7 @@ async def test_introduce_lead_cannot_mutate_assigned_same_line_lead(client: Asyn
     token = _agent_token(auth_uuid, agent_uuid)
     res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile, "name": "CLAIMED BY AGENT", "requirement": {"note": "mine now"}},
+        json={"mobile": mobile, "name": "CLAIMED BY AGENT", "requirement": {"notes": "mine now"}},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 409
@@ -503,7 +503,7 @@ async def test_introduce_lead_cannot_steal_other_agents_unassigned_lead(
     mobile = unique_mobile()
     first_res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile, "name": "First Agent's Lead", "requirement": {"k": "first"}},
+        json={"mobile": mobile, "name": "First Agent's Lead", "requirement": {"notes": "first"}},
         headers={"Authorization": f"Bearer {first_token}"},
     )
     assert first_res.status_code == 201, first_res.text
@@ -513,7 +513,7 @@ async def test_introduce_lead_cannot_steal_other_agents_unassigned_lead(
     second_token = _agent_token(second_auth_uuid, second_agent_uuid)
     res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile, "name": "STOLEN", "requirement": {"injected": "yes"}},
+        json={"mobile": mobile, "name": "STOLEN", "requirement": {"notes": "injected"}},
         headers={"Authorization": f"Bearer {second_token}"},
     )
     assert res.status_code == 409
@@ -524,7 +524,7 @@ async def test_introduce_lead_cannot_steal_other_agents_unassigned_lead(
     async with _session_mod.AsyncSessionLocal() as db:
         refreshed = await db.get(Lead, uuid.UUID(lead_id))
         assert refreshed.name == "First Agent's Lead"
-        assert refreshed.requirement == {"k": "first"}
+        assert refreshed.requirement == {"notes": "first"}
         assert str(refreshed.origin_agent_profile_uuid) == first_agent_uuid
 
 
