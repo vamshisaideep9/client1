@@ -688,6 +688,7 @@ async def approve_submission(
                 title=sub.title,
                 type=sub.type,
                 location=sub.location,
+                developer_name=sub.developer_name,
                 price_display=format_inr_display(sub.price_paise, sub.listing_intent),
                 meta=sub.meta,
                 image=sub.image,

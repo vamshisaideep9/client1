@@ -45,6 +45,11 @@ if [[ -f scripts/tests/test_production_environment_evidence.py ]]; then
   uv run --no-project python scripts/tests/test_production_environment_evidence.py
 fi
 
+if [[ -f scripts/tests/test_dev_droplet.py ]]; then
+  echo "==> Development droplet overlay tests"
+  uv run --no-project python scripts/tests/test_dev_droplet.py
+fi
+
 if [[ -x ./scripts/verify-api.sh ]]; then
   ./scripts/verify-api.sh "$MODE"
 fi

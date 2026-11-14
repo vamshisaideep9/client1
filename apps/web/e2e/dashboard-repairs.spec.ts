@@ -159,7 +159,7 @@ test("collapsed sidebar shows a white symbol above its toggle and expands beside
     await expect.poll(() => visibleLogo.evaluate((image) => (image as HTMLImageElement).naturalWidth), { timeout: 30_000 }).toBeGreaterThan(0);
     const logo = (await brand.getByRole("link").boundingBox())!;
     const button = (await toggle.boundingBox())!;
-    await expect(visibleLogo).toHaveCSS("filter", "brightness(0) invert(1)");
+    await expect(visibleLogo).toHaveCSS("filter", "none");
     if (name === "Expand sidebar") {
       await expect(visibleLogo).toHaveAttribute("src", "/brand/symbol.png");
       expect(button.y).toBeGreaterThan(logo.y + logo.height);

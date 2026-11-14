@@ -15,7 +15,8 @@ import { formatMobile } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
 import { useAgentLeadDetail } from "./use-agent-lead-detail";
-import { formatAgentLeadExpiry, isAgentLeadExpiryDue } from "./lead-expiry";
+import { AGENT_LEAD_EXPIRY_POLICY, formatAgentLeadExpiry, isAgentLeadExpiryDue } from "./lead-expiry";
+import { ResubmitLeadButton } from "./resubmit-lead-button";
 
 const STATUS_LABEL: Record<string, string> = {
   new: "New",
@@ -31,7 +32,7 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
   const searchParams = useSearchParams();
   const fromPage = Number(searchParams.get("page") ?? 1);
   const backHref = Number.isSafeInteger(fromPage) && fromPage > 1 ? `/dashboard/leads?page=${fromPage}` : "/dashboard/leads";
-  const { lead, status, error, errorStatus, retry, update } = useAgentLeadDetail(leadId);
+  const { lead, status, error, errorStatus, retry, update, resubmit } = useAgentLeadDetail(leadId);
   const [notes, setNotes] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -99,7 +100,9 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
 
   const readOnlyReason =
     lead.status === "expired"
-      ? "This lead returned to the open pool and can no longer be edited here."
+      ? lead.resubmittable
+        ? "This lead expired and returned to the open pool. Resubmit it to restart your 30-day window."
+        : "This lead returned to the open pool and can no longer be edited here."
       : isAgentLeadExpiryDue(lead.status, lead.expires_at, lead.expired_at)
         ? "This lead's conversion window ended and it is awaiting pool release."
         : "A telecaller is already working this lead, so it can no longer be edited here.";
@@ -140,11 +143,27 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
           </Button>
         ) : null}
         <p className="mt-3 text-sm font-medium text-text-primary">
-          {formatAgentLeadExpiry(lead.status, lead.expires_at, lead.expired_at)}
+          {formatAgentLeadExpiry(lead.status, lead.expires_at, lead.expired_at, {
+            resubmittable: lead.resubmittable,
+          })}
         </p>
+        {lead.status !== "converted" && lead.status !== "closed" ? (
+          <p className="mt-1 text-xs text-text-secondary">{AGENT_LEAD_EXPIRY_POLICY}</p>
+        ) : null}
+        {lead.resubmittable ? (
+          <ResubmitLeadButton className="mt-3" leadName={lead.name} onResubmit={resubmit} />
+        ) : null}
       </DashboardPanel>
 
       <DashboardPanel title="Requirement">
+        {typeof (lead.requirement as Record<string, unknown> | null)?.interest_title === "string" ? (
+          <p className="mb-3 text-sm">
+            <span className="text-text-secondary">Interested in: </span>
+            <span className="font-medium text-text-primary">
+              {String((lead.requirement as Record<string, unknown>).interest_title)}
+            </span>
+          </p>
+        ) : null}
         {editable ? (
           <form className="space-y-3" onSubmit={(e) => void onSave(e)}>
             <div>
