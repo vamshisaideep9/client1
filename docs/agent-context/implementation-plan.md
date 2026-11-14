@@ -60,6 +60,20 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**Implemented — security audit fixes, PR 2/5: enquiry and site-visit
+scoping** (2026-11-14; open for review), branch
+`security/re-enquiry-visit-scope` stacked on PR 1. Audit finding #3: a Real
+Estate Agent could list every client's property enquiry and site visit with
+contact name and mobile, and Telecallers/Employees got the whole line through
+the same client list routes. `GET /enquiries` and `GET /site-visits` now return
+only the caller's own rows ("My Enquiries" / "My Site Visits", the only web
+consumers). Migration `b4d6f8a0c2e3` drops `agent` from `enquiries_rls` and
+`site_visits_rls`; the Telecaller/Employee/Sub Admin line branch stays because
+the Telecaller lead workspace, deal-to-visit linking and the Employee
+vehicle-arrangement view read through it. Non-goal: narrowing that branch to
+assigned leads (legacy visits without `lead_uuid` would break deal linking).
+Next: PR 3 payout reject guard. Recommended: Opus 5.5 / high (RLS migration).
+
 **Implemented — security audit fixes, PR 1/5: Next.js 15.5.28** (2026-11-14;
 open for review), branch `security/nextjs-15-5-patch` from `upstream/main`
 `12a2aec`. First of five stacked PRs from the 2026-11-14 read-only audit

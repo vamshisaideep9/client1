@@ -2,8 +2,9 @@
 
 Verifies migration 4d5e6f7a8b9c's hybrid policy: a client sees only their own
 enquiry, another client sees none, a real-estate telecaller/employee/
-sub_admin/agent sees it, a loans-only staff member sees NONE of it
-(cross-line), and platform_scope (Admin/Sub Admin) sees all. Mirrors
+sub_admin sees it (an agent does not, migration b4d6f8a0c2e3), a loans-only
+staff member sees NONE of it (cross-line), and platform_scope (Admin/Sub
+Admin) sees all. Mirrors
 test_site_visits_rls.py's harness.
 
 Requires the Docker stack with migrations applied; auto-skips without Redis.
@@ -156,13 +157,15 @@ async def test_real_estate_sub_admin_can_see_it(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_real_estate_agent_can_see_it(client: AsyncClient) -> None:
+async def test_real_estate_agent_cannot_see_it(client: AsyncClient) -> None:
+    """Audit finding #3 (migration b4d6f8a0c2e3): Agents never read client
+    enquiries or site visits, even on their own business line."""
     _, mobile = await full_registration(client, lines=["real_estate"])
     uid = await _auth_user_uuid(mobile)
     enquiry_id = await _seed_enquiry(uid)
 
     rows = await _select_as(role="agent", business_line="real_estate")
-    assert uuid.UUID(enquiry_id) in [r["id"] for r in rows]
+    assert uuid.UUID(enquiry_id) not in [r["id"] for r in rows]
 
 
 @pytest.mark.asyncio
