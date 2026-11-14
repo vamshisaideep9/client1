@@ -2,6 +2,23 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — security audit fixes, PR 2/5: enquiry and site-visit
+scoping** (2026-11-14; open for review), branch
+`security/re-enquiry-visit-scope` stacked on PR 1. Audit finding #3 (live
+probe: a Real Estate Agent token listed 81/81 enquiries and 128/128 site
+visits). `GET /enquiries` and `GET /site-visits` filter on
+`user_uuid = caller`; migration `b4d6f8a0c2e3` (additive policy replacement,
+one head) removes `agent` from both policies' line-staff role list, with the
+admin, owner and telecaller/employee/sub_admin branches unchanged. Tests:
+`test_enquiries_rls.py` / `test_site_visits_rls.py` now assert an Agent sees
+nothing; new parametrized API tests assert Telecaller/Employee/Agent tokens
+never see another client's rows. Evidence: migration downgrade/upgrade with
+live `pg_policies` inspection each way, `alembic heads` = `b4d6f8a0c2e3`;
+enquiry/site-visit API+RLS 52 passed; telecaller, vehicle-arrangement,
+property-deal and Admin coverage-contract suites 76 passed; ruff check/format
+clean (542 files); exported OpenAPI identical to the committed contract.
+Completion impact: none (security hardening).
+
 **Implemented — security audit fixes, PR 1/5: Next.js 15.5.28** (2026-11-14;
 open for review), branch `security/nextjs-15-5-patch` from `upstream/main`
 `12a2aec`. Audit finding #2: `pnpm audit --prod` reported one critical

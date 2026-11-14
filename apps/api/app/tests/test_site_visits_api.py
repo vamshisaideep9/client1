@@ -354,3 +354,41 @@ async def test_real_estate_staff_cannot_cancel_clients_visit(client: AsyncClient
         "/api/v1/site-visits", headers={"Authorization": f"Bearer {owner_token}"}
     )
     assert still.json()["visits"][0]["status"] == "requested"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", ["telecaller", "employee", "agent"])
+async def test_line_staff_list_never_shows_other_clients_visits(
+    client: AsyncClient, role: str
+) -> None:
+    """Audit finding #3: GET /site-visits is "My Site Visits" for every caller.
+
+    RLS admits real-estate Telecallers/Employees for their own workflows, but
+    this list must not turn into a line-wide directory of client contacts.
+    """
+    owner_token, _ = await full_registration(client, lines=["real_estate"])
+    created = await client.post(
+        "/api/v1/site-visits",
+        headers={"Authorization": f"Bearer {owner_token}"},
+        json=_payload(),
+    )
+    assert created.status_code == 201, created.text
+
+    from sqlalchemy import text as _text
+
+    import app.db.session as _session_mod
+
+    _, staff_mobile = await full_registration(client, lines=["real_estate"])
+    async with _session_mod.AsyncSessionLocal() as db:
+        staff_id = (
+            await db.execute(
+                _text("SELECT id FROM auth_users WHERE mobile = :m"), {"m": staff_mobile}
+            )
+        ).scalar_one()
+
+    resp = await client.get(
+        "/api/v1/site-visits",
+        headers={"Authorization": f"Bearer {_staff_token(str(staff_id), role)}"},
+    )
+    assert resp.status_code == 200
+    assert created.json()["id"] not in [v["id"] for v in resp.json()["visits"]]

@@ -29,10 +29,14 @@ from app.services.properties import get_active_property
 _TERMINAL_STATUSES = {SiteVisitStatus.DONE, SiteVisitStatus.CANCELLED}
 
 
-async def list_site_visits(db: AsyncSession) -> list[SiteVisit]:
+async def list_site_visits(db: AsyncSession, *, user_uuid: UUID) -> list[SiteVisit]:
+    """The caller's own visits. RLS also admits line-scoped staff for their
+    workflows (vehicle arrangements, Telecaller lead workspace); this list must
+    never become a line-wide contact directory for them."""
     result = await db.execute(
         select(SiteVisit)
         .options(selectinload(SiteVisit.vehicle_arrangement))
+        .where(SiteVisit.user_uuid == user_uuid)
         .order_by(SiteVisit.created_at.desc())
     )
     return list(result.scalars().all())

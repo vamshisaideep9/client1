@@ -4,8 +4,8 @@ Same hybrid shape as site_visits (migration 9c1d2e3f4a5b): identity-level owner
 FK (user_uuid -> auth_users.id, keyed on app.auth_user_uuid so a "both"-line
 client's real-estate enquiry never vanishes behind the JWT's loans-first
 client_profile_uuid claim) plus a business_line column (always "real_estate")
-and the standard staff/agent business_line RLS predicate, since real-estate
-telecallers/employees/sub_admins/agents must action enquiries the way they
+and the standard line-staff business_line RLS predicate, since real-estate
+telecallers/employees/sub_admins must action enquiries the way they
 action site-visit requests.
 
 property_ref/title/locality/city/contact_name/contact_mobile are denormalized

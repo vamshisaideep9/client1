@@ -12,8 +12,8 @@ Instead this follows support_tickets' identity-level FK (auth_user_uuid ->
 auth_users.id, named user_uuid here for readability — it is the same GUC,
 app.auth_user_uuid, set from the same JWT `sub` claim, not a per-line
 profile), but — unlike support_tickets — ADDS a business_line column (always
-"real_estate") plus the standard staff/agent business_line RLS predicate from
-loan_applications, since real-estate telecallers/employees/sub_admins/agents
+"real_estate") plus the standard line-staff business_line RLS predicate from
+loan_applications, since real-estate telecallers/employees/sub_admins
 need to see site-visit requests the way loans staff see loan_applications.
 
 property_ref/title/locality/city/contact_name/contact_mobile are denormalized
