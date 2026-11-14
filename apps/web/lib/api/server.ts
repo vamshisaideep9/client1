@@ -11,6 +11,7 @@
 // separate, non-NEXT_PUBLIC_, runtime-only env var instead (see
 // docker-compose.yml's comment on API_INTERNAL_URL for why the split exists).
 
+import { unstable_rethrow } from "next/navigation";
 import type { ApiResponse } from "@/lib/api/client";
 
 if (typeof window !== "undefined") {
@@ -20,7 +21,10 @@ if (typeof window !== "undefined") {
   throw new Error("lib/api/server.ts is server-only and must not be imported by client code.");
 }
 
-const SERVER_BASE_URL = (process.env.API_INTERNAL_URL ?? "http://api:8000").replace(/\/$/, "");
+const SERVER_BASE_URL = (
+  process.env.API_INTERNAL_URL ??
+  (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "http://api:8000")
+).replace(/\/$/, "");
 
 const REQUEST_TIMEOUT_MS = 5_000;
 
@@ -62,6 +66,9 @@ export async function serverFetchJson<TResponse>(
       next: { revalidate },
     });
   } catch (error) {
+    // Next uses thrown signals to opt a route into dynamic rendering. Swallowing
+    // those as network failures can prerender an empty catalogue permanently.
+    unstable_rethrow(error);
     // Includes prod-image-build-time failures (API_INTERNAL_URL unresolved
     // inside the builder) and a stopped/unreachable API at runtime. Callers
     // must treat this the same as an empty result, never let it throw.

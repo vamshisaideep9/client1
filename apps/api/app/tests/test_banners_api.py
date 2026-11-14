@@ -886,7 +886,7 @@ async def test_image_upload_url_returns_conforming_key(client: AsyncClient) -> N
     assert body["object_key"].endswith("diwali-hero.jpg")
     assert body["upload_url"].startswith("http")
     assert body["fields"]["key"] == body["object_key"]
-    assert body["max_bytes"] == 2 * 1024 * 1024
+    assert body["max_bytes"] == 5 * 1024 * 1024
 
 
 @pytest.mark.asyncio

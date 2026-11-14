@@ -12,10 +12,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { DashboardFormSection } from "@/features/dashboard/dashboard-ui";
 import {
+  APPROVAL_AUTHORITY_OPTIONS,
   CONFIGURATION_OPTIONS,
   CONSTRUCTION_OPTIONS,
   FACING_OPTIONS,
   FURNISHING_OPTIONS,
+  SITE_AREA_UNIT_OPTIONS,
   YES_NO_UNKNOWN_OPTIONS,
   propertyFormFamily,
   type PropertyDetailForm,
@@ -167,7 +169,7 @@ function Narrative({
         id={helpId}
         className="mt-1 flex flex-wrap justify-between gap-2 text-xs text-text-secondary"
       >
-        <span>Do not include numbers, links, email addresses, or markup.</span>
+        <span>Numbers up to 6 digits are fine. No phone numbers, links, email addresses, or markup.</span>
         <span>
           {minWords > 0
             ? `${words} words · ${minWords}–${maxWords} required`
@@ -179,6 +181,92 @@ function Narrative({
   );
 }
 
+function RangeField({
+  id,
+  label,
+  from,
+  to,
+  onFrom,
+  onTo,
+  fromError,
+  toError,
+  suffix,
+  optional = false,
+  unit,
+}: {
+  id: string;
+  label: string;
+  from: string;
+  to: string;
+  onFrom: (value: string) => void;
+  onTo: (value: string) => void;
+  fromError?: string;
+  toError?: string;
+  suffix?: string;
+  optional?: boolean;
+  unit?: { value: string; onChange: (value: string) => void; error?: string };
+}) {
+  const box = (
+    boxId: string,
+    boxLabel: string,
+    value: string,
+    onChange: (value: string) => void,
+    error?: string,
+  ) => (
+    <div className="min-w-0 flex-1">
+      <Label htmlFor={boxId} className="text-xs text-text-secondary">{boxLabel}</Label>
+      <div className="relative">
+        <Input
+          id={boxId}
+          name={boxId}
+          type="number"
+          min="0"
+          step="1"
+          inputMode="numeric"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className={suffix ? "pr-14" : undefined}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${boxId}-error` : undefined}
+        />
+        {suffix ? (
+          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-text-secondary">
+            {suffix}
+          </span>
+        ) : null}
+      </div>
+      <ErrorText id={`${boxId}-error`} message={error} />
+    </div>
+  );
+  return (
+    <fieldset className="sm:col-span-2">
+      <legend className="text-sm font-medium leading-none">
+        {label}{optional ? " (optional)" : ""}
+      </legend>
+      <div className="mt-2 flex flex-wrap items-start gap-3">
+        {box(`${id}-from`, "From", from, onFrom, fromError)}
+        {box(`${id}-to`, "To (optional)", to, onTo, toError)}
+        {unit ? (
+          <div className="w-28">
+            <Label htmlFor={`${id}-unit`} className="text-xs text-text-secondary">Unit</Label>
+            <Select value={unit.value} onValueChange={unit.onChange}>
+              <SelectTrigger id={`${id}-unit`} aria-invalid={Boolean(unit.error)}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SITE_AREA_UNIT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <ErrorText id={`${id}-unit-error`} message={unit.error} />
+          </div>
+        ) : null}
+      </div>
+    </fieldset>
+  );
+}
+
 const SALE_OPTIONS = [
   { value: "new_sale", label: "New sale" },
   { value: "resale", label: "Resale" },
@@ -187,17 +275,27 @@ const SALE_OPTIONS = [
 function ApprovalFields({ form, errors, setDetailField }: Pick<Props, "form" | "errors" | "setDetailField">) {
   return (
     <>
-      <Field
+      <Choice
         id="approval-authority"
         label="Local approval authority"
         value={form.details.approvalAuthority}
         onChange={(value) => setDetailField("approvalAuthority", value)}
+        options={APPROVAL_AUTHORITY_OPTIONS}
         error={errors.approvalAuthority}
         optional
       />
+      {form.details.approvalAuthority === "other" ? (
+        <Field
+          id="approval-authority-other"
+          label="Approval authority name"
+          value={form.details.approvalAuthorityOther}
+          onChange={(value) => setDetailField("approvalAuthorityOther", value)}
+          error={errors.approvalAuthorityOther}
+        />
+      ) : null}
       <Field
         id="approval-reference"
-        label="Local approval reference"
+        label="Local approval number"
         value={form.details.approvalReference}
         onChange={(value) => setDetailField("approvalReference", value)}
         error={errors.approvalReference}
@@ -263,16 +361,39 @@ export function PropertyDetailFields({ form, errors, setField, setDetailField }:
               </div>
               <ErrorText id="configurations-error" message={errors.configurations} />
             </div>
-            <Field id="unit-area" label="Unit or plot area" suffix="sq ft" type="number" value={d.unitAreaSqft} onChange={(value) => setDetailField("unitAreaSqft", value)} error={errors.unitAreaSqft} />
-            <Field id="uds-area" label="Undivided share" suffix="sq ft" type="number" value={d.udsSqft} onChange={(value) => setDetailField("udsSqft", value)} error={errors.udsSqft} optional />
+            <RangeField
+              id="unit-area"
+              label="Unit or flat area"
+              suffix="sq ft"
+              from={d.unitAreaSqft}
+              to={d.unitAreaMaxSqft}
+              onFrom={(value) => setDetailField("unitAreaSqft", value)}
+              onTo={(value) => setDetailField("unitAreaMaxSqft", value)}
+              fromError={errors.unitAreaSqft}
+              toError={errors.unitAreaMaxSqft}
+            />
+            <RangeField
+              id="uds-area"
+              label="Undivided share"
+              optional
+              from={d.udsFrom}
+              to={d.udsTo}
+              onFrom={(value) => setDetailField("udsFrom", value)}
+              onTo={(value) => setDetailField("udsTo", value)}
+              fromError={errors.udsFrom}
+              toError={errors.udsTo}
+              unit={{
+                value: d.udsUnit,
+                onChange: (value) => setDetailField("udsUnit", value),
+                error: errors.udsUnit,
+              }}
+            />
             <Field id="price-per-sqft" label="Price per square foot" suffix="₹" type="number" value={d.rateRupees} onChange={(value) => setDetailField("rateRupees", value)} error={errors.rateRupees} />
             {isRent ? null : <Choice id="sale-type" label="Sale type" value={d.saleType} onChange={(value) => setDetailField("saleType", value)} options={SALE_OPTIONS} error={errors.saleType} />}
-            <Choice id="plot-facing" label="Plot facing" value={d.plotFacing} onChange={(value) => setDetailField("plotFacing", value)} options={FACING_OPTIONS} error={errors.plotFacing} optional />
+            <Choice id="plot-facing" label="Flat facing" value={d.plotFacing} onChange={(value) => setDetailField("plotFacing", value)} options={FACING_OPTIONS} error={errors.plotFacing} optional />
             <Choice id="entrance-facing" label="Entrance facing" value={d.facing} onChange={(value) => setDetailField("facing", value)} options={FACING_OPTIONS} error={errors.facing} />
             <Field id="handover" label="Expected handover date" type="date" value={d.expectedHandoverDate} onChange={(value) => setDetailField("expectedHandoverDate", value)} error={errors.expectedHandoverDate} optional={form.constructionStatus !== "under_construction"} />
             <ApprovalFields form={form} errors={errors} setDetailField={setDetailField} />
-            <Narrative id="amenities-description" label="Amenities description" value={d.amenitiesDescription} onChange={(value) => setDetailField("amenitiesDescription", value)} minWords={150} maxWords={500} error={errors.amenitiesDescription} />
-            <Narrative id="about-project" label="About the project" value={d.about} onChange={(value) => setDetailField("about", value)} maxWords={500} error={errors.about} />
           </>
         ) : null}
 
@@ -286,8 +407,6 @@ export function PropertyDetailFields({ form, errors, setField, setDetailField }:
             <Choice id="individual-facing" label="Facing" value={d.facing} onChange={(value) => setDetailField("facing", value)} options={FACING_OPTIONS} error={errors.facing} />
             <Field id="rental-income" label="Monthly rental income" suffix="₹" type="number" value={d.monthlyRentalIncomeRupees} onChange={(value) => setDetailField("monthlyRentalIncomeRupees", value)} error={errors.monthlyRentalIncomeRupees} optional />
             <Choice id="individual-loan" label="Ongoing loan" value={d.ongoingLoanStatus} onChange={(value) => setDetailField("ongoingLoanStatus", value)} options={YES_NO_UNKNOWN_OPTIONS} error={errors.ongoingLoanStatus} />
-            <Narrative id="individual-about" label="About the property" value={d.about} onChange={(value) => setDetailField("about", value)} maxWords={250} error={errors.about} />
-            <Narrative id="individual-other" label="Additional information" value={d.otherInformation} onChange={(value) => setDetailField("otherInformation", value)} maxWords={250} error={errors.otherInformation} optional />
           </>
         ) : null}
 
@@ -301,9 +420,6 @@ export function PropertyDetailFields({ form, errors, setField, setDetailField }:
             <Choice id="income-start" label="Rental income starts" value={d.rentalIncomeStart} onChange={(value) => setDetailField("rentalIncomeStart", value)} options={[{ value: "immediate", label: "From day one" }, { value: "from_handover", label: "From handover" }, { value: "not_applicable", label: "Not applicable" }]} error={errors.rentalIncomeStart} />
             <Field id="commercial-income" label="Monthly rental income" suffix="₹" type="number" value={d.monthlyRentalIncomeRupees} onChange={(value) => setDetailField("monthlyRentalIncomeRupees", value)} error={errors.monthlyRentalIncomeRupees} optional />
             <ApprovalFields form={form} errors={errors} setDetailField={setDetailField} />
-            <Narrative id="commercial-amenities" label="Amenities description" value={d.amenitiesDescription} onChange={(value) => setDetailField("amenitiesDescription", value)} maxWords={150} error={errors.amenitiesDescription} optional />
-            <Narrative id="commercial-about" label="About the property" value={d.about} onChange={(value) => setDetailField("about", value)} maxWords={250} error={errors.about} />
-            <Narrative id="commercial-other" label="Additional information" value={d.otherInformation} onChange={(value) => setDetailField("otherInformation", value)} maxWords={250} error={errors.otherInformation} optional />
           </>
         ) : null}
 
@@ -318,9 +434,6 @@ export function PropertyDetailFields({ form, errors, setField, setDetailField }:
             {isRent ? null : <Choice id="plot-sale-type" label="Sale type" value={d.saleType} onChange={(value) => setDetailField("saleType", value)} options={SALE_OPTIONS} error={errors.saleType} />}
             <Choice id="project-status" label="Project status" value={d.projectStatus} onChange={(value) => setDetailField("projectStatus", value)} options={[{ value: "under_development", label: "Under development" }, { value: "completed", label: "Completed" }]} error={errors.projectStatus} />
             <ApprovalFields form={form} errors={errors} setDetailField={setDetailField} />
-            <Narrative id="plot-amenities" label="Amenities description" value={d.amenitiesDescription} onChange={(value) => setDetailField("amenitiesDescription", value)} maxWords={150} error={errors.amenitiesDescription} optional />
-            <Narrative id="plot-about" label="About the project" value={d.about} onChange={(value) => setDetailField("about", value)} maxWords={500} error={errors.about} />
-            <Narrative id="plot-other" label="Additional information" value={d.otherInformation} onChange={(value) => setDetailField("otherInformation", value)} maxWords={250} error={errors.otherInformation} optional />
           </>
         ) : null}
 
@@ -335,7 +448,6 @@ export function PropertyDetailFields({ form, errors, setField, setDetailField }:
             <Choice id="rythu-bandhu" label="Rythu Bandhu" value={d.rythuBandhuStatus} onChange={(value) => setDetailField("rythuBandhuStatus", value)} options={YES_NO_UNKNOWN_OPTIONS} error={errors.rythuBandhuStatus} />
             <Field id="registration-district" label="Registration district" value={d.registrationDistrict} onChange={(value) => setDetailField("registrationDistrict", value)} error={errors.registrationDistrict} />
             <Field id="sub-registrar" label="Sub-Registrar Office" value={d.subRegistrarOffice} onChange={(value) => setDetailField("subRegistrarOffice", value)} error={errors.subRegistrarOffice} />
-            <Narrative id="agricultural-other" label="Additional information" value={d.otherInformation} onChange={(value) => setDetailField("otherInformation", value)} maxWords={250} error={errors.otherInformation} optional />
           </>
         ) : null}
 
@@ -365,9 +477,69 @@ export function PropertyDetailFields({ form, errors, setField, setDetailField }:
           ]}
           error={errors.reraApplicability}
         />
-          <Field id="rera-number" label="RERA registration number" value={form.reraNumber} onChange={(value) => setField("reraNumber", value)} error={errors.reraNumber} optional />
+          {form.reraApplicability === "applicable" ? (
+            <Field id="rera-number" label="RERA registration number" value={form.reraNumber} onChange={(value) => setField("reraNumber", value)} error={errors.reraNumber} optional />
+          ) : null}
         </div>
       </DashboardFormSection>
     </>
+  );
+}
+
+/**
+ * The public descriptions for the selected property type. Rendered as its own
+ * section just above the media, after the facts and amenities.
+ */
+export function PropertyDescriptionFields({
+  form,
+  errors,
+  setDetailField,
+}: Pick<Props, "form" | "errors" | "setDetailField">) {
+  const family = propertyFormFamily(form.propertySubtype);
+  if (!family) return null;
+  const d = form.details;
+  const aboutLabel = family === "project" || family === "plot" ? "About the project" : "About the property";
+  const aboutMaxWords = family === "project" || family === "plot" ? 500 : 250;
+  return (
+    <DashboardFormSection
+      title="Description"
+      description="What buyers read on the listing. Reviewed before publication."
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        {family !== "individual" && family !== "agricultural" ? (
+          <Narrative
+            id="amenities-description"
+            label="Amenities description"
+            value={d.amenitiesDescription}
+            onChange={(value) => setDetailField("amenitiesDescription", value)}
+            minWords={family === "project" ? 150 : 0}
+            maxWords={family === "project" ? 500 : 150}
+            error={errors.amenitiesDescription}
+            optional={family !== "project"}
+          />
+        ) : null}
+        {family !== "agricultural" ? (
+          <Narrative
+            id="about-property"
+            label={aboutLabel}
+            value={d.about}
+            onChange={(value) => setDetailField("about", value)}
+            maxWords={aboutMaxWords}
+            error={errors.about}
+          />
+        ) : null}
+        {family !== "project" ? (
+          <Narrative
+            id="other-information"
+            label="Additional information"
+            value={d.otherInformation}
+            onChange={(value) => setDetailField("otherInformation", value)}
+            maxWords={250}
+            error={errors.otherInformation}
+            optional
+          />
+        ) : null}
+      </div>
+    </DashboardFormSection>
   );
 }

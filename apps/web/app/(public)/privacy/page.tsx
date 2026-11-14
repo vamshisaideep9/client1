@@ -1,13 +1,12 @@
-import { SITE_NAME } from "@/lib/site";
 import type { Metadata } from "next";
 import { PrivacyContent } from "@/components/help/privacy-content";
 export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description: `How ${SITE_NAME} collects, uses, and protects the information you share with us.`,
+  title: "Privacy Policy | Dhanadhara",
+  description: "How Dhanadhara collects, uses and protects your personal and KYC data, who it is shared with (only with your consent) and how to contact us.",
   alternates: { canonical: "/privacy" },
   openGraph: {
-    title: "Privacy Policy",
-    description: `How ${SITE_NAME} collects, uses, and protects the information you share with us.`,
+    title: "Privacy Policy | Dhanadhara",
+    description: "How Dhanadhara collects, uses and protects your personal and KYC data, who it is shared with (only with your consent) and how to contact us.",
     type: "website",
     url: "/privacy",
   },

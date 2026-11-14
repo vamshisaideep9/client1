@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSubmissionPayload,
+  submissionIssuesToFieldErrors,
+  submissionToFormState,
   validateForm,
   EMPTY_DETAILS,
   EMPTY_FORM,
@@ -99,6 +101,11 @@ describe("buildSubmissionPayload()", () => {
     expect(p.meta).toBeNull();
     expect(p.media).toEqual(MEDIA);
   });
+
+  it("sends a trimmed developer name, or null when blank", () => {
+    expect(buildSubmissionPayload({ ...VALID, developerName: "  My Home " }, MEDIA).developer_name).toBe("My Home");
+    expect(buildSubmissionPayload({ ...VALID, developerName: "   " }, MEDIA).developer_name).toBeNull();
+  });
 });
 
 describe("validateForm()", () => {
@@ -122,6 +129,27 @@ describe("validateForm()", () => {
   it("flags a zero or missing price", () => {
     expect(validateForm({ ...VALID, priceRupees: "0" }).priceRupees).toBeTruthy();
     expect(validateForm({ ...VALID, priceRupees: "" }).priceRupees).toBeTruthy();
+  });
+
+  it("flags an entered undivided share of zero instead of sending 0 to the API", () => {
+    const details = { ...VALID.details, udsFrom: "0" };
+    expect(validateForm({ ...VALID, details }).udsFrom).toBe(
+      "Enter a whole number greater than 0, or leave undivided share blank.",
+    );
+    expect(validateForm({ ...VALID, details: { ...VALID.details, udsFrom: "" } }).udsFrom).toBeUndefined();
+    expect(validateForm({ ...VALID, details: { ...VALID.details, udsFrom: "420" } }).udsFrom).toBeUndefined();
+  });
+
+  it("flags whole-number fields that would be sent as 0", () => {
+    const details = { ...VALID.details, unitAreaSqft: "0.5", numberOfTowers: "0.4" };
+    const errors = validateForm({ ...VALID, details });
+    expect(errors.unitAreaSqft).toBe("Enter a whole number greater than 0 for unit or flat area.");
+    expect(errors.numberOfTowers).toBe("Enter a whole number greater than 0 for number of towers.");
+  });
+
+  it("flags a price that rounds to zero paise", () => {
+    expect(validateForm({ ...VALID, priceRupees: "0.001" }).priceRupees).toBeTruthy();
+    expect(validateForm({ ...VALID, details: { ...VALID.details, rateRupees: "0.004" } }).rateRupees).toBeTruthy();
   });
 
   it("flags missing required text fields", () => {
@@ -177,8 +205,8 @@ describe("validateForm()", () => {
     expect(
       validateForm({
         ...VALID,
-        panorama: new File(["gif"], "tour.gif", { type: "image/gif" }),
-      }).panorama,
+        panoramas: [new File(["gif"], "tour.gif", { type: "image/gif" })],
+      }).panoramas,
     ).toBeTruthy();
   });
 });
@@ -284,5 +312,137 @@ describe("listing links", () => {
     );
 
     expect(errors.listingLinks).toMatch(/at most 4/);
+  });
+});
+
+describe("submissionIssuesToFieldErrors()", () => {
+  it("puts API validation errors on the form field they belong to", () => {
+    expect(
+      submissionIssuesToFieldErrors([
+        { field: "structured_details.project_residence.uds_sqft", message: "Input should be greater than 0" },
+        { field: "price_paise", message: "Input should be greater than 0" },
+        { field: "structured_details.plot.price_per_sqyd_paise", message: "Input should be greater than 0" },
+      ]),
+    ).toEqual({
+      udsFrom: "Input should be greater than 0",
+      priceRupees: "Input should be greater than 0",
+      rateRupees: "Input should be greater than 0",
+    });
+  });
+
+  it("ignores issues it cannot place, so the caller can fall back to a toast", () => {
+    expect(submissionIssuesToFieldErrors([{ field: "media.0.object_key", message: "bad" }])).toEqual({});
+    expect(submissionIssuesToFieldErrors(undefined)).toEqual({});
+  });
+});
+
+describe("listing form refinements (CS-018)", () => {
+  it("sends the unit or flat area and undivided share as From-To ranges", () => {
+    const details = {
+      ...VALID.details,
+      unitAreaMaxSqft: "1450",
+      udsFrom: "40",
+      udsTo: "60",
+      udsUnit: "sqyd",
+      configurations: ["2_5_bhk", "3_5_bhk"],
+    };
+    const p = buildSubmissionPayload({ ...VALID, details }, MEDIA);
+    expect(p.structured_details).toMatchObject({
+      unit_or_plot_area_sqft: 1150,
+      unit_or_plot_area_max_sqft: 1450,
+      uds_sqft: null,
+      uds_area_from: 40,
+      uds_area_to: 60,
+      uds_area_unit: "sqyd",
+      configurations: ["2_5_bhk", "3_5_bhk"],
+    });
+  });
+
+  it("sends no undivided share fields when it is left blank", () => {
+    const p = buildSubmissionPayload(VALID, MEDIA);
+    expect(p.structured_details).toMatchObject({
+      uds_area_from: null,
+      uds_area_to: null,
+      uds_area_unit: null,
+    });
+  });
+
+  it("checks the To values against From", () => {
+    expect(
+      validateForm({ ...VALID, details: { ...VALID.details, unitAreaMaxSqft: "900" } }).unitAreaMaxSqft,
+    ).toBe("The unit or flat area To value must not be less than From.");
+    expect(
+      validateForm({ ...VALID, details: { ...VALID.details, udsFrom: "60", udsTo: "40" } }).udsTo,
+    ).toBe("The undivided share To value must not be less than From.");
+    expect(
+      validateForm({ ...VALID, details: { ...VALID.details, udsTo: "40" } }).udsFrom,
+    ).toBe("Enter the undivided share From value before To.");
+  });
+
+  it("uses a predefined authority or the typed Other name", () => {
+    const predefined = buildSubmissionPayload(
+      { ...VALID, details: { ...VALID.details, approvalAuthority: "HMDA", approvalReference: "LP/12/2024" } },
+      MEDIA,
+    );
+    expect(predefined.structured_details).toMatchObject({
+      local_approval: { authority: "HMDA", reference_number: "LP/12/2024" },
+    });
+    const other = { ...VALID.details, approvalAuthority: "other", approvalAuthorityOther: "  GVMC " };
+    expect(buildSubmissionPayload({ ...VALID, details: other }, MEDIA).structured_details).toMatchObject({
+      local_approval: { authority: "GVMC" },
+    });
+    expect(
+      validateForm({ ...VALID, details: { ...VALID.details, approvalAuthority: "other" } }).approvalAuthorityOther,
+    ).toBe("Enter the approval authority.");
+  });
+
+  it("only sends a RERA number when RERA applies", () => {
+    expect(buildSubmissionPayload(VALID, MEDIA).rera_number).toBe("TS-RERA-123");
+    expect(
+      buildSubmissionPayload({ ...VALID, reraApplicability: "exemption_claimed" }, MEDIA).rera_number,
+    ).toBeNull();
+  });
+
+  it("allows short numbers in descriptions but not phone numbers", () => {
+    const about = "Three towers with 450 homes, ready by 2027.";
+    expect(validateForm({ ...VALID, details: { ...VALID.details, about } }).about).toBeUndefined();
+    for (const phone of ["Call 9876543210", "Call 98765 43210", "Call +91-98765-43210"]) {
+      expect(validateForm({ ...VALID, details: { ...VALID.details, about: phone } }).about).toContain(
+        "up to 6 digits",
+      );
+    }
+  });
+
+  it("accepts AVIF photos and up to ten 360 images", () => {
+    const avif = new File(["avif"], "front.avif", { type: "image/avif" });
+    expect(validateForm({ ...VALID, images: [avif] }).images).toBeUndefined();
+    const pano = (name: string) => new File(["png"], name, { type: "image/png" });
+    const ten = Array.from({ length: 10 }, (_, index) => pano(`p${index}.png`));
+    expect(validateForm({ ...VALID, panoramas: ten }).panoramas).toBeUndefined();
+    expect(validateForm({ ...VALID, panoramas: [...ten, pano("p10.png")] }).panoramas).toBe(
+      "Choose at most 10 360 images.",
+    );
+  });
+
+  it("loads a legacy single undivided share and a free-typed authority for editing", () => {
+    const submission = {
+      ...buildSubmissionPayload(VALID, MEDIA),
+      listing_intent: "sale",
+      rera_applicability: "applicable",
+      rera_number: "TS-RERA-123",
+      structured_details: {
+        ...buildSubmissionPayload(VALID, MEDIA).structured_details,
+        uds_sqft: 420,
+        uds_area_from: null,
+        uds_area_to: null,
+        uds_area_unit: null,
+        local_approval: { authority: "Gram Panchayat Kondapur", reference_number: null },
+      },
+    } as unknown as Parameters<typeof submissionToFormState>[0];
+    const form = submissionToFormState(submission);
+    expect(form.details.udsFrom).toBe("420");
+    expect(form.details.udsUnit).toBe("sqft");
+    expect(form.details.approvalAuthority).toBe("other");
+    expect(form.details.approvalAuthorityOther).toBe("Gram Panchayat Kondapur");
   });
 });
