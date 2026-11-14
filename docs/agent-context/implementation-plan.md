@@ -60,7 +60,7 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — agent dashboard refinements** (2026-11-14), branch
+**Implemented — agent dashboard refinements** (2026-11-14; PR #334, mirror #38, open for review), branch
 `feat/agent-dashboard-refinements` from `upstream/main` `a927f60`. Five
 client-requested Agent items: lead name required; expiry countdown replaced by
 policy copy, a same-Agent Resubmit after expiry (fresh 30-day window, only

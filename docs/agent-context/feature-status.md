@@ -2,7 +2,7 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — agent dashboard refinements** (2026-11-14), branch
+**Implemented — agent dashboard refinements** (2026-11-14; PR #334, mirror #38, open for review), branch
 `feat/agent-dashboard-refinements` from `upstream/main` `a927f60`. Lead name
 required; expiry policy copy, same-Agent Resubmit and 7-day reminder;
 encrypted Agent bank/UPI payout details; "Hi <name>" Agent home; 5 MB

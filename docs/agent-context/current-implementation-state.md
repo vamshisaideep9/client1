@@ -532,7 +532,8 @@ FR-4.6 and CS-009.
   logos, banners, campaign images raised from 1, 2 and 4 MB). MP4 video stays
   at 20 MB.
 
-**Implementation status:** Implemented on `feat/agent-dashboard-refinements`.
+**Implementation status:** Implemented on `feat/agent-dashboard-refinements` in
+[PR #334](https://github.com/brollysolutions/client1/pull/334) (mirror #38).
 Migrations `f8a0c2e4b6d1` (resubmit-aware expiry trigger, `resubmit_count`,
 `expiry_reminder_sent_at`) and `a1b3d5f7c9e2` (`agent_payout_details` with
 owner-only RLS and a confined erase function).
