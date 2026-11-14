@@ -142,7 +142,7 @@ async def test_public_capture_cannot_overwrite_agent_owned_details(
         json={
             "mobile": mobile,
             "name": "Agent Supplied",
-            "requirement": {"message": "Agent message"},
+            "requirement": {"notes": "Agent message"},
         },
         headers={"Authorization": f"Bearer {_agent_token(agent_user, agent_profile)}"},
     )
@@ -166,9 +166,12 @@ async def test_public_capture_cannot_overwrite_agent_owned_details(
         lead = await db.get(Lead, uuid.UUID(created.json()["id"]))
         assert lead is not None
         assert lead.name == "Agent Supplied"
-        assert lead.requirement["message"] == "Agent message"
+        assert lead.requirement["notes"] == "Agent message"
         assert lead.detail_ownership["name"]["role"] == "agent"
-        assert lead.detail_ownership["requirement.message"]["role"] == "agent"
+        assert lead.detail_ownership["requirement.notes"]["role"] == "agent"
+        # The public form may only add its own, unclaimed field beside them.
+        assert lead.requirement["message"] == "Public overwrite"
+        assert lead.detail_ownership["requirement.message"]["role"] == "unclaimed"
 
 
 @pytest.mark.asyncio
@@ -190,24 +193,37 @@ async def test_agent_retry_preserves_system_owned_requirement(
         json={
             "mobile": mobile,
             "name": "Agent Supplied",
-            "requirement": {"product": "Original product", "notes": "Original notes"},
+            "requirement": {"notes": "Original notes"},
         },
         headers=headers,
     )
     assert created.status_code == 201, created.text
+
+    # Agents may only send notes / property_id / product_slug, so a
+    # system-owned field reaches the lead from the platform side.
+    import app.db.session as session_module
+    from app.services.lead_details import owner
+
+    async with session_module.AsyncSessionLocal() as db:
+        lead = await db.get(Lead, uuid.UUID(created.json()["id"]))
+        assert lead is not None
+        lead.requirement = {**(lead.requirement or {}), "product": "Original product"}
+        lead.detail_ownership = {
+            **(lead.detail_ownership or {}),
+            "requirement.product": owner("system"),
+        }
+        await db.commit()
 
     retried = await client.post(
         "/api/v1/agent/leads",
         json={
             "mobile": mobile,
             "name": "Agent Supplied",
-            "requirement": {"product": "Overwrite", "notes": "Updated notes"},
+            "requirement": {"notes": "Updated notes"},
         },
         headers=headers,
     )
     assert retried.status_code == 201, retried.text
-
-    import app.db.session as session_module
 
     async with session_module.AsyncSessionLocal() as db:
         lead = await db.get(Lead, uuid.UUID(created.json()["id"]))
@@ -248,7 +264,7 @@ async def test_agent_claim_transfers_unclaimed_but_preserves_system_metadata(
         json={
             "mobile": mobile,
             "name": "Agent name",
-            "requirement": {"page": "overwrite", "message": "Agent message"},
+            "requirement": {"notes": "Agent message"},
         },
         headers={"Authorization": f"Bearer {_agent_token(agent_user, agent_profile)}"},
     )
@@ -259,12 +275,16 @@ async def test_agent_claim_transfers_unclaimed_but_preserves_system_metadata(
     async with session_module.AsyncSessionLocal() as db:
         lead = await db.get(Lead, uuid.UUID(claimed.json()["id"]))
         assert lead is not None
+        # The unclaimed public name transfers to the claiming Agent; system
+        # metadata and the visitor's own message are left as they were.
         assert lead.name == "Agent name"
         assert lead.requirement["page"] == "contact"
-        assert lead.requirement["message"] == "Agent message"
+        assert lead.requirement["message"] == "Public message"
+        assert lead.requirement["notes"] == "Agent message"
         assert lead.detail_ownership["name"]["role"] == "agent"
         assert lead.detail_ownership["requirement.page"]["role"] == "system"
-        assert lead.detail_ownership["requirement.message"]["role"] == "agent"
+        assert lead.detail_ownership["requirement.message"]["role"] == "unclaimed"
+        assert lead.detail_ownership["requirement.notes"]["role"] == "agent"
 
 
 @pytest.mark.asyncio

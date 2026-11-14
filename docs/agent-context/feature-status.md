@@ -2,6 +2,16 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — stale Agent lead test fixtures** (2026-11-14; PR #335, mirror #39, open for review), branch
+`fix/agent-lead-stale-tests` stacked on PR #334. Six tests in
+`test_agent_api.py` and `test_lead_detail_ownership_api.py` posted Agent
+`requirement` keys (`k`, `injected`, `message`, `product`, `page`) that the
+allow-list added in `4d2acf0` rejects with 422. Request payloads now use the
+allowed `notes` key; the retry test seeds its system-owned `product` in the
+database; the claim test asserts the public message stays unclaimed. Test-only;
+the allow-list is unchanged. Evidence: the 6 pass; both files 37 passed; ruff
+clean. Recommended: Opus 5.5 / medium (test-only).
+
 **Implemented — agent dashboard refinements** (2026-11-14; PR #334, mirror #38, open for review), branch
 `feat/agent-dashboard-refinements` from `upstream/main` `a927f60`. Lead name
 required; expiry policy copy, same-Agent Resubmit and 7-day reminder;
