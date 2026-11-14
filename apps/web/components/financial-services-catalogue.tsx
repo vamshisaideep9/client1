@@ -100,8 +100,8 @@ export function FinancialServicesCatalogue({
             Explore financial services
           </h2>
           <p className="mt-4 text-lg text-text-secondary">
-            Explore our loans, insurance and credit card services. Compare available
-            provider options or enquire with our team for guidance.
+            Explore our loan and credit card services. Compare available provider
+            options or enquire with our team for guidance.
           </p>
         </div>
       </div>

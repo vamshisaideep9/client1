@@ -369,6 +369,10 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   content_block_archived: { label: "Content block archived", icon: Archive, tone: "bg-muted text-text-secondary" },
   loan_application_updated: { label: "Loan application updated", icon: ClipboardList, tone: "bg-loans-soft text-brand-link" },
   property_deal_updated: { label: "Property deal updated", icon: Home, tone: "bg-realestate-soft text-brand-link" },
+  agent_lead_resubmitted: { label: "Agent lead resubmitted", icon: RefreshCw, tone: "bg-loans-soft text-brand-link" },
+  agent_payout_details_updated: { label: "Agent payout details saved", icon: Wallet, tone: "bg-muted text-text-secondary" },
+  agent_payout_details_deleted: { label: "Agent payout details removed", icon: Eraser, tone: "bg-muted text-text-secondary" },
+  agent_payout_details_viewed: { label: "Agent payout details viewed", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
   vehicle_arrangement_updated: {
     label: "Vehicle arrangement updated",
     icon: CarFront,

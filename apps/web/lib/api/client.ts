@@ -192,7 +192,14 @@ export async function apiRequest<TResponse = undefined>(
     }
   }
 
-  const payload = safeParse(await res.text());
+  let payload: unknown;
+  try {
+    payload = safeParse(await res.text());
+  } catch {
+    // fetch resolves at headers; aborts/disconnects can still reject the body.
+    // Preserve the result contract without retrying a potentially accepted write.
+    return { ok: false, status: 0, error: NETWORK_ERROR };
+  }
   if (!res.ok) {
     const issues = validationIssues(payload, res.status);
     return {

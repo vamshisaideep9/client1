@@ -11,9 +11,9 @@ import { AGENT_FAQ_ITEMS, faqPageJsonLd } from "@/lib/faq";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Earn with Us: Partner Commission and Referral Cashback",
+  title: "Become a Loan DSA Partner or Refer & Earn | Dhanadhara",
   description:
-    "Become a loan DSA or real estate partner and earn commission, or refer friends and earn cashback when their deal completes. Free to join, KYC verified.",
+    "Join from anywhere in India as a loan DSA or real estate partner. Earn commission on closed deals, paid within 45 days. Free to join, KYC verified.",
   keywords: [
     "become a loan agent",
     "loan DSA registration",
@@ -23,13 +23,13 @@ export const metadata: Metadata = {
     "loan agent commission",
     "agent partner program",
     "refer and earn",
-    "referral cashback",
+    "referral bonus",
   ],
   alternates: { canonical: "/earn-with-us" },
   openGraph: {
-    title: "Earn with Us: Partner Commission and Referral Cashback",
+    title: "Become a Loan DSA Partner or Refer & Earn | Dhanadhara",
     description:
-      "Become a loan DSA or real estate partner and earn commission, or refer friends and earn cashback when their deal completes. Free to join, KYC verified.",
+      "Join from anywhere in India as a loan DSA or real estate partner. Earn commission on closed deals, paid within 45 days. Free to join, KYC verified.",
     type: "website",
     url: "/earn-with-us",
   },
