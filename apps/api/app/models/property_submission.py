@@ -97,6 +97,7 @@ class PropertySubmission(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     type: Mapped[str] = mapped_column(String(40), nullable=False)
     location: Mapped[str] = mapped_column(String(160), nullable=False)
+    developer_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     meta: Mapped[str | None] = mapped_column(String(120), nullable=True)
     image: Mapped[str | None] = mapped_column(String(200), nullable=True)
     category: Mapped[PropertyCategory] = mapped_column(property_category_enum, nullable=False)

@@ -81,6 +81,23 @@ describe("Lead Details validation", () => {
     expect(validateCallLog({ notes: "Spoke to the customer", followUpAt: "" }, now)).toEqual({});
   });
 
+  it("allows call notes and task descriptions up to 1500 words", () => {
+    const fifteenHundred = Array.from({ length: 1500 }, () => "word").join(" ");
+    const tooMany = `${fifteenHundred} extra`;
+
+    expect(validateCallLog({ notes: fifteenHundred, followUpAt: "" })).toEqual({});
+    expect(validateCallLog({ notes: tooMany, followUpAt: "" })).toEqual({
+      notes: "Notes must be 1,500 words or fewer.",
+    });
+    expect(validateFieldTask({ notes: fifteenHundred, dueAt: "" })).toEqual({});
+    expect(validateFieldTask({ notes: tooMany, dueAt: "" })).toEqual({
+      notes: "Task description must be 1,500 words or fewer.",
+    });
+    expect(validateCallLog({ notes: "x".repeat(10_001), followUpAt: "" })).toEqual({
+      notes: "Notes must be 10,000 characters or fewer.",
+    });
+  });
+
   it("validates optional loan progress terms when entered", () => {
     expect(
       validateLoanProgressTerms({
