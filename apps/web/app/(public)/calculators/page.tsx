@@ -11,9 +11,9 @@ import type { CalculatorDef } from "@/lib/calculators/types";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Financial Calculators: EMI, Eligibility, Stamp Duty & More",
+  title: "EMI, Eligibility & Stamp Duty Calculators | Dhanadhara",
   description:
-    "Free financial calculators for loans, real estate, credit cards, and insurance in India. Work out your EMI, eligibility, stamp duty, card payoff, term cover, and more in seconds.",
+    "Free calculators for India: EMI, loan eligibility, prepayment, stamp duty, GST on property, rent vs buy, card payoff and insurance cover. No login.",
   keywords: [
     "financial calculators",
     "emi calculator",
@@ -25,9 +25,9 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/calculators" },
   openGraph: {
-    title: "Financial Calculators for Loans & Real Estate",
+    title: "EMI, Eligibility & Stamp Duty Calculators | Dhanadhara",
     description:
-      "Work out your EMI, eligibility, affordability, stamp duty, card payoff, insurance cover and more with our free calculators.",
+      "Free calculators for India: EMI, loan eligibility, prepayment, stamp duty, GST on property, rent vs buy, card payoff and insurance cover. No login.",
     type: "website",
     url: "/calculators",
   },
@@ -77,7 +77,7 @@ export default function CalculatorsHubPage() {
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
             <div>
               <h1 className="font-heading text-4xl font-semibold text-[var(--nav-text)] sm:text-5xl lg:text-6xl">
-                Financial calculators for loans and property
+                Free loan and property calculators
               </h1>
               <p className="mt-4 max-w-2xl text-lg text-[var(--nav-text)] sm:text-xl">
                 Plan your money with clear, honest numbers. Work out your EMI, loan eligibility,

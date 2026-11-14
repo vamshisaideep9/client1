@@ -37,6 +37,7 @@ from app.jobs.purge_property_media import purge_property_media
 from app.jobs.purge_task_document_orphans import purge_task_document_orphans
 from app.jobs.reconcile_payout_links import reconcile_payout_links
 from app.jobs.reconcile_payouts import reconcile_payouts
+from app.jobs.remind_agent_lead_expiry import remind_agent_lead_expiry
 from app.jobs.retention_purge import retention_purge_job
 from app.models.auth import RefreshToken
 
@@ -295,6 +296,15 @@ def build_scheduler() -> AsyncIOScheduler:
         trigger="interval",
         minutes=15,
         id="expire_agent_leads",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    add_operational_job(
+        remind_agent_lead_expiry,
+        trigger="interval",
+        hours=1,  # reminder is day-granular; hourly is ample
+        id="remind_agent_lead_expiry",
         max_instances=1,
         coalesce=True,
         replace_existing=True,

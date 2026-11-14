@@ -76,7 +76,7 @@ from app.schemas.financial_catalog import (
     ProviderOfferCreate,
     ProviderOfferUpdate,
 )
-from app.schemas.lead_details import AdminLeadDetailsPatch, LeadDetailsRead
+from app.schemas.lead_details import AdminLeadDetailsPatch, AdminLeadDetailsRead, LeadDetailsRead
 from app.schemas.loan_config import (
     AdminBankListResponse,
     AdminBankRead,
@@ -164,6 +164,7 @@ from app.services.lead_details import (
 from app.services.leads import list_assigned_leads, list_unassigned_leads
 from app.services.loan_applications import (
     BankNotAvailableForLoanType,
+    SanctionTermsRequired,
     StatusReasonRequired,
     TerminalApplication,
     TermsNotAllowedAtStage,
@@ -227,6 +228,7 @@ from app.services.support_tickets import (
 )
 from app.services.task_feedback import list_feedback_media
 from app.services.tasks import list_active_employees, list_tasks_for_admin
+from app.services.telecaller import request_summaries_for_leads
 
 router = APIRouter()
 
@@ -840,20 +842,23 @@ async def list_assigned(
     ]
 
 
-@router.get("/leads/{lead_id}/details", response_model=LeadDetailsRead)
+@router.get("/leads/{lead_id}/details", response_model=AdminLeadDetailsRead)
 async def get_lead_details(
     lead_id: UUID,
     response: Response,
     current_user: CurrentUser = Depends(require_platform_admin),
     db: AsyncSession = Depends(get_db),
-) -> LeadDetailsRead:
+) -> AdminLeadDetailsRead:
     response.headers["Cache-Control"] = "private, no-store"
     actor = DetailActor(role="admin", subject_uuid=current_user.id, auth_user_uuid=current_user.id)
     try:
         lead = await get_lead_details_for_actor(db, lead_id, actor)
     except LeadDetailsNotFound as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found.") from exc
-    return to_lead_details_read(lead, actor)
+    # What the client applied for and when (loan applications, enquiries,
+    # site visits, deals), newest first.
+    requests = (await request_summaries_for_leads(db, [lead.id]))[lead.id]
+    return AdminLeadDetailsRead(**to_lead_details_read(lead, actor).model_dump(), requests=requests)
 
 
 @router.patch("/leads/{lead_id}/details", response_model=LeadDetailsRead)
@@ -1006,6 +1011,11 @@ async def update_loan_application_progress(
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Deal terms can only be set once the application has been submitted to a bank.",
+        ) from exc
+    except SanctionTermsRequired as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Add the sanctioned amount and bank before marking the loan sanctioned or disbursed.",
         ) from exc
     except UnknownBank as exc:
         raise HTTPException(

@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
+import { LongNoteField } from "@/features/dashboard/long-note-field";
 import { UserAvatar } from "@/components/user-avatar";
 import {
   DashboardBackLink,
@@ -32,29 +32,91 @@ import {
   type FieldErrors,
 } from "@/lib/form-validation";
 import { formatMobile } from "@/lib/phone";
-import type { LeadActivityCreate } from "@/lib/telecaller-api";
+import type { LeadActivityCreate, TelecallerLeadDetail } from "@/lib/telecaller-api";
 import { cn } from "@/lib/utils";
 
+import { CallLogPanel } from "./telecaller-call-log";
+import { ClientHistoryButton } from "./telecaller-client-history";
 import {
   validateCallLog,
   type CallLogField,
 } from "./telecaller-lead-detail-validation";
 import {
-  DISPOSITION_LABEL,
   DISPOSITION_OPTIONS,
   INTEREST_OPTIONS,
   LEAD_STATUS_OPTIONS,
   STATUS_LABEL,
-  dispositionDotClass,
-  formatDateTime,
   statusAccentBorderClass,
 } from "./telecaller-lead-status";
 import { TelecallerLoanAppsSection } from "./telecaller-loan-apps-section";
-import { TelecallerPropertyDealsSection } from "./telecaller-property-deals-section";
+import {
+  CreateDealForm,
+  TelecallerPropertyDealsSection,
+} from "./telecaller-property-deals-section";
+import { TelecallerRequestDetails } from "./telecaller-request-details";
+import { TelecallerRequestList } from "./telecaller-request-list";
+import {
+  buildWorkspaceRequests,
+  defaultRequestKey,
+  formatAppliedAt,
+  parseRequestKey,
+  type WorkspaceRequest,
+} from "./telecaller-requests";
 import { TelecallerTasksSection } from "./telecaller-tasks-section";
 import { useTelecallerLeadDetail } from "./use-telecaller-lead-detail";
 
 type CallFormField = CallLogField | "disposition" | "interestLevel";
+type Actions = ReturnType<typeof useTelecallerLeadDetail>;
+
+const GENERAL = "general";
+
+/** The workspace for one selected request: its own pipeline or details. */
+function RequestWorkspace({
+  lead,
+  request,
+  actions,
+}: {
+  lead: TelecallerLeadDetail;
+  request: WorkspaceRequest;
+  actions: Pick<Actions, "addTxn" | "updateApp" | "createDeal" | "updateDeal">;
+}) {
+  switch (request.kind) {
+    case "loan_application": {
+      const application = lead.loan_applications?.find((item) => item.id === request.id);
+      return application ? (
+        <TelecallerLoanAppsSection
+          applications={[application]}
+          onAddTxn={actions.addTxn}
+          onUpdateApp={actions.updateApp}
+        />
+      ) : null;
+    }
+    case "property_deal": {
+      const deal = lead.property_deals?.find((item) => item.id === request.id);
+      return deal ? (
+        <TelecallerPropertyDealsSection
+          leadId={lead.id}
+          deals={[deal]}
+          showCreate={false}
+          onCreateDeal={actions.createDeal}
+          onUpdateDeal={actions.updateDeal}
+        />
+      ) : null;
+    }
+    case "financial_enquiry": {
+      const item = lead.financial_enquiries?.find((entry) => entry.id === request.id);
+      return item ? <TelecallerRequestDetails request={{ kind: request.kind, item }} /> : null;
+    }
+    case "property_enquiry": {
+      const item = lead.property_enquiries?.find((entry) => entry.id === request.id);
+      return item ? <TelecallerRequestDetails request={{ kind: request.kind, item }} /> : null;
+    }
+    case "site_visit": {
+      const item = lead.site_visits?.find((entry) => entry.id === request.id);
+      return item ? <TelecallerRequestDetails request={{ kind: request.kind, item }} /> : null;
+    }
+  }
+}
 
 export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
   const {
@@ -71,6 +133,24 @@ export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
     createDeal,
     updateDeal,
   } = useTelecallerLeadDetail(leadId);
+
+  const requests = React.useMemo(() => (lead ? buildWorkspaceRequests(lead) : []), [lead]);
+  const [selectedKey, setSelectedKey] = React.useState<string | null>(null);
+  const selected = requests.find((request) => request.key === selectedKey) ?? null;
+
+  // Keep a valid selection as the lead (re)loads: the first visit opens the
+  // newest request still in progress; a vanished selection falls back too.
+  React.useEffect(() => {
+    if (!lead) return;
+    if (!selectedKey || !requests.some((request) => request.key === selectedKey)) {
+      setSelectedKey(defaultRequestKey(requests));
+    }
+  }, [lead, requests, selectedKey]);
+
+  const [aboutKey, setAboutKey] = React.useState<string>(GENERAL);
+  React.useEffect(() => {
+    setAboutKey(selectedKey ?? GENERAL);
+  }, [selectedKey]);
 
   const [disposition, setDisposition] = React.useState<LeadActivityCreate["disposition"] | "">("");
   const [interestLevel, setInterestLevel] = React.useState<
@@ -115,6 +195,7 @@ export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
       interest_level: disposition === "connected" ? interestLevel || null : null,
       notes: notes.trim() || null,
       follow_up_at: followUpAt ? new Date(followUpAt).toISOString() : null,
+      request: aboutKey === GENERAL ? null : parseRequestKey(aboutKey),
     });
     setLoggingCall(false);
     if (res.ok) {
@@ -147,7 +228,7 @@ export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
     }
   }
 
-  if (status === "loading") {
+  if (status === "loading" && !lead) {
     return (
       <DashboardPage className="space-y-5">
         <Skeleton className="h-9 w-64 rounded-lg" />
@@ -165,6 +246,11 @@ export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
   }
 
   const leadName = lead.name ?? "Unnamed lead";
+  const latest = lead.latest_request;
+  const aboutRequest = requests.find((request) => request.key === aboutKey);
+  const aboutLabel = aboutRequest
+    ? `${aboutRequest.title} · ${formatAppliedAt(aboutRequest.applied_at)}`
+    : "General (not one application)";
 
   return (
     <DashboardPage>
@@ -172,34 +258,49 @@ export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
 
       <DashboardHeader
         title={leadName}
-        description={`${formatMobile(lead.mobile)} · Review progress, record the next action, and keep follow-ups current.`}
+        description={
+          latest
+            ? `${formatMobile(lead.mobile)} · Latest: ${latest.title}, applied ${formatAppliedAt(latest.applied_at)}`
+            : `${formatMobile(lead.mobile)} · Review progress, record the next action, and keep follow-ups current.`
+        }
         actions={
-          <ContactActions mobile={lead.mobile} name={leadName} />
+          <div className="flex flex-wrap items-center gap-2">
+            <ContactActions mobile={lead.mobile} name={leadName} />
+            <ClientHistoryButton leadId={lead.id} name={leadName} />
+          </div>
         }
       />
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="min-w-0 xl:col-start-1 xl:row-start-1">
-          {lead.business_line === "loans" ? (
-            <TelecallerLoanAppsSection
-              applications={lead.loan_applications}
-              onAddTxn={addTxn}
-              onUpdateApp={updateApp}
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0 space-y-5 xl:col-start-1 xl:row-start-1">
+          <TelecallerRequestList
+            requests={requests}
+            activities={lead.activities}
+            selectedKey={selectedKey}
+            onSelect={setSelectedKey}
+            footer={
+              lead.business_line === "real_estate" ? (
+                <div>
+                  <h3 className="text-sm font-semibold text-text-primary">Open a property deal</h3>
+                  <p className="mt-0.5 text-xs text-text-secondary">
+                    Start a deal when the client is ready to move on a property.
+                  </p>
+                  <CreateDealForm leadId={lead.id} onCreate={createDeal} />
+                </div>
+              ) : null
+            }
+          />
+
+          {selected ? (
+            <RequestWorkspace
+              lead={lead}
+              request={selected}
+              actions={{ addTxn, updateApp, createDeal, updateDeal }}
             />
           ) : null}
-
-          {lead.business_line === "real_estate" ? (
-            <TelecallerPropertyDealsSection
-              leadId={lead.id}
-              deals={lead.property_deals}
-              onCreateDeal={createDeal}
-              onUpdateDeal={updateDeal}
-            />
-          ) : null}
-
         </div>
 
-        <aside className="space-y-5 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:sticky xl:top-24">
+        <aside className="min-w-0 space-y-5 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:sticky xl:top-24">
           <DashboardPanel
             title="Lead status"
             description="Keep the overall lead state aligned with the latest conversation."
@@ -251,6 +352,32 @@ export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
               onSubmit={(e) => void onLogCall(e)}
             >
               <DashboardFormSection title="Outcome">
+                <div>
+                  <Label htmlFor="lead-call-about">About</Label>
+                  <Select
+                    value={aboutKey}
+                    // Radix reports "" when the value changes before its options
+                    // have rendered; keep the chosen request instead.
+                    onValueChange={(value) => value && setAboutKey(value)}
+                  >
+                    <SelectTrigger id="lead-call-about" className="w-full">
+                      {/* Explicit label: the selection can change before the
+                          option list has ever rendered. */}
+                      <SelectValue className="min-w-0 overflow-hidden">
+                        <span className="block min-w-0 truncate">{aboutLabel}</span>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={GENERAL}>General (not one application)</SelectItem>
+                      {requests.map((request) => (
+                        <SelectItem key={request.key} value={request.key}>
+                          {request.title} · {formatAppliedAt(request.applied_at)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div>
                   <Label htmlFor="lead-call-disposition">
                     Call outcome
@@ -354,11 +481,11 @@ export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
                 </div>
                 <div>
                   <Label htmlFor="lead-call-notes">Notes (optional)</Label>
-                  <Textarea
+                  <LongNoteField
                     id="lead-call-notes"
+                    counterId="lead-call-notes-count"
                     name="notes"
                     rows={3}
-                    maxLength={1000}
                     value={notes}
                     onChange={(e) => {
                       setNotes(e.target.value);
@@ -381,49 +508,7 @@ export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
         </aside>
 
         <div className="min-w-0 xl:col-start-1 xl:row-start-2">
-          <DashboardPanel
-            title="Call history"
-            description={
-              lead.activities.length === 0
-                ? "Past call outcomes will appear here."
-                : `${lead.activities.length} calls logged`
-            }
-          >
-            {lead.activities.length === 0 ? (
-              <p className="text-sm text-text-secondary">No calls logged yet.</p>
-            ) : (
-              <ol className="relative space-y-5 border-l border-border pl-6">
-                {lead.activities.map((activity) => (
-                  <li key={activity.id} className="relative">
-                    <span
-                      className={cn(
-                        "absolute -left-[29px] top-1 h-3 w-3 rounded-full ring-4 ring-card",
-                        dispositionDotClass(activity.disposition),
-                      )}
-                      aria-hidden="true"
-                    />
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-medium text-text-primary">
-                        {DISPOSITION_LABEL[activity.disposition] ?? activity.disposition}
-                        {activity.interest_level ? ` · ${activity.interest_level}` : ""}
-                      </span>
-                      <span className="text-xs text-text-secondary">
-                        {formatDateTime(activity.created_at)}
-                      </span>
-                    </div>
-                    {activity.notes ? (
-                      <p className="mt-1 text-sm text-text-secondary">{activity.notes}</p>
-                    ) : null}
-                    {activity.follow_up_at ? (
-                      <p className="mt-1 text-xs text-text-secondary">
-                        Follow up: {formatDateTime(activity.follow_up_at)}
-                      </p>
-                    ) : null}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </DashboardPanel>
+          <CallLogPanel activities={lead.activities} requests={requests} selected={selected} />
         </div>
       </div>
 
