@@ -2,6 +2,17 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — security audit fixes, PR 1/5: Next.js 15.5.28** (2026-11-14;
+open for review), branch `security/nextjs-15-5-patch` from `upstream/main`
+`12a2aec`. Audit finding #2: `pnpm audit --prod` reported one critical
+(GHSA-2464-fhr4-w9xw, image-optimizer RCE with SVGs) and one high
+(GHSA-p3m5-59mp-jv5r, Server Actions DoS) advisory for `next` 15.5.27, patched
+in 15.5.28. `next` and `eslint-config-next` now resolve to 15.5.28 (`^15.5.28`
+ranges, lockfile pinned); no other package changed. No product behavior or
+API contract change. Evidence: `pnpm audit --prod` reports no known
+vulnerabilities; `pnpm lint` and `pnpm typecheck` pass; `pnpm test` 121 files /
+822 tests pass; production build pending (see follow-up). Completion impact: none (security maintenance).
+
 **Implemented — stale Agent lead test fixtures** (2026-11-14; PR #335, mirror #39, open for review), branch
 `fix/agent-lead-stale-tests` stacked on PR #334. Six tests in
 `test_agent_api.py` and `test_lead_detail_ownership_api.py` posted Agent
