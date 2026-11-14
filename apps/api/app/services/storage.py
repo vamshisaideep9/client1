@@ -341,10 +341,17 @@ def content_type_is_recognized(object_key: str) -> bool:
     the actual security concern (arbitrary/executable content uploaded
     under a claimed KYC-document key); it just can't catch "uploaded a real
     PNG when a PDF was declared" without a schema change."""
+    return sniffed_content_type(object_key) is not None
+
+
+def sniffed_content_type(object_key: str) -> str | None:
+    """The accepted content type an object's leading bytes sniff to, or None
+    when the object is missing or matches none of them. Transport failures
+    re-raise, same as read_head_bytes."""
     head = read_head_bytes(object_key, 32)
     if head is None:
-        return False
-    return sniff_content_type(head) is not None
+        return None
+    return sniff_content_type(head)
 
 
 def delete_object(object_key: str) -> None:
