@@ -1,3 +1,5 @@
+import base64
+import binascii
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
@@ -48,6 +50,14 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+
+    # Agent payout destinations (bank account / UPI ID) are encrypted at rest
+    # with this base64 32-byte AES key (core/field_crypto.py). Development falls
+    # back to a fixed non-secret key; elsewhere an unset key disables only that
+    # feature (503) rather than blocking boot. Generate one with:
+    # python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())"
+    PAYOUT_DETAILS_ENCRYPTION_KEY: str = ""
+    PAYOUT_DETAILS_ENCRYPTION_KEY_VERSION: int = 1
 
     # OTP (Redis-backed, hashed, single-use per security rules)
     OTP_EXPIRE_SECONDS: int = 300
@@ -130,6 +140,9 @@ class Settings(BaseSettings):
     MEDIA_PROCESS_BATCH_SIZE: int = 4
     MEDIA_VIDEO_MAX_UPLOAD_BYTES: int = 20 * 1024 * 1024
     LOAN_VIDEO_MAX_DURATION_SECONDS: int = 60
+    # Uploaded banner videos are short, muted loops; longer stories belong on
+    # YouTube, which banners can link by video id instead.
+    BANNER_VIDEO_MAX_DURATION_SECONDS: int = 30
     LOAN_VIDEO_MAX_PER_APPLICATION: int = 2
     TASK_FEEDBACK_MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     TASK_FEEDBACK_MAX_PER_TASK: int = 5
@@ -284,6 +297,13 @@ class Settings(BaseSettings):
     SPACES_BUCKET: str = "task-documents"
     SPACES_ACCESS_KEY: str = "minioadmin"  # dev placeholder; real value in prod env
     SPACES_SECRET_KEY: str = "minioadmin"  # dev placeholder; real value in prod env
+    # DigitalOcean Spaces rejects bucket policies (403 even for a full-access
+    # key), so the `public/*` anonymous read that MinIO gets from its bucket
+    # policy is granted per object instead: every write to a `public/` key
+    # carries a `public-read` canned ACL. Keys outside `public/` never get an
+    # ACL and stay private. Off by default for local MinIO, which keeps using
+    # its `public/` bucket policy (docker-compose minio-init).
+    SPACES_PUBLIC_OBJECT_ACL: bool = False
 
     @model_validator(mode="after")
     def _guard_secret_key(self) -> "Settings":
@@ -298,6 +318,19 @@ class Settings(BaseSettings):
                 )
             if len(self.SECRET_KEY) < 32:
                 raise ValueError("SECRET_KEY must be at least 32 characters.")
+        return self
+
+    @model_validator(mode="after")
+    def _guard_payout_details_key(self) -> "Settings":
+        if not 1 <= self.PAYOUT_DETAILS_ENCRYPTION_KEY_VERSION <= 255:
+            raise ValueError("PAYOUT_DETAILS_ENCRYPTION_KEY_VERSION must be between 1 and 255.")
+        if self.PAYOUT_DETAILS_ENCRYPTION_KEY:
+            try:
+                key = base64.b64decode(self.PAYOUT_DETAILS_ENCRYPTION_KEY, validate=True)
+            except (binascii.Error, ValueError) as exc:
+                raise ValueError("PAYOUT_DETAILS_ENCRYPTION_KEY must be base64.") from exc
+            if len(key) != 32:
+                raise ValueError("PAYOUT_DETAILS_ENCRYPTION_KEY must decode to exactly 32 bytes.")
         return self
 
     @model_validator(mode="after")
@@ -330,6 +363,14 @@ class Settings(BaseSettings):
             # network-level interception.
             if not self.SPACES_ENDPOINT_URL.startswith("https://"):
                 raise ValueError("SPACES_ENDPOINT_URL must use https:// outside development.")
+            # The public endpoint is the one actually handed to browsers, so
+            # an http override would reopen exactly the exposure above.
+            if self.SPACES_PUBLIC_ENDPOINT_URL and not self.SPACES_PUBLIC_ENDPOINT_URL.startswith(
+                "https://"
+            ):
+                raise ValueError(
+                    "SPACES_PUBLIC_ENDPOINT_URL must use https:// outside development."
+                )
         return self
 
     @model_validator(mode="after")

@@ -145,6 +145,8 @@ export type SubmitFormState = {
   title: string;
   type: string;
   location: string;
+  /** Optional developer / builder brand, e.g. "My Home". */
+  developerName: string;
   meta: string;
   images: File[];
   documents: File[];
@@ -174,6 +176,7 @@ export const EMPTY_FORM: SubmitFormState = {
   title: "",
   type: "",
   location: "",
+  developerName: "",
   meta: "",
   images: [],
   documents: [],
@@ -364,6 +367,7 @@ export function buildSubmissionUpdatePayload(form: SubmitFormState): SubmissionU
     title: form.title.trim(),
     type: form.type.trim(),
     location: form.location.trim(),
+    developer_name: orNull(form.developerName),
     meta: orNull(form.meta),
     category: subtype.category,
     property_subtype: subtype.value,
@@ -492,6 +496,7 @@ export function submissionToFormState(submission: SubmissionRead): SubmitFormSta
     title: submission.title,
     type: submission.type,
     location: submission.location,
+    developerName: submission.developer_name ?? "",
     meta: submission.meta ?? "",
     images: [],
     documents: [],

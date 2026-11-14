@@ -139,6 +139,23 @@ ADMIN_OPERATIONAL_COVERAGE: dict[str, AdminCoverageEntry] = {
         audit_expectation="Issue and revoke append link-id events without the raw token or applicant PII.",
         rationale="The separate setup-link tab supports delayed credential handoff while preserving hash-only, expiring, single-use credentials.",
     ),
+    "agent_payout_details": _entry(
+        domain="Agent-saved payout destination (bank account / UPI ID)",
+        sensitivity=(DataSensitivity.FINANCIAL, DataSensitivity.IDENTITY_PII),
+        view_mode=AdminViewMode.MINIMIZED,
+        view_coverage=CoverageState.COVERED,
+        update_mode=AdminUpdateMode.PROHIBITED,
+        update_coverage=CoverageState.PROTECTED,
+        audit_coverage=CoverageState.COVERED,
+        api_surfaces=(
+            "/api/v1/payouts/recipients/{user_uuid}/saved-destination",
+            "/api/v1/payouts/agents/{agent_profile_uuid}/saved-destination",
+        ),
+        ui_surfaces=("/dashboard/payouts",),
+        rls_expectation="Owner-only Agent SELECT/INSERT/UPDATE/DELETE; owner or platform Admin DELETE for account erasure. Payout makers read only through the guarded, audited service.",
+        audit_expectation="Agent save/remove and every payout-maker reveal append events without account numbers or UPI IDs.",
+        rationale="Values are AES-GCM encrypted at rest; payout makers see a decrypted destination only to prefill one payout, and cannot edit an Agent's details.",
+    ),
     "agent_profiles": _entry(
         domain="Active Agent identity and business-line profile",
         sensitivity=(DataSensitivity.IDENTITY_PII,),

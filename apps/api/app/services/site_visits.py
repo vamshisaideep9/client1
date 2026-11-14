@@ -29,10 +29,14 @@ from app.services.properties import get_active_property
 _TERMINAL_STATUSES = {SiteVisitStatus.DONE, SiteVisitStatus.CANCELLED}
 
 
-async def list_site_visits(db: AsyncSession) -> list[SiteVisit]:
+async def list_site_visits(db: AsyncSession, *, user_uuid: UUID) -> list[SiteVisit]:
+    """The caller's own visits. RLS also admits line-scoped staff for their
+    workflows (vehicle arrangements, Telecaller lead workspace); this list must
+    never become a line-wide contact directory for them."""
     result = await db.execute(
         select(SiteVisit)
         .options(selectinload(SiteVisit.vehicle_arrangement))
+        .where(SiteVisit.user_uuid == user_uuid)
         .order_by(SiteVisit.created_at.desc())
     )
     return list(result.scalars().all())
@@ -45,7 +49,7 @@ async def create_site_visit(
     if property_listing is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Property not found.")
     try:
-        await ensure_client_line_lead_for_user(
+        lead_uuid = await ensure_client_line_lead_for_user(
             auth_user_uuid=current_user.id,
             mobile=current_user.mobile,
             business_line="real_estate",
@@ -57,6 +61,7 @@ async def create_site_visit(
         ) from exc
     visit = SiteVisit(
         user_uuid=current_user.id,
+        lead_uuid=lead_uuid,
         business_line="real_estate",
         property_ref=str(property_listing.id),
         title=property_listing.title,

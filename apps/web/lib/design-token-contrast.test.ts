@@ -68,9 +68,12 @@ describe("shared normal-text color contrast", () => {
     for (const name of ["--background", "--nav-bg", "--nav-tint", "--color-brand-cta-tint", "--color-surface-silver", "--color-loans-soft", "--color-realestate-soft", "--secondary", "--muted"]) {
       expect(tokenHex(name), name).toBe(tokenHex("--color-surface-sky"));
     }
-    for (const name of ["--primary", "--nav-primary", "--color-brand-cta", "--color-cta", "--color-brand-blue", "--color-loans-accent", "--color-realestate-accent", "--color-dash-rail"]) {
+    for (const name of ["--primary", "--nav-primary", "--color-brand-cta", "--color-cta", "--color-brand-blue", "--color-loans-accent", "--color-realestate-accent"]) {
       expect(tokenHex(name), name).toBe(tokenHex("--color-brand-navy"));
     }
+    // The dashboard rail is white in the light theme, separate from actions.
+    expect(tokenHex("--color-dash-rail")).toBe(tokenHex("--color-surface"));
+    expect(tokenHex("--color-action-hover")).not.toBe(tokenHex("--color-dash-rail-hover"));
   });
 
   it.each([
@@ -90,9 +93,14 @@ describe("shared normal-text color contrast", () => {
     expect(contrastRatio(foreground, tokenHex("--background"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(["--color-dash-foreground", "--color-dash-muted", "--color-brand-sky"])("keeps %s legible on navy navigation", (token) => {
-    expect(contrastRatio(tokenHex(token), tokenHex("--color-dash-rail"))).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio(tokenHex(token), tokenHex("--color-dash-rail-hover"))).toBeGreaterThanOrEqual(4.5);
+  it.each([false, true])("keeps dashboard rail text legible on rest, hover and active states (dark=%s)", (dark) => {
+    const color = (name: string) => tokenHex(name, new Set(), dark);
+    for (const surface of ["--color-dash-rail", "--color-dash-rail-hover", "--color-dash-active"]) {
+      for (const text of ["--color-dash-foreground", "--color-dash-muted", "--color-brand-heading"]) {
+        expect(contrastRatio(color(text), color(surface)), `${text} on ${surface}`).toBeGreaterThanOrEqual(4.5);
+      }
+      expect(contrastRatio(color("--ring"), color(surface)), `--ring on ${surface}`).toBeGreaterThanOrEqual(3);
+    }
   });
 
   it("keeps editing boundaries and focus distinct on white", () => {

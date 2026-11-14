@@ -224,6 +224,30 @@ async def test_concurrent_processed_settle_emits_single_ledger_row(
     assert len(txns) == 1  # exactly one credit, no double-pay
 
 
+@pytest.mark.parametrize("late_event", ["payout.failed", "payout.processed"])
+async def test_reversed_payout_cannot_be_resurrected_by_late_events(
+    client: AsyncClient, late_event: str
+) -> None:
+    payout_id, gw_id, recipient_token = await _setup(client)
+    await payments.settle_from_webhook(event="payout.reversed", gateway_payout_id=gw_id)
+    await payments.settle_from_webhook(event=late_event, gateway_payout_id=gw_id)
+    assert (await _payout_status(payout_id))[0] == "reversed"
+    assert await _recipient_ledger(client, recipient_token) == []
+
+
+async def test_concurrent_reversal_and_processed_leave_no_recipient_credit(
+    client: AsyncClient,
+) -> None:
+    payout_id, gw_id, recipient_token = await _setup(client)
+    await asyncio.gather(
+        payments.settle_from_webhook(event="payout.processed", gateway_payout_id=gw_id),
+        payments.settle_from_webhook(event="payout.reversed", gateway_payout_id=gw_id),
+    )
+    assert (await _payout_status(payout_id))[0] == "reversed"
+    transactions = await _recipient_ledger(client, recipient_token)
+    assert sum(transaction["amount_paise"] for transaction in transactions) == 0
+
+
 @pytest.mark.asyncio
 async def test_webhook_rejected_marks_failed(client: AsyncClient, monkeypatch) -> None:
     """A payout.rejected webhook is a terminal failure, not an ignored event."""
