@@ -27,6 +27,7 @@ export function CommissionPayoutDialog({
       lockedCopy="Recipient and amount come from this commission and cannot be changed here. Enter only where the money should go."
       submitLabel="Pay commission"
       conflictTitle="This commission may already have a payout"
+      savedDestinationTarget={commission ? { agentProfileUuid: commission.agent_profile_uuid } : null}
       onSubmit={(form) => onPay(commission!.id, buildCommissionPayoutPayload(form))}
     />
   );

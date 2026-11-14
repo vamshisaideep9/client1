@@ -26,7 +26,12 @@ from app.services.lead_details import (
     LeadDetailsLocked,
     patch_details,
 )
-from app.services.leads import AgentLeadConflict, capture_agent_lead
+from app.services.leads import (
+    AgentLeadConflict,
+    AgentLeadNotResubmittable,
+    capture_agent_lead,
+    resubmit_agent_lead,
+)
 
 
 class AgentProfileNotFound(Exception):
@@ -59,6 +64,10 @@ class InvalidStatusFilter(Exception):
 
 class InvalidLeadInterest(Exception):
     """Raised when an introduced lead names a property or product the Agent cannot offer."""
+
+
+class LeadNotResubmittable(Exception):
+    """Raised when an Agent tries to resubmit a lead that is not eligible."""
 
 
 async def _resolve_interest(
@@ -202,3 +211,33 @@ async def update_lead_for_agent(
     except (LeadDetailsForbidden, LeadDetailsLocked, DBAPIError) as exc:
         await db.rollback()
         raise LeadLocked from exc
+
+
+async def resubmit_lead_for_agent(
+    db: AsyncSession,
+    lead_id: UUID,
+    *,
+    agent_profile_uuid: UUID,
+    auth_user_uuid: UUID,
+) -> Lead:
+    """Restart this Agent's 30-day window on their expired lead.
+
+    The write runs in services.leads on its own transaction; the result is then
+    re-read through the Agent's request-scoped RLS session.
+    """
+    try:
+        await resubmit_agent_lead(
+            lead_id=lead_id,
+            agent_profile_uuid=agent_profile_uuid,
+            actor_auth_user_uuid=auth_user_uuid,
+        )
+    except AgentLeadNotResubmittable as exc:
+        raise LeadNotResubmittable from exc
+    visible = await db.scalar(
+        select(Lead)
+        .where(Lead.id == lead_id, Lead.origin_agent_profile_uuid == agent_profile_uuid)
+        .execution_options(populate_existing=True)
+    )
+    if visible is None:
+        raise LeadNotResubmittable
+    return visible

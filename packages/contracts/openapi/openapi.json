@@ -3486,6 +3486,46 @@
         "title": "AgentApproveResponse",
         "type": "object"
       },
+      "AgentBankAccount": {
+        "properties": {
+          "account_holder_name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Account Holder Name",
+            "type": "string"
+          },
+          "account_number": {
+            "pattern": "^\\d{6,18}$",
+            "title": "Account Number",
+            "type": "string"
+          },
+          "bank_name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "ifsc": {
+            "pattern": "^[A-Za-z]{4}0[A-Za-z0-9]{6}$",
+            "title": "Ifsc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_holder_name",
+          "account_number",
+          "ifsc"
+        ],
+        "title": "AgentBankAccount",
+        "type": "object"
+      },
       "AgentContactRead": {
         "description": "Name + agent_code only -- never phone/email. Contact routes through\nthe support-ticket flow (POST /api/v1/support-tickets/tickets).",
         "properties": {
@@ -3776,16 +3816,10 @@
             "type": "string"
           },
           "name": {
-            "anyOf": [
-              {
-                "maxLength": 100,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
           },
           "requirement": {
             "anyOf": [
@@ -3801,7 +3835,8 @@
           }
         },
         "required": [
-          "mobile"
+          "mobile",
+          "name"
         ],
         "title": "AgentLeadCreate",
         "type": "object"
@@ -3892,6 +3927,10 @@
             ],
             "title": "Requirement"
           },
+          "resubmittable": {
+            "title": "Resubmittable",
+            "type": "boolean"
+          },
           "status": {
             "enum": [
               "new",
@@ -3918,6 +3957,7 @@
           "status",
           "registered",
           "editable",
+          "resubmittable",
           "expires_at",
           "expired_at",
           "created_at",
@@ -3932,6 +3972,7 @@
             "anyOf": [
               {
                 "maxLength": 100,
+                "minLength": 1,
                 "type": "string"
               },
               {
@@ -3954,6 +3995,89 @@
           }
         },
         "title": "AgentLeadUpdate",
+        "type": "object"
+      },
+      "AgentPayoutDetailsRead": {
+        "description": "What the Agent sees about their own saved destination: masked only.",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "bank_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Hint"
+          },
+          "saved": {
+            "title": "Saved",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "upi_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upi Hint"
+          }
+        },
+        "required": [
+          "saved",
+          "available"
+        ],
+        "title": "AgentPayoutDetailsRead",
+        "type": "object"
+      },
+      "AgentPayoutDetailsUpdate": {
+        "description": "Partial update. Omit a field to keep it; send ``null`` to remove it.\n\nAfter the update at least one destination must remain (the service\nanswers 422 otherwise); remove everything with DELETE instead.",
+        "properties": {
+          "bank": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentBankAccount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "upi_id": {
+            "anyOf": [
+              {
+                "maxLength": 320,
+                "pattern": "^[A-Za-z0-9._-]{2,256}@[A-Za-z][A-Za-z0-9]{1,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upi Id"
+          }
+        },
+        "title": "AgentPayoutDetailsUpdate",
         "type": "object"
       },
       "AgentProfileStatusRead": {
@@ -4621,7 +4745,11 @@
           "content_block_published",
           "content_block_archived",
           "loan_application_updated",
-          "property_deal_updated"
+          "property_deal_updated",
+          "agent_lead_resubmitted",
+          "agent_payout_details_updated",
+          "agent_payout_details_deleted",
+          "agent_payout_details_viewed"
         ],
         "title": "AuditAction",
         "type": "string"
@@ -11581,6 +11709,7 @@
           "lead_assigned",
           "lead_released",
           "agent_lead_expired",
+          "agent_lead_expiry_reminder",
           "task_assigned",
           "loan_status_updated",
           "property_deal_status_updated",
@@ -16486,6 +16615,42 @@
         ],
         "title": "SaleType",
         "type": "string"
+      },
+      "SavedPayoutDestinationRead": {
+        "description": "Decrypted destination for prefilling one payout (audited read).",
+        "properties": {
+          "bank": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentBankAccount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "upi_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upi Id"
+          }
+        },
+        "required": [
+          "updated_at"
+        ],
+        "title": "SavedPayoutDestinationRead",
+        "type": "object"
       },
       "SetPasswordRequest": {
         "properties": {
@@ -26732,6 +26897,145 @@
         ]
       }
     },
+    "/api/v1/agent/leads/{lead_id}/resubmit": {
+      "post": {
+        "description": "Resubmit this Agent's expired lead for a fresh 30-day window.",
+        "operationId": "resubmit_lead_api_v1_agent_leads__lead_id__resubmit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Lead Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentLeadRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Resubmit Lead",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/v1/agent/payout-details": {
+      "delete": {
+        "description": "Remove every saved payout destination.",
+        "operationId": "delete_payout_details_api_v1_agent_payout_details_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Payout Details",
+        "tags": [
+          "agent"
+        ]
+      },
+      "get": {
+        "description": "The Agent's saved payout destination, masked.",
+        "operationId": "get_payout_details_api_v1_agent_payout_details_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPayoutDetailsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Payout Details",
+        "tags": [
+          "agent"
+        ]
+      },
+      "put": {
+        "description": "Save or change the bank account and/or UPI ID commissions are paid to.",
+        "operationId": "put_payout_details_api_v1_agent_payout_details_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPayoutDetailsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPayoutDetailsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Put Payout Details",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
     "/api/v1/auth/change-password": {
       "post": {
         "operationId": "change_password_api_v1_auth_change_password_post",
@@ -31880,6 +32184,55 @@
         ]
       }
     },
+    "/api/v1/payouts/agents/{agent_profile_uuid}/saved-destination": {
+      "get": {
+        "description": "Same as the recipient prefill, keyed by Agent profile (commission payouts).",
+        "operationId": "get_agent_saved_destination_api_v1_payouts_agents__agent_profile_uuid__saved_destination_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_profile_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Profile Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedPayoutDestinationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Agent Saved Destination",
+        "tags": [
+          "payouts"
+        ]
+      }
+    },
     "/api/v1/payouts/link-divergences": {
       "get": {
         "description": "Read-only: payouts whose linked referral/commission/fee_cashback row\nhasn't caught up yet (services/payout_links.py's scheduled sweep repairs\nthese automatically \u2014 this is visibility, not a manual trigger). No\nmutating counterpart exists on purpose: see payout_links.py's docstring\nfor why a force-unlink endpoint would convert a display bug into a money\nbug.",
@@ -31964,6 +32317,55 @@
           }
         ],
         "summary": "List Payout Recipients",
+        "tags": [
+          "payouts"
+        ]
+      }
+    },
+    "/api/v1/payouts/recipients/{user_uuid}/saved-destination": {
+      "get": {
+        "description": "Prefill a payout from the bank account / UPI ID an Agent saved.\n\nSame access as the recipient picker. Every successful read is audited\n(agent_payout_details_viewed); a maker's own details are refused.",
+        "operationId": "get_recipient_saved_destination_api_v1_payouts_recipients__user_uuid__saved_destination_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedPayoutDestinationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Recipient Saved Destination",
         "tags": [
           "payouts"
         ]

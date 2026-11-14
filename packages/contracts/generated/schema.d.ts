@@ -1579,6 +1579,54 @@ export interface paths {
         patch: operations["patch_lead_api_v1_agent_leads__lead_id__patch"];
         trace?: never;
     };
+    "/api/v1/agent/leads/{lead_id}/resubmit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resubmit Lead
+         * @description Resubmit this Agent's expired lead for a fresh 30-day window.
+         */
+        post: operations["resubmit_lead_api_v1_agent_leads__lead_id__resubmit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/payout-details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Payout Details
+         * @description The Agent's saved payout destination, masked.
+         */
+        get: operations["get_payout_details_api_v1_agent_payout_details_get"];
+        /**
+         * Put Payout Details
+         * @description Save or change the bank account and/or UPI ID commissions are paid to.
+         */
+        put: operations["put_payout_details_api_v1_agent_payout_details_put"];
+        post?: never;
+        /**
+         * Delete Payout Details
+         * @description Remove every saved payout destination.
+         */
+        delete: operations["delete_payout_details_api_v1_agent_payout_details_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/change-password": {
         parameters: {
             query?: never;
@@ -3088,6 +3136,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payouts/agents/{agent_profile_uuid}/saved-destination": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Saved Destination
+         * @description Same as the recipient prefill, keyed by Agent profile (commission payouts).
+         */
+        get: operations["get_agent_saved_destination_api_v1_payouts_agents__agent_profile_uuid__saved_destination_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/payouts/link-divergences": {
         parameters: {
             query?: never;
@@ -3125,6 +3193,29 @@ export interface paths {
          * @description Minimal recipient picker for an authorized payout requester.
          */
         get: operations["list_payout_recipients_api_v1_payouts_recipients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/recipients/{user_uuid}/saved-destination": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Recipient Saved Destination
+         * @description Prefill a payout from the bank account / UPI ID an Agent saved.
+         *
+         *     Same access as the recipient picker. Every successful read is audited
+         *     (agent_payout_details_viewed); a maker's own details are refused.
+         */
+        get: operations["get_recipient_saved_destination_api_v1_payouts_recipients__user_uuid__saved_destination_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5496,6 +5587,17 @@ export interface components {
             /** Temp Password */
             temp_password: string | null;
         };
+        /** AgentBankAccount */
+        AgentBankAccount: {
+            /** Account Holder Name */
+            account_holder_name: string;
+            /** Account Number */
+            account_number: string;
+            /** Bank Name */
+            bank_name?: string | null;
+            /** Ifsc */
+            ifsc: string;
+        };
         /**
          * AgentContactRead
          * @description Name + agent_code only -- never phone/email. Contact routes through
@@ -5626,7 +5728,7 @@ export interface components {
             /** Mobile */
             mobile: string;
             /** Name */
-            name?: string | null;
+            name: string;
             /** Requirement */
             requirement?: {
                 [key: string]: unknown;
@@ -5662,6 +5764,8 @@ export interface components {
             requirement?: {
                 [key: string]: unknown;
             } | null;
+            /** Resubmittable */
+            resubmittable: boolean;
             /**
              * Status
              * @enum {string}
@@ -5681,6 +5785,34 @@ export interface components {
             requirement?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /**
+         * AgentPayoutDetailsRead
+         * @description What the Agent sees about their own saved destination: masked only.
+         */
+        AgentPayoutDetailsRead: {
+            /** Available */
+            available: boolean;
+            /** Bank Hint */
+            bank_hint?: string | null;
+            /** Saved */
+            saved: boolean;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Upi Hint */
+            upi_hint?: string | null;
+        };
+        /**
+         * AgentPayoutDetailsUpdate
+         * @description Partial update. Omit a field to keep it; send ``null`` to remove it.
+         *
+         *     After the update at least one destination must remain (the service
+         *     answers 422 otherwise); remove everything with DELETE instead.
+         */
+        AgentPayoutDetailsUpdate: {
+            bank?: components["schemas"]["AgentBankAccount"] | null;
+            /** Upi Id */
+            upi_id?: string | null;
         };
         /** AgentProfileStatusRead */
         AgentProfileStatusRead: {
@@ -5897,7 +6029,7 @@ export interface components {
          *     `services/fee_cashbacks.py` (FR-6.6 processing-fee cashback).
          * @enum {string}
          */
-        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated";
+        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed";
         /** AuditLogListResponse */
         AuditLogListResponse: {
             /** Entries */
@@ -8213,7 +8345,7 @@ export interface components {
          * NotificationType
          * @enum {string}
          */
-        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed";
+        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "agent_lead_expiry_reminder" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed";
         /** OfferCreate */
         OfferCreate: {
             audience_rules?: components["schemas"]["AudienceRules"];
@@ -9799,6 +9931,20 @@ export interface components {
          * @enum {string}
          */
         SaleType: "new_sale" | "resale";
+        /**
+         * SavedPayoutDestinationRead
+         * @description Decrypted destination for prefilling one payout (audited read).
+         */
+        SavedPayoutDestinationRead: {
+            bank?: components["schemas"]["AgentBankAccount"] | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Upi Id */
+            upi_id?: string | null;
+        };
         /** SetPasswordRequest */
         SetPasswordRequest: {
             /** Confirm Password */
@@ -14343,6 +14489,108 @@ export interface operations {
             };
         };
     };
+    resubmit_lead_api_v1_agent_leads__lead_id__resubmit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentLeadRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_payout_details_api_v1_agent_payout_details_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentPayoutDetailsRead"];
+                };
+            };
+        };
+    };
+    put_payout_details_api_v1_agent_payout_details_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentPayoutDetailsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentPayoutDetailsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_payout_details_api_v1_agent_payout_details_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     change_password_api_v1_auth_change_password_post: {
         parameters: {
             query?: never;
@@ -17728,6 +17976,37 @@ export interface operations {
             };
         };
     };
+    get_agent_saved_destination_api_v1_payouts_agents__agent_profile_uuid__saved_destination_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_profile_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedPayoutDestinationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_payout_link_divergences_api_v1_payouts_link_divergences_get: {
         parameters: {
             query?: never;
@@ -17767,6 +18046,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PayoutRecipientListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_recipient_saved_destination_api_v1_payouts_recipients__user_uuid__saved_destination_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedPayoutDestinationRead"];
                 };
             };
             /** @description Validation Error */

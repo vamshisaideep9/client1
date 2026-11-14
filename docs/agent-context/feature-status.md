@@ -2,8 +2,53 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — staff dashboard feedback batch, PR C: personal analytics**
-(2026-11-14; PR #333, mirror #37, open for review), branch `feat/staff-analytics`
+**In progress — agent dashboard refinements** (2026-11-14), branch
+`feat/agent-dashboard-refinements` from `upstream/main` `a927f60`. Lead name
+required; expiry policy copy, same-Agent Resubmit and 7-day reminder;
+encrypted Agent bank/UPI payout details; "Hi <name>" Agent home; 5 MB
+image/document upload limits. Decision record: CS-017 in
+`current-implementation-state.md`.
+- Name: `AgentLeadCreate.name` is required (trimmed, 1-100); an Agent PATCH
+  cannot clear it. The introduce form marks it required with an inline error.
+- Expiry: migration `f8a0c2e4b6d1` replaces
+  `enforce_agent_lead_expiry_immutable` so the expiry columns may be reset only
+  when the service sets `app.agent_lead_resubmit`, the originating Agent,
+  mobile and line are unchanged, the client is unregistered, the lead is not
+  converted/closed, the new deadline is in the future and `resubmit_count`
+  advances by one. The cross-Agent no-reset trigger is unchanged.
+  `POST /agent/leads/{id}/resubmit` (409 when ineligible) keeps any current
+  Telecaller assignment and re-offers an unassigned lead to auto-assignment.
+  `AgentLeadRead.resubmittable`. Hourly `remind_agent_lead_expiry` job sends one
+  reminder per window with 7 days left when the client hasn't registered.
+  Agents see the 30-day policy instead of a day countdown.
+- Payout details: migration `a1b3d5f7c9e2` adds `agent_payout_details`
+  (AES-256-GCM blobs bound to the Agent profile and field, masked hints,
+  owner-only RLS, `erase_agent_payout_details` SECURITY DEFINER for account
+  erasure). New setting `PAYOUT_DETAILS_ENCRYPTION_KEY` (base64 32 bytes; dev
+  fallback key only when `ENV=development`; elsewhere the feature answers 503).
+  `GET/PUT/DELETE /agent/payout-details` return hints only;
+  `GET /payouts/recipients/{user}/saved-destination` and
+  `/payouts/agents/{profile}/saved-destination` decrypt for a payout maker,
+  refuse self, audit every reveal and send `Cache-Control: private, no-store`.
+  Settings card for Agents; "Use saved payout details" in the payout and
+  commission dialogs. `cryptography` declared explicitly (already locked).
+- Uploads: banner/offer images 2→5 MB, campaign images 4→5 MB, provider logos
+  1→5 MB; video stays 20 MB.
+Evidence (this session): new `test_agent_dashboard_refinements.py` 33 passed;
+affected suites (agent, lead ownership, leads RLS, expiry job, scheduler,
+banners, loan config, campaign media, payouts, delete account, admin coverage,
+RLS coverage, auth leads, auto-assignment, business-line contract, offers)
+298 passed, 1 skipped, 6 failed. The same 6 fail identically on unmodified
+`upstream/main` `a927f60` (requirement keys outside notes/property_id/
+product_slug are rejected with 422); pre-existing, not addressed here.
+Migrations upgrade from base, downgrade -2 and upgrade again on a scratch
+database; one head. Ruff check/format clean. Web: lint, `tsc`, vitest 822
+passed; Playwright `agent-dashboard-refinements.spec.ts` 5 passed (greeting,
+required name, policy + resubmit, masked payout details at 360px, not shown
+to clients).
+
+**Implemented — staff dashboard feedback batch, PR C: personal analytics**
+(2026-11-14; merged as PR #333, mirror #37), branch `feat/staff-analytics`
 stacked on PR B (#332). Item 7.
 - API: `GET /api/v1/me/analytics?days=` (clamped to 7/30/90; 422 outside
   1-365). Role and every filter come from the session: Telecaller (own calls

@@ -22,6 +22,7 @@ import { FetchError } from "@/features/dashboard/fetch-error";
 import { useMe } from "@/features/dashboard/me-provider";
 import { PushSubscriptionCard } from "@/features/push-notifications/push-subscription-card";
 import { JourneyDetailsCard } from "@/features/settings/journey-details-card";
+import { PayoutDetailsCard } from "@/features/settings/payout-details-card";
 import { PersonalizationSettingsCard } from "@/features/settings/personalization-settings-card";
 import { AppearanceSettingsCard } from "@/features/settings/appearance-settings-card";
 import { updateProfile, type Me } from "@/lib/auth";
@@ -83,6 +84,8 @@ export default function SettingsPage() {
       ) : null}
 
       {session?.role === "client" ? <JourneyDetailsCard /> : null}
+
+      {session?.role === "agent" ? <PayoutDetailsCard /> : null}
 
       <AppearanceSettingsCard />
       <PushSubscriptionCard />

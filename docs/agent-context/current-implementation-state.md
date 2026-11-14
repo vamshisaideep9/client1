@@ -505,6 +505,46 @@ Source and approved interpretation:
 
 - [`campaign-studio-media-library-2026-08-29.md`](campaign-studio-media-library-2026-08-29.md)
 
+### CS-017 — same-Agent lead resubmission and Agent-saved payout details
+
+**Decision (2026-11-14, user-approved):** Amends only the named parts of
+FR-4.6 and CS-009.
+
+- *Lead name.* An Agent must give the person's name when introducing a lead
+  and cannot clear it later.
+- *Expiry and resubmit (FR-4.6).* The 30-day Agent window and the return to the
+  open Telecaller pool are unchanged. Agents now see the policy ("if the
+  customer doesn't respond within 30 days the lead expires; resubmit it after it
+  expires") instead of a day countdown. After expiry, **only the Agent who
+  introduced the lead** may resubmit it for a fresh 30-day window, and only
+  while the client has not registered, the mobile belongs to no account, and
+  the lead is neither converted nor closed. Another Agent still cannot attribute
+  a mobile whose Agent history ended. Seven days before the window ends, an
+  Agent whose client has not registered receives one reminder per window.
+- *Payout details (CS-009).* An Agent may save a UPI ID and/or a bank account
+  for commission payouts. This is the platform's only store of raw payout
+  destinations: values are AES-256-GCM encrypted at rest with a runtime key,
+  the Agent sees masked hints only, and a payout maker (platform Admin or a
+  Sub Admin with the payout-request grant) may decrypt them only to prefill one
+  payout, with every reveal audited. Payout rows still keep only masked hints;
+  account erasure removes the saved details.
+- *Uploads.* Image and document upload limits are 5 MB everywhere (provider
+  logos, banners, campaign images raised from 1, 2 and 4 MB). MP4 video stays
+  at 20 MB.
+
+**Implementation status:** Implemented on `feat/agent-dashboard-refinements`.
+Migrations `f8a0c2e4b6d1` (resubmit-aware expiry trigger, `resubmit_count`,
+`expiry_reminder_sent_at`) and `a1b3d5f7c9e2` (`agent_payout_details` with
+owner-only RLS and a confined erase function).
+
+Evidence:
+
+- [`apps/api/app/services/leads.py`](../../apps/api/app/services/leads.py) (`resubmit_agent_lead`)
+- [`apps/api/app/jobs/remind_agent_lead_expiry.py`](../../apps/api/app/jobs/remind_agent_lead_expiry.py)
+- [`apps/api/app/core/field_crypto.py`](../../apps/api/app/core/field_crypto.py)
+- [`apps/api/app/services/agent_payout_details.py`](../../apps/api/app/services/agent_payout_details.py)
+- [`apps/api/app/tests/test_agent_dashboard_refinements.py`](../../apps/api/app/tests/test_agent_dashboard_refinements.py)
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in
@@ -523,7 +563,7 @@ explicitly changes it.
 | Banner precedence | Public banners sort by highest `priority`, then oldest `created_at`, then stable ID. | [`services/public_catalog.py`](../../apps/api/app/services/public_catalog.py), [`test_public_banners.py`](../../apps/api/app/tests/test_public_banners.py) |
 | Client status reasons | The API exposes `status_reason`, and the client loan UI renders it verbatim when present. | [`schemas/loans.py`](../../apps/api/app/schemas/loans.py), [`apps/web/lib/loans.ts`](../../apps/web/lib/loans.ts), [`loans-applications.tsx`](../../apps/web/features/dashboard/loans-applications.tsx) |
 | Referral payout execution | Sub Admin manages bonus configuration; creating the actual referral payout is restricted to platform Admin. | [`api/v1/referral_bonus.py`](../../apps/api/app/api/v1/referral_bonus.py), [`api/v1/referrals.py`](../../apps/api/app/api/v1/referrals.py) |
-| Agent lead expiry | Agent attribution has a fixed 30-day first-attribution deadline with converted/closed exclusions, idempotent scheduled release, audit, notifications, RLS denial, and Agent history/countdown. | [PR #144](https://github.com/brollysolutions/client1/pull/144), [`services/lead_expiry.py`](../../apps/api/app/services/lead_expiry.py) |
+| Agent lead expiry | Agent attribution has a fixed 30-day first-attribution deadline with converted/closed exclusions, idempotent scheduled release, audit, notifications, RLS denial, and Agent history/countdown. CS-017 (2026-11-14) adds same-Agent resubmission, a 7-day reminder, and policy copy in place of the countdown. | [PR #144](https://github.com/brollysolutions/client1/pull/144), [`services/lead_expiry.py`](../../apps/api/app/services/lead_expiry.py) |
 | Client registration and optional profile | Client registration is mobile-first; email and demographic/income/location details are optional, skippable, editable, clearable, and never gate account use. Location is entered manually through a search-style field; the web app does not request browser geolocation. | CS-005, [PR #148](https://github.com/brollysolutions/client1/pull/148), migration `e4b5c6d7e8f9` |
 | Vehicle arrangements | One dedicated arrangement per site visit; Admin enters transport details, the service automatically assigns an eligible real-estate or dual-line Employee, the assignee fulfils it, and the owning Client follows it read-only. | CS-006, [PR #149](https://github.com/brollysolutions/client1/pull/149), migration `b8c9d0e1f2a3`, migration `dd45ee67ff89`, vehicle-arrangement and Employee-auto-assignment tests |
 | Authenticated personalization | Client/Agent dashboard banner layers and Client offers use a closed consented rule grammar; coarse optional location is retained for at most 30 days; public responses exclude targeted content. | CS-008, [PR #152](https://github.com/brollysolutions/client1/pull/152), migration `c9d0e1f2a3b4`, personalization API/RLS/web tests |

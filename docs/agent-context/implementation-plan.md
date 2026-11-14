@@ -60,8 +60,24 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — staff dashboard feedback batch, PR C: personal analytics**
-(2026-11-14; PR #333, mirror #37, open for review), branch `feat/staff-analytics`
+**In progress — agent dashboard refinements** (2026-11-14), branch
+`feat/agent-dashboard-refinements` from `upstream/main` `a927f60`. Five
+client-requested Agent items: lead name required; expiry countdown replaced by
+policy copy, a same-Agent Resubmit after expiry (fresh 30-day window, only
+while the client is unregistered and the lead is not converted/closed; amends
+FR-4.6 no-reset for the same Agent only) and a 7-day expiry reminder; encrypted
+Agent bank/UPI payout details with audited Admin payout prefill; "Hi <name>"
+Agent home header; image/document upload limits raised to 5 MB everywhere
+(video stays 20 MB). Migrations `f8a0c2e4b6d1` and `a1b3d5f7c9e2` (one head);
+decision CS-017. Evidence is in `feature-status.md`. Deploy note: set
+`PAYOUT_DETAILS_ENCRYPTION_KEY` for api and scheduler before Agents can save
+payout details outside development. Known pre-existing failures: 6 Agent/lead
+ownership tests post requirement keys the schema has rejected since before
+this branch. Next: fix those stale tests; item 9 design brief (managers over
+teams). Recommended: Opus 5.5 / high (migration, triggers, PII).
+
+**Implemented — staff dashboard feedback batch, PR C: personal analytics**
+(2026-11-14; merged as PR #333, mirror #37), branch `feat/staff-analytics`
 stacked on PR B (#332). Item 7.
 New `GET /api/v1/me/analytics?days=7|30|90` builds the caller's own KPIs,
 day-by-day trend (India Standard Time days), category breakdowns and funnel

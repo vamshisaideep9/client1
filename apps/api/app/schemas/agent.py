@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 LeadStatusLiteral = Literal[
     "new", "assigned", "working", "converted", "closed", "released", "expired"
@@ -30,10 +30,14 @@ class AgentHomeResponse(BaseModel):
 
 _AGENT_REQUIREMENT_KEYS = {"notes", "property_id", "product_slug"}
 
+# A lead must carry the person's name so the telecaller can address them. Leading
+# and trailing whitespace is stripped first, so a blank name is rejected.
+LeadName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+
 
 class AgentLeadCreate(BaseModel):
     mobile: Annotated[str, Field(pattern=r"^\+[1-9]\d{6,14}$")]
-    name: Annotated[str | None, Field(default=None, max_length=100)] = None
+    name: LeadName
     # Agent-authored context: free-text notes plus, optionally, the one listing
     # (real estate) or product (loans) the person is interested in. The service
     # confirms the chosen item exists, is published, and matches the Agent's
@@ -65,11 +69,14 @@ class AgentLeadCreate(BaseModel):
 
 
 class AgentLeadUpdate(BaseModel):
-    name: Annotated[str | None, Field(default=None, max_length=100)] = None
+    # Omit name to leave it unchanged; a supplied name cannot be blank or null.
+    name: LeadName | None = None
     requirement: dict[str, Any] | None = None
 
     @model_validator(mode="after")
     def _at_least_one_field(self) -> AgentLeadUpdate:
+        if "name" in self.model_fields_set and self.name is None:
+            raise ValueError("Name is required and cannot be cleared.")
         if self.name is None and self.requirement is None:
             raise ValueError("Provide at least one of name or requirement.")
         return self
@@ -90,6 +97,9 @@ class AgentLeadRead(BaseModel):
     requirement: dict[str, Any] | None = None
     registered: bool
     editable: bool
+    # True when the originating Agent may resubmit this expired lead for a
+    # fresh window (2026-11-14 amendment to FR-4.6).
+    resubmittable: bool
     expires_at: datetime | None
     expired_at: datetime | None
     created_at: datetime
