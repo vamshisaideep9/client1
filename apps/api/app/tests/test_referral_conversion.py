@@ -230,10 +230,22 @@ async def test_loan_disbursal_accrues_referral(client: AsyncClient) -> None:
     application_id = created.json()["id"]
 
     admin_headers = {"Authorization": f"Bearer {_admin_token(uid_a)}"}
+    import app.db.session as _session_mod
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        bank_id = str(
+            (
+                await db.execute(text("SELECT id FROM banks WHERE active = true LIMIT 1"))
+            ).scalar_one()
+        )
     for step in _LOAN_STEPS:
+        body: dict[str, str] = {"status": step}
+        if step == "sanctioned":
+            # Sanction requires the amount and lending bank (audit finding #5).
+            body.update(amount_sanctioned="500000", bank_id=bank_id)
         res = await client.patch(
             f"/api/v1/admin/loan-applications/{application_id}",
-            json={"status": step},
+            json=body,
             headers=admin_headers,
         )
         assert res.status_code == 200, res.text

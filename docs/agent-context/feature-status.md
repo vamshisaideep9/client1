@@ -2,6 +2,28 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — security audit fixes, PR 4/5: sanction and disbursal need
+terms** (2026-11-14; open for review), branch `fix/loan-sanction-terms-required`
+stacked on PR 3. Audit finding #5 (live probe: `new` → `disbursed` with no
+terms returned 200). `services/loan_applications.py` raises
+`SanctionTermsRequired` (422 "Add the sanctioned amount and bank before marking
+the loan sanctioned or disbursed.") when a status change lands on `sanctioned`
+or `disbursed` without `amount_sanctioned` and a bank; the Telecaller and Admin
+routes map it. Web: `LoanProgressForm` opens the terms block for a forward move
+to "submitted to bank" or later, `validateLoanProgressTerms` gains `bankId` and
+`requireSanctionTerms`, and the bank select carries an inline error. Evidence:
+new parametrized API tests (no terms / amount only / bank only × sanctioned /
+disbursed; nothing changes, `disbursed_at` stays NULL), same-update and
+saved-terms success paths and the Admin route; they fail 7/7 with the rule
+disabled. Loan progress 32 passed; loan progress, referral conversion, loan
+config, commission, fee cashback, agent earnings, reporting, telecaller and
+payout-link suites 233 passed plus 6 corrected new-test cases; one
+`test_reporting_service.py` case failed once in the combined run and passed in
+two isolated reruns (order-dependent, untouched). Web: lint, typecheck, unit
+121 files / 824 tests; new Playwright spec `loan-sanction-terms.spec.ts` passes
+against `pnpm dev` with mocked API (screenshot reviewed). OpenAPI unchanged.
+Completion impact: none.
+
 **Implemented — security audit fixes, PR 3/5: payout reject race**
 (2026-11-14; open for review), branch `fix/payout-reject-race` stacked on PR 2.
 Audit finding #4. `services/payments.py::reject_payout` now loads the payout
