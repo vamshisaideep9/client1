@@ -534,6 +534,35 @@ function requirePositive(errors: Record<string, string>, key: string, value: str
   if (toNumber(value) <= 0) errors[key] = `Enter a valid ${label.toLowerCase()}.`;
 }
 
+/** Rupee amounts are sent as whole paise; anything that rounds to 0 is rejected by the API. */
+function requirePositiveRupees(
+  errors: Record<string, string>,
+  key: string,
+  value: string,
+  label: string,
+) {
+  if (toPaise(value) <= 0) errors[key] = `Enter a valid ${label.toLowerCase()}.`;
+}
+
+function isPositiveWholeNumber(value: string): boolean {
+  return /^\d+$/.test(value.trim()) && toInt(value) > 0;
+}
+
+/**
+ * Whole-number fields are sent with parseInt, so "0.5" would reach the API as
+ * 0 and fail its greater-than-zero rule with no field named. Catch it here.
+ */
+function requirePositiveInt(
+  errors: Record<string, string>,
+  key: string,
+  value: string,
+  label: string,
+) {
+  if (!isPositiveWholeNumber(value)) {
+    errors[key] = `Enter a whole number greater than 0 for ${label.toLowerCase()}.`;
+  }
+}
+
 function validateNarrative(
   errors: Record<string, string>,
   key: string,
@@ -570,7 +599,7 @@ export function validateForm(
   ] as const) requireValue(errors, key, value, label);
   if (!/^[1-9]\d{5}$/.test(form.pincode.trim())) errors.pincode = "Enter a valid 6-digit pincode.";
   const isRent = form.listingIntent === "rent";
-  requirePositive(
+  requirePositiveRupees(
     errors,
     "priceRupees",
     form.priceRupees,
@@ -583,7 +612,7 @@ export function validateForm(
       form.securityDepositRupees,
       "security deposit",
     );
-    requirePositive(
+    requirePositiveInt(
       errors,
       "minimumLeaseMonths",
       form.minimumLeaseMonths,
@@ -608,11 +637,16 @@ export function validateForm(
   if (family === "project") {
     requireValue(errors, "projectName", details.projectName, "Project name");
     requirePositive(errors, "projectAreaAcres", details.projectAreaAcres, "project area");
-    requirePositive(errors, "numberOfTowers", details.numberOfTowers, "number of towers");
-    requirePositive(errors, "totalUnits", details.totalUnits, "total units");
+    requirePositiveInt(errors, "numberOfTowers", details.numberOfTowers, "number of towers");
+    requirePositiveInt(errors, "totalUnits", details.totalUnits, "total units");
     if (details.configurations.length === 0) errors.configurations = "Choose a configuration.";
-    requirePositive(errors, "unitAreaSqft", details.unitAreaSqft, "unit or plot area");
-    requirePositive(errors, "rateRupees", details.rateRupees, "price per square foot");
+    requirePositiveInt(errors, "unitAreaSqft", details.unitAreaSqft, "unit or plot area");
+    // Optional, but the API rejects 0: an agent typing 0 for "not applicable"
+    // used to get a bare "Input should be greater than 0".
+    if (details.udsSqft.trim() && !isPositiveWholeNumber(details.udsSqft)) {
+      errors.udsSqft = "Enter a whole number greater than 0, or leave undivided share blank.";
+    }
+    requirePositiveRupees(errors, "rateRupees", details.rateRupees, "price per square foot");
     if (!isRent) requireValue(errors, "saleType", details.saleType, "Sale type");
     requireValue(errors, "facing", details.facing, "Entrance facing");
     requireValue(errors, "about", details.about, "About the project");
@@ -635,16 +669,16 @@ export function validateForm(
     requireValue(errors, "propertyUse", details.propertyUse, "Property use");
     requirePositive(errors, "totalLandArea", details.totalLandArea, "total land area");
     requireValue(errors, "landAreaUnit", details.landAreaUnit, "Land area unit");
-    requirePositive(errors, "unitAreaSqft", details.unitAreaSqft, "built-up area");
-    requirePositive(errors, "numberOfFloors", details.numberOfFloors, "number of floors");
+    requirePositiveInt(errors, "unitAreaSqft", details.unitAreaSqft, "built-up area");
+    requirePositiveInt(errors, "numberOfFloors", details.numberOfFloors, "number of floors");
     requireValue(errors, "facing", details.facing, "Facing");
     requireValue(errors, "ongoingLoanStatus", details.ongoingLoanStatus, "Ongoing loan status");
     requireValue(errors, "about", details.about, "About the property");
     validateNarrative(errors, "about", details.about, "About the property", 250);
   } else if (family === "commercial") {
     requireValue(errors, "ownershipType", details.ownershipType, "Ownership type");
-    requirePositive(errors, "totalAreaSqft", details.totalAreaSqft, "total area");
-    requirePositive(errors, "unitAreaSqft", details.unitAreaSqft, "unit area");
+    requirePositiveInt(errors, "totalAreaSqft", details.totalAreaSqft, "total area");
+    requirePositiveInt(errors, "unitAreaSqft", details.unitAreaSqft, "unit area");
     requireValue(errors, "facing", details.facing, "Facing");
     if (!isRent) requireValue(errors, "saleType", details.saleType, "Sale type");
     requireValue(errors, "rentalIncomeStart", details.rentalIncomeStart, "Income start");
@@ -655,10 +689,10 @@ export function validateForm(
   } else if (family === "plot") {
     requireValue(errors, "projectName", details.projectName, "Project name");
     requirePositive(errors, "totalProjectAreaAcres", details.totalProjectAreaAcres, "project area");
-    requirePositive(errors, "plotSizeSqyd", details.plotSizeSqyd, "plot size");
-    requirePositive(errors, "totalPlots", details.totalPlots, "total plots");
+    requirePositiveInt(errors, "plotSizeSqyd", details.plotSizeSqyd, "plot size");
+    requirePositiveInt(errors, "totalPlots", details.totalPlots, "total plots");
     requireValue(errors, "facing", details.facing, "Facing");
-    requirePositive(errors, "rateRupees", details.rateRupees, "price per square yard");
+    requirePositiveRupees(errors, "rateRupees", details.rateRupees, "price per square yard");
     if (!isRent) requireValue(errors, "saleType", details.saleType, "Sale type");
     requireValue(errors, "projectStatus", details.projectStatus, "Project status");
     requireValue(errors, "about", details.about, "About the project");
@@ -703,6 +737,53 @@ export function validateForm(
     } else if (form.panorama.size < 1) {
       errors.panorama = "The 360 panorama is empty.";
     }
+  }
+  return errors;
+}
+
+// API field -> form key, for 422s the client checks did not catch. Structured
+// detail issues arrive as structured_details[.<variant>].<field>, so the last
+// segment is matched.
+const API_FIELD_TO_FORM_KEY: Record<string, string> = {
+  title: "title",
+  type: "type",
+  location: "location",
+  city: "city",
+  locality: "locality",
+  state: "state",
+  pincode: "pincode",
+  price_paise: "priceRupees",
+  security_deposit_paise: "securityDepositRupees",
+  minimum_lease_months: "minimumLeaseMonths",
+  available_from: "availableFrom",
+  project_name: "projectName",
+  project_area_acres: "projectAreaAcres",
+  number_of_towers: "numberOfTowers",
+  total_units: "totalUnits",
+  unit_or_plot_area_sqft: "unitAreaSqft",
+  uds_sqft: "udsSqft",
+  price_per_sqft_paise: "rateRupees",
+  total_land_area: "totalLandArea",
+  built_up_area_sqft: "unitAreaSqft",
+  number_of_floors: "numberOfFloors",
+  total_area_sqft: "totalAreaSqft",
+  unit_area_sqft: "unitAreaSqft",
+  total_project_area_acres: "totalProjectAreaAcres",
+  plot_size_sqyd: "plotSizeSqyd",
+  total_plots: "totalPlots",
+  price_per_sqyd_paise: "rateRupees",
+  land_area: "landArea",
+};
+
+/** Turn API validation issues into inline field errors; unknown paths are skipped. */
+export function submissionIssuesToFieldErrors(
+  issues: readonly { field: string; message: string }[] | undefined,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const issue of issues ?? []) {
+    const segments = issue.field.split(".");
+    const key = API_FIELD_TO_FORM_KEY[segments[segments.length - 1]];
+    if (key && !errors[key]) errors[key] = issue.message;
   }
   return errors;
 }

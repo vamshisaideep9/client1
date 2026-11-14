@@ -60,6 +60,17 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**Implemented — agent listing submit "Input should be greater than 0"**
+(2026-11-14; open for review), branch `fix/property-submit-price` from
+`upstream/main` `0ae41c0`. User-reported defect on dev: submitting a listing
+from the Agent dashboard failed with a bare "Input should be greater than 0"
+(four `POST /property-submissions` 422s in the dev API log). Root cause: the
+optional project "Undivided share" box was never validated, so 0 was sent as
+`uds_sqft: 0` and rejected by the API's `gt=0`; whole-number fields were also
+checked as decimals but sent as integers ("0.5" → 0). The form now enforces
+every positive-number rule the API has, and any remaining 422 is shown on its
+field instead of an unnamed toast. Web-only. Recommended: Opus 5.5 / medium.
+
 **Implemented — "Submitted on" for enquiries and site visits** (2026-11-14;
 open for review), branch `fix/request-submitted-labels` from `upstream/main`
 `bd49ff2`. User request: show staff when a client sent each property enquiry

@@ -2,6 +2,23 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — agent listing submit "Input should be greater than 0"**
+(2026-11-14; open for review), branch `fix/property-submit-price` from
+`upstream/main` `0ae41c0`. Reproduced against the local API: a project listing
+with Undivided share 0 returns 422 "Input should be greater than 0" at
+`structured_details.project_residence.uds_sqft`, which the web showed only as an
+unnamed toast. `lib/property-submit.ts` now rejects an entered UDS that is not a
+whole number above 0, checks every whole-number field (unit/built-up/total/plot
+area, towers, units, floors, plots, minimum lease) with the same integer parse
+used to build the payload, and checks rupee amounts after paise rounding.
+`submissionIssuesToFieldErrors` maps API 422 paths (including tagged
+`structured_details.<variant>.<field>`) onto form fields, and
+`use-submit-property.ts` shows them inline with "Please fix the highlighted
+fields." Evidence: the three new validation tests failed before the fix and
+pass after; mapping tests added; `pnpm lint`, `pnpm typecheck`, `pnpm test`
+(121 files / 831 tests) pass. Not run: a browser walkthrough of the full listing
+form (needs real image uploads). Completion impact: none.
+
 **Implemented — "Submitted on" for enquiries and site visits** (2026-11-14;
 open for review), branch `fix/request-submitted-labels` from `upstream/main`
 `bd49ff2`. Visibility confirmed on the local API before the change: a client's
