@@ -60,6 +60,17 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**Implemented — security audit fixes, PR 1/5: Next.js 15.5.28** (2026-11-14;
+open for review), branch `security/nextjs-15-5-patch` from `upstream/main`
+`12a2aec`. First of five stacked PRs from the 2026-11-14 read-only audit
+(findings #2–#6). `next` and `eslint-config-next` move from 15.5.27 to the
+patched 15.5.28 for GHSA-2464-fhr4-w9xw (image-optimizer remote code execution
+with SVGs) and GHSA-p3m5-59mp-jv5r (App Router Server Actions denial of
+service). 15.5.29 exists but was 11 days old; 15.5.28 is the first patched
+release. Lockfile changes are limited to `next`, `@next/*` and
+`eslint-config-next`. Evidence is in `feature-status.md`. Next: PR 2 enquiry
+and site-visit scoping. Recommended: Opus 5.5 / medium (dependency bump).
+
 **Implemented — stale Agent lead test fixtures** (2026-11-14; PR #335, mirror #39, open for review), branch
 `fix/agent-lead-stale-tests` stacked on PR #334. Six tests in
 `test_agent_api.py` and `test_lead_detail_ownership_api.py` posted Agent
