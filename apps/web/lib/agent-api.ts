@@ -43,3 +43,31 @@ export async function updateAgentLead(
 ): Promise<ApiResponse<AgentLead>> {
   return apiRequest<AgentLead>(`/api/v1/agent/leads/${leadId}`, { method: "PATCH", body: payload });
 }
+
+/** Restart this Agent's 30-day window on their expired, unregistered lead. */
+export async function resubmitAgentLead(leadId: string): Promise<ApiResponse<AgentLead>> {
+  return apiRequest<AgentLead>(`/api/v1/agent/leads/${leadId}/resubmit`, { method: "POST" });
+}
+
+export type AgentPayoutDetails = Schemas["AgentPayoutDetailsRead"];
+export type AgentPayoutDetailsUpdate = Schemas["AgentPayoutDetailsUpdate"];
+export type AgentBankAccount = Schemas["AgentBankAccount"];
+
+/** The Agent's saved payout destination, masked. */
+export async function getAgentPayoutDetails(): Promise<ApiResponse<AgentPayoutDetails>> {
+  return apiRequest<AgentPayoutDetails>("/api/v1/agent/payout-details");
+}
+
+/** Partial update: omit a field to keep it, send null to remove it. */
+export async function saveAgentPayoutDetails(
+  payload: AgentPayoutDetailsUpdate,
+): Promise<ApiResponse<AgentPayoutDetails>> {
+  return apiRequest<AgentPayoutDetails>("/api/v1/agent/payout-details", {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+export async function deleteAgentPayoutDetails(): Promise<ApiResponse<unknown>> {
+  return apiRequest<unknown>("/api/v1/agent/payout-details", { method: "DELETE" });
+}

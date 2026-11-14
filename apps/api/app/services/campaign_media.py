@@ -29,7 +29,7 @@ from app.schemas.campaign_media import (
 from app.services import media_processing, storage
 from app.services.audit_log import record as record_audit
 
-MEDIA_MAX_BYTES = 4 * 1024 * 1024
+MEDIA_MAX_BYTES = 5 * 1024 * 1024
 _STAGING_PREFIX = "private/campaign-media/staging/"
 _CANONICAL_PREFIX = "public/campaign-media/"
 _ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}

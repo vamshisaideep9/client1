@@ -229,7 +229,9 @@ async def test_introduce_lead_idempotent(client: AsyncClient) -> None:
     token = _agent_token(auth_uuid, agent_uuid)
     mobile = unique_mobile()
     headers = {"Authorization": f"Bearer {token}"}
-    first = await client.post("/api/v1/agent/leads", json={"mobile": mobile}, headers=headers)
+    first = await client.post(
+        "/api/v1/agent/leads", json={"mobile": mobile, "name": "Test Lead"}, headers=headers
+    )
     await client.post(
         "/api/v1/agent/leads", json={"mobile": mobile, "name": "Ravi"}, headers=headers
     )
@@ -373,7 +375,7 @@ async def test_introduce_lead_cross_line_conflict_is_409(client: AsyncClient) ->
     token = _agent_token(auth_uuid, agent_uuid)
     res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile},
+        json={"mobile": mobile, "name": "Test Lead"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 409
@@ -392,7 +394,7 @@ async def test_introduce_lead_same_line_different_agent_conflict_is_409(
     mobile = unique_mobile()
     first_res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile},
+        json={"mobile": mobile, "name": "Test Lead"},
         headers={"Authorization": f"Bearer {first_token}"},
     )
     assert first_res.status_code == 201, first_res.text
@@ -401,7 +403,7 @@ async def test_introduce_lead_same_line_different_agent_conflict_is_409(
     second_token = _agent_token(second_auth_uuid, second_agent_uuid)
     res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile},
+        json={"mobile": mobile, "name": "Test Lead"},
         headers={"Authorization": f"Bearer {second_token}"},
     )
     assert res.status_code == 409
@@ -532,7 +534,9 @@ async def test_lead_read_editable_until_telecaller_starts_work(client: AsyncClie
     token = _agent_token(auth_uuid, agent_uuid)
     headers = {"Authorization": f"Bearer {token}"}
     create_res = await client.post(
-        "/api/v1/agent/leads", json={"mobile": unique_mobile()}, headers=headers
+        "/api/v1/agent/leads",
+        json={"mobile": unique_mobile(), "name": "Test Lead"},
+        headers=headers,
     )
     lead_id = create_res.json()["id"]
     assert create_res.json()["editable"] is True
@@ -560,7 +564,9 @@ async def test_list_leads_returns_own(client: AsyncClient) -> None:
     token = _agent_token(auth_uuid, agent_uuid)
     headers = {"Authorization": f"Bearer {token}"}
     create_res = await client.post(
-        "/api/v1/agent/leads", json={"mobile": unique_mobile()}, headers=headers
+        "/api/v1/agent/leads",
+        json={"mobile": unique_mobile(), "name": "Test Lead"},
+        headers=headers,
     )
     lead_id = create_res.json()["id"]
 
@@ -579,7 +585,7 @@ async def test_get_lead_not_owned_is_404(client: AsyncClient) -> None:
 
     create_res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": unique_mobile()},
+        json={"mobile": unique_mobile(), "name": "Test Lead"},
         headers={"Authorization": f"Bearer {token}"},
     )
     lead_id = create_res.json()["id"]
@@ -597,7 +603,9 @@ async def test_patch_lead_success_when_unassigned(client: AsyncClient) -> None:
     token = _agent_token(auth_uuid, agent_uuid)
     headers = {"Authorization": f"Bearer {token}"}
     create_res = await client.post(
-        "/api/v1/agent/leads", json={"mobile": unique_mobile()}, headers=headers
+        "/api/v1/agent/leads",
+        json={"mobile": unique_mobile(), "name": "Test Lead"},
+        headers=headers,
     )
     lead_id = create_res.json()["id"]
 
@@ -616,7 +624,9 @@ async def test_patch_lead_empty_payload_rejected(client: AsyncClient) -> None:
     token = _agent_token(auth_uuid, agent_uuid)
     headers = {"Authorization": f"Bearer {token}"}
     create_res = await client.post(
-        "/api/v1/agent/leads", json={"mobile": unique_mobile()}, headers=headers
+        "/api/v1/agent/leads",
+        json={"mobile": unique_mobile(), "name": "Test Lead"},
+        headers=headers,
     )
     lead_id = create_res.json()["id"]
 
@@ -630,7 +640,9 @@ async def test_patch_lead_remains_editable_after_assignment(client: AsyncClient)
     token = _agent_token(auth_uuid, agent_uuid)
     headers = {"Authorization": f"Bearer {token}"}
     create_res = await client.post(
-        "/api/v1/agent/leads", json={"mobile": unique_mobile()}, headers=headers
+        "/api/v1/agent/leads",
+        json={"mobile": unique_mobile(), "name": "Test Lead"},
+        headers=headers,
     )
     lead_id = create_res.json()["id"]
 
@@ -690,7 +702,11 @@ async def test_introduce_lead_with_property_interest_records_its_title(
     token = _agent_token(auth_uuid, agent_uuid, "real_estate")
     res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": unique_mobile(), "requirement": {"property_id": property_id}},
+        json={
+            "mobile": unique_mobile(),
+            "name": "Test Lead",
+            "requirement": {"property_id": property_id},
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 201, res.text
@@ -708,7 +724,11 @@ async def test_introduce_lead_rejects_interest_outside_agent_line(client: AsyncC
     token = _agent_token(auth_uuid, agent_uuid)
     res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": unique_mobile(), "requirement": {"property_id": property_id}},
+        json={
+            "mobile": unique_mobile(),
+            "name": "Test Lead",
+            "requirement": {"property_id": property_id},
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 422, res.text
@@ -724,7 +744,11 @@ async def test_introduce_lead_rejects_inactive_or_unknown_property(client: Async
     for property_id in (inactive_id, str(uuid.uuid4())):
         res = await client.post(
             "/api/v1/agent/leads",
-            json={"mobile": unique_mobile(), "requirement": {"property_id": property_id}},
+            json={
+                "mobile": unique_mobile(),
+                "name": "Test Lead",
+                "requirement": {"property_id": property_id},
+            },
             headers={"Authorization": f"Bearer {token}"},
         )
         assert res.status_code == 422, res.text
@@ -736,7 +760,11 @@ async def test_introduce_lead_rejects_client_supplied_interest_title(client: Asy
     token = _agent_token(auth_uuid, agent_uuid)
     res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": unique_mobile(), "requirement": {"interest_title": "Spoofed"}},
+        json={
+            "mobile": unique_mobile(),
+            "name": "Test Lead",
+            "requirement": {"interest_title": "Spoofed"},
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 422, res.text

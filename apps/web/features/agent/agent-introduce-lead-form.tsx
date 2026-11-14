@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/auth/session-provider";
 import { MobileInput } from "@/components/auth/mobile-input";
 import { Button } from "@/components/ui/button";
+import { FieldError, RequiredIndicator } from "@/components/ui/field-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +34,7 @@ export function AgentIntroduceLeadForm() {
   const [notes, setNotes] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [mobileError, setMobileError] = React.useState<string | null>(null);
+  const [nameError, setNameError] = React.useState<string | null>(null);
   const [interest, setInterest] = React.useState<LeadInterest>(null);
   const { session } = useAuth();
   const businessLine =
@@ -42,16 +44,19 @@ export function AgentIntroduceLeadForm() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!isValidMobile(mobile)) {
-      setMobileError("Enter a 10-digit Indian mobile number.");
-      requestAnimationFrame(() => document.getElementById("mobile")?.focus());
+    const nextMobileError = isValidMobile(mobile) ? null : "Enter a 10-digit Indian mobile number.";
+    const nextNameError = name.trim() ? null : "Enter the person's name.";
+    setMobileError(nextMobileError);
+    setNameError(nextNameError);
+    if (nextMobileError || nextNameError) {
+      const firstInvalid = nextMobileError ? "mobile" : "name";
+      requestAnimationFrame(() => document.getElementById(firstInvalid)?.focus());
       return;
     }
-    setMobileError(null);
     setSaving(true);
     const res = await introduceAgentLead({
       mobile: toE164(mobile),
-      name: name.trim() || null,
+      name: name.trim(),
       requirement: buildRequirement(notes, interest),
     });
     setSaving(false);
@@ -97,14 +102,26 @@ export function AgentIntroduceLeadForm() {
             ) : null}
           </div>
           <div>
-            <Label htmlFor="name">Name (optional)</Label>
+            <Label htmlFor="name">
+              Name
+              <RequiredIndicator />
+            </Label>
             <Input
               id="name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (nameError) setNameError(null);
+              }}
               placeholder="Full name"
               maxLength={100}
+              autoComplete="off"
+              aria-invalid={!!nameError}
+              aria-describedby={nameError ? "name-error" : undefined}
             />
+            <FieldError id="name-error" className="mt-1.5">
+              {nameError ?? undefined}
+            </FieldError>
           </div>
         </DashboardFormSection>
 

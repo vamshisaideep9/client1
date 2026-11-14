@@ -107,6 +107,7 @@ export const FORM_SURFACE_REGISTRY = {
   "features/real-estate/real-estate-home.tsx": "filter",
   "features/real-estate/submit-property-form.tsx": "mutation",
   "features/settings/journey-details-card.tsx": "mutation",
+  "features/settings/payout-details-card.tsx": "mutation",
   "features/settings/personalization-settings-card.tsx": "mutation",
   "features/settings/appearance-settings-card.tsx": "mutation",
   "features/sub-admin/artwork-upload-dialog.tsx": "mutation",

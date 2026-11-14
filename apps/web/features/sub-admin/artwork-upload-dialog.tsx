@@ -160,7 +160,7 @@ export function ArtworkUploadDialog({
               onChange={setFile}
               accept={isVideo ? CAMPAIGN_VIDEO_ACCEPT : CAMPAIGN_IMAGE_ACCEPT}
               maxBytes={isVideo ? CAMPAIGN_VIDEO_MAX_BYTES : CAMPAIGN_IMAGE_MAX_BYTES}
-              hint={isVideo ? "MP4 · max 20 MB · up to 30 seconds" : "JPG, PNG or WEBP · max 4 MB"}
+              hint={isVideo ? "MP4 · max 20 MB · up to 30 seconds" : "JPG, PNG or WEBP · max 5 MB"}
               disabled={busy}
             />
             <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs leading-5 text-text-secondary">

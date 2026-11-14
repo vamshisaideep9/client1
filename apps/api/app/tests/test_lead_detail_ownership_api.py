@@ -189,6 +189,7 @@ async def test_agent_retry_preserves_system_owned_requirement(
         "/api/v1/agent/leads",
         json={
             "mobile": mobile,
+            "name": "Agent Supplied",
             "requirement": {"product": "Original product", "notes": "Original notes"},
         },
         headers=headers,
@@ -199,6 +200,7 @@ async def test_agent_retry_preserves_system_owned_requirement(
         "/api/v1/agent/leads",
         json={
             "mobile": mobile,
+            "name": "Agent Supplied",
             "requirement": {"product": "Overwrite", "notes": "Updated notes"},
         },
         headers=headers,
