@@ -2,8 +2,22 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — "Submitted on" for enquiries and site visits** (2026-11-14;
+open for review), branch `fix/request-submitted-labels` from `upstream/main`
+`bd49ff2`. Visibility confirmed on the local API before the change: a client's
+new enquiry and site visit appear on the assigned Telecaller's lead page and as
+the newest rows in Admin Operations; another Real Estate Telecaller gets 404 and
+a Real Estate Agent sees neither. Change: `telecaller-request-details.tsx`
+("Enquired"/"Scheduled" → "Submitted on", listed before "Visit on") and
+`operational-records-view.tsx` (enquiry "Created" and site-visit "Requested" →
+"Submitted on", first field; "Preferred slot" → "Visit on"). Evidence: new
+unit tests for both Admin records; new Playwright spec
+`request-submitted-on.spec.ts` passes against `pnpm dev` with a mocked API
+(screenshot reviewed); `pnpm lint`, `pnpm typecheck` and `pnpm test` (121 files /
+826 tests) pass. Completion impact: none.
+
 **Implemented — security audit fixes, PR 5/5: agent KYC canonical copies**
-(2026-11-14; open for review), branch `security/agent-kyc-canonical-copy`
+(2026-11-14; merged as PR #340, mirror #44 open), branch `security/agent-kyc-canonical-copy`
 stacked on PR 4. Audit finding #6 (dev storage: the same presigned policy
 accepted an overwrite of a verified PDF with HTML bytes, 201). Submit verifies
 size and sniffs the real type (`storage.sniffed_content_type`; JPEG/PNG/WebP/
@@ -24,7 +38,7 @@ upload against real object storage for this branch (dev runs `main`).
 Completion impact: none.
 
 **Implemented — security audit fixes, PR 4/5: sanction and disbursal need
-terms** (2026-11-14; open for review), branch `fix/loan-sanction-terms-required`
+terms** (2026-11-14; merged as PR #339, mirror #43 open), branch `fix/loan-sanction-terms-required`
 stacked on PR 3. Audit finding #5 (live probe: `new` → `disbursed` with no
 terms returned 200). `services/loan_applications.py` raises
 `SanctionTermsRequired` (422 "Add the sanctioned amount and bank before marking
@@ -46,7 +60,7 @@ against `pnpm dev` with mocked API (screenshot reviewed). OpenAPI unchanged.
 Completion impact: none.
 
 **Implemented — security audit fixes, PR 3/5: payout reject race**
-(2026-11-14; open for review), branch `fix/payout-reject-race` stacked on PR 2.
+(2026-11-14; merged as PR #338, mirror #42 open), branch `fix/payout-reject-race` stacked on PR 2.
 Audit finding #4. `services/payments.py::reject_payout` now loads the payout
 with `SELECT … FOR UPDATE`; `approve_payout`'s conditional UPDATE waits on that
 lock and returns `PayoutStateError` (409) once the row is rejected, and a
@@ -59,7 +73,7 @@ payout, commission-payout, cashback-payout, referral-admin and payout-RLS
 suites pass (110); ruff check/format clean. Completion impact: none.
 
 **Implemented — security audit fixes, PR 2/5: enquiry and site-visit
-scoping** (2026-11-14; open for review), branch
+scoping** (2026-11-14; merged as PR #337, mirror #41 open), branch
 `security/re-enquiry-visit-scope` stacked on PR 1. Audit finding #3 (live
 probe: a Real Estate Agent token listed 81/81 enquiries and 128/128 site
 visits). `GET /enquiries` and `GET /site-visits` filter on
@@ -76,7 +90,7 @@ clean (542 files); exported OpenAPI identical to the committed contract.
 Completion impact: none (security hardening).
 
 **Implemented — security audit fixes, PR 1/5: Next.js 15.5.28** (2026-11-14;
-open for review), branch `security/nextjs-15-5-patch` from `upstream/main`
+merged as PR #336, mirror #40 open), branch `security/nextjs-15-5-patch` from `upstream/main`
 `12a2aec`. Audit finding #2: `pnpm audit --prod` reported one critical
 (GHSA-2464-fhr4-w9xw, image-optimizer RCE with SVGs) and one high
 (GHSA-p3m5-59mp-jv5r, Server Actions DoS) advisory for `next` 15.5.27, patched

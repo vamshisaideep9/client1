@@ -60,8 +60,18 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**Implemented — "Submitted on" for enquiries and site visits** (2026-11-14;
+open for review), branch `fix/request-submitted-labels` from `upstream/main`
+`bd49ff2`. User request: show staff when a client sent each property enquiry
+and site visit. The date and time already existed but were labelled
+"Enquired" / "Scheduled" (Telecaller) and "Created" / "Requested" (Admin
+Operations); "Scheduled" beside "Visit on" read as the appointment. All four now
+say "Submitted on <date, time>"; Admin cards list it first and name the visit
+slot "Visit on". Web-only; no API or contract change. Also records that the
+audit stack PRs #336–#340 merged. Recommended: Opus 5.5 / low (copy change).
+
 **Implemented — security audit fixes, PR 5/5: agent KYC canonical copies**
-(2026-11-14; open for review), branch `security/agent-kyc-canonical-copy`
+(2026-11-14; merged as PR #340, mirror #44 open), branch `security/agent-kyc-canonical-copy`
 stacked on PR 4. Audit finding #6: the anonymous agent-application intake was
 the only upload flow storing the applicant's staged key directly. The bytes
 were sniffed but not scanned or re-encoded, and the presigned POST stayed valid
@@ -74,7 +84,7 @@ their original keys. This closes the audit fix stack (findings #2–#6; #1 is a
 dev-only accepted risk). Recommended: Opus 5.5 / high (public KYC upload path).
 
 **Implemented — security audit fixes, PR 4/5: sanction and disbursal need
-terms** (2026-11-14; open for review), branch `fix/loan-sanction-terms-required`
+terms** (2026-11-14; merged as PR #339, mirror #43 open), branch `fix/loan-sanction-terms-required`
 stacked on PR 3. Audit finding #5: a Telecaller could move a new loan straight
 to `disbursed` with no sanctioned amount or bank, stamping `disbursed_at` and
 opening commission, fee-cashback and referral eligibility. Moving to
@@ -86,7 +96,7 @@ bank", marks amount and bank required for sanction/disbursal and validates them
 inline. Next: PR 5 agent KYC canonical copy. Recommended: Opus 5.5 / high.
 
 **Implemented — security audit fixes, PR 3/5: payout reject race**
-(2026-11-14; open for review), branch `fix/payout-reject-race` stacked on PR 2.
+(2026-11-14; merged as PR #338, mirror #42 open), branch `fix/payout-reject-race` stacked on PR 2.
 Audit finding #4: `reject_payout` read the payout without a lock, so a
 concurrent approve and reject could both succeed (13 of 40 local trials) and a
 stale reject could overwrite a paid payout and release its linked commission,
@@ -96,7 +106,7 @@ the status check; approve's existing compare-and-swap then loses cleanly with
 Recommended: Opus 5.5 / high (money path).
 
 **Implemented — security audit fixes, PR 2/5: enquiry and site-visit
-scoping** (2026-11-14; open for review), branch
+scoping** (2026-11-14; merged as PR #337, mirror #41 open), branch
 `security/re-enquiry-visit-scope` stacked on PR 1. Audit finding #3: a Real
 Estate Agent could list every client's property enquiry and site visit with
 contact name and mobile, and Telecallers/Employees got the whole line through
@@ -110,7 +120,7 @@ assigned leads (legacy visits without `lead_uuid` would break deal linking).
 Next: PR 3 payout reject guard. Recommended: Opus 5.5 / high (RLS migration).
 
 **Implemented — security audit fixes, PR 1/5: Next.js 15.5.28** (2026-11-14;
-open for review), branch `security/nextjs-15-5-patch` from `upstream/main`
+merged as PR #336, mirror #40 open), branch `security/nextjs-15-5-patch` from `upstream/main`
 `12a2aec`. First of five stacked PRs from the 2026-11-14 read-only audit
 (findings #2–#6). `next` and `eslint-config-next` move from 15.5.27 to the
 patched 15.5.28 for GHSA-2464-fhr4-w9xw (image-optimizer remote code execution
