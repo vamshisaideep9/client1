@@ -2,6 +2,27 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — security audit fixes, PR 5/5: agent KYC canonical copies**
+(2026-11-14; open for review), branch `security/agent-kyc-canonical-copy`
+stacked on PR 4. Audit finding #6 (dev storage: the same presigned policy
+accepted an overwrite of a verified PDF with HTML bytes, 201). Submit verifies
+size and sniffs the real type (`storage.sniffed_content_type`; JPEG/PNG/WebP/
+PDF only, so MP4 bytes are refused), then `media_processing.canonicalize_object`
+writes each document once to `agent-applications/canonical/{jti}/{hex}-{doc}`
+(ClamAV for PDFs, Pillow re-encode without metadata for images, in the shared
+bounded media slot). The row stores only canonical keys; staged uploads are
+deleted after commit. Malware or an unusable image returns 422 and removes the
+attempted copies and staged uploads; scanner/storage unavailability returns
+502, keeps the staged uploads and does not burn the ticket; a lost ticket race
+or failed DB write removes the copies. Canonical keys sit outside every
+ticket's claimable prefix and inside the orphan-purge prefix. Evidence: intake,
+storage-sniff, application RLS, business-line immutability and Admin agent
+suites 79 passed (new tests: canonical storage and cleanup, per-document type
+pass-through, MP4 refusal, malware, scanner outage with same-ticket retry,
+forged canonical key); ruff clean; OpenAPI unchanged. Not run: an end-to-end
+upload against real object storage for this branch (dev runs `main`).
+Completion impact: none.
+
 **Implemented — security audit fixes, PR 4/5: sanction and disbursal need
 terms** (2026-11-14; open for review), branch `fix/loan-sanction-terms-required`
 stacked on PR 3. Audit finding #5 (live probe: `new` → `disbursed` with no

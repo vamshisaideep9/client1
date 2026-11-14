@@ -60,6 +60,19 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**Implemented — security audit fixes, PR 5/5: agent KYC canonical copies**
+(2026-11-14; open for review), branch `security/agent-kyc-canonical-copy`
+stacked on PR 4. Audit finding #6: the anonymous agent-application intake was
+the only upload flow storing the applicant's staged key directly. The bytes
+were sniffed but not scanned or re-encoded, and the presigned POST stayed valid
+for 5 minutes, so a verified file could be swapped afterwards (reproduced on
+dev storage). Submit now scans PDFs and re-encodes images through
+`media_processing.canonicalize_object` into
+`agent-applications/canonical/{jti}/…`, stores only those keys, deletes the
+staged uploads, and accepts only JPEG/PNG/WebP/PDF bytes. Existing rows keep
+their original keys. This closes the audit fix stack (findings #2–#6; #1 is a
+dev-only accepted risk). Recommended: Opus 5.5 / high (public KYC upload path).
+
 **Implemented — security audit fixes, PR 4/5: sanction and disbursal need
 terms** (2026-11-14; open for review), branch `fix/loan-sanction-terms-required`
 stacked on PR 3. Audit finding #5: a Telecaller could move a new loan straight
