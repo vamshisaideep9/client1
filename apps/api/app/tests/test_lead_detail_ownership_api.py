@@ -189,6 +189,7 @@ async def test_agent_retry_preserves_system_owned_requirement(
         "/api/v1/agent/leads",
         json={
             "mobile": mobile,
+            "name": "Agent Supplied",
             "requirement": {"product": "Original product", "notes": "Original notes"},
         },
         headers=headers,
@@ -199,6 +200,7 @@ async def test_agent_retry_preserves_system_owned_requirement(
         "/api/v1/agent/leads",
         json={
             "mobile": mobile,
+            "name": "Agent Supplied",
             "requirement": {"product": "Overwrite", "notes": "Updated notes"},
         },
         headers=headers,
@@ -341,6 +343,48 @@ async def test_agent_can_edit_assigned_but_not_working_lead(client: AsyncClient)
         headers=headers,
     )
     assert locked.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_admin_lead_details_list_what_the_client_applied_for(client: AsyncClient) -> None:
+    token, mobile = await full_registration(client, lines=["loans"])
+    details = await client.get(
+        "/api/v1/client/lead-details/loans",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    lead_id = details.json()["id"]
+    assert "requests" not in details.json()  # client shape unchanged
+    user_uuid = await _auth_user_uuid(mobile)
+
+    import app.db.session as _session_mod
+    from app.models.loan import LoanApplication, LoanType
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        lead = await db.get(Lead, uuid.UUID(lead_id))
+        assert lead is not None and lead.client_profile_uuid is not None
+        loan_type = LoanType(name=f"lt_{uuid.uuid4().hex[:8]}", label="Gold Loan")
+        db.add(loan_type)
+        await db.flush()
+        application = LoanApplication(
+            lead_uuid=lead.id,
+            client_profile_uuid=lead.client_profile_uuid,
+            business_line="loans",
+            loan_type_id=loan_type.id,
+        )
+        db.add(application)
+        await db.commit()
+        application_id = str(application.id)
+
+    admin_view = await client.get(
+        f"/api/v1/admin/leads/{lead_id}/details",
+        headers={"Authorization": f"Bearer {_admin_token(user_uuid)}"},
+    )
+    assert admin_view.status_code == 200, admin_view.text
+    [request] = admin_view.json()["requests"]
+    assert request["kind"] == "loan_application"
+    assert request["id"] == application_id
+    assert request["title"] == "Gold Loan"
+    assert request["applied_at"]
 
 
 @pytest.mark.asyncio

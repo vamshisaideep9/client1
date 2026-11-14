@@ -2,6 +2,452 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — agent dashboard refinements** (2026-11-14; PR #334, mirror #38, open for review), branch
+`feat/agent-dashboard-refinements` from `upstream/main` `a927f60`. Lead name
+required; expiry policy copy, same-Agent Resubmit and 7-day reminder;
+encrypted Agent bank/UPI payout details; "Hi <name>" Agent home; 5 MB
+image/document upload limits. Decision record: CS-017 in
+`current-implementation-state.md`.
+- Name: `AgentLeadCreate.name` is required (trimmed, 1-100); an Agent PATCH
+  cannot clear it. The introduce form marks it required with an inline error.
+- Expiry: migration `f8a0c2e4b6d1` replaces
+  `enforce_agent_lead_expiry_immutable` so the expiry columns may be reset only
+  when the service sets `app.agent_lead_resubmit`, the originating Agent,
+  mobile and line are unchanged, the client is unregistered, the lead is not
+  converted/closed, the new deadline is in the future and `resubmit_count`
+  advances by one. The cross-Agent no-reset trigger is unchanged.
+  `POST /agent/leads/{id}/resubmit` (409 when ineligible) keeps any current
+  Telecaller assignment and re-offers an unassigned lead to auto-assignment.
+  `AgentLeadRead.resubmittable`. Hourly `remind_agent_lead_expiry` job sends one
+  reminder per window with 7 days left when the client hasn't registered.
+  Agents see the 30-day policy instead of a day countdown.
+- Payout details: migration `a1b3d5f7c9e2` adds `agent_payout_details`
+  (AES-256-GCM blobs bound to the Agent profile and field, masked hints,
+  owner-only RLS, `erase_agent_payout_details` SECURITY DEFINER for account
+  erasure). New setting `PAYOUT_DETAILS_ENCRYPTION_KEY` (base64 32 bytes; dev
+  fallback key only when `ENV=development`; elsewhere the feature answers 503).
+  `GET/PUT/DELETE /agent/payout-details` return hints only;
+  `GET /payouts/recipients/{user}/saved-destination` and
+  `/payouts/agents/{profile}/saved-destination` decrypt for a payout maker,
+  refuse self, audit every reveal and send `Cache-Control: private, no-store`.
+  Settings card for Agents; "Use saved payout details" in the payout and
+  commission dialogs. `cryptography` declared explicitly (already locked).
+- Uploads: banner/offer images 2→5 MB, campaign images 4→5 MB, provider logos
+  1→5 MB; video stays 20 MB.
+Evidence (this session): new `test_agent_dashboard_refinements.py` 33 passed;
+affected suites (agent, lead ownership, leads RLS, expiry job, scheduler,
+banners, loan config, campaign media, payouts, delete account, admin coverage,
+RLS coverage, auth leads, auto-assignment, business-line contract, offers)
+298 passed, 1 skipped, 6 failed. The same 6 fail identically on unmodified
+`upstream/main` `a927f60` (requirement keys outside notes/property_id/
+product_slug are rejected with 422); pre-existing, not addressed here.
+Migrations upgrade from base, downgrade -2 and upgrade again on a scratch
+database; one head. Ruff check/format clean. Web: lint, `tsc`, vitest 822
+passed; Playwright `agent-dashboard-refinements.spec.ts` 5 passed (greeting,
+required name, policy + resubmit, masked payout details at 360px, not shown
+to clients).
+
+**Implemented — staff dashboard feedback batch, PR C: personal analytics**
+(2026-11-14; merged as PR #333, mirror #37), branch `feat/staff-analytics`
+stacked on PR B (#332). Item 7.
+- API: `GET /api/v1/me/analytics?days=` (clamped to 7/30/90; 422 outside
+  1-365). Role and every filter come from the session: Telecaller (own calls
+  and assigned leads), Employee (own tasks), Agent (leads they introduced,
+  own commissions), Sub Admin (banners/offers they created). Clients and
+  Admin get 403 (Admin keeps `/dashboard/analytics`). Days are India Standard
+  Time; task completion uses `updated_at` of completed tasks (no completion
+  timestamp exists). Part-to-whole parts come in a fixed category order so a
+  part keeps its color.
+- Web: "My analytics" (`/dashboard/insights`, Insights nav for the four
+  roles): KPI tiles, a day-by-day stacked bar chart (Recharts, lazy-loaded via
+  `next/dynamic`, tooltip, legend, table view), segmented share bars and
+  ranked bars with visible labels, and a funnel with step conversion.
+- Dependency review: `recharts@3.10.1` (MIT, released 2026-07-25, three
+  maintainers, no install scripts) and peer `react-is@19.2.7` (matches the
+  installed React), both pinned exactly; 37 packages added to the lock.
+  `pnpm audit --prod` reports no advisory in that tree; it does report two
+  pre-existing advisories in `next` (GHSA-2464-fhr4-w9xw critical,
+  GHSA-p3m5-59mp-jv5r high) that this change does not touch.
+- Palette: reference categorical slots 1-4 validated with the dataviz
+  validator (all checks pass; two slots under 3:1 on white, so every chart has
+  visible labels or a table view).
+Evidence (this session): `test_staff_analytics_api.py` 5 passed (own data
+only, other people's calls/tasks excluded, range clamp, role gating) plus
+telecaller API 37 passed together; full web vitest 811 passed; lint and `tsc`
+clean; Playwright 26 passed including the new `staff-analytics.spec.ts`
+(figures, chart, legend, table view, period switch, 360px fit, Client
+redirect).
+Recommended: Opus 5.5 / high.
+
+**Implemented — staff dashboard feedback batch, PR B: per-application lead
+workspace** (2026-11-14; PR #332, mirror #36, open for review), branch
+`feat/telecaller-application-workspace` stacked on PR A (#331). Items 1, 4 and 6.
+- Data: migration `e7a9c1b3d5f8` adds nullable `lead_uuid` to `enquiries`
+  and `site_visits` (stamped from `ensure_client_line_lead_for_user`; existing
+  rows backfilled to the same client's Real Estate lead live at creation) and
+  five nullable request links on `lead_activities` with
+  `ck_lead_activities_single_request_link` (at most one). `ON DELETE SET NULL`.
+  No grant or policy change.
+- Why re-applications mixed: a converted lead is reused by
+  `_ensure_client_line_lead` (`status != closed`), so every later application
+  lands on the same lead. Kept that model; the lead page now separates work
+  per request instead.
+- API: Telecaller detail adds `opened_at`, card/insurance requests, property
+  enquiries (with the client's message), site visits and `latest_request`;
+  `loan_type_name` is now the readable label, not the slug. Calls accept an
+  optional `request` (`{kind, id}`) validated against the same lead (422
+  otherwise). New `GET /telecaller/leads/{id}/client-history` returns every
+  journey of that client on the line assigned to the caller, with the
+  caller's own calls. Leads list and home add `latest_request`; Admin
+  `GET /admin/leads/{id}/details` adds `requests` (client shape unchanged).
+- Web: "Applications & requests" cards, per-request workspace (loan pipeline,
+  deal, or details), "About" on the call form, call log scoped to the request
+  with a full-screen filtered log, Client history window, applied times on the
+  leads list, home and Admin lead dialog.
+- Security review: every new read starts from a lead assigned to the caller;
+  client history filters own calls explicitly on top of
+  `lead_activities_rls`. Pre-existing, not changed here: `enquiries_rls` and
+  `site_visits_rls` let any same-line agent, employee, sub admin or telecaller
+  read all enquiries/visits (including contact fields) at the database level.
+  Recommend a separate tightening change.
+Evidence (this session): alembic one head, upgrade/downgrade/upgrade clean on
+the dev DB; affected API suites 291 passed, 5 failed — the same 5 fail on
+clean `upstream/main` (`test_lead_detail_ownership_api` requirement-key
+validation x3, `system/test_cms_activation` x2); telecaller + activity RLS
+36 passed after the review fix; full web vitest 806 passed, lint and
+`tsc` clean; Playwright (mocked API, dev server) 23 passed including the new
+`telecaller-request-workspace.spec.ts` (separate applications, scoped and
+full-screen call log, client history, 360px fit).
+Recommended: Opus 5.5 / high.
+
+**Implemented — staff dashboard feedback batch, PR A: shell quick wins**
+(2026-11-13; merged as PR #331, mirror #35 open), branch
+`feat/staff-shell-quick-wins` from `upstream/main`
+`5d69cde`. Items 2, 3, 5 and 8 of a 9-item telecaller/staff list.
+Requirement coverage unchanged; no migration, RLS or new endpoint.
+- Sidebar: `shell-state.ts` no longer fixes operational roles. Every role
+  has the collapse toggle; staff default expanded and keep their choice in
+  guarded `localStorage`; the Client still starts collapsed each session.
+- Add transaction: `telecaller-add-txn-dialog.tsx` replaces the inline
+  four-column form (bank defaults to the application's bank, date to today,
+  ₹ prefix with exact and compact preview, % suffix, 44px buttons on phones);
+  the history table becomes a card list below `sm`.
+- Assignment toast: `AssignmentToaster` reads the caller's own notification
+  feed (no new API) and shows "N new leads/tasks have been assigned to you"
+  with a View action, once per notification per tab, refreshing every 2
+  minutes and on tab focus through a new silent `refreshNotifications`.
+- Notes: `STAFF_NOTE_MAX_CHARS = 10_000` for call-log notes, field-task notes
+  and Employee task notes (was 1,000 characters, about 170 words); the UI
+  limit is 1,500 words with a live counter and auto-growing field.
+Evidence (this session): telecaller + employee API tests 51 passed in a
+`python:3.13` container on the compose network; ruff check/format clean;
+OpenAPI diff is the three `maxLength` values only (generated TS unchanged);
+full web vitest 802 passed (form-surface registry updated for the new
+dialog and note field), `pnpm lint` and `tsc --noEmit` clean, production
+build passed in a clean `node:22-alpine` container (the Windows host build
+compiles and prerenders 110/110 pages but cannot write the standalone
+symlinks: EPERM); Playwright against the dev server: new
+`staff-shell-quick-wins.spec.ts` (toast, collapse persistence, dialog at
+360/768/1024/1440) plus `sidebar-chrome` and `sidebar-layout` passed.
+Recommended: Opus 5.5 / high.
+
+**Implemented — client feedback batch, PR B: Resale filter and Share / Refer
+links** (2026-11-13; merged as PR #329), branch `feat/resale-share-refer` stacked on PR A. Web
+only, no contract or schema change:
+- Resale: "New or resale" filter (from the existing `structured_details.sale_type`;
+  rent listings never match), an "Age of property" filter (under 5 / 5 to 10 /
+  10+ years) once Resale is chosen, filter chips, and a "Resale" badge on
+  dashboard and public property cards.
+- Share sends the plain public page, with no referral code.
+- Refer sends `/register?ref=CODE&return_to=/dashboard/properties/<id>`.
+  Register keeps a visible "Log in" link carrying the code and destination;
+  Login keeps them on its "Sign up" link and explains invite codes apply to new
+  accounts. An existing number on Register gets a "Log in" action instead of a
+  dead end. The latest link opened wins before sign-up; the captured code is
+  cleared after registering. `return_to` is still limited to `/dashboard`
+  paths by `dashboardReturnTo`; attribution, self-referral and first-claim
+  rules stay server-side and unchanged.
+Recommended: Opus 5.5 / high (auth redirect and referral attribution).
+
+**Implemented — client feedback batch, PR A: dashboard and browse UI fixes**
+(2026-11-13; PR #327, mirror #32, open for review), branch `feat/client-feedback-ui` from `upstream/main`
+`6f60cd8`. One of three stacked PRs for an 11-item client list (A: UI fixes,
+B: Resale filter + share/refer links, C: site-visit reschedule + party size).
+Lease/rent needed no work: `ListingIntent.rent` is already "Rent / Lease";
+card badges now say "For rent / lease" consistently. PR A, web only, no
+contract or schema change:
+- Bookmark/Compare buttons painted over the sticky dashboard header and search
+  bar while scrolling (card overlay `z-20` joined the page stacking order);
+  the card image now isolates its stacking context, and buttons are 44px.
+- Every property subtype (9, grouped Residential / Plots & land / Commercial)
+  on the client Real Estate dashboard home (not the public site, per client).
+  Follow-up fix (2026-11-13, branch `fix/property-type-cards`): the tiles
+  went back to the illustrated ExploreArtCard treatment (per-subtype artwork
+  from `PROPERTY_SUBTYPE_ARTWORK`, one-line description, Explore footer)
+  after the client found the small menu icons looked worse than the old cards.
+- Budget filter: stepped slider to ₹20 Cr+ plus optional digits-only Min/Max
+  rupee fields; filter state is now whole rupees (`budgetMin`/`budgetMax`),
+  old `priceMin`/`priceMax` lakh links still read.
+- Support ticket dialog: compact content-sized panel with status, topic,
+  message and a next-step line (resolution note stays staff-only).
+- Calculators inside the Client and Telecaller dashboards
+  (`/dashboard/calculators`), reusing the public registry and islands.
+- Banner position counter ("2/4") on Home, Financial Services and Properties.
+Recommended: Opus 5.5 / high.
+
+**Implemented — synthetic demo media for every media surface** (2026-11-13;
+merged as PR #326, mirror #31),
+branch `feat/demo-media-seed`. Development seed only; requirement coverage
+unchanged. New `app.scripts.demo_media` generates JPEG artwork per campaign
+surface, property photos and a 4096x2048 seamless equirectangular panorama
+with Pillow. A committed 74 KB synthetic MP4 (8 s, muted, H.264 from the
+media runtime's pinned FFmpeg 8.0.1) is the banner video. `seed_demo` adds
+idempotent, fixed-id rows: 6 artwork assets, 1 banner video asset, 5 LIVE
+banners (3 with video, none on the dashboard or the one-slot sponsor
+placement), artwork on the pending banner and the active offer, 3 photos plus
+1 panorama per demo property, 2 photos plus 1 panorama per pending submission,
+and a loan photo (sanitized on confirm) plus a loan video (queued for the
+scheduler/media-runtime pipeline). Unit tests check the generated media
+against the real artwork-spec, panorama, MP4-sniff and banner-placement rules.
+Known product bug found, not fixed here: API containers cannot resolve
+`media-runtime`, so `POST` banner-video uploads fail.
+
+**Implemented — Spaces public reads via per-object ACL** (2026-11-13; merged as
+PR #325, mirror #30), branch
+`fix/spaces-public-object-acl`. On the live dev Space, CORS applied (200) but
+`put_bucket_policy` returned 403 for every policy shape, even with a
+full-access key; `public-read` object ACLs work with the app's limited key.
+New `SPACES_PUBLIC_OBJECT_ACL` (default off; MinIO keeps its bucket policy)
+adds a policy-signed `acl=public-read` to presigned POSTs for `public/` keys
+and `ACL=public-read` to `copy_object`/`put_object_bytes` for `public/`
+destinations; private and look-alike keys never get an ACL.
+`configure_storage` skips the bucket policy in this mode and writes its
+probes through `storage._public_acl`. Evidence: storage/configure/config tests
+101 passed, droplet contract tests 9 passed, API ruff clean. Live droplet
+verification is recorded on the PR.
+
+**Implemented — DigitalOcean Spaces object storage for dev and production**
+(2026-11-13; merged as PR #324, mirror #29), branch `feat/spaces-object-storage`. Infra, API tooling and docs;
+requirement coverage unchanged; no upload-flow, schema, RLS or contract change.
+Recommended: Opus 5.5 / high. The dev droplet overlay now requires every
+`SPACES_*` value from `.env`, clears dev's `localhost:9000` public endpoint and
+passes the Space origin to web as `NEXT_PUBLIC_ASSET_HOST` (credentials reach
+only api and scheduler; MinIO stays profile-disabled). New
+`app.scripts.configure_storage` applies an exact-origin CORS rule and a
+`public/*`-only `s3:GetObject` policy, then probes anonymously: listing,
+private and `public`-look-alike objects denied, `public/` readable, untrusted
+origin refused; it emits the production evidence booleans. Outside development
+`SPACES_PUBLIC_ENDPOINT_URL` must also be https. Dev and production runbooks
+document Space creation, limited keys and the full-access fallback for
+`--apply`. Verified: boto3 1.43 presigns path-style on the regional endpoint;
+targeted API tests 90/90 in a `python:3.13` container on the compose network;
+droplet contract tests 9 passed (35 subtests); full API ruff check/format pass
+(526 files); rendered droplet compose shows correct env per service and fails
+on a missing `SPACES_*`. Full API pytest suite was still running at commit
+time with 5 failures in files this change does not touch; result is recorded
+on the PR. Live droplet rollout (`configure_storage --apply --verify`, demo
+media, browser upload) follows the PR.
+
+**Implemented — loan-page content and insurance unpublish** (2026-11-12; merged as PR #322),
+branch `feat/loan-pages-content-insurance-unpublish`, stack 4 of 4 on
+`feat/seo-titles-homepage-copy`. API data migration plus web; requirement
+coverage unchanged. Recommended: Opus 5.5 / high (xhigh for the migration
+review). Additive data-only migration `d4f6a8c0e2b5` (single head) writes the
+client-approved Home Loan and Personal Loan summary, description, highlights,
+eligibility, documents and FAQ only where the untouched 73f4c2a91d6e seed copy
+remains, so Admin edits survive; it unpublishes the four insurance products and
+clears `homepage_featured` with them (`ck_loan_types_homepage_featured_is_public`).
+No DDL, grant, RLS or contract change. Web: `FINANCIAL_SERVICE_SEO` gives the
+16 catalogue slugs their supplied title, description and H1 (label/summary
+fallback); `FINANCIAL_SERVICE_SECTIONS` renders the drafted RBI LTV table,
+rate factors, borrowing limits and steps for Home and Personal Loan; loan
+Service schema is scoped to Hyderabad and Telangana. Evidence: API tests in a
+`python:3.13` container on the compose network (the API image's pinned Alpine
+packages no longer resolve) 31 passed, 0 skipped, including the TEMP-table
+migration test (seed rows updated, Admin-edited rows untouched, idempotent,
+insurance unpublished and unfeatured, downgrade restores); API ruff check and
+format pass; `alembic heads` = `d4f6a8c0e2b5`; web loan-page and metadata
+tests 55/55, typecheck and lint pass.
+
+**Implemented — public titles, H1s, meta and homepage copy** (2026-11-12;
+[PR #321](https://github.com/brollysolutions/client1/pull/321), mirror
+vamshisaideep9/client1#26), branch `feat/seo-titles-homepage-copy`, stack 3 of 4 on
+`feat/client-facts-copy-seo`. Web only; requirement coverage unchanged.
+Recommended: Opus 5.5 / high. The supplied titles, H1s and meta descriptions
+(sheet v2) are applied to 13 static public pages and 18 calculators;
+compound-interest gets a shortened branded title. Calculator pages keep
+appending `| Dhanadhara`; every rendered title is unique and at most 60
+characters. Home gets a visible H1 intro band, the drafted loans/property bands,
+a 4-step "How it works", partner copy and 5 FAQs; insurance wording leaves Home,
+`/loans` and the fallback hero; property copy says title documents are
+reviewed and recommends the buyer's own lawyer. "Cookie Notice" becomes
+"Cookie Policy". Privacy and Terms keep their proper-noun H1s.
+
+**Implemented — client facts and About page** (2026-11-12;
+[PR #320](https://github.com/brollysolutions/client1/pull/320), mirror
+vamshisaideep9/client1#25), branch
+`feat/client-facts-copy-seo`, stack 2 of 4 on `feat/brand-logo-sidebar-trust-lines`.
+Web only; requirement coverage unchanged. Recommended: Opus 5.5 / high. Contact
+defaults are now the client-confirmed public details (+91 90100 53010,
+dhanadhara@gmail.com, Monday to Saturday 10 AM to 6 PM with Sunday closed, APHB
+Colony, Vikarabad); env overrides and the production guard remain, and the
+guard now pins the retired sample number rather than the default.
+`BUSINESS_FACTS` (proprietorship of R Rohini, Udyam UDYAM-TS-28-0042986, 2026,
+5 advisors, English/Hindi/Telugu) feeds the footer, a new `/about` page
+(sitemap and footer link) and a FinancialService node on Home and About built by
+`organizationJsonLd()`; JSON-LD is escaped with `jsonLdScript`. Stacks 3-4:
+titles/H1/meta and homepage copy, then loan-page content and insurance unpublish.
+Evidence: targeted Vitest 17/17 (site, organization/About, footer, footer links),
+typecheck and lint pass; full Vitest on `7652f33` was 751/752, the one failure
+being the missing `/about` loading-fallback registration, now added
+(loading coverage 20/20).
+
+**Implemented — brand chrome: original logo, caption, white sidebar, trust
+lines** (2026-11-12; [PR #319](https://github.com/brollysolutions/client1/pull/319),
+mirror vamshisaideep9/client1#24), branch `feat/brand-logo-sidebar-trust-lines` from
+`upstream/main` `07cf748`. Web only (plus the email logo height); requirement
+coverage unchanged. Recommended: Opus 5.5 / high. Generated lockups carry a
+"Wealth & Growth" caption (960x232 horizontal, 960x930 stacked); every white
+logo treatment is gone (dark themes still lighten the artwork); the dashboard
+rail is #FFFFFF with navy text and the dark theme keeps its navy rail; action
+hover no longer aliases the rail token; the footer is light; the trust banner
+is a left-to-right ticker showing the lender line on `/loans*`, a property line
+on `/real-estate*` and both elsewhere. Evidence (2026-11-12): web lint and
+typecheck pass; Vitest 744/745 with one unrelated banner-asset timeout under
+load that passes alone (5/5); API brand tests 8/8; production build passes in
+a clean worktree with `output: "standalone"` disabled there only (Windows
+symlink EPERM); affected e2e against that build surfaced stale navy-rail
+assertions and a dark footer/closer colour clash, both fixed.
+
+**Implemented — development seed expansion and lender policy catalogue**
+(2026-11-12), branch `feat/dev-seed-roster-lender-policy` from `upstream/main`
+`07cf748`; [PR #318](https://github.com/brollysolutions/client1/pull/318) (mirror vamshisaideep9/client1#23), merged as `1cead74`. Development-only seed scripts; requirement coverage unchanged and no
+API, schema, permission or contract change. `seed_dev_roster` adds 14 role
+accounts (2 Clients; 2 Agents, Telecallers and Employees per line) with
+one-time generated passwords and 10 published listings. `seed_lender_policy`
+replaces the development provider catalogue with 303 offers from 136 providers
+transcribed from the user's `Bank loan policy.xlsx` (as of 2026-08-31),
+dry-run by default, preserving credit-card/life-insurance offers and any
+provider a loan application references. Evidence: see the change log row in
+`implementation-plan.md` dated 2026-11-12.
+
+**Delivered — 2026-11-11 product batch** via
+[PR #317](https://github.com/brollysolutions/client1/pull/317), merged as
+`07cf748`. Original record:
+
+**Public UI quick wins** (2026-11-11), branch
+`feat/public-ui-quick-wins` from `upstream/main` `966c48b`; stack 1 of 6 for
+the 2026-11-11 product batch. Web only; requirement coverage unchanged.
+The Compound Interest island is registered as a calculator form surface.
+Stack 2, `feat/share-refer-links`: Share and Refer on public and dashboard
+property cards, property detail, provider offers and loan service pages; shared
+links carry the signed-in client's own `?ref=` code (cached after login, cleared
+on logout), public pages remember an incoming code for the session, and
+registration falls back to it. Regression test proves a second transaction by an
+already-rewarded referred person pays nothing; the list labels earned and paid
+referrals as closed. No API, schema or contract change.
+Stack 3, `feat/property-developer-suggestions`: additive migration
+`b7d9f1a3c5e2` adds nullable `developer_name` to `properties` and
+`property_submissions` (table-wide grants and row-level RLS unchanged) with a
+lower-case index; submit/edit forms, approval copy, authenticated and public
+reads, regenerated contracts, a Developer facet plus a name field in the Filters
+sheet, a Developers suggestion group and search haystack. Home shows "Suggested
+for you" from the public catalog ranked against locally cached bookmark ids
+(ids only, session-hint gated, cleared on logout).
+Stack 4, `feat/referral-lead-detail`: each client referral row opens a detail
+dialog with what converted (listing title/location/type or loan product label
+only, resolved through a bypass read constrained to the caller's RLS-visible
+rows), a one-time lifecycle timeline and the referrer's own bonus. Agents pick
+a published property (real estate) or active product (loans) in Introduce Lead
+and confirm it from a details-and-fees popup; the API validates the key set,
+existence and business line, rejects client-supplied titles, and snapshots
+`interest_title` for the Agent and telecaller views. No migration. The product
+picker relies on the API's active-product filter (fixes a type error).
+The interest picker is registered as a mutation form surface.
+Stack 5, `feat/banner-video`: additive migration `c3e5a7b9d1f4` adds
+`youtube_video_id` (11-character id, pattern-checked), `video_media_asset_id`
+(RESTRICT) and `video_key` (canonical public MP4 key) to `banners`, with
+single-source and public-placement-only checks, and the `banner_video` Media
+Library usage type. MP4 uploads (20 MB, 30 s) go through the existing scan +
+isolated transcode + rescan pipeline. Home, Financial Services, Properties and
+sponsor banners render a click-to-play youtube-nocookie facade or a muted MP4
+loop with a pause control, reduced-motion/Save-Data handling and carousel
+autoplay hold. CSP adds only `frame-src https://www.youtube-nocookie.com` and
+`img-src https://i.ytimg.com`. Video changes follow the existing draft and
+maker-checker approval flow.
+Delivery (2026-11-11): only stack 1 reached `main` (#310); #311-#315 merged into
+their parent stack branches. The owner withdrew the glass finish, so
+`feat/land-batch-no-glass` lands stacks 2-5 on `main` together with the public
+navbar no-wrap fix (1280-1535 px) and the wider callback dialog (42rem); #316
+and mirror #21 (which carried glass) are superseded.
+#316 was nevertheless merged into `main` with the glass finish; this branch
+merges `main` with the `ours` strategy, so landing it removes all glass styling
+(backdrop, glass cards, buttons, dropdowns, body marker, Button data hooks) while
+keeping the batch features. The sticky property search bar is solid as well.
+
+**Implemented — development droplet deployment overlay** (2026-11-02),
+branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;
+[PR #309](https://github.com/brollysolutions/client1/pull/309).
+`infra/dev-droplet/` runs the existing development stack on one DigitalOcean
+droplet: PostgreSQL, Redis and PgBouncer publish no host port; API and web
+bind only to `127.0.0.1` behind host Caddy; credentials are freshly
+generated by `init-env.sh` (which refuses to overwrite or accept allow-all
+ranges) and Compose fails closed when one is missing; both API processes get
+the same HTTPS CORS/origin and trusted-proxy settings; every long-running
+service restarts after reboot. MinIO is disabled on the droplet (user
+decision, 2026-11-03): `minio/minio` and `minio/mc` are no longer published on
+Docker Hub or quay.io, so the first droplet `up` failed to pull them. Uploads,
+managed media and banner images do not work there; database-backed journeys
+do. The local dev stack is unchanged but cannot pull those images on a fresh
+machine either. Caddy answers 403 to clients
+outside the IP allowlist before any proxying, and the droplet checks out only
+`apps/api`, `apps/web`, `apps/media-runtime` and `infra/dev-droplet`. Because
+`ENV=development` returns one-time codes in API responses by design, that
+allowlist is the host's access boundary and the runbook says so. The only
+host is `dev.dhanadhara.com`; the apex and `www` stay reserved for
+production. The runbook's sparse checkout runs
+`init --cone` before `set`: on the real Ubuntu 22.04 droplet, Git 2.34 kept
+non-cone patterns (even with `set --cone`) and dropped the root compose files.
+
+Fresh local evidence: 7 new overlay tests pass, including executing
+`init-env.sh`; the three-file stack renders with Docker Compose 5.4.0 to
+the intended ports, restart policies and environment, and a missing secret
+aborts rendering. Caddy 2.6.2 (Ubuntu 24.04's packaged version) adapts the
+Caddyfile with the 403 rule first on both hosts; this caught and fixed a
+directive-order bypass where `handle` would have run before the allowlist.
+Not verified: a real droplet, DNS, certificate issuance and browser journeys.
+No application, API, schema, contract or dependency change; requirement
+coverage is unchanged. Development data only — production launch gates remain
+NO-GO.
+**Implemented — production audit remediation** (2026-10-12),
+branch `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308).
+OTP budgets and consumption are atomic across concurrent verification/resends.
+Payout settlement locks the current row and cannot recreate credit after a
+reversal. SMTP failures no longer log provider-echoed PII. Browser response-body
+failures return the existing unavailable result; server fetch preserves Next's
+dynamic-render signals and defaults to localhost only in development. The media
+CSP permits private video on the configured storage origin. Published runtime
+and development dependency fixes are locked, including Next 15.5.27 and Vitest
+4.1.11. Existing roles, RLS, publication filters and financial contracts remain.
+
+Fresh local evidence: lint/typecheck, 714 web tests, production compilation,
+11 release Chromium tests, the actual-response CSP probe, 208 infrastructure
+tests (one platform skip), API lint/format, fresh migrations, one migration head
+and unchanged OpenAPI pass. OTP and payout concurrency regressions were reproduced
+before remediation and pass afterward. The linked PR records the full API and
+Linux standalone CI results; partial local API runs are not passing evidence.
+Windows standalone output needed a local dependency junction after a symlink
+permission warning. Python's production/full dependency scans and Node's
+production scan are clean. The full Node audit still reports development-only
+`braces@3.0.3` (GHSA-vfj7-8cjw-p6xm), used solely by Next's ESLint glob chain;
+the suggested 3.0.4 is unpublished and no advisory is suppressed.
+
+Requirement coverage is unchanged. Next priority: require the linked CI gates,
+human review and existing production environment/capacity/recovery evidence
+before deployment. No live provider or customer-data operations were performed.
+The self-contained public HTML stays a separate local deliverable; earlier
+upstream #307 and origin #13 are closed unmerged. This task has one upstream PR.
+
 **Implemented — complete static homepage sponsor card** (2026-09-16),
 on `feat/auth-actions-footer`. Replaces the former curtain reveal with an
 uncropped 16:9 image, burgundy headline/CTA, clear Sponsored disclosure and a

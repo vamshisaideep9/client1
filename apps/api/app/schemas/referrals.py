@@ -43,6 +43,23 @@ class MyReferralResponse(BaseModel):
     stats: ReferralStats
 
 
+class ReferralConvertedItem(BaseModel):
+    """What a referral converted on, for the referrer's own activity detail.
+
+    Deliberately limited to catalogue facts: the property listing's public
+    title/location/type, or the loan product label. Never a deal value, loan
+    amount, quoted price, status note, or anything about the referred person.
+    ``property_id`` is set only while the listing is still published, so the
+    web app can link to the public page without exposing withdrawn listings.
+    """
+
+    kind: Literal["property", "loan"]
+    title: str
+    location: str | None = None
+    property_type: str | None = None
+    property_id: UUID | None = None
+
+
 class ReferralRead(BaseModel):
     id: UUID
     # Never the raw number — see app/core/masking.py::mask_mobile. The raw
@@ -53,6 +70,7 @@ class ReferralRead(BaseModel):
     bonus_amount_paise: int | None
     converted_at: datetime | None
     created_at: datetime
+    converted_item: ReferralConvertedItem | None = None
 
 
 class ReferralListResponse(BaseModel):

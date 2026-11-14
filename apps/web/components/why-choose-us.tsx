@@ -167,11 +167,11 @@ export function WhyChooseUs() {
           </span>
           <div className="flex-1">
             <h3 className="font-heading text-base font-semibold text-foreground">
-              Refer and earn cashback
+              Refer and earn a referral bonus
             </h3>
             <p className="text-sm leading-snug text-text-secondary">
               Share your referral code with friends. When someone you refer
-              buys a property or closes a loan, you earn cashback.
+              buys a property or closes a loan, you earn a referral bonus.
             </p>
           </div>
           <Link

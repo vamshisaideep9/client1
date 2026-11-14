@@ -210,6 +210,20 @@ export function SubmitPropertyForm({
             <FieldError msg={f.errors.location} />
           </div>
           <div>
+            <Label htmlFor="developerName">Developer / builder (optional)</Label>
+            <Input
+              id="developerName"
+              value={f.form.developerName}
+              onChange={(e) => f.setField("developerName", e.target.value)}
+              maxLength={120}
+              placeholder="e.g. My Home, Sattva"
+              aria-describedby="developerName-hint"
+            />
+            <p id="developerName-hint" className="mt-1 text-xs text-text-secondary">
+              Buyers can search and filter by this name.
+            </p>
+          </div>
+          <div>
             <Label htmlFor="city">City</Label>
             <Input id="city" value={f.form.city} onChange={(e) => f.setField("city", e.target.value)} maxLength={120} />
             <FieldError msg={f.errors.city} />

@@ -19,7 +19,7 @@ import type { PropertyDealProgressUpdate, TelecallerPropertyDeal } from "@/lib/t
 import type { ApiResponse } from "@/lib/api/client";
 import type { REListing } from "@/lib/real-estate";
 
-function CreateDealForm({
+export function CreateDealForm({
   leadId,
   onCreate,
 }: {
@@ -91,8 +91,10 @@ export function TelecallerPropertyDealsSection({
   deals,
   onCreateDeal,
   onUpdateDeal,
+  showCreate = true,
 }: {
   leadId: string;
+  showCreate?: boolean;
   deals: TelecallerPropertyDeal[];
   onCreateDeal: (propertyId: string) => Promise<ApiResponse<unknown>>;
   onUpdateDeal: (
@@ -124,7 +126,7 @@ export function TelecallerPropertyDealsSection({
         </div>
       )}
 
-      <CreateDealForm leadId={leadId} onCreate={onCreateDeal} />
+      {showCreate ? <CreateDealForm leadId={leadId} onCreate={onCreateDeal} /> : null}
     </DashboardPanel>
   );
 }
