@@ -506,9 +506,18 @@ async def reject_payout(
     reason: str,
     rejector_role: str | None = None,
 ) -> None:
-    """Reject a pending payout. Reject is not value-moving, so maker==rejector is allowed."""
+    """Reject a pending payout. Reject is not value-moving, so maker==rejector is allowed.
+
+    The row is locked before the status check. approve_payout's
+    compare-and-swap then waits on this lock and re-reads the row, so the two
+    can never both succeed. Without the lock a concurrent approve and reject
+    each returned success and the payout ended rejected after the approver
+    was told it was approved; a reject reading a stale pending row could also
+    overwrite a paid payout and release its linked commission, cashback or
+    referral for a second payment.
+    """
     async with AsyncSessionLocal() as db:
-        payout = await db.get(Payout, payout_id)
+        payout = await db.scalar(select(Payout).where(Payout.id == payout_id).with_for_update())
         if payout is None:
             raise PayoutNotFound("Payout not found.")
         if payout.status != PayoutStatus.PENDING_APPROVAL:

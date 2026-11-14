@@ -2,6 +2,19 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — security audit fixes, PR 3/5: payout reject race**
+(2026-11-14; open for review), branch `fix/payout-reject-race` stacked on PR 2.
+Audit finding #4. `services/payments.py::reject_payout` now loads the payout
+with `SELECT … FOR UPDATE`; `approve_payout`'s conditional UPDATE waits on that
+lock and returns `PayoutStateError` (409) once the row is rejected, and a
+reject after approval sees the advanced status and returns 409. New tests:
+`test_concurrent_approve_and_reject_have_exactly_one_winner` (8 racing rounds;
+exactly one 200 and one 409, stored status/checker/rejector/ledger match the
+winner) and `test_reject_after_approval_conflicts_and_keeps_paid`. Evidence:
+with the lock temporarily removed the race test fails (`[200, 200]`); with it,
+payout, commission-payout, cashback-payout, referral-admin and payout-RLS
+suites pass (110); ruff check/format clean. Completion impact: none.
+
 **Implemented — security audit fixes, PR 2/5: enquiry and site-visit
 scoping** (2026-11-14; open for review), branch
 `security/re-enquiry-visit-scope` stacked on PR 1. Audit finding #3 (live
