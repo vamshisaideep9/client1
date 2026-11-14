@@ -19,6 +19,8 @@ import { useLine } from "@/features/dashboard/line-provider";
 import { getNotifications, type AppNotification } from "@/lib/notifications";
 import { getTelecallerHome, type TelecallerHome as TelecallerHomeData } from "@/lib/telecaller-api";
 
+import { formatAppliedAt } from "./telecaller-requests";
+
 const STATUS_LABEL: Record<string, string> = {
   new: "New",
   assigned: "Assigned",
@@ -143,9 +145,19 @@ export function TelecallerHome() {
                     href={`/dashboard/leads/${item.lead_uuid}`}
                     className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm transition-colors hover:border-brand-cta"
                   >
-                    <span className="flex items-center gap-2 font-medium text-text-primary">
-                      <DASHBOARD_ICONS.leads className="h-4 w-4 text-brand-link" aria-hidden="true" />
-                      {item.name ?? item.mobile}
+                    <span className="flex min-w-0 items-start gap-2">
+                      <DASHBOARD_ICONS.leads className="mt-0.5 h-4 w-4 shrink-0 text-brand-link" aria-hidden="true" />
+                      <span className="min-w-0">
+                        <span className="block font-medium text-text-primary">
+                          {item.name ?? item.mobile}
+                        </span>
+                        {item.latest_request ? (
+                          <span className="block text-xs text-text-secondary">
+                            {item.latest_request.title} · applied{" "}
+                            {formatAppliedAt(item.latest_request.applied_at)}
+                          </span>
+                        ) : null}
+                      </span>
                     </span>
                     <span className="text-xs text-text-secondary">
                       {formatDateTime(item.follow_up_at)}

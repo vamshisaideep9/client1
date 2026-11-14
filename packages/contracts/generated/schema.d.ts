@@ -1579,6 +1579,54 @@ export interface paths {
         patch: operations["patch_lead_api_v1_agent_leads__lead_id__patch"];
         trace?: never;
     };
+    "/api/v1/agent/leads/{lead_id}/resubmit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resubmit Lead
+         * @description Resubmit this Agent's expired lead for a fresh 30-day window.
+         */
+        post: operations["resubmit_lead_api_v1_agent_leads__lead_id__resubmit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/payout-details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Payout Details
+         * @description The Agent's saved payout destination, masked.
+         */
+        get: operations["get_payout_details_api_v1_agent_payout_details_get"];
+        /**
+         * Put Payout Details
+         * @description Save or change the bank account and/or UPI ID commissions are paid to.
+         */
+        put: operations["put_payout_details_api_v1_agent_payout_details_put"];
+        post?: never;
+        /**
+         * Delete Payout Details
+         * @description Remove every saved payout destination.
+         */
+        delete: operations["delete_payout_details_api_v1_agent_payout_details_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/change-password": {
         parameters: {
             query?: never;
@@ -2683,6 +2731,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Analytics */
+        get: operations["my_analytics_api_v1_me_analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile-change/authenticated/initiate": {
         parameters: {
             query?: never;
@@ -3071,6 +3136,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payouts/agents/{agent_profile_uuid}/saved-destination": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Saved Destination
+         * @description Same as the recipient prefill, keyed by Agent profile (commission payouts).
+         */
+        get: operations["get_agent_saved_destination_api_v1_payouts_agents__agent_profile_uuid__saved_destination_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/payouts/link-divergences": {
         parameters: {
             query?: never;
@@ -3108,6 +3193,29 @@ export interface paths {
          * @description Minimal recipient picker for an authorized payout requester.
          */
         get: operations["list_payout_recipients_api_v1_payouts_recipients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/recipients/{user_uuid}/saved-destination": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Recipient Saved Destination
+         * @description Prefill a payout from the bank account / UPI ID an Agent saved.
+         *
+         *     Same access as the recipient picker. Every successful read is audited
+         *     (agent_payout_details_viewed); a maker's own details are refused.
+         */
+        get: operations["get_recipient_saved_destination_api_v1_payouts_recipients__user_uuid__saved_destination_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4050,6 +4158,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/telecaller/leads/{lead_id}/client-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Client History
+         * @description All of this client's journeys on the line that are assigned to the
+         *     caller, each with its requests and the caller's own calls.
+         */
+        get: operations["client_history_api_v1_telecaller_leads__lead_id__client_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/telecaller/leads/{lead_id}/property-deals": {
         parameters: {
             query?: never;
@@ -4533,6 +4662,46 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /**
+         * AdminLeadDetailsRead
+         * @description Admin view: also what the client applied for and when.
+         */
+        AdminLeadDetailsRead: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** Editable Fields */
+            editable_fields: ("name" | "requirement.notes")[];
+            /** Field Owners */
+            field_owners: {
+                [key: string]: "agent" | "client" | "telecaller" | "admin" | "system" | "unclaimed" | "legacy_locked";
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string | null;
+            /** Requests */
+            requests: components["schemas"]["LeadRequestSummary"][];
+            /** Requirement */
+            requirement: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "assigned" | "working" | "converted" | "closed" | "released";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** AdminLeadRead */
         AdminLeadRead: {
             /**
@@ -4818,6 +4987,8 @@ export interface components {
             /** City */
             city: string;
             construction_status?: components["schemas"]["ConstructionStatus"] | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing?: components["schemas"]["Furnishing"] | null;
             /** @default sale */
             listing_intent: components["schemas"]["ListingIntent"];
@@ -5416,6 +5587,17 @@ export interface components {
             /** Temp Password */
             temp_password: string | null;
         };
+        /** AgentBankAccount */
+        AgentBankAccount: {
+            /** Account Holder Name */
+            account_holder_name: string;
+            /** Account Number */
+            account_number: string;
+            /** Bank Name */
+            bank_name?: string | null;
+            /** Ifsc */
+            ifsc: string;
+        };
         /**
          * AgentContactRead
          * @description Name + agent_code only -- never phone/email. Contact routes through
@@ -5546,7 +5728,7 @@ export interface components {
             /** Mobile */
             mobile: string;
             /** Name */
-            name?: string | null;
+            name: string;
             /** Requirement */
             requirement?: {
                 [key: string]: unknown;
@@ -5582,6 +5764,8 @@ export interface components {
             requirement?: {
                 [key: string]: unknown;
             } | null;
+            /** Resubmittable */
+            resubmittable: boolean;
             /**
              * Status
              * @enum {string}
@@ -5601,6 +5785,34 @@ export interface components {
             requirement?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /**
+         * AgentPayoutDetailsRead
+         * @description What the Agent sees about their own saved destination: masked only.
+         */
+        AgentPayoutDetailsRead: {
+            /** Available */
+            available: boolean;
+            /** Bank Hint */
+            bank_hint?: string | null;
+            /** Saved */
+            saved: boolean;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Upi Hint */
+            upi_hint?: string | null;
+        };
+        /**
+         * AgentPayoutDetailsUpdate
+         * @description Partial update. Omit a field to keep it; send ``null`` to remove it.
+         *
+         *     After the update at least one destination must remain (the service
+         *     answers 422 otherwise); remove everything with DELETE instead.
+         */
+        AgentPayoutDetailsUpdate: {
+            bank?: components["schemas"]["AgentBankAccount"] | null;
+            /** Upi Id */
+            upi_id?: string | null;
         };
         /** AgentProfileStatusRead */
         AgentProfileStatusRead: {
@@ -5713,6 +5925,64 @@ export interface components {
             /** Title Details */
             title_details: string;
         };
+        /** AnalyticsBreakdown */
+        AnalyticsBreakdown: {
+            /** Description */
+            description: string;
+            /** Items */
+            items: components["schemas"]["BreakdownItem"][];
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "share" | "ranked";
+            /** Title */
+            title: string;
+            /**
+             * Unit
+             * @default count
+             * @enum {string}
+             */
+            unit: "count" | "percent" | "hours" | "rupees";
+        };
+        /** AnalyticsFunnel */
+        AnalyticsFunnel: {
+            /** Description */
+            description: string;
+            /** Steps */
+            steps: components["schemas"]["FunnelStep"][];
+            /** Title */
+            title: string;
+        };
+        /** AnalyticsKpi */
+        AnalyticsKpi: {
+            /** Hint */
+            hint?: string | null;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "count" | "percent" | "hours" | "rupees";
+            /** Value */
+            value: number | null;
+        };
+        /** AnalyticsTrend */
+        AnalyticsTrend: {
+            /** Description */
+            description: string;
+            /** Points */
+            points: components["schemas"]["TrendPoint"][];
+            /** Series */
+            series: components["schemas"]["TrendSeries"][];
+            /** Title */
+            title: string;
+        };
         /** AudienceLocationCircle */
         AudienceLocationCircle: {
             /** Label */
@@ -5759,7 +6029,7 @@ export interface components {
          *     `services/fee_cashbacks.py` (FR-6.6 processing-fee cashback).
          * @enum {string}
          */
-        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated";
+        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed";
         /** AuditLogListResponse */
         AuditLogListResponse: {
             /** Entries */
@@ -6031,6 +6301,10 @@ export interface components {
             template_id?: string | null;
             /** Title */
             title: string;
+            /** Video Media Asset Id */
+            video_media_asset_id?: string | null;
+            /** Youtube Url */
+            youtube_url?: string | null;
         };
         /** BannerImageUploadRequest */
         BannerImageUploadRequest: {
@@ -6135,6 +6409,12 @@ export interface components {
             updated_at: string;
             /** Version */
             version: number;
+            /** Video Media Asset Id */
+            video_media_asset_id?: string | null;
+            /** Video Url */
+            video_url?: string | null;
+            /** Youtube Video Id */
+            youtube_video_id?: string | null;
         };
         /**
          * BannerStatus
@@ -6216,6 +6496,10 @@ export interface components {
             template_id?: string | null;
             /** Title */
             title?: string | null;
+            /** Video Media Asset Id */
+            video_media_asset_id?: string | null;
+            /** Youtube Url */
+            youtube_url?: string | null;
         };
         /** BookmarkCreate */
         BookmarkCreate: {
@@ -6253,6 +6537,15 @@ export interface components {
             property_ref: string;
             /** Title */
             title: string | null;
+        };
+        /** BreakdownItem */
+        BreakdownItem: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: number;
         };
         /**
          * BroadcastAudience
@@ -6296,7 +6589,7 @@ export interface components {
              * Content Type
              * @enum {string}
              */
-            content_type: "image/jpeg" | "image/png" | "image/webp";
+            content_type: "image/jpeg" | "image/png" | "image/webp" | "video/mp4";
             /** Object Key */
             object_key: string;
             /** Source Reference */
@@ -6309,7 +6602,7 @@ export interface components {
              * Usage Type
              * @enum {string}
              */
-            usage_type: "homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign";
+            usage_type: "homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign" | "banner_video";
         };
         /** CampaignMediaListResponse */
         CampaignMediaListResponse: {
@@ -6384,7 +6677,7 @@ export interface components {
              * Content Type
              * @enum {string}
              */
-            content_type: "image/jpeg" | "image/png" | "image/webp";
+            content_type: "image/jpeg" | "image/png" | "image/webp" | "video/mp4";
             /** Filename */
             filename: string;
         };
@@ -6426,6 +6719,31 @@ export interface components {
             current_password: string;
             /** New Password */
             new_password: string;
+        };
+        /**
+         * ClientHistoryLead
+         * @description One lead (journey) of the same client, with this Telecaller's calls.
+         */
+        ClientHistoryLead: {
+            /** Activities */
+            activities: components["schemas"]["LeadActivityRead"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Lead Id
+             * Format: uuid
+             */
+            lead_id: string;
+            /** Requests */
+            requests: components["schemas"]["LeadRequestSummary"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "assigned" | "working" | "converted" | "closed" | "released";
         };
         /** ClientProfileSummary */
         ClientProfileSummary: {
@@ -7200,6 +7518,15 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** FunnelStep */
+        FunnelStep: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: number;
+        };
         /**
          * Furnishing
          * @enum {string}
@@ -7279,6 +7606,7 @@ export interface components {
             interest_level?: ("hot" | "warm" | "cold") | null;
             /** Notes */
             notes?: string | null;
+            request?: components["schemas"]["RequestRef"] | null;
         };
         /** LeadActivityRead */
         LeadActivityRead: {
@@ -7308,6 +7636,7 @@ export interface components {
             lead_uuid: string;
             /** Notes */
             notes: string | null;
+            request?: components["schemas"]["RequestRef"] | null;
         };
         /** LeadDetailsPatch */
         LeadDetailsPatch: {
@@ -7350,6 +7679,31 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * LeadRequestSummary
+         * @description One application/enquiry/visit/deal on a lead: what and when.
+         */
+        LeadRequestSummary: {
+            /**
+             * Applied At
+             * Format: date-time
+             */
+            applied_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "loan_application" | "financial_enquiry" | "property_enquiry" | "site_visit" | "property_deal";
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
         };
         /** LeadsReportResponse */
         LeadsReportResponse: {
@@ -7991,7 +8345,7 @@ export interface components {
          * NotificationType
          * @enum {string}
          */
-        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed";
+        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "agent_lead_expiry_reminder" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed";
         /** OfferCreate */
         OfferCreate: {
             audience_rules?: components["schemas"]["AudienceRules"];
@@ -8640,6 +8994,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing: components["schemas"]["Furnishing"] | null;
             /**
              * Id
@@ -8885,6 +9241,10 @@ export interface components {
             subtitle: string | null;
             /** Title */
             title: string;
+            /** Video Url */
+            video_url?: string | null;
+            /** Youtube Video Id */
+            youtube_video_id?: string | null;
         };
         /** PublicContentBlockListResponse */
         PublicContentBlockListResponse: {
@@ -9033,6 +9393,8 @@ export interface components {
             /** City */
             city: string;
             construction_status: components["schemas"]["ConstructionStatus"] | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing: components["schemas"]["Furnishing"] | null;
             /**
              * Id
@@ -9098,6 +9460,8 @@ export interface components {
          */
         PublicPropertyRead: {
             category: components["schemas"]["PropertyCategory"];
+            /** Developer Name */
+            developer_name?: string | null;
             /**
              * Id
              * Format: uuid
@@ -9268,6 +9632,31 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /**
+         * ReferralConvertedItem
+         * @description What a referral converted on, for the referrer's own activity detail.
+         *
+         *     Deliberately limited to catalogue facts: the property listing's public
+         *     title/location/type, or the loan product label. Never a deal value, loan
+         *     amount, quoted price, status note, or anything about the referred person.
+         *     ``property_id`` is set only while the listing is still published, so the
+         *     web app can link to the public page without exposing withdrawn listings.
+         */
+        ReferralConvertedItem: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "property" | "loan";
+            /** Location */
+            location?: string | null;
+            /** Property Id */
+            property_id?: string | null;
+            /** Property Type */
+            property_type?: string | null;
+            /** Title */
+            title: string;
+        };
         /** ReferralListResponse */
         ReferralListResponse: {
             /** Referrals */
@@ -9351,6 +9740,7 @@ export interface components {
             conversion_status: string;
             /** Converted At */
             converted_at: string | null;
+            converted_item?: components["schemas"]["ReferralConvertedItem"] | null;
             /**
              * Created At
              * Format: date-time
@@ -9447,6 +9837,19 @@ export interface components {
             /** Total Count */
             total_count: number;
         };
+        /** RequestRef */
+        RequestRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "loan_application" | "financial_enquiry" | "property_enquiry" | "site_visit" | "property_deal";
+        };
         /**
          * ReraApplicability
          * @enum {string}
@@ -9528,6 +9931,20 @@ export interface components {
          * @enum {string}
          */
         SaleType: "new_sale" | "resale";
+        /**
+         * SavedPayoutDestinationRead
+         * @description Decrypted destination for prefilling one payout (audited read).
+         */
+        SavedPayoutDestinationRead: {
+            bank?: components["schemas"]["AgentBankAccount"] | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Upi Id */
+            upi_id?: string | null;
+        };
         /** SetPasswordRequest */
         SetPasswordRequest: {
             /** Confirm Password */
@@ -9663,6 +10080,22 @@ export interface components {
             /** Entries */
             entries: components["schemas"]["StaffAccessEntry"][];
         };
+        /** StaffAnalyticsResponse */
+        StaffAnalyticsResponse: {
+            /** Breakdowns */
+            breakdowns: components["schemas"]["AnalyticsBreakdown"][];
+            funnel?: components["schemas"]["AnalyticsFunnel"] | null;
+            /** Kpis */
+            kpis: components["schemas"]["AnalyticsKpi"][];
+            /** Range Days */
+            range_days: number;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "telecaller" | "employee" | "agent" | "sub_admin";
+            trend: components["schemas"]["AnalyticsTrend"];
+        };
         /** StaffCreateRequest */
         StaffCreateRequest: {
             /** Business Line */
@@ -9792,6 +10225,8 @@ export interface components {
             /** City */
             city: string;
             construction_status?: components["schemas"]["ConstructionStatus"] | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing?: components["schemas"]["Furnishing"] | null;
             /** @default sale */
             listing_intent: components["schemas"]["ListingIntent"];
@@ -9905,6 +10340,8 @@ export interface components {
             };
             /** Details Version */
             details_version: number | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing: components["schemas"]["Furnishing"] | null;
             /**
              * Id
@@ -9998,6 +10435,8 @@ export interface components {
             /** City */
             city: string;
             construction_status?: components["schemas"]["ConstructionStatus"] | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing?: components["schemas"]["Furnishing"] | null;
             /** @default sale */
             listing_intent: components["schemas"]["ListingIntent"];
@@ -10326,6 +10765,42 @@ export interface components {
             /** Loans Total */
             loans_total: number;
         };
+        /**
+         * TelecallerClientHistoryResponse
+         * @description Every journey of this client on this line that is assigned to the
+         *     caller, newest first. Calls are the caller's own (lead_activities_rls).
+         */
+        TelecallerClientHistoryResponse: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** Leads */
+            leads: components["schemas"]["ClientHistoryLead"][];
+        };
+        /**
+         * TelecallerFinancialEnquiryRead
+         * @description A credit-card or insurance request (outside the loan pipeline).
+         */
+        TelecallerFinancialEnquiryRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Product Category */
+            product_category: string;
+            /** Product Name */
+            product_name: string;
+            /** Status */
+            status: string;
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+        };
         /** TelecallerFollowUpItem */
         TelecallerFollowUpItem: {
             /**
@@ -10333,6 +10808,7 @@ export interface components {
              * Format: date-time
              */
             follow_up_at: string;
+            latest_request?: components["schemas"]["LeadRequestSummary"] | null;
             /**
              * Lead Uuid
              * Format: uuid
@@ -10367,12 +10843,18 @@ export interface components {
              */
             created_at: string;
             /**
+             * Financial Enquiries
+             * @default []
+             */
+            financial_enquiries: components["schemas"]["TelecallerFinancialEnquiryRead"][];
+            /**
              * Id
              * Format: uuid
              */
             id: string;
             /** Last Disposition */
             last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+            latest_request?: components["schemas"]["LeadRequestSummary"] | null;
             /**
              * Loan Applications
              * @default []
@@ -10389,10 +10871,20 @@ export interface components {
              * @default []
              */
             property_deals: components["schemas"]["TelecallerPropertyDealRead"][];
+            /**
+             * Property Enquiries
+             * @default []
+             */
+            property_enquiries: components["schemas"]["TelecallerPropertyEnquiryRead"][];
             /** Requirement */
             requirement?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Site Visits
+             * @default []
+             */
+            site_visits: components["schemas"]["TelecallerSiteVisitRead"][];
             /**
              * Status
              * @enum {string}
@@ -10428,6 +10920,7 @@ export interface components {
             id: string;
             /** Last Disposition */
             last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+            latest_request?: components["schemas"]["LeadRequestSummary"] | null;
             /** Mobile */
             mobile: string;
             /** Name */
@@ -10489,6 +10982,11 @@ export interface components {
             loan_type_id: string;
             /** Loan Type Name */
             loan_type_name: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
             /** Processing Fee */
             processing_fee?: string | null;
             /**
@@ -10512,6 +11010,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
             /** Price Quoted */
             price_quoted?: string | null;
             /** Property Location */
@@ -10527,6 +11030,61 @@ export interface components {
             status: "new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold";
             /** Status Reason */
             status_reason?: string | null;
+        };
+        /** TelecallerPropertyEnquiryRead */
+        TelecallerPropertyEnquiryRead: {
+            /** City */
+            city: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Locality */
+            locality: string;
+            /** Message */
+            message: string | null;
+            /** Property Ref */
+            property_ref: string;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+        };
+        /** TelecallerSiteVisitRead */
+        TelecallerSiteVisitRead: {
+            /** City */
+            city: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Locality */
+            locality: string;
+            /**
+             * Preferred Date
+             * Format: date
+             */
+            preferred_date: string;
+            /** Preferred Time Slot */
+            preferred_time_slot: string;
+            /** Property Ref */
+            property_ref: string;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
         };
         /** TransactionListResponse */
         TransactionListResponse: {
@@ -10564,6 +11122,25 @@ export interface components {
          * @enum {string}
          */
         TransactionType: "cashback" | "referral_bonus" | "commission";
+        /** TrendPoint */
+        TrendPoint: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Values */
+            values: {
+                [key: string]: number;
+            };
+        };
+        /** TrendSeries */
+        TrendSeries: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+        };
         /** UnreadCountResponse */
         UnreadCountResponse: {
             /** Count */
@@ -11854,7 +12431,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LeadDetailsRead"];
+                    "application/json": components["schemas"]["AdminLeadDetailsRead"];
                 };
             };
             /** @description Validation Error */
@@ -13912,6 +14489,108 @@ export interface operations {
             };
         };
     };
+    resubmit_lead_api_v1_agent_leads__lead_id__resubmit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentLeadRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_payout_details_api_v1_agent_payout_details_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentPayoutDetailsRead"];
+                };
+            };
+        };
+    };
+    put_payout_details_api_v1_agent_payout_details_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentPayoutDetailsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentPayoutDetailsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_payout_details_api_v1_agent_payout_details_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     change_password_api_v1_auth_change_password_post: {
         parameters: {
             query?: never;
@@ -14968,7 +15647,7 @@ export interface operations {
         parameters: {
             query?: {
                 active_only?: boolean;
-                usage_type?: ("homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign") | null;
+                usage_type?: ("homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign" | "banner_video") | null;
                 business_line?: ("loans" | "real_estate" | "both") | null;
             };
             header?: never;
@@ -16464,6 +17143,38 @@ export interface operations {
             };
         };
     };
+    my_analytics_api_v1_me_analytics_get: {
+        parameters: {
+            query?: {
+                /** @description Period in days (7, 30 or 90). */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffAnalyticsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     initiate_authenticated_api_v1_mobile_change_authenticated_initiate_post: {
         parameters: {
             query?: never;
@@ -17265,6 +17976,37 @@ export interface operations {
             };
         };
     };
+    get_agent_saved_destination_api_v1_payouts_agents__agent_profile_uuid__saved_destination_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_profile_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedPayoutDestinationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_payout_link_divergences_api_v1_payouts_link_divergences_get: {
         parameters: {
             query?: never;
@@ -17304,6 +18046,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PayoutRecipientListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_recipient_saved_destination_api_v1_payouts_recipients__user_uuid__saved_destination_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedPayoutDestinationRead"];
                 };
             };
             /** @description Validation Error */
@@ -19154,6 +19927,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LeadActivityRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    client_history_api_v1_telecaller_leads__lead_id__client_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelecallerClientHistoryResponse"];
                 };
             };
             /** @description Validation Error */

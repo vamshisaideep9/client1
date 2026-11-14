@@ -52,6 +52,7 @@ from app.api.v1.referral_bonus import router as referral_bonus_router
 from app.api.v1.referrals import router as referrals_router
 from app.api.v1.reporting import router as reporting_router
 from app.api.v1.site_visits import router as site_visits_router
+from app.api.v1.staff_analytics import router as staff_analytics_router
 from app.api.v1.staff_invites import router as staff_invites_router
 from app.api.v1.sub_admin import router as sub_admin_router
 from app.api.v1.support_tickets import router as support_tickets_router
@@ -157,6 +158,7 @@ app.include_router(transactions_router, prefix="/api/v1/transactions", tags=["tr
 app.include_router(referrals_router, prefix="/api/v1/referrals", tags=["referrals"])
 app.include_router(payments_router, prefix="/api/v1/payouts", tags=["payouts"])
 app.include_router(telecaller_router, prefix="/api/v1/telecaller", tags=["telecaller"])
+app.include_router(staff_analytics_router, prefix="/api/v1/me", tags=["analytics"])
 app.include_router(agent_router, prefix="/api/v1/agent", tags=["agent"])
 app.include_router(
     client_lead_details_router,

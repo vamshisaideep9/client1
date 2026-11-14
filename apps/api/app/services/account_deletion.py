@@ -291,6 +291,8 @@ async def delete_account(
     # avoiding a staff SELECT policy over consent/location data. Keeping it in
     # Phase A makes erasure atomic with the identity scrub.
     await db.scalar(func.erase_personalization_preference(target_auth_user_uuid))
+    # Same confined-definer shape for an Agent's encrypted payout destination.
+    await db.scalar(func.erase_agent_payout_details(target_auth_user_uuid))
 
     db.add(
         AuthEvent(

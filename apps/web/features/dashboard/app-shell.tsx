@@ -11,6 +11,7 @@ import { RealEstateProvider } from "@/features/real-estate/store";
 import { cn } from "@/lib/utils";
 
 import { AppSidebar } from "./app-sidebar";
+import { AssignmentToaster } from "./assignment-toaster";
 import { DashboardRouteGuard } from "./dashboard-route-guard";
 import { LineProvider } from "./line-provider";
 import { LineSwitcher } from "./line-switcher";
@@ -18,24 +19,37 @@ import { MeProvider } from "./me-provider";
 import { NotificationBell } from "./notification-bell";
 import { NotificationsProvider } from "./notifications-provider";
 import { ProfileMenu } from "./profile-menu";
-import { hasFixedDesktopSidebar, isDesktopSidebarExpanded } from "./shell-state";
+import {
+  isDesktopSidebarExpanded,
+  readStoredSidebarPreference,
+  storeSidebarPreference,
+} from "./shell-state";
 
-// Authenticated dashboard shell: Clients get a collapsible icon rail that
-// always starts collapsed (session-only expand/collapse, not remembered
-// across reloads), while operational roles use an always-labeled desktop
-// sidebar. Every role gets the same mobile drawer and a top bar with
-// line/account utilities.
+// Authenticated dashboard shell: every role gets a collapsible desktop rail.
+// Clients start collapsed each session (not remembered across reloads);
+// operational roles start expanded and remember their choice on this device.
+// Every role gets the same mobile drawer and a top bar with line/account
+// utilities.
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
+  const role = session?.role;
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const mobileTriggerRef = React.useRef<HTMLButtonElement>(null);
-  const [railOpen, setRailOpen] = React.useState(false);
-  const fixedDesktopSidebar = hasFixedDesktopSidebar(session?.role);
-  const desktopSidebarExpanded = isDesktopSidebarExpanded(session?.role, railOpen);
+  // The session (and so `role`) only exists after the client refresh, so the
+  // server and first client render agree (collapsed) and the stored choice is
+  // read in render once the role is known — no expanded-then-collapsed flash.
+  const [toggledPreference, setRailPreference] = React.useState<boolean | null>(null);
+  const storedPreference = React.useMemo(() => readStoredSidebarPreference(role), [role]);
+  const desktopSidebarExpanded = isDesktopSidebarExpanded(
+    role,
+    toggledPreference ?? storedPreference,
+  );
 
   const toggleRail = React.useCallback(() => {
-    setRailOpen((open) => !open);
-  }, []);
+    const next = !desktopSidebarExpanded;
+    setRailPreference(next);
+    storeSidebarPreference(role, next);
+  }, [desktopSidebarExpanded, role]);
 
   return (
     <MeProvider>
@@ -43,6 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <RealEstateProvider>
           <LoanCompareProvider>
             <NotificationsProvider>
+              <AssignmentToaster />
               <div
                 className={cn(
                   "font-geist min-h-dvh bg-background transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none lg:grid",
@@ -61,7 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="sticky top-0 h-dvh min-h-0">
                   <AppSidebar
                     expanded={desktopSidebarExpanded}
-                    onToggle={fixedDesktopSidebar ? undefined : toggleRail}
+                    onToggle={session ? toggleRail : undefined}
                   />
                 </div>
               </aside>
@@ -70,8 +85,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetContent
                   side="left"
-                  className="font-geist h-dvh w-64 border-white/15 bg-dash-rail p-0 text-dash-foreground"
-                  closeButtonClassName="z-10 text-dash-foreground hover:bg-dash-rail-hover focus-visible:ring-brand-sky"
+                  className="font-geist h-dvh w-64 border-dash-border bg-dash-rail p-0 text-dash-foreground"
+                  closeButtonClassName="z-10 text-dash-foreground hover:bg-dash-rail-hover focus-visible:ring-ring"
                   onCloseAutoFocus={(event) => {
                     event.preventDefault();
                     mobileTriggerRef.current?.focus();

@@ -226,7 +226,7 @@ export function FinancialServicesFilters({
             onChange={(event) => setText(event.target.value)}
             aria-label="Search financial services"
             aria-keyshortcuts={FOCUS_KEY}
-            placeholder="Search personal loan, insurance, cards..."
+            placeholder="Search personal loan, home loan, cards..."
             className="h-12 w-full rounded-xl border border-input bg-surface pl-12 pr-12 text-base text-brand-heading shadow-xs transition-[border-color,box-shadow] duration-150 placeholder:text-text-secondary hover:border-brand-blue focus:outline-none focus-visible:border-brand-blue focus-visible:ring-2 focus-visible:ring-ring/30 motion-reduce:transition-none [&::-webkit-search-cancel-button]:appearance-none"
           />
           {text ? (
@@ -294,7 +294,7 @@ export function FinancialServicesFilters({
                   <span
                     className={cn(
                       "tabular-nums text-xs font-semibold",
-                      active ? "text-dash-foreground" : "text-text-secondary",
+                      active ? "text-white" : "text-text-secondary",
                     )}
                   >
                     {count}

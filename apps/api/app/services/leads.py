@@ -25,8 +25,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, func, or_, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import and_, func, or_, select, text, update
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -414,7 +414,7 @@ async def capture_lead(
 async def capture_agent_lead(
     *,
     mobile: str,
-    name: str | None,
+    name: str,
     business_line: str,
     agent_profile_uuid: UUID,
     requirement: dict[str, Any] | None,
@@ -578,6 +578,119 @@ async def capture_agent_lead(
     if notice is not None:
         await notify_lead_assignments([notice])
     return lead
+
+
+class AgentLeadNotResubmittable(Exception):
+    """The lead is not this Agent's expired, unregistered, open lead."""
+
+
+# Transaction-local opt-in read by enforce_agent_lead_expiry_immutable. The
+# trigger still re-checks every resubmission condition itself.
+_RESUBMIT_FLAG_SQL = text("SELECT set_config('app.agent_lead_resubmit', 'on', true)")
+
+
+def is_agent_lead_resubmittable(lead: Lead) -> bool:
+    """Whether the originating Agent may restart this lead's window.
+
+    2026-11-14 amendment to FR-4.6: after expiry, only the Agent who
+    introduced the lead may resubmit it, and only while the client has not
+    registered and the lead is neither converted nor closed. The service also
+    rejects a mobile that now belongs to any account or has another live
+    Agent-attributed lead.
+    """
+    return (
+        lead.origin_agent_profile_uuid is not None
+        and lead.agent_expired_at is not None
+        and lead.client_profile_uuid is None
+        and lead.status not in (LeadStatus.CONVERTED, LeadStatus.CLOSED)
+    )
+
+
+async def resubmit_agent_lead(
+    *,
+    lead_id: UUID,
+    agent_profile_uuid: UUID,
+    actor_auth_user_uuid: UUID,
+) -> None:
+    """Give the originating Agent a fresh window on their expired lead.
+
+    Runs on the owner session like capture_agent_lead: the post-update row may
+    be assigned to a Telecaller, which the Agent's RLS WITH CHECK forbids. All
+    ownership and state checks happen here under the mobile advisory lock and
+    a row lock, and the database trigger enforces them again.
+
+    The operational status and any current Telecaller assignment are kept, so
+    a Telecaller already working the lead is not interrupted. An unassigned
+    lead is offered to automatic assignment again.
+    """
+    notice: LeadAssignmentNotice | None = None
+    try:
+        async with AsyncSessionLocal() as session:
+            mobile = await session.scalar(
+                select(Lead.mobile).where(
+                    Lead.id == lead_id,
+                    Lead.origin_agent_profile_uuid == agent_profile_uuid,
+                )
+            )
+            if mobile is None:
+                raise AgentLeadNotResubmittable
+            await lock_lead_mobile(session, mobile)
+            lead = await session.scalar(select(Lead).where(Lead.id == lead_id).with_for_update())
+            if (
+                lead is None
+                or lead.origin_agent_profile_uuid != agent_profile_uuid
+                or lead.mobile != mobile
+                or not is_agent_lead_resubmittable(lead)
+            ):
+                raise AgentLeadNotResubmittable
+            if await session.scalar(select(User.id).where(User.mobile == mobile).limit(1)):
+                raise AgentLeadNotResubmittable
+            if await session.scalar(
+                select(Lead.id)
+                .where(
+                    Lead.mobile == mobile,
+                    Lead.id != lead.id,
+                    Lead.origin_agent_profile_uuid.is_not(None),
+                    Lead.agent_expired_at.is_(None),
+                    Lead.status != LeadStatus.CLOSED,
+                )
+                .limit(1)
+            ):
+                raise AgentLeadNotResubmittable
+
+            previous_expired_at = lead.agent_expired_at
+            now = datetime.now(UTC)
+            await session.execute(_RESUBMIT_FLAG_SQL)
+            lead.expires_at = now + timedelta(days=settings.AGENT_LEAD_EXPIRY_DAYS)
+            lead.agent_expired_at = None
+            lead.expiry_reminder_sent_at = None
+            lead.resubmit_count = lead.resubmit_count + 1
+            lead.updated_at = now
+            await session.flush()
+            await record_audit(
+                session,
+                action=AuditAction.AGENT_LEAD_RESUBMITTED,
+                entity_type="lead",
+                entity_uuid=lead.id,
+                actor_uuid=actor_auth_user_uuid,
+                actor_role="agent",
+                business_line=lead.business_line,
+                detail={
+                    "resubmit_count": lead.resubmit_count,
+                    "previous_expired_at": (
+                        previous_expired_at.isoformat() if previous_expired_at else None
+                    ),
+                },
+            )
+            notice = await auto_assign_locked_lead(session, lead)
+            await session.commit()
+    except AgentLeadNotResubmittable:
+        raise
+    except (IntegrityError, DBAPIError) as exc:
+        raise AgentLeadNotResubmittable from exc
+
+    if notice is not None:
+        await notify_lead_assignments([notice])
 
 
 async def _ensure_client_line_lead(

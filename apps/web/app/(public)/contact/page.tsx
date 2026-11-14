@@ -8,9 +8,9 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 import type { LeadTopic } from "@/lib/leads";
 
 export const metadata: Metadata = {
-  title: "Contact Us: Talk to Our Financial Services and Real Estate Team",
+  title: "Contact Dhanadhara: Loans & Property in Telangana",
   description:
-    "Get in touch with our financial services and real estate team. Leave your number and we will call you back, or reach us by phone and email.",
+    "Call +91 90100 53010 or email Dhanadhara, Monday to Saturday, 10 AM to 6 PM. Office in Vikarabad, serving Hyderabad and Telangana. Request a callback.",
   keywords: [
     "contact",
     "get in touch",
@@ -20,9 +20,9 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/contact" },
   openGraph: {
-    title: "Contact Us: Talk to Our Financial Services and Real Estate Team",
+    title: "Contact Dhanadhara: Loans & Property in Telangana",
     description:
-      "Get in touch with our financial services and real estate team. Leave your number and we will call you back.",
+      "Call +91 90100 53010 or email Dhanadhara, Monday to Saturday, 10 AM to 6 PM. Office in Vikarabad, serving Hyderabad and Telangana. Request a callback.",
     type: "website",
     url: "/contact",
   },
@@ -97,7 +97,7 @@ export default async function ContactPage({
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
             <div>
               <h1 className="max-w-3xl font-heading text-3xl font-semibold leading-tight tracking-tight text-brand-heading sm:text-5xl lg:text-6xl">
-                Talk to a real person
+                Talk to our loans and property team
               </h1>
               <p className="mt-5 max-w-2xl text-lg text-[var(--nav-text)] sm:text-xl">
                 A loan or a property. Whatever brought you here, leave your
