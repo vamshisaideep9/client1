@@ -304,13 +304,17 @@ _WEBP_MARKER = b"WEBP"
 
 def sniff_content_type(head: bytes) -> str | None:
     """Best-guess content type from a file's opening bytes, or None if it
-    matches none of the four types this codebase accepts anywhere."""
+    matches none of the types this codebase accepts anywhere."""
     for signature, content_type in _MAGIC_BYTES:
         if head.startswith(signature):
             return content_type
     if head[:4] == _WEBP_RIFF_PREFIX and head[8:12] == _WEBP_MARKER:
         return "image/webp"
     # ISO Base Media File Format: a 32-bit box length followed by `ftyp`.
+    # AVIF images share the container; their major brand is `avif` (still) or
+    # `avis` (sequence). Checked before MP4 so an image is never read as video.
+    if len(head) >= 12 and head[4:8] == b"ftyp" and head[8:12] in {b"avif", b"avis"}:
+        return "image/avif"
     # Accept only well-known MP4 brands; QuickTime/MOV and arbitrary ISO-BMFF
     # payloads are not part of the closed upload vocabulary.
     if len(head) >= 12 and head[4:8] == b"ftyp":

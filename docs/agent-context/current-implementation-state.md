@@ -546,6 +546,43 @@ Evidence:
 - [`apps/api/app/services/agent_payout_details.py`](../../apps/api/app/services/agent_payout_details.py)
 - [`apps/api/app/tests/test_agent_dashboard_refinements.py`](../../apps/api/app/tests/test_agent_dashboard_refinements.py)
 
+### CS-018 — property listing form refinements, media formats and 360 images
+
+**Decision (2026-11-14, user-approved):** Amends only the named parts of
+`property-specific-listing-forms-2026-08-21.md` (field labels, the narrative-safety
+rule) and `property-listing-authority-and-panorama-2026-08-20.md` (panorama
+count, formats and minimum size). Applies to every lister: Agent, Sub Admin and
+Admin share one form.
+
+- *Labels.* "Listing name" becomes "Property name" (same public title field).
+  Project listings say "Unit or flat area" and "Flat facing"; the approval
+  reference is labelled "Local approval number".
+- *Configurations.* 2.5 BHK and 3.5 BHK are added.
+- *Ranges.* Unit or flat area and undivided share are From-To ranges; the
+  undivided share carries a sq ft or sq yd unit. The existing single values
+  remain valid ("From"; legacy UDS reads as sq ft).
+- *Approval authority.* GHMC, HMDA, DTCP or GP, or "Other" with a typed name.
+  The API keeps accepting any name; the list is a form choice.
+- *RERA.* The registration number is shown and sent only when RERA applies.
+- *Amenities.* The free amenity list stays, with one-click common amenities.
+  Amenities description and About the project move to their own section above
+  media.
+- *Narratives.* Public descriptions may now include numbers of up to 6 digits;
+  a run of 7 or more digits (also when split by spaces, dashes, dots, brackets
+  or +) is still rejected as a phone or account number. Links, email and markup
+  stay blocked.
+- *Media.* Listing photos and 360 images accept JPEG, PNG, WebP and AVIF. A
+  listing may have up to ten 360 images (was one), each 2:1 and at least
+  1024 x 512 (was 2048 x 1024), at most 25 MP and 5 MB. A failing 360 image now
+  gets a specific error instead of "does not match its declared type".
+
+Evidence:
+
+- [`apps/api/app/schemas/property_details.py`](../../apps/api/app/schemas/property_details.py)
+- [`apps/api/alembic/versions/c7e9a1b3d5f7_property_media_formats_and_panoramas.py`](../../apps/api/alembic/versions/c7e9a1b3d5f7_property_media_formats_and_panoramas.py)
+- [`apps/web/lib/property-submit.ts`](../../apps/web/lib/property-submit.ts)
+- [`apps/api/app/tests/test_property_media_constraints.py`](../../apps/api/app/tests/test_property_media_constraints.py)
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in

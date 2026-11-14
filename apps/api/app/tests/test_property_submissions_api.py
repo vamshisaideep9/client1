@@ -273,17 +273,18 @@ async def test_panorama_presign_uses_image_cap(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_submission_rejects_more_than_one_panorama(client: AsyncClient) -> None:
+async def test_submission_rejects_more_than_ten_panoramas(client: AsyncClient) -> None:
     _, mobile = await full_registration(client, lines=["real_estate"])
     uid = await _auth_user_uuid(mobile)
     payload = _payload_with_panorama(uid)
-    payload["media"].append(
+    payload["media"].extend(
         {
             "kind": "panorama",
             "content_type": "image/webp",
             "object_key": (f"private/property-submissions/staging/{uid}/{uuid.uuid4()}/asset.webp"),
-            "position": 2,
+            "position": position,
         }
+        for position in range(2, 12)
     )
 
     response = await client.post(
@@ -1067,8 +1068,10 @@ async def test_presign_rate_limit_fails_closed(
     _, mobile = await full_registration(client, lines=["real_estate"])
     uid = await _auth_user_uuid(mobile)
 
+    from app.services.property_submissions import PRESIGN_LIMIT_PER_HOUR
+
     async def over_limit(_cache: RedisCache, _key: str, _ttl: int) -> int:
-        return 37
+        return PRESIGN_LIMIT_PER_HOUR + 1
 
     monkeypatch.setattr(RedisCache, "incr_with_expire", over_limit)
     res = await client.post(

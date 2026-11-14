@@ -21,6 +21,7 @@ import {
   type PropertyDetailForm,
   type SubmitFormState,
 } from "@/lib/property-submit";
+import { firstPanoramaError } from "@/lib/panorama-check";
 
 export function useSubmitProperty(
   submission?: Submission,
@@ -66,8 +67,8 @@ export function useSubmitProperty(
   const setDocuments = React.useCallback((documents: File[]) => {
     setForm((prev) => ({ ...prev, documents }));
   }, []);
-  const setPanorama = React.useCallback((panorama: File | null) => {
-    setForm((prev) => ({ ...prev, panorama }));
+  const setPanoramas = React.useCallback((panoramas: File[]) => {
+    setForm((prev) => ({ ...prev, panoramas }));
   }, []);
 
   // A 422 the client checks missed is shown on the field it belongs to, not as
@@ -122,12 +123,20 @@ export function useSubmitProperty(
       }
       return;
     }
-    const totalUploads = form.images.length + form.documents.length + (form.panorama ? 1 : 0);
+    // Catch a wrongly shaped 360 image before any upload starts.
+    const panoramaError = await firstPanoramaError(form.panoramas);
+    if (panoramaError) {
+      setSubmitting(false);
+      setErrors({ panoramas: panoramaError });
+      toast.error("Please fix the highlighted fields.");
+      return;
+    }
+    const totalUploads = form.images.length + form.documents.length + form.panoramas.length;
     setUploadProgress(`Uploading 0 of ${totalUploads}`);
     const uploaded = await uploadPropertyMedia(
       form.images,
       form.documents,
-      form.panorama,
+      form.panoramas,
       (done, total) => setUploadProgress(`Uploading ${done} of ${total}`),
     );
     if (!uploaded.ok) {
@@ -156,7 +165,7 @@ export function useSubmitProperty(
     removeAmenity,
     setImages,
     setDocuments,
-    setPanorama,
+    setPanoramas,
     adminCorrection,
     correctionReason,
     setCorrectionReason,

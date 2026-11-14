@@ -53,7 +53,9 @@ from app.services.media_processing import (
 
 IMAGE_MAX_BYTES = 5 * 1024 * 1024
 DOCUMENT_MAX_BYTES = 5 * 1024 * 1024
-PRESIGN_LIMIT_PER_HOUR = 36
+# One full listing can need 22 uploads (10 images, 10 panoramas, 2 PDFs);
+# this allows three complete attempts per hour.
+PRESIGN_LIMIT_PER_HOUR = 66
 _PRIVATE_PREFIX = "private/property-submissions/"
 _STAGING_PREFIX = f"{_PRIVATE_PREFIX}staging/"
 _CANONICAL_PREFIX = f"{_PRIVATE_PREFIX}canonical/"
@@ -62,6 +64,7 @@ _MEDIA_EXTENSION = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
     "image/webp": ".webp",
+    "image/avif": ".avif",
     "application/pdf": ".pdf",
 }
 
@@ -88,6 +91,10 @@ class MediaContentMismatch(Exception):
 
 class MediaStorageUnavailable(Exception):
     """Raised when storage cannot be verified or promoted; callers fail closed."""
+
+
+class PanoramaInvalid(Exception):
+    """A 360 image is not a usable equirectangular photo (shape or size)."""
 
 
 class MediaObjectChanged(Exception):
@@ -212,11 +219,15 @@ async def create_submission(
                     max_bytes=_max_bytes(asset.content_type),
                 )
                 if asset.kind == "panorama":
-                    await asyncio.to_thread(
-                        validate_panorama_object,
-                        canonical_key,
-                        asset.content_type,
-                    )
+                    try:
+                        await asyncio.to_thread(
+                            validate_panorama_object,
+                            canonical_key,
+                            asset.content_type,
+                        )
+                    except MediaProcessingError as exc:
+                        await _delete_objects([asset.object_key])
+                        raise PanoramaInvalid from exc
                 processing_status = MediaProcessingStatus.READY
                 sanitized_at = datetime.now(UTC)
                 canonical_size = await asyncio.to_thread(storage.head_object, canonical_key)
@@ -227,7 +238,7 @@ async def create_submission(
                 )
                 if not canonical_valid:
                     raise MediaStorageUnavailable
-            except (MediaUploadMissing, MediaContentMismatch):
+            except (MediaUploadMissing, MediaContentMismatch, PanoramaInvalid):
                 raise
             except MalwareDetected as exc:
                 await _delete_objects([asset.object_key])
