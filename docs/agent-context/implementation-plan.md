@@ -60,6 +60,20 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**Implemented — property listing form refinements (CS-018)** (2026-11-14; open
+for review), branch `feat/property-form-refinements` stacked on PR #342.
+Client-requested changes to the listing form used by every lister (Agent, Sub
+Admin, Admin): "Property name"; 2.5/3.5 BHK; From-To unit or flat area and
+undivided share (sq ft or sq yd); "Flat facing"; approval authority list
+(GHMC/HMDA/DTCP/GP/Other) and "Local approval number"; RERA number only when
+RERA applies; one-click common amenities; a Description section above media;
+numbers up to 6 digits in descriptions; JPEG/PNG/WebP/AVIF photos and up to ten
+360 images at a lowered 1024 x 512 minimum. Also fixes the misleading "Uploaded
+media content does not match its declared type" (dev diagnosis: the 360 images
+were 1774 x 887 and 4000 x 6000, below the old minimum and not 2:1). Migration
+`c7e9a1b3d5f7` widens the media constraints and replaces the one-panorama index
+with a ten-panorama trigger. Recommended: Opus 5.5 / high (uploads, migration).
+
 **Implemented — agent listing submit "Input should be greater than 0"**
 (2026-11-14; open for review), branch `fix/property-submit-price` from
 `upstream/main` `0ae41c0`. User-reported defect on dev: submitting a listing

@@ -123,22 +123,32 @@ def test_rejects_kind_content_type_mismatch() -> None:
         SubmissionCreate.model_validate(_payload([_asset(0, kind="document")]))
 
 
-def test_rejects_property_video_and_more_than_one_panorama() -> None:
+def test_rejects_property_video_and_more_than_ten_panoramas() -> None:
     video = _asset(1, kind="video", content_type="video/mp4")
     video["object_key"] = video["object_key"].removesuffix(".jpg") + ".mp4"
     with pytest.raises(ValidationError):
         SubmissionCreate.model_validate(_payload([_asset(0), video]))
 
-    with pytest.raises(ValidationError):
-        SubmissionCreate.model_validate(
-            _payload(
-                [
-                    _asset(0),
-                    _asset(1, kind="panorama", content_type="image/webp"),
-                    _asset(2, kind="panorama", content_type="image/webp"),
-                ]
-            )
-        )
+    panoramas = [
+        _asset(position, kind="panorama", content_type="image/webp") for position in range(1, 12)
+    ]
+    with pytest.raises(ValidationError, match="at most 10 360 images"):
+        SubmissionCreate.model_validate(_payload([_asset(0), *panoramas]))
+
+
+def test_accepts_ten_panoramas_alongside_full_media() -> None:
+    media = [_asset(position) for position in range(10)]
+    media += [
+        _asset(position, kind="document", content_type="application/pdf")
+        for position in range(10, 12)
+    ]
+    media += [
+        _asset(position, kind="panorama", content_type="image/png") for position in range(12, 22)
+    ]
+
+    parsed = SubmissionCreate.model_validate(_payload(media))
+
+    assert sum(asset.kind == "panorama" for asset in parsed.media) == 10
 
 
 @pytest.mark.parametrize("duplicate_field", ["object_key", "position"])
@@ -188,7 +198,9 @@ def test_project_amenities_require_at_least_one_hundred_fifty_words() -> None:
 @pytest.mark.parametrize(
     ("field", "value", "message"),
     [
-        ("about_project", "Call 9876 for details", "cannot contain numbers"),
+        ("about_project", "Call 9876543210 for details", "up to 6 digits"),
+        ("about_project", "Call 98765 43210 for details", "up to 6 digits"),
+        ("about_project", "Call +91-98765-43210 today", "up to 6 digits"),
         ("about_project", "See example.com for details", "cannot contain links"),
         ("about_project", "See example.xyz for details", "cannot contain links"),
         ("about_project", "Use ftp://example for details", "cannot contain links"),
@@ -588,3 +600,56 @@ def test_developer_name_is_collapsed_and_blank_is_none(
 def test_developer_name_is_bounded() -> None:
     with pytest.raises(ValidationError):
         SubmissionCreate.model_validate({**_payload([_asset(0)]), "developer_name": "x" * 121})
+
+
+def test_allows_short_numbers_in_public_narratives() -> None:
+    payload = _payload([_asset(0)])
+    payload["structured_details"]["about_project"] = (
+        "Three towers with 450 homes, ready by 2027, on survey 123456."
+    )
+
+    parsed = SubmissionCreate.model_validate(payload)
+
+    assert "450" in parsed.structured_details.about_project
+
+
+def test_accepts_half_bhk_configurations_and_area_ranges() -> None:
+    payload = _payload([_asset(0)])
+    details = payload["structured_details"]
+    details["configurations"] = ["2_5_bhk", "3_5_bhk"]
+    details["unit_or_plot_area_max_sqft"] = details["unit_or_plot_area_sqft"] + 400
+    details.update(uds_area_from=40, uds_area_to=60, uds_area_unit="sqyd")
+
+    parsed = SubmissionCreate.model_validate(payload)
+
+    assert [c.value for c in parsed.structured_details.configurations] == ["2_5_bhk", "3_5_bhk"]
+    assert parsed.structured_details.uds_area_unit.value == "sqyd"
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        ({"unit_or_plot_area_max_sqft": 10}, "To value must not be less than From"),
+        ({"uds_area_from": 60, "uds_area_to": 40, "uds_area_unit": "sqft"}, "must not be less"),
+        ({"uds_area_to": 40, "uds_area_unit": "sqft"}, "From value before To"),
+        ({"uds_area_from": 40}, "square feet or square yards"),
+        ({"uds_area_unit": "sqft"}, "before choosing its unit"),
+        ({"uds_sqft": 40, "uds_area_from": 40, "uds_area_unit": "sqft"}, "not both"),
+        ({"uds_area_from": 0, "uds_area_unit": "sqft"}, "greater than 0"),
+    ],
+)
+def test_rejects_inconsistent_area_ranges(changes: dict, message: str) -> None:
+    payload = _payload([_asset(0)])
+    payload["structured_details"].update(changes)
+
+    with pytest.raises(ValidationError, match=message):
+        SubmissionCreate.model_validate(payload)
+
+
+def test_legacy_single_undivided_share_still_validates() -> None:
+    payload = _payload([_asset(0)])
+    payload["structured_details"]["uds_sqft"] = 420
+
+    parsed = SubmissionCreate.model_validate(payload)
+
+    assert parsed.structured_details.uds_sqft == 420

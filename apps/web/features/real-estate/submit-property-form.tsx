@@ -19,12 +19,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DashboardFormPage, DashboardFormSection } from "@/features/dashboard/dashboard-ui";
-import { LISTING_INTENT_OPTIONS } from "@/lib/property-submit";
+import {
+  LISTING_INTENT_OPTIONS,
+  MAX_PANORAMAS,
+  MEDIA_IMAGE_TYPES,
+  PREDEFINED_AMENITIES,
+} from "@/lib/property-submit";
 import { PROPERTY_SUBTYPE_GROUPS } from "@/lib/property-taxonomy";
 import type { Submission } from "@/lib/property-submissions-api";
 import { cn } from "@/lib/utils";
 import { ListingLinksField } from "./listing-links-field";
-import { PropertyDetailFields } from "./property-detail-fields";
+import { PropertyDescriptionFields, PropertyDetailFields } from "./property-detail-fields";
 import { useSubmitProperty } from "./use-submit-property";
 
 function FieldError({ msg }: { msg?: string }) {
@@ -46,9 +51,9 @@ export function SubmitPropertyForm({
     () => f.form.images.map((file) => ({ file, url: URL.createObjectURL(file) })),
     [f.form.images],
   );
-  const panoramaPreview = React.useMemo(
-    () => (f.form.panorama ? URL.createObjectURL(f.form.panorama) : null),
-    [f.form.panorama],
+  const panoramaPreviews = React.useMemo(
+    () => f.form.panoramas.map((file) => ({ file, url: URL.createObjectURL(file) })),
+    [f.form.panoramas],
   );
 
   React.useEffect(
@@ -59,9 +64,9 @@ export function SubmitPropertyForm({
   );
   React.useEffect(
     () => () => {
-      if (panoramaPreview) URL.revokeObjectURL(panoramaPreview);
+      panoramaPreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
     },
-    [panoramaPreview],
+    [panoramaPreviews],
   );
 
   const commitAmenity = () => {
@@ -136,7 +141,7 @@ export function SubmitPropertyForm({
 
         <DashboardFormSection
           title="Listing basics"
-          description="Provide the public title, property type, and catalogue category."
+          description="Provide the property name, property type, and catalogue category."
         >
           <div>
             <Label htmlFor="listing-intent">Listing for</Label>
@@ -162,7 +167,7 @@ export function SubmitPropertyForm({
             </p>
           </div>
           <div>
-            <Label htmlFor="title">Listing name</Label>
+            <Label htmlFor="title">Property name</Label>
             <Input id="title" value={f.form.title} onChange={(e) => f.setField("title", e.target.value)} maxLength={200} />
             <FieldError msg={f.errors.title} />
           </div>
@@ -298,9 +303,33 @@ export function SubmitPropertyForm({
 
         <DashboardFormSection
           title="Amenities or facilities"
-          description="Add concise, customer-visible features one at a time."
+          description="Pick common amenities or add your own, one at a time."
         >
-          <Label htmlFor="amenity">Feature</Label>
+          <div>
+            <p className="text-sm font-medium" id="predefined-amenities-label">Common amenities</p>
+            <div className="mt-2 flex flex-wrap gap-2" role="group" aria-labelledby="predefined-amenities-label">
+              {PREDEFINED_AMENITIES.map((amenity) => {
+                const selected = f.form.amenities.includes(amenity);
+                return (
+                  <button
+                    key={amenity}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => (selected ? f.removeAmenity(amenity) : f.addAmenity(amenity))}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-sm",
+                      selected
+                        ? "border-brand-cta bg-brand-cta/10 text-text-primary"
+                        : "border-border text-text-secondary",
+                    )}
+                  >
+                    {amenity}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <Label htmlFor="amenity">Other amenity</Label>
           <div className="flex gap-2">
             <Input id="amenity" value={amenityDraft}
               onChange={(e) => setAmenityDraft(e.target.value)}
@@ -322,6 +351,12 @@ export function SubmitPropertyForm({
           )}
         </DashboardFormSection>
 
+        <PropertyDescriptionFields
+          form={f.form}
+          errors={f.errors}
+          setDetailField={f.setDetailField}
+        />
+
         <DashboardFormSection
           title="Media and review material"
           description="Public media is scanned and normalized; reviewer PDFs always remain private."
@@ -332,7 +367,7 @@ export function SubmitPropertyForm({
               <p className="mt-1">
                 {f.existingMedia.filter((asset) => asset.kind === "image").length} images
                 {f.existingMedia.some((asset) => asset.kind === "panorama")
-                  ? " · 1 panorama"
+                  ? ` · ${f.existingMedia.filter((asset) => asset.kind === "panorama").length} 360 images`
                   : ""}
                 {f.existingMedia.some((asset) => asset.kind === "document")
                   ? ` · ${f.existingMedia.filter((asset) => asset.kind === "document").length} private documents`
@@ -347,7 +382,7 @@ export function SubmitPropertyForm({
             <Input
               id="property-images"
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept={MEDIA_IMAGE_TYPES.join(",")}
               capture="environment"
               multiple
               disabled={f.submitting}
@@ -358,7 +393,7 @@ export function SubmitPropertyForm({
               }}
             />
             <p className="mt-1 text-xs text-text-secondary">
-              Add 1–10 JPEG, PNG, or WebP images, up to 5 MiB each. The first image is the cover.
+              Add 1–10 JPEG, PNG, WebP, or AVIF images, up to 5 MiB each. The first image is the cover.
             </p>
             <FieldError msg={f.errors.images} />
             {imagePreviews.length > 0 && (
@@ -386,41 +421,51 @@ export function SubmitPropertyForm({
             )}
           </div>
           <div>
-            <Label htmlFor="property-panorama">360 panorama (optional)</Label>
+            <Label htmlFor="property-panorama">360 images (optional)</Label>
             <Input
               id="property-panorama"
               type="file"
-              accept="image/jpeg,image/webp"
-              disabled={f.submitting}
+              accept={MEDIA_IMAGE_TYPES.join(",")}
+              multiple
+              disabled={f.submitting || f.form.panoramas.length >= MAX_PANORAMAS}
+              aria-describedby="property-panorama-help"
               onChange={(event) => {
-                f.setPanorama(event.target.files?.[0] ?? null);
+                const selected = Array.from(event.target.files ?? []);
+                f.setPanoramas([...f.form.panoramas, ...selected].slice(0, MAX_PANORAMAS));
                 event.target.value = "";
               }}
             />
-            <p className="mt-1 text-xs text-text-secondary">
-              One 2:1 equirectangular JPEG or WebP, at least 2048 x 1024 and up to 5 MiB.
-              It is scanned and normalized before review.
+            <p id="property-panorama-help" className="mt-1 text-xs text-text-secondary">
+              Up to {MAX_PANORAMAS} 360 images ({f.form.panoramas.length} chosen). Each must be a 2:1
+              panorama in JPEG, PNG, WebP, or AVIF, at least 1024 × 512 pixels, up to 25 megapixels and
+              5 MiB. They are scanned and normalized before review.
             </p>
-            <FieldError msg={f.errors.panorama} />
-            {f.form.panorama && panoramaPreview ? (
-              <div className="mt-3 rounded-lg border p-2">
-                <div className="relative aspect-[2/1] overflow-hidden rounded bg-muted">
-                  <Image src={panoramaPreview} alt="Selected 360 panorama preview" fill unoptimized className="object-cover" />
-                </div>
-                <div className="mt-2 flex items-center gap-2 text-sm">
-                  <Rotate3D className="h-4 w-4 text-text-secondary" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate">{f.form.panorama.name}</span>
-                  <button
-                    type="button"
-                    className={cn("h-9 w-9", CLOSE_BUTTON_CLASS)}
-                    disabled={f.submitting}
-                    aria-label={`Remove ${f.form.panorama.name}`}
-                    onClick={() => f.setPanorama(null)}
-                  >
-                    <X className="h-4 w-4" aria-hidden />
-                  </button>
-                </div>
-              </div>
+            <FieldError msg={f.errors.panoramas} />
+            {panoramaPreviews.length > 0 ? (
+              <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+                {panoramaPreviews.map(({ file, url }, index) => (
+                  <li key={`${file.name}-${file.lastModified}-${index}`} className="rounded-lg border p-2">
+                    <div className="relative aspect-[2/1] overflow-hidden rounded bg-muted">
+                      <Image src={url} alt={`Selected 360 image ${index + 1}`} fill unoptimized className="object-cover" />
+                    </div>
+                    <div className="mt-2 flex items-center gap-2 text-sm">
+                      <Rotate3D className="h-4 w-4 text-text-secondary" aria-hidden />
+                      <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                      <button
+                        type="button"
+                        className={cn("h-9 w-9", CLOSE_BUTTON_CLASS)}
+                        disabled={f.submitting}
+                        aria-label={`Remove ${file.name}`}
+                        onClick={() =>
+                          f.setPanoramas(f.form.panoramas.filter((_, itemIndex) => itemIndex !== index))
+                        }
+                      >
+                        <X className="h-4 w-4" aria-hidden />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             ) : null}
           </div>
           <div>

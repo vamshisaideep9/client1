@@ -2,6 +2,36 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — property listing form refinements (CS-018)** (2026-11-14; open
+for review), branch `feat/property-form-refinements` stacked on PR #342.
+- API: `ProjectResidenceDetails` adds `unit_or_plot_area_max_sqft` and
+  `uds_area_from`/`uds_area_to`/`uds_area_unit` (ordered-range validation;
+  legacy `uds_sqft` still validates), `2_5_bhk`/`3_5_bhk`, and replaces the
+  digit ban with a 7+-digit (separator-tolerant) rule. Property media accept
+  `image/avif` (sniffed by its `ftyp avif/avis` brand, re-encoded by Pillow);
+  360 images accept JPEG/PNG/WebP/AVIF, up to 10 per listing, minimum
+  1024 x 512; a failing panorama returns a specific 422. Presign limit 36 → 66
+  per hour; media positions up to 21.
+- Migration `c7e9a1b3d5f7` (one head): content-type checks on
+  `property_submission_media` and `property_media`, position bounds 21/19, and a
+  `enforce_max_listing_panoramas` trigger replacing the one-panorama unique
+  indexes. Downgrade refuses while incompatible rows exist. No grant/RLS change.
+- Web: form fields, labels, ranges, approval dropdown, conditional RERA number,
+  common-amenity chips, Description section above media, multi-panorama upload
+  with a browser 2:1/size pre-check, AVIF accept lists, display rows
+  (`lib/property-details.ts`) and media summaries.
+- Evidence: API property/media/sniff suites pass (164) plus new DB constraint
+  tests (10th panorama allowed, 11th refused on both tables; AVIF/PNG
+  accepted; unknown type refused); the downgrade guard refused correctly with
+  test rows present; ruff clean; contracts regenerated. Web: lint, typecheck,
+  unit 123 files / 845 tests; new Playwright spec
+  `property-form-refinements.spec.ts` passes against `pnpm dev` (screenshot
+  reviewed). AVIF encode/decode verified on the dev API's Alpine runtime.
+  Locally `test_developer_name_is_published…` fails only because the shared
+  local DB holds 270 active apartments against the public 12-per-category cap.
+  Not run: a full downgrade/upgrade cycle on a clean database. Completion
+  impact: none.
+
 **Implemented — agent listing submit "Input should be greater than 0"**
 (2026-11-14; open for review), branch `fix/property-submit-price` from
 `upstream/main` `0ae41c0`. Reproduced against the local API: a project listing

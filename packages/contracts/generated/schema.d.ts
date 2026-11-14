@@ -8866,8 +8866,15 @@ export interface components {
             sale_type?: components["schemas"]["SaleType"] | null;
             /** Total Units */
             total_units: number;
+            /** Uds Area From */
+            uds_area_from?: number | null;
+            /** Uds Area To */
+            uds_area_to?: number | null;
+            uds_area_unit?: components["schemas"]["SiteAreaUnit"] | null;
             /** Uds Sqft */
             uds_sqft?: number | null;
+            /** Unit Or Plot Area Max Sqft */
+            unit_or_plot_area_max_sqft?: number | null;
             /** Unit Or Plot Area Sqft */
             unit_or_plot_area_sqft: number;
         };
@@ -8951,7 +8958,7 @@ export interface components {
         /** PropertyMediaUploadRequest */
         PropertyMediaUploadRequest: {
             /** Content Type */
-            content_type: ("image/jpeg" | "image/png" | "image/webp") | "application/pdf";
+            content_type: ("image/jpeg" | "image/png" | "image/webp" | "image/avif") | "application/pdf";
             /**
              * Kind
              * @enum {string}
@@ -9919,7 +9926,7 @@ export interface components {
          * ResidentialConfiguration
          * @enum {string}
          */
-        ResidentialConfiguration: "1_bhk" | "2_bhk" | "3_bhk" | "4_bhk" | "5_plus_bhk" | "studio";
+        ResidentialConfiguration: "1_bhk" | "2_bhk" | "2_5_bhk" | "3_bhk" | "3_5_bhk" | "4_bhk" | "5_plus_bhk" | "studio";
         /**
          * SaleType
          * @description New-vs-resale, meaningful only for a sale listing.
@@ -10274,7 +10281,7 @@ export interface components {
         /** SubmissionMediaInput */
         SubmissionMediaInput: {
             /** Content Type */
-            content_type: ("image/jpeg" | "image/png" | "image/webp") | "application/pdf";
+            content_type: ("image/jpeg" | "image/png" | "image/webp" | "image/avif") | "application/pdf";
             /**
              * Kind
              * @enum {string}
