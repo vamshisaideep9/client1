@@ -2,7 +2,48 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — staff dashboard feedback batch, PR A: shell quick wins**
+**In progress — staff dashboard feedback batch, PR B: per-application lead
+workspace** (2026-11-14), branch `feat/telecaller-application-workspace`
+stacked on PR A (#331). Items 1, 4 and 6.
+- Data: migration `e7a9c1b3d5f8` adds nullable `lead_uuid` to `enquiries`
+  and `site_visits` (stamped from `ensure_client_line_lead_for_user`; existing
+  rows backfilled to the same client's Real Estate lead live at creation) and
+  five nullable request links on `lead_activities` with
+  `ck_lead_activities_single_request_link` (at most one). `ON DELETE SET NULL`.
+  No grant or policy change.
+- Why re-applications mixed: a converted lead is reused by
+  `_ensure_client_line_lead` (`status != closed`), so every later application
+  lands on the same lead. Kept that model; the lead page now separates work
+  per request instead.
+- API: Telecaller detail adds `opened_at`, card/insurance requests, property
+  enquiries (with the client's message), site visits and `latest_request`;
+  `loan_type_name` is now the readable label, not the slug. Calls accept an
+  optional `request` (`{kind, id}`) validated against the same lead (422
+  otherwise). New `GET /telecaller/leads/{id}/client-history` returns every
+  journey of that client on the line assigned to the caller, with the
+  caller's own calls. Leads list and home add `latest_request`; Admin
+  `GET /admin/leads/{id}/details` adds `requests` (client shape unchanged).
+- Web: "Applications & requests" cards, per-request workspace (loan pipeline,
+  deal, or details), "About" on the call form, call log scoped to the request
+  with a full-screen filtered log, Client history window, applied times on the
+  leads list, home and Admin lead dialog.
+- Security review: every new read starts from a lead assigned to the caller;
+  client history filters own calls explicitly on top of
+  `lead_activities_rls`. Pre-existing, not changed here: `enquiries_rls` and
+  `site_visits_rls` let any same-line agent, employee, sub admin or telecaller
+  read all enquiries/visits (including contact fields) at the database level.
+  Recommend a separate tightening change.
+Evidence (this session): alembic one head, upgrade/downgrade/upgrade clean on
+the dev DB; affected API suites 291 passed, 5 failed — the same 5 fail on
+clean `upstream/main` (`test_lead_detail_ownership_api` requirement-key
+validation x3, `system/test_cms_activation` x2); telecaller + activity RLS
+36 passed after the review fix; full web vitest 806 passed, lint and
+`tsc` clean; Playwright (mocked API, dev server) 23 passed including the new
+`telecaller-request-workspace.spec.ts` (separate applications, scoped and
+full-screen call log, client history, 360px fit).
+Recommended: Opus 5.5 / high.
+
+**Implemented — staff dashboard feedback batch, PR A: shell quick wins**
 (2026-11-13; PR #331, mirror #35, open for review), branch
 `feat/staff-shell-quick-wins` from `upstream/main`
 `5d69cde`. Items 2, 3, 5 and 8 of a 9-item telecaller/staff list.

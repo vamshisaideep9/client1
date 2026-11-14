@@ -120,6 +120,7 @@ export const FORM_SURFACE_REGISTRY = {
   "features/sub-admin/property-campaign-select.tsx": "composite",
   "features/sub-admin/referral-config-form.tsx": "mutation",
   "features/telecaller/telecaller-add-txn-dialog.tsx": "mutation",
+  "features/telecaller/telecaller-call-log.tsx": "filter",
   "features/telecaller/telecaller-lead-detail-view.tsx": "mutation",
   "features/telecaller/telecaller-leads-view.tsx": "filter",
   "features/telecaller/telecaller-property-deals-section.tsx": "mutation",

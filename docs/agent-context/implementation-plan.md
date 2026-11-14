@@ -60,7 +60,20 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — staff dashboard feedback batch, PR A: shell quick wins**
+**In progress — staff dashboard feedback batch, PR B: per-application lead
+workspace** (2026-11-14), branch `feat/telecaller-application-workspace`
+stacked on PR A. Items 1, 4 and 6. Migration `e7a9c1b3d5f8` (additive, one
+head) links property enquiries and site visits to the client's lead and lets a
+call be filed against exactly one request. The Telecaller lead page lists
+every application/enquiry/visit/deal with when it was made, opens the newest
+one in progress, folds finished ones under "Previous applications", scopes the
+call log to the selected request with a full-screen filtered log, and adds a
+client-wise history of the Telecaller's own calls across journeys. The leads
+list, home follow-ups and the Admin lead dialog show what was applied for and
+when. Next: PR C staff analytics with Recharts; item 9 design brief.
+Recommended: Opus 5.5 / high (migration and data access).
+
+**Implemented — staff dashboard feedback batch, PR A: shell quick wins**
 (2026-11-13; PR #331, mirror #35, open for review), branch
 `feat/staff-shell-quick-wins` from `upstream/main`
 `5d69cde`. First of three stacked PRs for a 9-item telecaller/staff list.
