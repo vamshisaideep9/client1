@@ -16,6 +16,7 @@ import {
   buildSubmissionUpdatePayload,
   validateForm,
   EMPTY_FORM,
+  submissionIssuesToFieldErrors,
   submissionToFormState,
   type PropertyDetailForm,
   type SubmitFormState,
@@ -69,6 +70,19 @@ export function useSubmitProperty(
     setForm((prev) => ({ ...prev, panorama }));
   }, []);
 
+  // A 422 the client checks missed is shown on the field it belongs to, not as
+  // a bare "Input should be greater than 0" toast with no field named.
+  const showFieldIssues = React.useCallback(
+    (res: { ok: false; issues?: { field: string; message: string }[] }): boolean => {
+      const fieldErrors = submissionIssuesToFieldErrors(res.issues);
+      if (Object.keys(fieldErrors).length === 0) return false;
+      setErrors(fieldErrors);
+      toast.error("Please fix the highlighted fields.");
+      return true;
+    },
+    [],
+  );
+
   const submit = React.useCallback(async () => {
     const found = validateForm(form, { requireImages: submission == null });
     if (adminCorrection && correctionReason.trim() === "") {
@@ -103,7 +117,7 @@ export function useSubmitProperty(
           );
           router.push("/dashboard/my-submissions");
         }
-      } else {
+      } else if (!showFieldIssues(res)) {
         toast.error(res.error || "Could not update the listing.");
       }
       return;
@@ -129,10 +143,10 @@ export function useSubmitProperty(
     if (res.ok) {
       toast.success("Listing submitted for review.");
       router.push("/dashboard/my-submissions");
-    } else {
+    } else if (!showFieldIssues(res)) {
       toast.error(res.error || "Could not submit the listing.");
     }
-  }, [adminCorrection, correctionReason, form, router, submission]);
+  }, [adminCorrection, correctionReason, form, router, showFieldIssues, submission]);
 
   return {
     form,

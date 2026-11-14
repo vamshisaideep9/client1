@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSubmissionPayload,
+  submissionIssuesToFieldErrors,
   validateForm,
   EMPTY_DETAILS,
   EMPTY_FORM,
@@ -127,6 +128,27 @@ describe("validateForm()", () => {
   it("flags a zero or missing price", () => {
     expect(validateForm({ ...VALID, priceRupees: "0" }).priceRupees).toBeTruthy();
     expect(validateForm({ ...VALID, priceRupees: "" }).priceRupees).toBeTruthy();
+  });
+
+  it("flags an entered undivided share of zero instead of sending 0 to the API", () => {
+    const details = { ...VALID.details, udsSqft: "0" };
+    expect(validateForm({ ...VALID, details }).udsSqft).toBe(
+      "Enter a whole number greater than 0, or leave undivided share blank.",
+    );
+    expect(validateForm({ ...VALID, details: { ...VALID.details, udsSqft: "" } }).udsSqft).toBeUndefined();
+    expect(validateForm({ ...VALID, details: { ...VALID.details, udsSqft: "420" } }).udsSqft).toBeUndefined();
+  });
+
+  it("flags whole-number fields that would be sent as 0", () => {
+    const details = { ...VALID.details, unitAreaSqft: "0.5", numberOfTowers: "0.4" };
+    const errors = validateForm({ ...VALID, details });
+    expect(errors.unitAreaSqft).toBe("Enter a whole number greater than 0 for unit or plot area.");
+    expect(errors.numberOfTowers).toBe("Enter a whole number greater than 0 for number of towers.");
+  });
+
+  it("flags a price that rounds to zero paise", () => {
+    expect(validateForm({ ...VALID, priceRupees: "0.001" }).priceRupees).toBeTruthy();
+    expect(validateForm({ ...VALID, details: { ...VALID.details, rateRupees: "0.004" } }).rateRupees).toBeTruthy();
   });
 
   it("flags missing required text fields", () => {
@@ -289,5 +311,26 @@ describe("listing links", () => {
     );
 
     expect(errors.listingLinks).toMatch(/at most 4/);
+  });
+});
+
+describe("submissionIssuesToFieldErrors()", () => {
+  it("puts API validation errors on the form field they belong to", () => {
+    expect(
+      submissionIssuesToFieldErrors([
+        { field: "structured_details.project_residence.uds_sqft", message: "Input should be greater than 0" },
+        { field: "price_paise", message: "Input should be greater than 0" },
+        { field: "structured_details.plot.price_per_sqyd_paise", message: "Input should be greater than 0" },
+      ]),
+    ).toEqual({
+      udsSqft: "Input should be greater than 0",
+      priceRupees: "Input should be greater than 0",
+      rateRupees: "Input should be greater than 0",
+    });
+  });
+
+  it("ignores issues it cannot place, so the caller can fall back to a toast", () => {
+    expect(submissionIssuesToFieldErrors([{ field: "media.0.object_key", message: "bad" }])).toEqual({});
+    expect(submissionIssuesToFieldErrors(undefined)).toEqual({});
   });
 });
