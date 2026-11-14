@@ -85,6 +85,7 @@ export const FORM_SURFACE_REGISTRY = {
   "features/dashboard/documents-view.tsx": "mutation",
   "features/dashboard/filter-bar.tsx": "filter",
   "features/dashboard/financial-product-form.tsx": "composite",
+  "features/analytics/staff-analytics-view.tsx": "filter",
   "features/dashboard/long-note-field.tsx": "composite",
   "features/employee/employee-task-detail-view.tsx": "mutation",
   "features/employee/employee-task-document-panel.tsx": "mutation",

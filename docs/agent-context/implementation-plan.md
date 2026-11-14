@@ -60,8 +60,22 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — staff dashboard feedback batch, PR B: per-application lead
-workspace** (2026-11-14), branch `feat/telecaller-application-workspace`
+**In progress — staff dashboard feedback batch, PR C: personal analytics**
+(2026-11-14; PR #333, mirror #37, open for review), branch `feat/staff-analytics`
+stacked on PR B (#332). Item 7.
+New `GET /api/v1/me/analytics?days=7|30|90` builds the caller's own KPIs,
+day-by-day trend (India Standard Time days), category breakdowns and funnel
+for Telecaller (calls by outcome, connect rate, interest, applications by
+stage, lead funnel), Employee (assigned vs completed tasks, on-time rate,
+turnaround), Agent (leads introduced, conversion, commission) and Sub Admin
+(banners/offers created, approval rate). New "My analytics" page
+(`/dashboard/insights`) with Recharts 3.10.1 (pinned, MIT, lazy-loaded) for
+the daily chart and plain segmented/ranked bars elsewhere, each with labels or
+a table view. Admin analytics unchanged. Next: item 9 design brief (managers
+over teams), awaiting approval. Recommended: Opus 5.5 / high.
+
+**Implemented — staff dashboard feedback batch, PR B: per-application lead
+workspace** (2026-11-14; PR #332, mirror #36, open for review), branch `feat/telecaller-application-workspace`
 stacked on PR A. Items 1, 4 and 6. Migration `e7a9c1b3d5f8` (additive, one
 head) links property enquiries and site visits to the client's lead and lets a
 call be filed against exactly one request. The Telecaller lead page lists
@@ -74,7 +88,7 @@ when. Next: PR C staff analytics with Recharts; item 9 design brief.
 Recommended: Opus 5.5 / high (migration and data access).
 
 **Implemented — staff dashboard feedback batch, PR A: shell quick wins**
-(2026-11-13; PR #331, mirror #35, open for review), branch
+(2026-11-13; merged as PR #331, mirror #35 open), branch
 `feat/staff-shell-quick-wins` from `upstream/main`
 `5d69cde`. First of three stacked PRs for a 9-item telecaller/staff list.
 PR A: every role can collapse the desktop sidebar (staff start expanded and

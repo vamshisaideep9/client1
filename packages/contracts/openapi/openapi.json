@@ -4270,6 +4270,169 @@
         "title": "AgriculturalLandDetails",
         "type": "object"
       },
+      "AnalyticsBreakdown": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BreakdownItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "share",
+              "ranked"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "unit": {
+            "default": "count",
+            "enum": [
+              "count",
+              "percent",
+              "hours",
+              "rupees"
+            ],
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "description",
+          "kind",
+          "items"
+        ],
+        "title": "AnalyticsBreakdown",
+        "type": "object"
+      },
+      "AnalyticsFunnel": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/FunnelStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "steps"
+        ],
+        "title": "AnalyticsFunnel",
+        "type": "object"
+      },
+      "AnalyticsKpi": {
+        "properties": {
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "count",
+              "percent",
+              "hours",
+              "rupees"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value",
+          "unit"
+        ],
+        "title": "AnalyticsKpi",
+        "type": "object"
+      },
+      "AnalyticsTrend": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/TrendPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/TrendSeries"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "series",
+          "points"
+        ],
+        "title": "AnalyticsTrend",
+        "type": "object"
+      },
       "AudienceLocationCircle": {
         "additionalProperties": false,
         "properties": {
@@ -6132,6 +6295,29 @@
           "created_at"
         ],
         "title": "BookmarkRead",
+        "type": "object"
+      },
+      "BreakdownItem": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value"
+        ],
+        "title": "BreakdownItem",
         "type": "object"
       },
       "BroadcastAudience": {
@@ -8770,6 +8956,29 @@
           "fields"
         ],
         "title": "FormSectionDefinition",
+        "type": "object"
+      },
+      "FunnelStep": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value"
+        ],
+        "title": "FunnelStep",
         "type": "object"
       },
       "Furnishing": {
@@ -16607,6 +16816,60 @@
         "title": "StaffAccessListResponse",
         "type": "object"
       },
+      "StaffAnalyticsResponse": {
+        "properties": {
+          "breakdowns": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsBreakdown"
+            },
+            "title": "Breakdowns",
+            "type": "array"
+          },
+          "funnel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalyticsFunnel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kpis": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsKpi"
+            },
+            "title": "Kpis",
+            "type": "array"
+          },
+          "range_days": {
+            "title": "Range Days",
+            "type": "integer"
+          },
+          "role": {
+            "enum": [
+              "telecaller",
+              "employee",
+              "agent",
+              "sub_admin"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "trend": {
+            "$ref": "#/components/schemas/AnalyticsTrend"
+          }
+        },
+        "required": [
+          "role",
+          "range_days",
+          "kpis",
+          "trend",
+          "breakdowns"
+        ],
+        "title": "StaffAnalyticsResponse",
+        "type": "object"
+      },
       "StaffCreateRequest": {
         "properties": {
           "business_line": {
@@ -19539,6 +19802,46 @@
         ],
         "title": "TransactionType",
         "type": "string"
+      },
+      "TrendPoint": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "day",
+          "values"
+        ],
+        "title": "TrendPoint",
+        "type": "object"
+      },
+      "TrendSeries": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "TrendSeries",
+        "type": "object"
       },
       "UnreadCountResponse": {
         "properties": {
@@ -30301,6 +30604,58 @@
         "summary": "Get My Loan Officer Contact",
         "tags": [
           "loans"
+        ]
+      }
+    },
+    "/api/v1/me/analytics": {
+      "get": {
+        "operationId": "my_analytics_api_v1_me_analytics_get",
+        "parameters": [
+          {
+            "description": "Period in days (7, 30 or 90).",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Period in days (7, 30 or 90).",
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffAnalyticsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "My Analytics",
+        "tags": [
+          "analytics"
         ]
       }
     },

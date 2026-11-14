@@ -2683,6 +2683,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Analytics */
+        get: operations["my_analytics_api_v1_me_analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile-change/authenticated/initiate": {
         parameters: {
             query?: never;
@@ -5776,6 +5793,64 @@ export interface components {
             /** Title Details */
             title_details: string;
         };
+        /** AnalyticsBreakdown */
+        AnalyticsBreakdown: {
+            /** Description */
+            description: string;
+            /** Items */
+            items: components["schemas"]["BreakdownItem"][];
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "share" | "ranked";
+            /** Title */
+            title: string;
+            /**
+             * Unit
+             * @default count
+             * @enum {string}
+             */
+            unit: "count" | "percent" | "hours" | "rupees";
+        };
+        /** AnalyticsFunnel */
+        AnalyticsFunnel: {
+            /** Description */
+            description: string;
+            /** Steps */
+            steps: components["schemas"]["FunnelStep"][];
+            /** Title */
+            title: string;
+        };
+        /** AnalyticsKpi */
+        AnalyticsKpi: {
+            /** Hint */
+            hint?: string | null;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "count" | "percent" | "hours" | "rupees";
+            /** Value */
+            value: number | null;
+        };
+        /** AnalyticsTrend */
+        AnalyticsTrend: {
+            /** Description */
+            description: string;
+            /** Points */
+            points: components["schemas"]["TrendPoint"][];
+            /** Series */
+            series: components["schemas"]["TrendSeries"][];
+            /** Title */
+            title: string;
+        };
         /** AudienceLocationCircle */
         AudienceLocationCircle: {
             /** Label */
@@ -6330,6 +6405,15 @@ export interface components {
             property_ref: string;
             /** Title */
             title: string | null;
+        };
+        /** BreakdownItem */
+        BreakdownItem: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: number;
         };
         /**
          * BroadcastAudience
@@ -7301,6 +7385,15 @@ export interface components {
             key: string;
             /** Title */
             title: string;
+        };
+        /** FunnelStep */
+        FunnelStep: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: number;
         };
         /**
          * Furnishing
@@ -9841,6 +9934,22 @@ export interface components {
             /** Entries */
             entries: components["schemas"]["StaffAccessEntry"][];
         };
+        /** StaffAnalyticsResponse */
+        StaffAnalyticsResponse: {
+            /** Breakdowns */
+            breakdowns: components["schemas"]["AnalyticsBreakdown"][];
+            funnel?: components["schemas"]["AnalyticsFunnel"] | null;
+            /** Kpis */
+            kpis: components["schemas"]["AnalyticsKpi"][];
+            /** Range Days */
+            range_days: number;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "telecaller" | "employee" | "agent" | "sub_admin";
+            trend: components["schemas"]["AnalyticsTrend"];
+        };
         /** StaffCreateRequest */
         StaffCreateRequest: {
             /** Business Line */
@@ -10867,6 +10976,25 @@ export interface components {
          * @enum {string}
          */
         TransactionType: "cashback" | "referral_bonus" | "commission";
+        /** TrendPoint */
+        TrendPoint: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Values */
+            values: {
+                [key: string]: number;
+            };
+        };
+        /** TrendSeries */
+        TrendSeries: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+        };
         /** UnreadCountResponse */
         UnreadCountResponse: {
             /** Count */
@@ -16763,6 +16891,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LoanOfficerContactRead"] | null;
+                };
+            };
+        };
+    };
+    my_analytics_api_v1_me_analytics_get: {
+        parameters: {
+            query?: {
+                /** @description Period in days (7, 30 or 90). */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffAnalyticsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
