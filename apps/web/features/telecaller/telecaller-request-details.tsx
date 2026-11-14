@@ -73,7 +73,7 @@ export function TelecallerRequestDetails({ request }: { request: DetailRequest }
       >
         <Fields
           rows={[
-            { label: "Enquired", value: formatAppliedAt(item.created_at) },
+            { label: "Submitted on", value: formatAppliedAt(item.created_at) },
             { label: "Location", value: `${item.locality}, ${item.city}` },
             {
               label: "Client's message",
@@ -98,11 +98,12 @@ export function TelecallerRequestDetails({ request }: { request: DetailRequest }
     >
       <Fields
         rows={[
+          // When the client sent the request, not when the visit happens.
+          { label: "Submitted on", value: formatAppliedAt(item.created_at) },
           {
             label: "Visit on",
             value: `${formatDay(item.preferred_date)} · ${SLOT_LABEL[item.preferred_time_slot] ?? item.preferred_time_slot}`,
           },
-          { label: "Scheduled", value: formatAppliedAt(item.created_at) },
           { label: "Location", value: `${item.locality}, ${item.city}` },
         ]}
       />
