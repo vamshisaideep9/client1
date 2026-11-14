@@ -164,6 +164,7 @@ from app.services.lead_details import (
 from app.services.leads import list_assigned_leads, list_unassigned_leads
 from app.services.loan_applications import (
     BankNotAvailableForLoanType,
+    SanctionTermsRequired,
     StatusReasonRequired,
     TerminalApplication,
     TermsNotAllowedAtStage,
@@ -1010,6 +1011,11 @@ async def update_loan_application_progress(
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Deal terms can only be set once the application has been submitted to a bank.",
+        ) from exc
+    except SanctionTermsRequired as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Add the sanctioned amount and bank before marking the loan sanctioned or disbursed.",
         ) from exc
     except UnknownBank as exc:
         raise HTTPException(

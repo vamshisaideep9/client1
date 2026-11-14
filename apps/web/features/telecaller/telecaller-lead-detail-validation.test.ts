@@ -112,6 +112,45 @@ describe("Lead Details validation", () => {
     });
   });
 
+  it("requires the sanctioned amount and bank to sanction or disburse", () => {
+    expect(
+      validateLoanProgressTerms({
+        amountSanctioned: " ",
+        bankId: "",
+        interestRate: "",
+        processingFee: "",
+        requireSanctionTerms: true,
+      }),
+    ).toEqual({
+      amountSanctioned: "Enter the sanctioned amount.",
+      bankId: "Choose the lending bank.",
+    });
+    expect(
+      validateLoanProgressTerms({
+        amountSanctioned: "0",
+        bankId: "bank-1",
+        interestRate: "",
+        processingFee: "",
+        requireSanctionTerms: true,
+      }),
+    ).toEqual({ amountSanctioned: "Sanctioned amount must be greater than 0." });
+    expect(
+      validateLoanProgressTerms({
+        amountSanctioned: "500000",
+        bankId: "bank-1",
+        interestRate: "",
+        processingFee: "",
+        requireSanctionTerms: true,
+      }),
+    ).toEqual({});
+  });
+
+  it("keeps sanction terms optional before sanction", () => {
+    expect(
+      validateLoanProgressTerms({ amountSanctioned: "", interestRate: "", processingFee: "" }),
+    ).toEqual({});
+  });
+
   it("requires at least one valid property term", () => {
     expect(validatePropertyDealTerms({ priceQuoted: "", bookingAmount: "" })).toEqual({
       form: "Enter a quoted price or booking amount before saving.",

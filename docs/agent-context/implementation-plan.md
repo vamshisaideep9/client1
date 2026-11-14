@@ -60,6 +60,18 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**Implemented — security audit fixes, PR 4/5: sanction and disbursal need
+terms** (2026-11-14; open for review), branch `fix/loan-sanction-terms-required`
+stacked on PR 3. Audit finding #5: a Telecaller could move a new loan straight
+to `disbursed` with no sanctioned amount or bank, stamping `disbursed_at` and
+opening commission, fee-cashback and referral eligibility. Moving to
+`sanctioned` or `disbursed` (Telecaller and Admin share the rule) now needs a
+sanctioned amount and bank, saved earlier or sent in the same update; otherwise
+422. `closed` is unchanged because it never stamps `disbursed_at`. The shared
+progress form shows the terms as soon as a forward move reaches "submitted to
+bank", marks amount and bank required for sanction/disbursal and validates them
+inline. Next: PR 5 agent KYC canonical copy. Recommended: Opus 5.5 / high.
+
 **Implemented — security audit fixes, PR 3/5: payout reject race**
 (2026-11-14; open for review), branch `fix/payout-reject-race` stacked on PR 2.
 Audit finding #4: `reject_payout` read the payout without a lock, so a
