@@ -11,7 +11,7 @@ in 15.5.28. `next` and `eslint-config-next` now resolve to 15.5.28 (`^15.5.28`
 ranges, lockfile pinned); no other package changed. No product behavior or
 API contract change. Evidence: `pnpm audit --prod` reports no known
 vulnerabilities; `pnpm lint` and `pnpm typecheck` pass; `pnpm test` 121 files /
-822 tests pass; production build pending (see follow-up). Completion impact: none (security maintenance).
+822 tests pass; `pnpm build` in a clean `node:22-alpine` container (host build hits the known Windows standalone-symlink EPERM) compiles Next.js 15.5.28 and generates 111/111 pages, exit 0. Completion impact: none (security maintenance).
 
 **Implemented — stale Agent lead test fixtures** (2026-11-14; PR #335, mirror #39, open for review), branch
 `fix/agent-lead-stale-tests` stacked on PR #334. Six tests in
