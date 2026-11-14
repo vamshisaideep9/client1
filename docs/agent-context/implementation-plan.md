@@ -60,6 +60,16 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**Implemented — security audit fixes, PR 3/5: payout reject race**
+(2026-11-14; open for review), branch `fix/payout-reject-race` stacked on PR 2.
+Audit finding #4: `reject_payout` read the payout without a lock, so a
+concurrent approve and reject could both succeed (13 of 40 local trials) and a
+stale reject could overwrite a paid payout and release its linked commission,
+cashback or referral. Reject now locks the row (`SELECT … FOR UPDATE`) before
+the status check; approve's existing compare-and-swap then loses cleanly with
+409. No schema or contract change. Next: PR 4 loan sanction/disbursal terms.
+Recommended: Opus 5.5 / high (money path).
+
 **Implemented — security audit fixes, PR 2/5: enquiry and site-visit
 scoping** (2026-11-14; open for review), branch
 `security/re-enquiry-visit-scope` stacked on PR 1. Audit finding #3: a Real
