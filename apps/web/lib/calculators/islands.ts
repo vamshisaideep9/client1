@@ -92,4 +92,9 @@ export const ISLANDS: Partial<Record<CalculatorSlug, ComponentType>> = {
       (m) => m.HealthInsuranceCalculator,
     ),
   ),
+  "compound-interest": dynamic(() =>
+    import("@/components/calculators/islands/compound-interest-calculator").then(
+      (m) => m.CompoundInterestCalculator,
+    ),
+  ),
 };

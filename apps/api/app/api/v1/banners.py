@@ -25,7 +25,8 @@ from app.core.deps import (
 )
 from app.db.session import get_db
 from app.models.audit_log import AuditAction
-from app.models.banner import Banner, BannerStatus, BannerTemplate
+from app.models.banner import Banner, BannerPlacement, BannerStatus, BannerTemplate
+from app.models.campaign_media import CampaignMediaAsset
 from app.schemas.banners import (
     BannerCreate,
     BannerImageUploadRequest,
@@ -37,6 +38,7 @@ from app.schemas.banners import (
     BannerTemplateRead,
     BannerUpdate,
     RejectRequest,
+    youtube_id_or_none,
 )
 from app.schemas.personalization import (
     AudienceRules,
@@ -72,8 +74,41 @@ router = APIRouter()
 
 def _read(banner: Banner) -> BannerRead:
     return BannerRead.model_validate(banner, from_attributes=True).model_copy(
-        update={"image_url": asset_image_url(banner.image_key) if banner.image_key else None}
+        update={
+            "image_url": asset_image_url(banner.image_key) if banner.image_key else None,
+            "video_url": asset_image_url(banner.video_key) if banner.video_key else None,
+        }
     )
+
+
+async def _resolve_video_asset(
+    db: AsyncSession,
+    *,
+    asset_id: UUID | None,
+    business_line: str,
+    placement: BannerPlacement,
+) -> CampaignMediaAsset | None:
+    """A banner video must be an active, processed `banner_video` asset for
+    this line, on a public placement. Raises 422 otherwise."""
+    if asset_id is None:
+        return None
+    if placement not in campaign_artwork.VIDEO_PLACEMENTS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Dashboard banners cannot carry a video.",
+        )
+    try:
+        return await resolve_campaign_asset(
+            db,
+            asset_id=asset_id,
+            business_line=business_line,
+            allowed_usage_types={campaign_artwork.BANNER_VIDEO},
+        )
+    except CampaignMediaInvalid as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Choose an active banner video for this business line.",
+        ) from exc
 
 
 @router.post("", response_model=BannerRead, status_code=status.HTTP_201_CREATED)
@@ -121,12 +156,20 @@ async def create_banner(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Choose an active banner asset for this business line.",
         ) from exc
-    values = payload.model_dump(exclude={"audience_rules"})
+    video_asset = await _resolve_video_asset(
+        db,
+        asset_id=payload.video_media_asset_id,
+        business_line=payload.business_line,
+        placement=payload.placement,
+    )
+    values = payload.model_dump(exclude={"audience_rules", "youtube_url"})
     values["media_asset_id"] = template.media_asset_id if template else payload.media_asset_id
     if template is not None:
         values["image_key"] = None
     if media_asset is not None:
         values["image_key"] = media_asset.image_ref
+    values["youtube_video_id"] = youtube_id_or_none(payload.youtube_url)
+    values["video_key"] = video_asset.image_ref if video_asset else None
     values["audience_rules"] = audience_rules_to_storage(payload.audience_rules)
     values["category_key"] = template.category_key if template else None
     banner = Banner(created_by_uuid=current_user.id, **values)
@@ -368,11 +411,41 @@ async def update_banner(
             status_code=status.HTTP_409_CONFLICT,
             detail="This campaign changed after you opened it. Refresh before saving.",
         )
-    values = payload.model_dump(exclude_unset=True, exclude={"audience_rules", "expected_version"})
+    video_asset = None
+    if "video_media_asset_id" in payload.model_fields_set:
+        video_asset = await _resolve_video_asset(
+            db,
+            asset_id=payload.video_media_asset_id,
+            business_line=banner.business_line,
+            placement=banner.placement,
+        )
+    youtube_id = (
+        youtube_id_or_none(payload.youtube_url)
+        if "youtube_url" in payload.model_fields_set
+        else banner.youtube_video_id
+    )
+    if youtube_id is not None and banner.placement not in campaign_artwork.VIDEO_PLACEMENTS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Dashboard banners cannot carry a video.",
+        )
+    values = payload.model_dump(
+        exclude_unset=True, exclude={"audience_rules", "expected_version", "youtube_url"}
+    )
     if "audience_rules" in payload.model_fields_set and payload.audience_rules is not None:
         values["audience_rules"] = audience_rules_to_storage(payload.audience_rules)
     if "media_asset_id" in payload.model_fields_set:
         values["image_key"] = media_asset.image_ref if media_asset else None
+    # One video source at a time: choosing either replaces the other.
+    if "youtube_url" in payload.model_fields_set:
+        values["youtube_video_id"] = youtube_id
+        if youtube_id is not None:
+            values["video_media_asset_id"] = None
+            values["video_key"] = None
+    if "video_media_asset_id" in payload.model_fields_set:
+        values["video_key"] = video_asset.image_ref if video_asset else None
+        if video_asset is not None:
+            values["youtube_video_id"] = None
     # Template-backed campaigns mirror the template's asset; media-backed ones
     # keep the asset the author chose. Only the template branch may overwrite it.
     if template is not None:
@@ -548,6 +621,9 @@ async def create_replacement(
         cta_label=source.cta_label,
         image_key=source.image_key if source.template_id is None else None,
         media_asset_id=source.media_asset_id,
+        youtube_video_id=source.youtube_video_id,
+        video_media_asset_id=source.video_media_asset_id,
+        video_key=source.video_key,
         deep_link=source.deep_link,
         audience_rules=source.audience_rules,
         priority=source.priority,

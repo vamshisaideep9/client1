@@ -159,15 +159,27 @@ export function LoanProgressForm({
   }, [application.loan_type_id, application.bank_id]);
 
   const isTerminal = TERMINAL.has(application.status);
-  const termsEnabled = effectiveIndex(application.status) >= SUBMITTED_INDEX && !isTerminal;
+  const targetIndex = status ? ORDER.indexOf(status as (typeof ORDER)[number]) : -1;
+  // Terms open at "submitted to bank": either the application is already
+  // there, or the selected move takes it there or further in one step.
+  const termsEnabled =
+    !isTerminal &&
+    (effectiveIndex(application.status) >= SUBMITTED_INDEX || targetIndex >= SUBMITTED_INDEX);
   const feeOutcomeEnabled = effectiveIndex(application.status) >= SANCTIONED_INDEX && !isTerminal;
   const options = nextStatusOptions(application.status);
   const requiresReason = status === "rejected" || status === "on_hold";
+  const requiresSanctionTerms = status === "sanctioned" || status === "disbursed";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const nextTermErrors = termsEnabled
-      ? validateLoanProgressTerms({ amountSanctioned, interestRate, processingFee })
+      ? validateLoanProgressTerms({
+          amountSanctioned,
+          bankId,
+          interestRate,
+          processingFee,
+          requireSanctionTerms: requiresSanctionTerms,
+        })
       : {};
     if (requiresReason && reason.trim().length === 0) {
       setReasonError("A reason is required for this status.");
@@ -188,7 +200,7 @@ export function LoanProgressForm({
     const payload: LoanProgressUpdatePayload = {};
     if (status) payload.status = status;
     if (reason.trim()) payload.status_reason = reason.trim();
-    if (termsEnabled || (status && ORDER.indexOf(status as (typeof ORDER)[number]) >= SUBMITTED_INDEX)) {
+    if (termsEnabled) {
       if (amountSanctioned.trim()) payload.amount_sanctioned = amountSanctioned.trim();
       if (bankId) payload.bank_id = bankId;
       if (interestRate.trim()) payload.interest_rate = interestRate.trim();
@@ -287,7 +299,10 @@ export function LoanProgressForm({
       {termsEnabled ? (
         <div className="grid gap-4 sm:grid-cols-4">
           <div>
-            <Label htmlFor={`loan-progress-sanctioned-${application.id}`}>Sanctioned (₹)</Label>
+            <Label htmlFor={`loan-progress-sanctioned-${application.id}`}>
+              Sanctioned (₹)
+              {requiresSanctionTerms ? <RequiredIndicator /> : null}
+            </Label>
             <Input
               id={`loan-progress-sanctioned-${application.id}`}
               name="amount_sanctioned"
@@ -301,6 +316,7 @@ export function LoanProgressForm({
                 setTermErrors((current) => ({ ...current, amountSanctioned: undefined }));
               }}
               placeholder="500000"
+              aria-required={requiresSanctionTerms || undefined}
               aria-invalid={Boolean(termErrors.amountSanctioned)}
               aria-describedby={
                 termErrors.amountSanctioned
@@ -313,9 +329,26 @@ export function LoanProgressForm({
             </FieldError>
           </div>
           <div>
-            <Label htmlFor={`loan-progress-bank-${application.id}`}>Bank</Label>
-            <Select value={bankId} onValueChange={setBankId}>
-              <SelectTrigger id={`loan-progress-bank-${application.id}`} className="w-full">
+            <Label htmlFor={`loan-progress-bank-${application.id}`}>
+              Bank
+              {requiresSanctionTerms ? <RequiredIndicator /> : null}
+            </Label>
+            <Select
+              value={bankId}
+              onValueChange={(value) => {
+                setBankId(value);
+                setTermErrors((current) => ({ ...current, bankId: undefined }));
+              }}
+            >
+              <SelectTrigger
+                id={`loan-progress-bank-${application.id}`}
+                className="w-full"
+                aria-required={requiresSanctionTerms || undefined}
+                aria-invalid={Boolean(termErrors.bankId)}
+                aria-describedby={
+                  termErrors.bankId ? `loan-progress-bank-${application.id}-error` : undefined
+                }
+              >
                 <SelectValue placeholder={banks.length ? "Choose a bank" : "No banks configured yet"} />
               </SelectTrigger>
               <SelectContent>
@@ -326,6 +359,9 @@ export function LoanProgressForm({
                 ))}
               </SelectContent>
             </Select>
+            <FieldError id={`loan-progress-bank-${application.id}-error`}>
+              {termErrors.bankId}
+            </FieldError>
           </div>
           <div>
             <Label htmlFor={`loan-progress-rate-${application.id}`}>Rate (%)</Label>

@@ -24,6 +24,7 @@ import {
   type TelecallerLeadSortKey,
 } from "./telecaller-lead-filters";
 import { DISPOSITION_LABEL, STATUS_LABEL, STATUS_STYLE, formatDateTime } from "./telecaller-lead-status";
+import { REQUEST_KIND_LABEL, formatAppliedAt } from "./telecaller-requests";
 import { useTelecallerLeads } from "./use-telecaller-leads";
 
 const STATUS_FILTER_OPTIONS = ["new", "assigned", "working", "converted", "closed", "released"] as const;
@@ -220,6 +221,19 @@ export function TelecallerLeadsView() {
                             {lead.name ?? "Unnamed lead"}
                           </p>
                           <p className="text-xs text-text-secondary">{formatMobile(lead.mobile)}</p>
+                          {lead.latest_request ? (
+                            <p className="mt-1 text-xs text-text-secondary">
+                              <span className="font-medium text-text-primary">
+                                {lead.latest_request.title}
+                              </span>
+                              {" · "}
+                              {REQUEST_KIND_LABEL[lead.latest_request.kind]}
+                              {" · "}
+                              <time dateTime={lead.latest_request.applied_at}>
+                                {formatAppliedAt(lead.latest_request.applied_at)}
+                              </time>
+                            </p>
+                          ) : null}
                         </td>
                         <td className="px-5 py-4">
                           <span
