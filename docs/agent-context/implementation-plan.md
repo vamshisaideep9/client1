@@ -60,7 +60,7 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — stale Agent lead test fixtures** (2026-11-14), branch
+**Implemented — stale Agent lead test fixtures** (2026-11-14; PR #335, mirror #39, open for review), branch
 `fix/agent-lead-stale-tests` stacked on PR #334. Six tests in
 `test_agent_api.py` and `test_lead_detail_ownership_api.py` posted Agent
 `requirement` keys (`k`, `injected`, `message`, `product`, `page`) that the
