@@ -3628,6 +3628,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payouts/{payout_id}/simulate-gateway": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Simulate Gateway
+         * @description Development-only RazorpayX test mode: an Admin picks the gateway outcome.
+         *
+         *     404 unless PAYOUT_GATEWAY_SIMULATOR is on, ENV is development and no live
+         *     Razorpay credentials exist; the outcome then runs through settle_from_webhook.
+         */
+        post: operations["simulate_gateway_api_v1_payouts__payout_id__simulate_gateway_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/personalization/location": {
         parameters: {
             query?: never;
@@ -8896,6 +8919,17 @@ export interface components {
             /** Vpa */
             vpa?: string | null;
         };
+        /**
+         * PayoutGatewaySimulation
+         * @description Tester-chosen gateway outcome (development simulator only).
+         */
+        PayoutGatewaySimulation: {
+            /**
+             * Event
+             * @enum {string}
+             */
+            event: "payout.processed" | "payout.failed" | "payout.rejected" | "payout.reversed";
+        };
         /** PayoutLinkDivergenceRead */
         PayoutLinkDivergenceRead: {
             /**
@@ -8989,6 +9023,8 @@ export interface components {
             rejected_by_user_uuid: string | null;
             /** Reversal Transaction Id */
             reversal_transaction_id: string | null;
+            /** Simulate Events */
+            simulate_events?: ("payout.processed" | "payout.failed" | "payout.rejected" | "payout.reversed")[];
             status: components["schemas"]["PayoutStatus"];
             type: components["schemas"]["PayoutType"];
             /**
@@ -19844,6 +19880,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PayoutReject"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    simulate_gateway_api_v1_payouts__payout_id__simulate_gateway_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payout_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayoutGatewaySimulation"];
             };
         };
         responses: {

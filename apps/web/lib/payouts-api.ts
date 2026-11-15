@@ -44,6 +44,23 @@ export async function rejectPayout(id: string, reason: string): Promise<ApiRespo
   });
 }
 
+export type SimulatedGatewayEvent = Schemas["PayoutGatewaySimulation"]["event"];
+
+/**
+ * Development-only RazorpayX test mode: apply a chosen gateway outcome. The
+ * API returns 404 unless the simulator is enabled on a mock-payments server,
+ * so the UI only offers it for events listed in `payout.simulate_events`.
+ */
+export async function simulatePayoutGateway(
+  id: string,
+  event: SimulatedGatewayEvent,
+): Promise<ApiResponse<Payout>> {
+  return apiRequest<Payout>(`/api/v1/payouts/${id}/simulate-gateway`, {
+    method: "POST",
+    body: { event },
+  });
+}
+
 export async function issueManualCheque(
   id: string,
   reference: string,

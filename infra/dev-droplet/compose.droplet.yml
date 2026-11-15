@@ -52,6 +52,10 @@ x-droplet-api-env: &droplet-api-env
   # Spaces refuses bucket policies, so public/ objects are made readable with
   # a per-object public-read ACL; everything else stays private.
   SPACES_PUBLIC_OBJECT_ACL: "true"
+  # Payouts run in mock mode here (no Razorpay keys). The simulator makes an
+  # approved UPI/bank payout wait at a synthetic gateway so a tester can pick
+  # its outcome. The API refuses this flag outside ENV=development.
+  PAYOUT_GATEWAY_SIMULATOR: "true"
 
 services:
   postgres:

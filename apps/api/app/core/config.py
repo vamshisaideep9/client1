@@ -223,6 +223,13 @@ class Settings(BaseSettings):
     #   *_PAISE == 0 means "not configured": in LIVE mode an unset cap is treated
     #   as fail-closed (reject the payout — never move uncapped real money); in
     #   mock mode 0 means "no cap" for dev convenience. Enforced in the create guard.
+    # Development-only gateway simulator for testers. When on (and payments are in
+    # mock mode), approving a UPI/bank payout stops at INITIATED with a synthetic
+    # gateway id instead of auto-settling, and an Admin chooses the gateway
+    # outcome, which is applied through the same settle_from_webhook state
+    # machine a real RazorpayX webhook uses. Refused outside development; inert
+    # whenever real Razorpay credentials are present.
+    PAYOUT_GATEWAY_SIMULATOR: bool = False
     PAYOUT_MAX_AMOUNT_PAISE: int = 0  # per-payout ceiling
     PAYOUT_DAILY_CAP_PAISE: int = 0  # aggregate ceiling per calendar day (UTC)
     # Reject a duplicate (same recipient + type + amount + idempotency key) seen
@@ -452,6 +459,9 @@ class Settings(BaseSettings):
         # rotation) leaves the service in MOCK mode in production — payouts show
         # "paid" with no real money moving, and nothing fails or warns. Refuse to
         # boot outside development unless BOTH keys are set or NEITHER is.
+        if self.PAYOUT_GATEWAY_SIMULATOR and self.ENV != "development":
+            raise ValueError("PAYOUT_GATEWAY_SIMULATOR is development-only.")
+
         key_set = bool(self.RAZORPAY_KEY_ID)
         secret_set = bool(self.RAZORPAY_KEY_SECRET)
         if self.ENV != "development" and key_set != secret_set:

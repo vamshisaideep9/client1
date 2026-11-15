@@ -236,3 +236,14 @@ infra/dev-droplet/dc.sh up -d --build web
 `infra/dev-droplet/dc.sh down -v` deletes every volume (database and ClamAV
 signatures). Then `rm .env` and repeat step 4 onward. Re-copy Caddy's
 environment file in step 5 if a host value changed.
+
+## Payout test mode
+
+Payouts run in mock mode here (no Razorpay keys), and `compose.droplet.yml`
+sets `PAYOUT_GATEWAY_SIMULATOR=true`. Approving a UPI or bank payout therefore
+stops at "Initiated" and opens a "Razorpay test payout" dialog where an Admin
+picks what the gateway reports (success, failure, bank rejection, or later a
+reversal). No real money moves. The API refuses the flag outside
+`ENV=development`, and it does nothing once real Razorpay keys are set. The
+flag is an environment change, so apply it with
+`infra/dev-droplet/dc.sh up -d api scheduler` (recreate), not `restart`.

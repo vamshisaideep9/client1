@@ -31,6 +31,30 @@ stacked on it.
   (regression test added). Completion impact: manager tooling complete for
   this phase.
 
+**In review — Razorpay payout test mode on dev** (2026-11-15), branch
+`feat/razorpay-payout-simulator` from `upstream/main` `1454770`. Development-only
+behaviour behind `PAYOUT_GATEWAY_SIMULATOR`; additive contract change
+(`PayoutRead.simulate_events`, `POST /api/v1/payouts/{id}/simulate-gateway`); no
+schema, RLS or live-mode change, so the completion percentage is unchanged.
+- API: `gateway_simulator_active`, `simulator_events_for` and
+  `simulate_gateway_event` in `services/payments.py`; Admin-only route; settings
+  validator refuses the flag outside development.
+- Web: `payout-gateway-simulator-dialog.tsx` opens after approval and from a
+  "Test outcome" row action; labelled "Test mode", no Razorpay logo.
+- Infra: `compose.droplet.yml` enables the flag on the dev droplet.
+- Evidence (fresh, isolated `python:3.13` container on `client1_default`):
+  `test_payout_gateway_simulator.py` with the payouts API/webhook, config and
+  route-authorization suites: 132 passed; `ruff check`/`format --check` pass;
+  `test_dev_droplet.py` 10 passed. Web: typecheck, lint, 886 unit tests pass;
+  `payout-gateway-simulator.spec.ts` 3 passed at 1280 and 390 px with
+  screenshots reviewed. Production `pnpm build` passes in a `node:22-alpine`
+  container. Review fix: a chosen outcome claims the payout under its row lock
+  (`gateway_status = simulating`) so two contradictory concurrent choices
+  cannot both settle; covered by a concurrency test (simulator suite now 10).
+  Full API suite on a fresh database after the fix: 2330 passed, 3 failed; the
+  same three also fail on unmodified `upstream/main` `1454770` (pre-existing).
+- Not verified here: the droplet run (after merge) and live RazorpayX.
+
 **In review — item 9: Sub Admin managers over teams (CS-019)** (2026-11-15),
 branch `feat/sub-admin-team-managers` from `upstream/main` `76dced7`: PR 1 (API)
 [#348](https://github.com/brollysolutions/client1/pull/348), mirror
