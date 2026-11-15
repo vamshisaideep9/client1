@@ -129,6 +129,32 @@ class DevDropletComposeTests(unittest.TestCase):
             "NEXT_PUBLIC_ASSET_HOST: ${SPACES_ENDPOINT_URL?", "\n".join(self.droplet["web"])
         )
 
+    def test_web_runs_the_production_standalone_build(self) -> None:
+        web = "\n".join(self.droplet["web"])
+        # The dev server's unminified, uncached bundles make page speed on
+        # this host meaningless; the droplet builds the prod image instead.
+        self.assertRegex(web, r"(?m)^    build:\n      target: prod$")
+        self.assertIn("contracts: ./packages/contracts", web)
+        # Drop `pnpm dev` and the source bind mount so the image's own
+        # `node server.js` serves the baked build.
+        self.assertIn("pnpm dev", "\n".join(self.base["web"]))
+        self.assertRegex(web, r"(?m)^    command: !reset null$")
+        self.assertRegex(web, r"(?m)^    volumes: !reset \[\]$")
+        self.assertRegex(web, r"(?m)^      NODE_ENV: production$")
+        self.assertRegex(web, r"(?m)^      HOSTNAME: 0\.0\.0\.0$")
+        # Strict public config: every build-time identity value is supplied.
+        for variable in (
+            "NEXT_PUBLIC_API_BASE_URL",
+            "NEXT_PUBLIC_SITE_URL",
+            "NEXT_PUBLIC_ASSET_HOST",
+            "NEXT_PUBLIC_CONTACT_PHONE",
+            "NEXT_PUBLIC_CONTACT_EMAIL",
+            "NEXT_PUBLIC_CONTACT_HOURS",
+            "NEXT_PUBLIC_CONTACT_ADDRESS",
+        ):
+            with self.subTest(variable=variable):
+                self.assertRegex(web, rf"(?m)^        {variable}: ")
+
     def test_long_running_services_restart_after_reboot(self) -> None:
         for name in self.base:
             if name in ("minio", "minio-init"):
@@ -179,6 +205,8 @@ class DevDropletCaddyTests(unittest.TestCase):
                 self.assertNotIn("private_ranges", body)
                 self.assertNotIn("/0", body)
                 self.assertNotIn("basic_auth", body)
+                # next.config.ts leaves compression to the proxy.
+                self.assertIn("encode zstd gzip", directives)
 
 
 @unittest.skipUnless(BASH and shutil.which("openssl"), "bash and openssl required")

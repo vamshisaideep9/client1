@@ -4,8 +4,10 @@
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml \
 #     -f infra/dev-droplet/compose.droplet.yml up -d
 #
-# It runs the development build (ENV=development, hot reload) behind the host
-# Caddy proxy in ./Caddyfile. It is NOT a production topology; production uses
+# It runs the API in ENV=development and the web app as the production
+# standalone image (apps/web/Dockerfile `prod` target, no hot reload) behind the
+# host Caddy proxy in ./Caddyfile, so page speed matches what users will get.
+# It is NOT a production topology; production uses
 # docker-compose.prod.example.yml and its launch gates.
 #
 # Object storage is a dedicated DigitalOcean Space (README "Object storage"),
@@ -92,16 +94,43 @@ services:
     environment:
       <<: *droplet-api-env
 
+  # The production standalone build, not `next dev`: the dev server ships ~7 MB
+  # of unminified JavaScript with no caching, which made page-speed numbers on
+  # this host meaningless. Rebuild after every pull:
+  #   infra/dev-droplet/dc.sh up -d --build web
   web:
+    build:
+      target: prod
+      # The @contracts type import (apps/web/Dockerfile builder stage); the
+      # sparse checkout must include packages/contracts (README step 3).
+      additional_contexts:
+        contracts: ./packages/contracts
+      # NEXT_PUBLIC_* values are inlined at build time. The image runs in
+      # strict public-config mode, so the contact details are required; the
+      # defaults are the client-confirmed values in apps/web/lib/site.ts.
+      args:
+        # Same-origin: Caddy routes /api/* to the API on the app host.
+        NEXT_PUBLIC_API_BASE_URL: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
+        NEXT_PUBLIC_SITE_URL: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
+        # The Space origin: CSP connect/img/media-src, next/image remotePatterns
+        # and lib/allowed-asset-url.ts all trust exactly this origin.
+        NEXT_PUBLIC_ASSET_HOST: ${SPACES_ENDPOINT_URL?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
+        NEXT_PUBLIC_CONTACT_PHONE: "${NEXT_PUBLIC_CONTACT_PHONE:-+91 90100 53010}"
+        NEXT_PUBLIC_CONTACT_EMAIL: "${NEXT_PUBLIC_CONTACT_EMAIL:-dhanadhara@gmail.com}"
+        NEXT_PUBLIC_CONTACT_HOURS: "${NEXT_PUBLIC_CONTACT_HOURS:-Monday to Saturday|10 AM to 6 PM|Sunday closed}"
+        NEXT_PUBLIC_CONTACT_ADDRESS: "${NEXT_PUBLIC_CONTACT_ADDRESS:-APHB Colony|Vikarabad, Telangana}"
+    # The image's CMD is `node server.js`; pnpm is not in the prod image.
+    command: !reset null
+    # No source bind mount or dev caches: the code is baked into the image.
+    volumes: !reset []
     ports: !override
       - "127.0.0.1:3001:3000"
     environment:
-      # Same-origin: Caddy routes /api/* to the API on the app host.
+      NODE_ENV: production
+      # Docker sets HOSTNAME to the container ID, which server.js would bind
+      # to instead of every interface (the healthcheck dials 127.0.0.1).
+      HOSTNAME: 0.0.0.0
+      # Server-side reads of the same values (lib/site.ts at request time).
       NEXT_PUBLIC_API_BASE_URL: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
       NEXT_PUBLIC_SITE_URL: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
-      # The Space origin: CSP connect/img/media-src, next/image remotePatterns
-      # and lib/allowed-asset-url.ts all trust exactly this origin.
       NEXT_PUBLIC_ASSET_HOST: ${SPACES_ENDPOINT_URL?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
-      # Polling exists only for the Windows bind mount; Linux has inotify.
-      WATCHPACK_POLLING: "false"
-      CHOKIDAR_USEPOLLING: "false"

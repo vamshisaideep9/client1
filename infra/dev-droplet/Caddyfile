@@ -21,6 +21,10 @@
 
 		header X-Robots-Tag "noindex, nofollow"
 
+		# next.config.ts sets compress:false because a proxy compresses in
+		# production (nginx there); Caddy is that proxy here.
+		encode zstd gzip
+
 		reverse_proxy /api/* 127.0.0.1:8000
 		reverse_proxy 127.0.0.1:3001
 	}
