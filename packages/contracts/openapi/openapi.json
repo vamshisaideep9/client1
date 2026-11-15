@@ -12778,6 +12778,26 @@
         "title": "PayoutDestinationInput",
         "type": "object"
       },
+      "PayoutGatewaySimulation": {
+        "description": "Tester-chosen gateway outcome (development simulator only).",
+        "properties": {
+          "event": {
+            "enum": [
+              "payout.processed",
+              "payout.failed",
+              "payout.rejected",
+              "payout.reversed"
+            ],
+            "title": "Event",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event"
+        ],
+        "title": "PayoutGatewaySimulation",
+        "type": "object"
+      },
       "PayoutLinkDivergenceRead": {
         "properties": {
           "payout_id": {
@@ -13059,6 +13079,19 @@
               }
             ],
             "title": "Reversal Transaction Id"
+          },
+          "simulate_events": {
+            "items": {
+              "enum": [
+                "payout.processed",
+                "payout.failed",
+                "payout.rejected",
+                "payout.reversed"
+              ],
+              "type": "string"
+            },
+            "title": "Simulate Events",
+            "type": "array"
           },
           "status": {
             "$ref": "#/components/schemas/PayoutStatus"
@@ -37196,6 +37229,65 @@
           }
         ],
         "summary": "Reject Payout",
+        "tags": [
+          "payouts"
+        ]
+      }
+    },
+    "/api/v1/payouts/{payout_id}/simulate-gateway": {
+      "post": {
+        "description": "Development-only RazorpayX test mode: an Admin picks the gateway outcome.\n\n404 unless PAYOUT_GATEWAY_SIMULATOR is on, ENV is development and no live\nRazorpay credentials exist; the outcome then runs through settle_from_webhook.",
+        "operationId": "simulate_gateway_api_v1_payouts__payout_id__simulate_gateway_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payout_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Payout Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutGatewaySimulation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Simulate Gateway",
         "tags": [
           "payouts"
         ]

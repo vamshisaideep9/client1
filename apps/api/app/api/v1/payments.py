@@ -32,6 +32,7 @@ from app.schemas.agent_payout_details import SavedPayoutDestinationRead
 from app.schemas.payments import (
     ManualChequeIssue,
     PayoutCreate,
+    PayoutGatewaySimulation,
     PayoutLinkDivergenceRead,
     PayoutLinkDivergencesRead,
     PayoutListResponse,
@@ -158,6 +159,8 @@ async def _to_read(
             and p.maker_user_uuid != current_user.id
             and p.recipient_user_uuid != current_user.id
         )
+        if is_platform_admin(current_user) and p.recipient_user_uuid != current_user.id:
+            read.simulate_events = payments_service.simulator_events_for(p)
         reads.append(read)
     return reads
 
@@ -205,6 +208,34 @@ async def approve_payout(
         raise _map_error(exc) from None
 
     payout = await _get_payout_or_404(db, payout_id)
+    return (await _to_read([payout], current_user))[0]
+
+
+@router.post("/{payout_id}/simulate-gateway", response_model=PayoutRead)
+async def simulate_gateway(
+    payout_id: UUID,
+    body: PayoutGatewaySimulation,
+    current_user: CurrentUser = Depends(get_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> PayoutRead:
+    """Development-only RazorpayX test mode: an Admin picks the gateway outcome.
+
+    404 unless PAYOUT_GATEWAY_SIMULATOR is on, ENV is development and no live
+    Razorpay credentials exist; the outcome then runs through settle_from_webhook.
+    """
+    _require_admin(current_user, "Simulating a gateway outcome")
+    try:
+        await payments_service.simulate_gateway_event(
+            payout_id=payout_id,
+            event=body.event,
+            actor_user_uuid=current_user.id,
+        )
+    except payments_service.PayoutError as exc:
+        raise _map_error(exc) from None
+
+    payout = await _get_payout_or_404(db, payout_id)
+    # The settle ran on another session; read the committed state, not a cached row.
+    await db.refresh(payout)
     return (await _to_read([payout], current_user))[0]
 
 

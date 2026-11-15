@@ -176,6 +176,88 @@ def _is_live() -> bool:
     return bool(settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET)
 
 
+SIMULATED_GATEWAY_PREFIX = "pout_sim_"
+# Gateway outcomes a tester may choose, by the payout state they apply to. They
+# are the RazorpayX webhook events settle_from_webhook already understands, so a
+# simulated outcome takes exactly the path a real webhook would.
+SIMULATOR_IN_FLIGHT_EVENTS = ("payout.processed", "payout.failed", "payout.rejected")
+SIMULATOR_SETTLED_EVENTS = ("payout.reversed",)
+# Transient gateway_status while one chosen outcome is being applied. It makes a
+# second, concurrent choice for the same payout see "nothing to apply" (409)
+# instead of settling a contradictory event after the first one.
+SIMULATOR_CLAIM_STATUS = "simulating"
+
+
+def gateway_simulator_active() -> bool:
+    """Development-only and mock-only, re-checked on every call (fail closed)."""
+    return settings.PAYOUT_GATEWAY_SIMULATOR and settings.ENV == "development" and not _is_live()
+
+
+def simulator_events_for(payout: Payout) -> list[str]:
+    """Gateway outcomes the simulator can apply to this payout right now."""
+    if (
+        not gateway_simulator_active()
+        or payout.provider != PayoutProvider.RAZORPAYX
+        or not payout.gateway_payout_id
+        or payout.gateway_status == SIMULATOR_CLAIM_STATUS
+    ):
+        return []
+    if payout.status in {PayoutStatus.INITIATED, PayoutStatus.PROCESSING}:
+        return list(SIMULATOR_IN_FLIGHT_EVENTS)
+    if payout.status == PayoutStatus.PAID and payout.reversal_transaction_id is None:
+        return list(SIMULATOR_SETTLED_EVENTS)
+    return []
+
+
+async def simulate_gateway_event(
+    *, payout_id: uuid.UUID, event: str, actor_user_uuid: uuid.UUID
+) -> None:
+    """Apply a tester-chosen gateway outcome through the real webhook path.
+
+    Hidden (not found) unless the simulator is active, so production and live
+    gateways can never reach it. The state check and a claim happen under one
+    row lock, so concurrent choices for the same payout cannot both apply; the
+    settle then runs through settle_from_webhook's own compare-and-swap, which
+    replaces the claim with the gateway's final status.
+    """
+    if not gateway_simulator_active():
+        raise PayoutNotFound("Payout not found.")
+    async with AsyncSessionLocal() as db:
+        payout = await db.scalar(select(Payout).where(Payout.id == payout_id).with_for_update())
+        if payout is None:
+            raise PayoutNotFound("Payout not found.")
+        if payout.recipient_user_uuid == actor_user_uuid:
+            raise SelfPayoutForbidden("You cannot settle a payout to your own account.")
+        if event not in simulator_events_for(payout):
+            raise PayoutStateError("That gateway outcome does not apply to this payout now.")
+        gateway_payout_id = payout.gateway_payout_id
+        previous_gateway_status = payout.gateway_status
+        payout.gateway_status = SIMULATOR_CLAIM_STATUS
+        await db.commit()
+    logger.info(
+        "PAYOUT_SIMULATED payout_id=%s event=%s actor=%s", payout_id, event, actor_user_uuid
+    )
+    try:
+        await settle_from_webhook(
+            event=event,
+            gateway_payout_id=gateway_payout_id,
+            provider=PayoutProvider.RAZORPAYX,
+        )
+    finally:
+        # Release the claim if the settle did not record a gateway status, so a
+        # tester can choose again rather than leaving the payout stuck.
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                update(Payout)
+                .where(
+                    Payout.id == payout_id,
+                    Payout.gateway_status == SIMULATOR_CLAIM_STATUS,
+                )
+                .values(gateway_status=previous_gateway_status)
+            )
+            await db.commit()
+
+
 def _provider_for_destination(destination_type: PayoutDestination) -> PayoutProvider:
     if destination_type == PayoutDestination.CHEQUE:
         return PayoutProvider.MANUAL
@@ -784,6 +866,15 @@ async def initiate_payout(payout_id: uuid.UUID) -> None:
         async with AsyncSessionLocal() as db:
             payout = await db.get(Payout, payout_id)
             if payout is None:
+                return
+
+            if gateway_simulator_active():
+                # Development simulator: hand off to a synthetic gateway and wait
+                # for a tester to choose the outcome (simulate_gateway_event).
+                payout.gateway_payout_id = f"{SIMULATED_GATEWAY_PREFIX}{uuid.uuid4().hex[:14]}"
+                payout.gateway_status = "queued"
+                logger.info("PAYOUT_SIMULATOR_QUEUED payout_id=%s", payout.id)
+                await db.commit()
                 return
 
             if not _is_live():

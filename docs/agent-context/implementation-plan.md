@@ -96,6 +96,21 @@ Next: user review and merge of both PRs, then a dev-droplet deploy.
 Non-goals: roster/team settings for managers, client-detail edits, completing
 tasks for Employees, routing. Recommended: Opus 5.5 / xhigh.
 
+**In review — Razorpay payout test mode on dev** (2026-11-15; branch
+`feat/razorpay-payout-simulator` from `upstream/main` `1454770`; user decision
+2026-11-15, no requirement or completion-percentage change). Razorpay is
+payout-only (SRS FR-10.1/FR-7.5 forbid collecting money), so the dev "mock
+Razorpay" is a gateway simulator: with `PAYOUT_GATEWAY_SIMULATOR` on, mock mode
+and `ENV=development`, an approved UPI/bank payout stops at INITIATED with a
+`pout_sim_` id, and an Admin picks the outcome (success, failure, bank
+rejection, later reversal) in a "Razorpay test payout" dialog. Each outcome is
+the matching RazorpayX webhook event applied through `settle_from_webhook`, so
+ledgers, cashbacks, commissions and referrals update exactly as live. The flag
+is refused outside development, inert with live keys, and the endpoint 404s
+when off; the dev droplet overlay turns it on. Next: user merges this and
+#354, then deploy and seed the droplet. Non-goals: collecting payments, any
+Razorpay branding, changing live-mode behaviour. Recommended: Opus 5.5 / xhigh.
+
 **In review — item 9: Sub Admin managers over teams (CS-019)** (2026-11-15;
 PR 1 [#348](https://github.com/brollysolutions/client1/pull/348), mirror
 vamshisaideep9/client1#52; PR 2 web stacked),
