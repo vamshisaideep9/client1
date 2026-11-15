@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.admin import router as admin_router
 from app.api.v1.admin_operations import router as admin_operations_router
+from app.api.v1.admin_teams import router as admin_teams_router
 from app.api.v1.admin_vehicle_arrangements import router as admin_vehicle_arrangements_router
 from app.api.v1.agent import router as agent_router
 from app.api.v1.agent_applications import router as agent_applications_router
@@ -37,6 +38,7 @@ from app.api.v1.enquiries import router as enquiries_router
 from app.api.v1.fee_cashbacks import router as fee_cashbacks_router
 from app.api.v1.leads import router as leads_router
 from app.api.v1.loans import router as loans_router
+from app.api.v1.manager import router as manager_router
 from app.api.v1.mobile_change import admin_router as mobile_change_admin_router
 from app.api.v1.mobile_change import router as mobile_change_router
 from app.api.v1.notifications import router as notifications_router
@@ -182,6 +184,8 @@ app.include_router(
     referral_bonus_router, prefix="/api/v1/referral-bonus-config", tags=["referral-bonus-config"]
 )
 app.include_router(reporting_router, prefix="/api/v1/admin/reports", tags=["reports"])
+app.include_router(admin_teams_router, prefix="/api/v1/admin/teams", tags=["teams"])
+app.include_router(manager_router, prefix="/api/v1/manager", tags=["manager"])
 app.include_router(commissions_router, prefix="/api/v1/admin/commissions", tags=["commissions"])
 app.include_router(
     fee_cashbacks_router, prefix="/api/v1/admin/fee-cashbacks", tags=["fee-cashbacks"]

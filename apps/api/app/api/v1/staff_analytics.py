@@ -25,15 +25,14 @@ from app.core.deps import CurrentUser, get_active_user
 from app.db.session import get_db
 from app.schemas.staff_analytics import StaffAnalyticsResponse
 from app.services.staff_analytics import (
-    MAX_RANGE_DAYS,
     AnalyticsWindow,
+    InvalidAnalyticsWindow,
     StaffAnalyticsFilters,
     agent_analytics,
-    clamp_range,
     employee_analytics,
+    resolve_analytics_window,
     sub_admin_analytics,
     telecaller_analytics,
-    today_ist,
 )
 
 router = APIRouter()
@@ -81,18 +80,10 @@ def _unprocessable(detail: str) -> HTTPException:
 def _window(
     date_from: date | None, date_to: date | None, days: int, now: datetime
 ) -> AnalyticsWindow:
-    if date_from is None and date_to is None:
-        return AnalyticsWindow.last_days(clamp_range(days), now)
-    if date_from is None or date_to is None:
-        raise _unprocessable("Send both date_from and date_to, or neither.")
-    if date_from > date_to:
-        raise _unprocessable("date_from must not be after date_to.")
-    if date_to > today_ist(now):
-        raise _unprocessable("date_to cannot be in the future.")
-    window = AnalyticsWindow(date_from, date_to)
-    if window.days > MAX_RANGE_DAYS:
-        raise _unprocessable(f"Choose a period of at most {MAX_RANGE_DAYS} days.")
-    return window
+    try:
+        return resolve_analytics_window(date_from, date_to, days, now)
+    except InvalidAnalyticsWindow as exc:
+        raise _unprocessable(str(exc)) from exc
 
 
 @router.get("/analytics", response_model=StaffAnalyticsResponse)
