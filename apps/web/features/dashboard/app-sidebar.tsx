@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/components/auth/session-provider";
 import { useBookmarks } from "@/features/real-estate/store";
+import { useManagesTeam } from "@/features/team/use-manages-team";
 import { RE_CATEGORIES } from "@/lib/real-estate";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +52,7 @@ export function AppSidebar({
   const { activeLine } = useLine();
   const { count: bookmarkCount } = useBookmarks();
   const { session } = useAuth();
+  const managesTeam = useManagesTeam(session?.role, session?.accessToken);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const toggleRef = React.useRef<HTMLButtonElement>(null);
   const restoreToggleFocus = React.useRef(false);
@@ -83,6 +85,7 @@ export function AppSidebar({
         businessLine: session.businessLine,
         activeLine: screenLine,
         staffFeatures: session.staffFeatures,
+        managesTeam,
       })
     : [];
 

@@ -53,7 +53,7 @@ type State =
   | { status: "ready"; data: StaffAnalytics }
   | { status: "error"; error: string; code: number | null };
 
-function KpiTile({ kpi }: { kpi: AnalyticsKpi }) {
+export function KpiTile({ kpi }: { kpi: AnalyticsKpi }) {
   return (
     <div className="min-w-0 rounded-xl border border-border bg-card p-4 shadow-sm">
       <p className="text-xs font-medium text-text-secondary">{kpi.label}</p>
@@ -255,6 +255,44 @@ function FunnelPanel({ funnel }: { funnel: AnalyticsFunnel }) {
   );
 }
 
+export function AnalyticsLoading() {
+  return (
+    <div className="space-y-5" role="status" aria-label="Loading analytics">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton key={index} className="h-24 rounded-xl" />
+        ))}
+      </div>
+      <Skeleton className="h-80 rounded-xl" />
+    </div>
+  );
+}
+
+/** KPIs, the daily trend, breakdowns and funnel for one person's analytics. */
+export function AnalyticsReport({ data }: { data: StaffAnalytics }) {
+  return (
+    <div className="space-y-5">
+      <section
+        aria-label="Key figures"
+        className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5"
+      >
+        {data.kpis.map((kpi) => (
+          <KpiTile key={kpi.key} kpi={kpi} />
+        ))}
+      </section>
+
+      <TrendPanel trend={data.trend} bucket={data.bucket} />
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        {data.breakdowns.map((breakdown) => (
+          <BreakdownPanel key={breakdown.key} breakdown={breakdown} />
+        ))}
+        {data.funnel ? <FunnelPanel funnel={data.funnel} /> : null}
+      </div>
+    </div>
+  );
+}
+
 export function StaffAnalyticsView() {
   const { session } = useAuth();
   const { activeLine } = useLine();
@@ -308,34 +346,9 @@ export function StaffAnalyticsView() {
           onRetry={() => setReloadKey((key) => key + 1)}
         />
       ) : !data ? (
-        <div className="space-y-5" role="status" aria-label="Loading analytics">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {Array.from({ length: 4 }, (_, index) => (
-              <Skeleton key={index} className="h-24 rounded-xl" />
-            ))}
-          </div>
-          <Skeleton className="h-80 rounded-xl" />
-        </div>
+        <AnalyticsLoading />
       ) : (
-        <div className="space-y-5">
-          <section
-            aria-label="Key figures"
-            className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5"
-          >
-            {data.kpis.map((kpi) => (
-              <KpiTile key={kpi.key} kpi={kpi} />
-            ))}
-          </section>
-
-          <TrendPanel trend={data.trend} bucket={data.bucket} />
-
-          <div className="grid gap-5 lg:grid-cols-2">
-            {data.breakdowns.map((breakdown) => (
-              <BreakdownPanel key={breakdown.key} breakdown={breakdown} />
-            ))}
-            {data.funnel ? <FunnelPanel funnel={data.funnel} /> : null}
-          </div>
-        </div>
+        <AnalyticsReport data={data} />
       )}
     </DashboardPage>
   );
