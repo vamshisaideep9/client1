@@ -14,6 +14,7 @@ from app.models.payout import Payout, PayoutStatus
 from app.models.profile import ProfileStatus, StaffProfile
 from app.models.property import Property, PropertySubtype, ReraApplicability
 from app.models.property_deal import PropertyDeal, PropertyDealStatus
+from app.models.property_submission import PropertySubmission, SubmissionStatus
 from app.models.referral import Referral, ReferralStatus
 from app.models.task import Task, TaskStatus
 from app.models.user import User, UserStatus
@@ -113,6 +114,22 @@ def test_approved_submissions_mirror_a_rera_cleared_listing() -> None:
             assert plan.approved_listing is None and plan.index >= catalog.LISTING_COUNT
 
 
+def test_every_catalogue_listing_has_exactly_one_approved_origin() -> None:
+    planned = [
+        p.approved_listing for p in catalog.submission_plans() if p.approved_listing is not None
+    ]
+    origins = list(catalog.listing_origin_indices())
+    assert sorted(planned + origins) == list(range(catalog.LISTING_COUNT))
+    by_key = {a.key: a for a in catalog.staff_accounts()}
+    for index in origins:
+        author = by_key[catalog.listing_origin_author(index)]
+        assert author.role in {"admin", "sub_admin"} or (
+            author.role == "agent"
+            and author.business_line == "real_estate"
+            and author.profile_status == ProfileStatus.ACTIVE
+        )
+
+
 def test_client_journeys_cover_every_pipeline_and_account_state() -> None:
     journeys = catalog.client_journeys()
     loans = [j for j in journeys if j.line == "loans"]
@@ -204,6 +221,18 @@ async def test_every_phase_writes_valid_rows_in_one_transaction() -> None:
             assert (
                 await db.scalar(
                     select(func.count()).select_from(Property).where(Property.id.in_(properties))
+                )
+                == 110
+            )
+            # The Admin "Published" view joins approved submissions to listings.
+            assert (
+                await db.scalar(
+                    select(
+                        func.count(func.distinct(PropertySubmission.approved_property_id))
+                    ).where(
+                        PropertySubmission.status == SubmissionStatus.APPROVED,
+                        PropertySubmission.approved_property_id.in_(properties),
+                    )
                 )
                 == 110
             )

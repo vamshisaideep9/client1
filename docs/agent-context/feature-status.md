@@ -2,6 +2,19 @@
 
 Status: **Derived living implementation ledger**
 
+**In review — bulk seeder listing origins** (2026-11-15), branch
+`chore/bulk-seed-listing-origins` from `upstream/main` `bf9b7a3`.
+Development-only seeder fix; no product, schema or contract change.
+- Every one of the 110 bulk listings now has exactly one approved submission
+  (6 planned + 104 origin submissions), so all appear under Listing approvals →
+  Published and in their authors' own listings; each origin carries a private
+  photo and ownership PDF.
+- Evidence: `test_seed_bulk.py` + demo-media tests 23 passed (new catalogue test
+  and a phase-test assertion of 110 approved, distinct listing links); a full
+  `seed_bulk --skip-media` run on a fresh database gave approved 110/110,
+  pending 12, rejected 6; ruff check/format pass. The full API suite runs on
+  the stacked document-viewer PR, which contains this change.
+
 **In review — bulk development test data** (2026-11-15), branch
 `chore/bulk-test-seed` from `upstream/main` `1454770`. Development-only
 scripts; no requirement, schema, API, permission or contract change, so the

@@ -60,6 +60,17 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In review — bulk seeder listing origins** (2026-11-15; branch
+`chore/bulk-seed-listing-origins` from `upstream/main` `bf9b7a3`; user report,
+development-only, no requirement change). The Admin "Listing approvals →
+Published" view lists approved submissions joined to catalogue rows, so 104 of
+the 110 bulk listings (written straight to `properties`) were invisible there.
+`seed_bulk` now gives every listing not covered by a planned approval one
+approved origin submission (authors: active Real Estate Agents, Sub Admins
+08-09, bulk Admins) mirroring its facts and RERA review, with a private photo
+and ownership PDF. Reruns add only the missing rows. Next: stacked document
+viewer PR, merge both, reseed the dev droplet. Recommended: Opus 5.5 / high.
+
 **Delivered — dev droplet serves the production web build** (2026-11-15;
 PR [#352](https://github.com/brollysolutions/client1/pull/352) merged as
 `1454770`, mirror vamshisaideep9/client1#56; branch
