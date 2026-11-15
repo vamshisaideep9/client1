@@ -138,16 +138,17 @@ function authEventRecord(row: AdminAuthEvent): OperationalRecord {
   };
 }
 
-function enquiryRecord(row: AdminEnquiry): OperationalRecord {
+export function enquiryRecord(row: AdminEnquiry): OperationalRecord {
   return {
     id: row.id,
     title: row.title,
     subtitle: `${row.locality}, ${row.city}`,
     status: humanize(row.status),
     fields: [
+      // When the client sent it, shown first so staff can work requests in order.
+      { label: "Submitted on", value: formatWhen(row.created_at) },
       { label: "Property reference", value: row.property_ref },
       { label: "Client account", value: row.user_uuid },
-      { label: "Created", value: formatWhen(row.created_at) },
       { label: "Last updated", value: formatWhen(row.updated_at) },
     ],
   };
@@ -217,20 +218,21 @@ function loanHistoryRecord(row: AdminLoanTransactionHistory): OperationalRecord 
   };
 }
 
-function siteVisitRecord(row: AdminSiteVisit): OperationalRecord {
+export function siteVisitRecord(row: AdminSiteVisit): OperationalRecord {
   return {
     id: row.id,
     title: row.title,
     subtitle: `${row.locality}, ${row.city}`,
     status: humanize(row.status),
     fields: [
-      { label: "Property reference", value: row.property_ref },
-      { label: "Client account", value: row.user_uuid },
+      // When the client sent the request, kept apart from the visit's own slot.
+      { label: "Submitted on", value: formatWhen(row.created_at) },
       {
-        label: "Preferred slot",
+        label: "Visit on",
         value: `${formatDate(row.preferred_date)} · ${humanize(row.preferred_time_slot)}`,
       },
-      { label: "Requested", value: formatWhen(row.created_at) },
+      { label: "Property reference", value: row.property_ref },
+      { label: "Client account", value: row.user_uuid },
       { label: "Cancelled", value: formatWhen(row.cancelled_at) },
     ],
   };
