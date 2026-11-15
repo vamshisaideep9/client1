@@ -60,6 +60,31 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**Implemented — client feedback batch, PR 3: analytics calendar range and
+filters** (2026-11-15; open for review), branch
+`feat/analytics-date-range-filters` stacked on PR 2. Client feedback item 4:
+- Every analytics dashboard replaces the fixed 7/30/90 periods (staff) and the
+  native date inputs and presets (Admin) with a calendar range picker. It has
+  quick ranges, two months, and IST days, with no future dates and at most
+  366 days.
+- Staff "My analytics" filters by the active business line and by role:
+  - Telecaller: call status, interest, loan status, lead source.
+  - Employee: task type.
+  - Agent: lead status. Agents cannot read loan applications under RLS.
+- Admin Analytics adds:
+  - Leads, loans and deals: lead source, telecaller, latest call status and
+    interest.
+  - Leads: lead status.
+  - Loans: loan status, type and bank.
+  - Deals: deal status, property category and city.
+  - Exports apply the same filters. A new admin-only Telecaller option list
+    feeds the telecaller filter.
+- The legacy `?days=` still works for the in-progress Sub Admin teams branch.
+- Adds `react-day-picker@10.0.2` after a supply-chain review.
+
+Non-goals: URL-synced filters and the team-manager pages. Recommended:
+Opus 5.5 / high.
+
 **Implemented — client feedback batch, PR 2: lead filters and "referred by"**
 (2026-11-15; [PR #345](https://github.com/brollysolutions/client1/pull/345), mirror vamshisaideep9/client1#49, open for review), branch `feat/lead-filters-referrer` stacked on
 PR 1. Client feedback item 3:

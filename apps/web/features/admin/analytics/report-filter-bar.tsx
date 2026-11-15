@@ -3,7 +3,6 @@
 import * as React from "react";
 import { ChevronDownIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -14,26 +13,53 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateRangePicker } from "@/features/analytics/date-range-picker";
 import {
   EMPTY_FILTERS,
   FilterBar,
   type FilterBarValue,
 } from "@/features/dashboard/filter-bar";
-import { resolveDatePreset, type DatePreset } from "@/lib/reports";
-import type { ReportBucket, ReportBusinessLine, ReportKind } from "@/lib/reports-api";
+import {
+  INTEREST_LABEL,
+  LOAN_STATUS_LABEL,
+  REFERRER_SOURCE_LABEL,
+} from "@/features/telecaller/lead-signal-filters";
+import { DISPOSITION_LABEL, STATUS_LABEL } from "@/features/telecaller/telecaller-lead-status";
+import { listAdminBanks, listAdminLoanTypes } from "@/lib/loan-config-api";
+import { activeDetailCount, resolveDatePreset, type ReportDetailFilters } from "@/lib/reports";
+import {
+  getReportTelecallers,
+  type ReportBucket,
+  type ReportBusinessLine,
+  type ReportKind,
+} from "@/lib/reports-api";
 import { cn } from "@/lib/utils";
 import { useAgentOptions } from "./use-agent-options";
-
-const PRESETS: { value: DatePreset; label: string }[] = [
-  { value: "this_week", label: "This week" },
-  { value: "this_month", label: "This month" },
-  { value: "last_30_days", label: "Last 30 days" },
-];
 
 const BUCKET_OPTIONS: { value: ReportBucket; label: string }[] = [
   { value: "week", label: "Weekly" },
   { value: "month", label: "Monthly" },
 ];
+
+const DEAL_STATUS_LABEL: Record<string, string> = {
+  new: "New",
+  contacted: "Contacted",
+  site_visit_done: "Site visit done",
+  negotiation: "Negotiation",
+  booked: "Booked",
+  agreement_signed: "Agreement signed",
+  closed: "Closed",
+  rejected: "Rejected",
+  on_hold: "On hold",
+};
+
+const PROPERTY_CATEGORY_LABEL: Record<string, string> = {
+  houses: "Houses",
+  apartments: "Apartments",
+  villas: "Villas",
+  plots: "Plots",
+  commercial: "Commercial",
+};
 
 export type ReportFilterValue = {
   dateFrom: string;
@@ -41,6 +67,7 @@ export type ReportFilterValue = {
   bucket: ReportBucket;
   businessLine: ReportBusinessLine | undefined;
   agentProfileUuids: string[];
+  detail: ReportDetailFilters;
 };
 
 function baselineFilters(): ReportFilterValue {
@@ -51,11 +78,88 @@ function baselineFilters(): ReportFilterValue {
     bucket: "week",
     businessLine: undefined,
     agentProfileUuids: [],
+    detail: {},
   };
 }
 
-// The report keeps its domain-specific bucket and multi-Agent controls, but
-// date/line/reset layout now comes from the same FilterBar as every staff list.
+type Option = { value: string; label: string };
+
+function useOptions(load: () => Promise<Option[] | null>, deps: React.DependencyList): Option[] {
+  const [options, setOptions] = React.useState<Option[]>([]);
+  React.useEffect(() => {
+    let active = true;
+    void load().then((next) => {
+      if (active && next) setOptions(next);
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+  return options;
+}
+
+function DetailSelect({
+  label,
+  all,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  all: string;
+  value: string | undefined;
+  options: Option[] | Record<string, string>;
+  onChange: (value: string | undefined) => void;
+}) {
+  const list = Array.isArray(options)
+    ? options
+    : Object.entries(options).map(([optionValue, optionLabel]) => ({ value: optionValue, label: optionLabel }));
+  return (
+    <Select value={value ?? "all"} onValueChange={(next) => onChange(next === "all" ? undefined : next)}>
+      <SelectTrigger className="w-full" aria-label={label}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">{all}</SelectItem>
+        {list.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+/** Types into a local box and applies after a pause, so each keystroke isn't a fetch. */
+function CityInput({ value, onChange }: { value: string | undefined; onChange: (value: string | undefined) => void }) {
+  const [draft, setDraft] = React.useState(value ?? "");
+  React.useEffect(() => setDraft(value ?? ""), [value]);
+  React.useEffect(() => {
+    const handle = window.setTimeout(() => {
+      const next = draft.trim() || undefined;
+      if (next !== (value ?? undefined)) onChange(next);
+    }, 400);
+    return () => window.clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
+  return (
+    <Input
+      aria-label="Property city"
+      placeholder="Property city"
+      value={draft}
+      maxLength={120}
+      onChange={(event) => setDraft(event.target.value)}
+    />
+  );
+}
+
+// Date range (calendar picker), business line, grouping and agents for every
+// report, plus the report's own filters: lead source, telecaller, latest call
+// outcome and interest for leads/loans/deals; lead status for leads; loan
+// status, type and bank for loans; deal status and property city/category for
+// deals. Every value is applied server-side and carried into CSV/Excel exports.
 export function ReportFilterBar({
   kind,
   value,
@@ -68,32 +172,55 @@ export function ReportFilterBar({
   const [agentQuery, setAgentQuery] = React.useState("");
   const [agentPopoverOpen, setAgentPopoverOpen] = React.useState(false);
   const { options: agentOptions, loading: agentsLoading } = useAgentOptions(value.businessLine);
+  const journey = kind !== "agents";
+  const telecallers = useOptions(
+    async () => {
+      if (!journey) return [];
+      const res = await getReportTelecallers(value.businessLine);
+      return res.ok
+        ? res.data.map((t) => ({ value: t.staff_profile_uuid, label: `${t.name} (${t.staff_code})` }))
+        : null;
+    },
+    [journey, value.businessLine],
+  );
+  const loanTypes = useOptions(
+    async () => {
+      if (kind !== "loans") return [];
+      const res = await listAdminLoanTypes();
+      return res.ok ? res.data.map((t) => ({ value: t.id, label: t.label })) : null;
+    },
+    [kind],
+  );
+  const banks = useOptions(
+    async () => {
+      if (kind !== "loans") return [];
+      const res = await listAdminBanks();
+      return res.ok ? res.data.map((b) => ({ value: b.id, label: b.name })) : null;
+    },
+    [kind],
+  );
+
   const baseline = baselineFilters();
-  const filters: FilterBarValue = {
-    ...EMPTY_FILTERS,
-    line: value.businessLine ?? "all",
-    from: value.dateFrom,
-    to: value.dateTo,
-  };
+  const filters: FilterBarValue = { ...EMPTY_FILTERS, line: value.businessLine ?? "all" };
+  const detailCount = activeDetailCount(value.detail);
   const filtersCustomized =
     value.dateFrom !== baseline.dateFrom ||
     value.dateTo !== baseline.dateTo ||
     value.bucket !== baseline.bucket ||
     value.businessLine !== baseline.businessLine ||
-    value.agentProfileUuids.length > 0;
+    value.agentProfileUuids.length > 0 ||
+    detailCount > 0;
 
   function updateSharedFilters(next: FilterBarValue) {
-    onChange({
-      ...value,
-      dateFrom: next.from,
-      dateTo: next.to,
-      businessLine: next.line === "all" ? undefined : (next.line as ReportBusinessLine),
-    });
+    const businessLine = next.line === "all" ? undefined : (next.line as ReportBusinessLine);
+    // A telecaller picked on one line is meaningless after switching lines.
+    const detail =
+      businessLine !== value.businessLine ? { ...value.detail, telecallerProfileUuid: undefined } : value.detail;
+    onChange({ ...value, businessLine, detail });
   }
 
-  function applyPreset(preset: DatePreset) {
-    const { dateFrom, dateTo } = resolveDatePreset(preset, new Date());
-    onChange({ ...value, dateFrom, dateTo });
+  function setDetail<K extends keyof ReportDetailFilters>(key: K, next: ReportDetailFilters[K]) {
+    onChange({ ...value, detail: { ...value.detail, [key]: next } });
   }
 
   function toggleAgent(id: string) {
@@ -115,28 +242,21 @@ export function ReportFilterBar({
       searchLabel="Search report"
       showSearch={false}
       showStatus={false}
+      showDates={false}
       showClear={filtersCustomized}
-      dateFromLabel="Report from date"
-      dateToLabel="Report to date"
-      actions={PRESETS.map((preset) => (
-        <Button
-          key={preset.value}
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => applyPreset(preset.value)}
-        >
-          {preset.label}
-        </Button>
-      ))}
       extra={
         <>
-          {kind !== "agents" ? (
+          <DateRangePicker
+            value={{ dateFrom: value.dateFrom, dateTo: value.dateTo }}
+            onChange={(range) => onChange({ ...value, ...range })}
+            className="sm:w-full"
+          />
+          {journey ? (
             <Select
               value={value.bucket}
               onValueChange={(bucket) => onChange({ ...value, bucket: bucket as ReportBucket })}
             >
-              <SelectTrigger aria-label="Report grouping">
+              <SelectTrigger className="w-full" aria-label="Report grouping">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -207,6 +327,92 @@ export function ReportFilterBar({
               </div>
             </PopoverContent>
           </Popover>
+
+          {journey ? (
+            <>
+              <DetailSelect
+                label="Lead source"
+                all="Any lead source"
+                value={value.detail.leadSource}
+                options={REFERRER_SOURCE_LABEL}
+                onChange={(next) => setDetail("leadSource", next as ReportDetailFilters["leadSource"])}
+              />
+              <DetailSelect
+                label="Telecaller"
+                all="All telecallers"
+                value={value.detail.telecallerProfileUuid}
+                options={telecallers}
+                onChange={(next) => setDetail("telecallerProfileUuid", next)}
+              />
+              <DetailSelect
+                label="Latest call status"
+                all="Any call outcome"
+                value={value.detail.callStatus}
+                options={DISPOSITION_LABEL}
+                onChange={(next) => setDetail("callStatus", next)}
+              />
+              <DetailSelect
+                label="Interest"
+                all="Any interest"
+                value={value.detail.interest}
+                options={INTEREST_LABEL}
+                onChange={(next) => setDetail("interest", next)}
+              />
+            </>
+          ) : null}
+          {kind === "leads" ? (
+            <DetailSelect
+              label="Lead status"
+              all="All lead statuses"
+              value={value.detail.leadStatus}
+              options={STATUS_LABEL}
+              onChange={(next) => setDetail("leadStatus", next)}
+            />
+          ) : null}
+          {kind === "loans" ? (
+            <>
+              <DetailSelect
+                label="Loan status"
+                all="All loan statuses"
+                value={value.detail.loanStatus}
+                options={LOAN_STATUS_LABEL}
+                onChange={(next) => setDetail("loanStatus", next)}
+              />
+              <DetailSelect
+                label="Loan type"
+                all="All loan types"
+                value={value.detail.loanTypeId}
+                options={loanTypes}
+                onChange={(next) => setDetail("loanTypeId", next)}
+              />
+              <DetailSelect
+                label="Bank"
+                all="All banks"
+                value={value.detail.bankId}
+                options={banks}
+                onChange={(next) => setDetail("bankId", next)}
+              />
+            </>
+          ) : null}
+          {kind === "deals" ? (
+            <>
+              <DetailSelect
+                label="Deal status"
+                all="All deal statuses"
+                value={value.detail.dealStatus}
+                options={DEAL_STATUS_LABEL}
+                onChange={(next) => setDetail("dealStatus", next)}
+              />
+              <DetailSelect
+                label="Property category"
+                all="All categories"
+                value={value.detail.propertyCategory}
+                options={PROPERTY_CATEGORY_LABEL}
+                onChange={(next) => setDetail("propertyCategory", next)}
+              />
+              <CityInput value={value.detail.propertyCity} onChange={(next) => setDetail("propertyCity", next)} />
+            </>
+          ) : null}
         </>
       }
     />

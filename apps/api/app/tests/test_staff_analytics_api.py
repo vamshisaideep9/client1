@@ -226,3 +226,161 @@ async def test_clients_and_unauthenticated_callers_are_refused(client: AsyncClie
         "/api/v1/me/analytics", headers=_token(staff_auth, "telecaller")
     )
     assert staff_without_profile.status_code == 403
+
+
+# --- Calendar date range and filters ------------------------------------------
+
+
+def _ist_today():
+    from zoneinfo import ZoneInfo
+
+    return datetime.now(ZoneInfo("Asia/Kolkata")).date()
+
+
+@pytest.mark.asyncio
+async def test_explicit_date_range_sets_the_period_and_daily_points(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_staff("telecaller")
+    await _seed_lead_with_calls(staff_uuid, ["connected", "busy"])
+    today = _ist_today()
+    start = today - timedelta(days=13)
+
+    res = await client.get(
+        "/api/v1/me/analytics",
+        params={"date_from": start.isoformat(), "date_to": today.isoformat()},
+        headers=_token(auth_uuid, "telecaller", staff_profile_uuid=staff_uuid),
+    )
+
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert (body["date_from"], body["date_to"]) == (start.isoformat(), today.isoformat())
+    assert body["range_days"] == 14
+    assert body["bucket"] == "day"
+    assert len(body["trend"]["points"]) == 14
+    assert _kpis(body)["calls"] == 2
+
+
+@pytest.mark.asyncio
+async def test_past_range_excludes_todays_calls(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_staff("telecaller")
+    await _seed_lead_with_calls(staff_uuid, ["connected", "busy"])
+    end = _ist_today() - timedelta(days=1)
+
+    res = await client.get(
+        "/api/v1/me/analytics",
+        params={"date_from": (end - timedelta(days=6)).isoformat(), "date_to": end.isoformat()},
+        headers=_token(auth_uuid, "telecaller", staff_profile_uuid=staff_uuid),
+    )
+
+    assert res.status_code == 200, res.text
+    assert _kpis(res.json())["calls"] == 0
+
+
+@pytest.mark.asyncio
+async def test_long_ranges_switch_to_weekly_points(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_staff("telecaller")
+    today = _ist_today()
+    start = today - timedelta(days=199)
+
+    res = await client.get(
+        "/api/v1/me/analytics",
+        params={"date_from": start.isoformat(), "date_to": today.isoformat()},
+        headers=_token(auth_uuid, "telecaller", staff_profile_uuid=staff_uuid),
+    )
+
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["bucket"] == "week"
+    days = [point["day"] for point in body["trend"]["points"]]
+    assert days[0] == start.isoformat()
+    assert 28 <= len(days) <= 30
+    # Every point after the first starts on a Monday.
+    assert all(datetime.fromisoformat(day).weekday() == 0 for day in days[1:])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"date_from": "2026-01-10"},
+        {"date_from": "2026-02-01", "date_to": "2026-01-01"},
+        {"date_from": "2024-01-01", "date_to": "2025-06-30"},
+        {"date_from": "2026-01-01", "date_to": "2099-01-01"},
+    ],
+)
+async def test_invalid_ranges_are_rejected(client: AsyncClient, params: dict[str, str]) -> None:
+    auth_uuid, staff_uuid = await _seed_staff("telecaller")
+
+    res = await client.get(
+        "/api/v1/me/analytics",
+        params=params,
+        headers=_token(auth_uuid, "telecaller", staff_profile_uuid=staff_uuid),
+    )
+
+    assert res.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_telecaller_call_status_and_interest_filters_narrow_calls(
+    client: AsyncClient,
+) -> None:
+    auth_uuid, staff_uuid = await _seed_staff("telecaller")
+    await _seed_lead_with_calls(staff_uuid, ["connected", "busy", "no_answer", "connected"])
+    headers = _token(auth_uuid, "telecaller", staff_profile_uuid=staff_uuid)
+
+    busy = await client.get("/api/v1/me/analytics?call_status=busy", headers=headers)
+    hot = await client.get("/api/v1/me/analytics?interest=hot", headers=headers)
+    cold = await client.get("/api/v1/me/analytics?interest=cold", headers=headers)
+
+    assert _kpis(busy.json())["calls"] == 1
+    assert _kpis(hot.json())["calls"] == 2
+    assert _kpis(cold.json())["calls"] == 0
+
+
+@pytest.mark.asyncio
+async def test_telecaller_loan_status_and_source_filters_narrow_leads(
+    client: AsyncClient,
+) -> None:
+    from app.tests.test_telecaller_api import _seed_client_referral, _seed_loan_application
+
+    auth_uuid, staff_uuid = await _seed_staff("telecaller")
+    with_loan = await _seed_lead_with_calls(staff_uuid, ["connected"])
+    referred = await _seed_lead_with_calls(staff_uuid, ["busy", "busy"])
+    await _seed_loan_application(with_loan)
+    await _seed_client_referral(referred)
+    headers = _token(auth_uuid, "telecaller", staff_profile_uuid=staff_uuid)
+
+    by_loan = await client.get("/api/v1/me/analytics?loan_status=new", headers=headers)
+    by_client = await client.get("/api/v1/me/analytics?lead_source=client", headers=headers)
+    by_agent = await client.get("/api/v1/me/analytics?lead_source=agent", headers=headers)
+
+    assert by_loan.status_code == 200, by_loan.text
+    assert (_kpis(by_loan.json())["calls"], _kpis(by_loan.json())["active_leads"]) == (1, 1)
+    assert (_kpis(by_client.json())["calls"], _kpis(by_client.json())["active_leads"]) == (2, 1)
+    assert _kpis(by_agent.json())["active_leads"] == 0
+
+
+@pytest.mark.asyncio
+async def test_filters_outside_the_role_are_rejected(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_staff("employee")
+
+    res = await client.get(
+        "/api/v1/me/analytics?call_status=busy",
+        headers=_token(auth_uuid, "employee", staff_profile_uuid=staff_uuid),
+    )
+
+    assert res.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_business_line_follows_the_selected_line(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_staff("telecaller", "both")
+    await _seed_lead_with_calls(staff_uuid, ["connected", "busy"])  # loans calls
+    token = _token(auth_uuid, "telecaller", staff_profile_uuid=staff_uuid, business_line="both")
+
+    loans = await client.get("/api/v1/me/analytics", headers={**token, "X-Business-Line": "loans"})
+    real_estate = await client.get(
+        "/api/v1/me/analytics", headers={**token, "X-Business-Line": "real_estate"}
+    )
+
+    assert _kpis(loans.json())["calls"] == 2
+    assert _kpis(real_estate.json())["calls"] == 0

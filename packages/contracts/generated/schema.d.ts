@@ -1144,6 +1144,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/reports/telecallers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Report Telecallers
+         * @description Telecallers for the Analytics "Telecaller" filter (platform Admin only).
+         */
+        get: operations["list_report_telecallers_api_v1_admin_reports_telecallers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/staff-access": {
         parameters: {
             query?: never;
@@ -9867,6 +9887,23 @@ export interface components {
             /** Total Count */
             total_count: number;
         };
+        /**
+         * ReportTelecallerOption
+         * @description One Telecaller for the Analytics "Telecaller" filter (ids and names only).
+         */
+        ReportTelecallerOption: {
+            /** Business Line */
+            business_line: string | null;
+            /** Name */
+            name: string;
+            /** Staff Code */
+            staff_code: string;
+            /**
+             * Staff Profile Uuid
+             * Format: uuid
+             */
+            staff_profile_uuid: string;
+        };
         /** RequestRef */
         RequestRef: {
             /**
@@ -10114,6 +10151,22 @@ export interface components {
         StaffAnalyticsResponse: {
             /** Breakdowns */
             breakdowns: components["schemas"]["AnalyticsBreakdown"][];
+            /**
+             * Bucket
+             * @default day
+             * @enum {string}
+             */
+            bucket: "day" | "week";
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
             funnel?: components["schemas"]["AnalyticsFunnel"] | null;
             /** Kpis */
             kpis: components["schemas"]["AnalyticsKpi"][];
@@ -13389,6 +13442,15 @@ export interface operations {
                 sort_dir?: "asc" | "desc";
                 limit?: number;
                 offset?: number;
+                deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
+                property_city?: string | null;
+                property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -13424,6 +13486,15 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
+                deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
+                property_city?: string | null;
+                property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -13459,6 +13530,15 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
+                deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
+                property_city?: string | null;
+                property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -13498,6 +13578,13 @@ export interface operations {
                 sort_dir?: "asc" | "desc";
                 limit?: number;
                 offset?: number;
+                lead_status?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -13533,6 +13620,13 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
+                lead_status?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -13568,6 +13662,13 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
+                lead_status?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -13607,6 +13708,15 @@ export interface operations {
                 sort_dir?: "asc" | "desc";
                 limit?: number;
                 offset?: number;
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                loan_type_id?: string | null;
+                bank_id?: string | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -13642,6 +13752,15 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                loan_type_id?: string | null;
+                bank_id?: string | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -13677,6 +13796,15 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                loan_type_id?: string | null;
+                bank_id?: string | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -13691,6 +13819,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_report_telecallers_api_v1_admin_reports_telecallers_get: {
+        parameters: {
+            query?: {
+                business_line?: ("loans" | "real_estate") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportTelecallerOption"][];
                 };
             };
             /** @description Validation Error */
@@ -17186,8 +17345,24 @@ export interface operations {
     my_analytics_api_v1_me_analytics_get: {
         parameters: {
             query?: {
-                /** @description Period in days (7, 30 or 90). */
+                /** @description Legacy period in days (7, 30 or 90). */
                 days?: number;
+                /** @description First IST day of the period, inclusive. */
+                date_from?: string | null;
+                /** @description Last IST day of the period, inclusive. */
+                date_to?: string | null;
+                /** @description Telecaller: calls with outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Telecaller: calls with this interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Telecaller: leads with a loan application in this status. */
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Telecaller: leads from this referral source. */
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Agent: leads in this status. */
+                lead_status?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
+                /** @description Employee: tasks of this type. */
+                task_type?: ("document_collection" | "property_visit" | "background_check") | null;
             };
             header?: never;
             path?: never;

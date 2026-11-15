@@ -2,6 +2,57 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — client feedback batch, PR 3: analytics calendar range and
+filters** (2026-11-15; open for review), branch
+`feat/analytics-date-range-filters` stacked on PR 2.
+
+API, `GET /me/analytics`:
+- Accepts `date_from`/`date_to`: inclusive IST dates, 422 when only one is
+  sent, reversed, in the future, or longer than 366 days. The legacy `days`
+  is still accepted.
+- The response adds `date_from`, `date_to` and `bucket`. Points are per day up
+  to 92 days, then per Monday-start week.
+- The effective business line (X-Business-Line, validated against the token)
+  is applied explicitly to every query.
+- Role filters: `call_status`, `interest`, `loan_status`, `lead_source`
+  (Telecaller); `task_type` (Employee); `lead_status` (Agent). A filter for
+  another role returns 422.
+
+API, Admin reports:
+- `ReportFilters` adds lead source, telecaller, latest call outcome/interest
+  (correlated latest-activity subquery), lead status, loan status/type/bank,
+  and deal status/property city/category (join on `properties`).
+- CSV/XLSX exports carry the same filters.
+- New `GET /admin/reports/telecallers` (platform Admin only).
+- Contracts regenerated.
+
+Web:
+- `components/ui/calendar.tsx` (react-day-picker 10.0.2, styled with tokens,
+  no stylesheet).
+- `features/analytics/date-range-picker.tsx` and `lib/analytics-range.ts`
+  (IST presets, validation, labels).
+- `StaffAnalyticsFilterBar` replaces the 7/30/90 toggle; its business-line
+  control switches the dashboard line.
+- `ReportFilterBar` uses the picker and per-report filters.
+
+Evidence (2026-11-15), API on the isolated `app_feedback` DB:
+- `test_staff_analytics_api.py`, `test_reporting_api.py`,
+  `test_reporting_service.py`, `test_reporting_rls.py`: 50 passed, including
+  new tests for range, weekly bucketing, 422s, role filters, the line switch,
+  every report filter, export filters and Telecaller options.
+- ruff is clean.
+
+Evidence, web:
+- lint and typecheck pass; Vitest 127 files / 879 tests pass (new
+  `analytics-range.test.ts`).
+- Playwright `staff-analytics.spec.ts` (updated for the picker and filters)
+  plus new `admin-analytics-filters.spec.ts`: 5 passed. Screenshots reviewed.
+- `pnpm audit --prod`: 0 advisories.
+- `pnpm build`: compiled and generated 111/111 pages, then stopped at the
+  known Windows standalone symlink EPERM.
+
+Completion impact: none (client feedback).
+
 **Implemented — client feedback batch, PR 2: lead filters and "referred by"**
 (2026-11-15; [PR #345](https://github.com/brollysolutions/client1/pull/345), mirror vamshisaideep9/client1#49, open for review), branch `feat/lead-filters-referrer` stacked on
 PR 1.

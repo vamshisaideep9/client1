@@ -73,6 +73,12 @@ class AnalyticsFunnel(BaseModel):
 class StaffAnalyticsResponse(BaseModel):
     role: AnalyticsRole
     range_days: int
+    # Inclusive India Standard Time calendar dates covered by the period.
+    date_from: date
+    date_to: date
+    # Trend points are per day up to 92 days, then per Monday-start week
+    # (a point's ``day`` is then the first day of that week in the period).
+    bucket: Literal["day", "week"] = "day"
     kpis: list[AnalyticsKpi]
     trend: AnalyticsTrend
     breakdowns: list[AnalyticsBreakdown]

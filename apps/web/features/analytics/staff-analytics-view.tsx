@@ -3,23 +3,24 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 
+import { useAuth } from "@/components/auth/session-provider";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   DashboardHeader,
   DashboardPage,
   DashboardPanel,
 } from "@/features/dashboard/dashboard-ui";
 import { FetchError } from "@/features/dashboard/fetch-error";
+import { useLine } from "@/features/dashboard/line-provider";
+import { resolveRangePreset, type DateRangeValue } from "@/lib/analytics-range";
 import {
-  ANALYTICS_RANGES,
-  getMyAnalytics,
+  getMyAnalyticsForRange,
   type AnalyticsBreakdown,
   type AnalyticsFunnel,
   type AnalyticsKpi,
-  type AnalyticsRange,
   type AnalyticsTrend,
   type StaffAnalytics,
+  type StaffAnalyticsFilterValues,
 } from "@/lib/staff-analytics-api";
 
 import {
@@ -32,6 +33,7 @@ import {
   seriesColor,
   shareLabel,
 } from "./analytics-format";
+import { StaffAnalyticsFilterBar } from "./staff-analytics-filter-bar";
 
 // Recharts loads only on this page, after the shell has painted.
 const TrendChart = dynamic(() => import("./trend-chart"), {
@@ -94,7 +96,7 @@ function TableToggle({ summary, children }: { summary: string; children: React.R
   );
 }
 
-function TrendPanel({ trend }: { trend: AnalyticsTrend }) {
+function TrendPanel({ trend, bucket = "day" }: { trend: AnalyticsTrend; bucket?: "day" | "week" }) {
   const totals = trend.series.map((series) =>
     trend.points.reduce((sum, point) => sum + (point.values[series.key] ?? 0), 0),
   );
@@ -122,7 +124,7 @@ function TrendPanel({ trend }: { trend: AnalyticsTrend }) {
           <caption className="sr-only">{trend.title}</caption>
           <thead className="sticky top-0 bg-muted text-xs text-text-secondary">
             <tr>
-              <th scope="col" className="px-3 py-2 font-medium">Day</th>
+              <th scope="col" className="px-3 py-2 font-medium">{bucket === "week" ? "Week starting" : "Day"}</th>
               {trend.series.map((series) => (
                 <th key={series.key} scope="col" className="px-3 py-2 text-right font-medium">
                   {series.label}
@@ -254,14 +256,22 @@ function FunnelPanel({ funnel }: { funnel: AnalyticsFunnel }) {
 }
 
 export function StaffAnalyticsView() {
-  const [range, setRange] = React.useState<AnalyticsRange>(30);
+  const { session } = useAuth();
+  const { activeLine } = useLine();
+  const [range, setRange] = React.useState<DateRangeValue>(() => resolveRangePreset("last_30_days", new Date()));
+  const [filters, setFilters] = React.useState<StaffAnalyticsFilterValues>({});
   const [state, setState] = React.useState<State>({ status: "loading" });
   const [reloadKey, setReloadKey] = React.useState(0);
+
+  // Loan status only exists on the Loans line; drop it when the line changes.
+  React.useEffect(() => {
+    if (activeLine !== "loans") setFilters((current) => (current.loan_status ? { ...current, loan_status: undefined } : current));
+  }, [activeLine]);
 
   React.useEffect(() => {
     let active = true;
     setState((current) => (current.status === "ready" ? current : { status: "loading" }));
-    void getMyAnalytics(range).then((res) => {
+    void getMyAnalyticsForRange(range, filters).then((res) => {
       if (!active) return;
       setState(
         res.ok
@@ -272,7 +282,8 @@ export function StaffAnalyticsView() {
     return () => {
       active = false;
     };
-  }, [range, reloadKey]);
+    // activeLine: the line travels as the X-Business-Line header.
+  }, [range, filters, activeLine, reloadKey]);
 
   const data = state.status === "ready" ? state.data : null;
 
@@ -281,20 +292,13 @@ export function StaffAnalyticsView() {
       <DashboardHeader
         title="My analytics"
         description={data ? ROLE_COPY[data.role] : "How your work is going."}
-        actions={
-          <ToggleGroup
-            type="single"
-            value={String(range)}
-            onValueChange={(value) => value && setRange(Number(value) as AnalyticsRange)}
-            aria-label="Period"
-          >
-            {ANALYTICS_RANGES.map((days) => (
-              <ToggleGroupItem key={days} value={String(days)} className="px-3">
-                {days} days
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        }
+      />
+      <StaffAnalyticsFilterBar
+        role={session?.role}
+        range={range}
+        onRangeChange={setRange}
+        filters={filters}
+        onFiltersChange={setFilters}
       />
 
       {state.status === "error" ? (
@@ -323,7 +327,7 @@ export function StaffAnalyticsView() {
             ))}
           </section>
 
-          <TrendPanel trend={data.trend} />
+          <TrendPanel trend={data.trend} bucket={data.bucket} />
 
           <div className="grid gap-5 lg:grid-cols-2">
             {data.breakdowns.map((breakdown) => (
