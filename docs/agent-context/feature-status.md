@@ -3,8 +3,10 @@
 Status: **Derived living implementation ledger**
 
 **In review — item 9: Sub Admin managers over teams (CS-019)** (2026-11-15),
-branch `feat/sub-admin-team-managers` from `upstream/main` `76dced7` (PR 1,
-API) with the web PR stacked on it.
+branch `feat/sub-admin-team-managers` from `upstream/main` `76dced7`: PR 1 (API)
+[#348](https://github.com/brollysolutions/client1/pull/348), mirror
+vamshisaideep9/client1#52; PR 2 (web) on `feat/sub-admin-team-managers-web`
+stacked on it.
 - API: migration `e4f6a8c0b2d5` (one head) adds `staff_teams` (one line, one
   member role, partial-unique live team per manager per line) and
   `staff_team_members` (one team per member per line), Main-Admin-only write
@@ -36,7 +38,11 @@ API) with the web PR stacked on it.
   `sub-admin-teams.spec.ts` (4) and `staff-analytics.spec.ts` (3) pass against
   `pnpm dev` at 1440 and 360 px with screenshots reviewed.
   `dashboard-navigation.spec.ts` needs a live API on :8000 and was not run.
-  Full API suite and the production web build: see the PR. Completion
+  Full API suite: 2308 passed, 7 failed; the 4 caused by this branch (ledger
+  entries) were fixed and re-run green, and the other 3 pre-exist on
+  `upstream/main` (a hardcoded old Alembic head; public banner and property
+  field lists missing upstream's new fields). Production `pnpm build` of the
+  full stack passes in a `node:22-alpine` container. Completion
   impact: item 9 delivered pending review; routing unchanged by design.
 
 **Implemented — loan application review and agreement stages** (2026-11-15;

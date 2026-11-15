@@ -60,7 +60,9 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — item 9: Sub Admin managers over teams (CS-019)** (2026-11-15),
+**In review — item 9: Sub Admin managers over teams (CS-019)** (2026-11-15;
+PR 1 [#348](https://github.com/brollysolutions/client1/pull/348), mirror
+vamshisaideep9/client1#52; PR 2 web stacked),
 branch `feat/sub-admin-team-managers` from `upstream/main` `76dced7`. Two
 stacked PRs. PR 1 (API, this branch): migration `e4f6a8c0b2d5` (one head) adds
 `staff_teams` and `staff_team_members`, the live `team_manager_reaches()` RLS
@@ -69,7 +71,9 @@ tables and member names, and confined `team_manager_reassign_lead/_task`
 functions; Main Admin team endpoints under `/api/v1/admin/teams`; manager
 endpoints under `/api/v1/manager` (teams, overview, member analytics and work,
 audited lead detail, reassignment inside the team). PR 2 (web, stacked):
-Admin Teams page and the Sub Admin "My team" dashboard. Non-goals: team-based
+Admin Teams page and the Sub Admin "My team" dashboard, reusing the analytics
+charts and calendar range picker. Next: user review of both PRs, then the
+next backlog item. Non-goals: team-based
 routing, targets, manager approvals/payouts, exports. Recommended: Opus 5.5 /
 xhigh (RLS and PII authorization).
 

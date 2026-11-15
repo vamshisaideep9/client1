@@ -35,6 +35,8 @@ const CAPABILITIES = {
   staffInsights: { roles: ["telecaller", "employee", "agent", "sub_admin"] },
   payouts: { roles: ["admin", "sub_admin"], staffFeature: "payout_requests" },
   subAdminPayouts: { roles: ["sub_admin"], staffFeature: "payout_requests" },
+  // Shown only once /api/v1/manager/teams says the Sub Admin runs a team.
+  teamManager: { roles: ["sub_admin"], teamManager: true },
   cms: { roles: ["sub_admin", "admin"] },
   referralRules: { roles: ["sub_admin", "admin"] },
 } as const satisfies Record<
@@ -43,6 +45,7 @@ const CAPABILITIES = {
     roles: readonly UserRole[];
     lines?: readonly BusinessLine[];
     staffFeature?: StaffFeature;
+    teamManager?: true;
   }
 >;
 
@@ -61,6 +64,8 @@ export type DashboardAccessContext = {
   activeLine?: BusinessLine;
   profileLines?: readonly BusinessLine[];
   staffFeatures?: readonly StaffFeature[];
+  /** Navigation hint only: the Sub Admin manages at least one live team. */
+  managesTeam?: boolean;
 };
 
 export type NavItem = {
@@ -285,6 +290,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     section: "operations",
   },
   {
+    key: "sub-admin-team",
+    label: "My team",
+    href: "/dashboard/team",
+    icon: DASHBOARD_ICONS.team,
+    capability: "teamManager",
+    section: "people",
+  },
+  {
     key: "sub-admin-finance",
     label: "Finance overview",
     href: "/dashboard/finance",
@@ -430,6 +443,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Users & staff",
     href: "/dashboard/users",
     icon: DASHBOARD_ICONS.usersAndStaff,
+    capability: "admin",
+    section: "people",
+  },
+  {
+    key: "admin-teams",
+    label: "Teams",
+    href: "/dashboard/teams",
+    icon: DASHBOARD_ICONS.team,
     capability: "admin",
     section: "people",
   },
@@ -587,6 +608,9 @@ export const DASHBOARD_ROUTE_RULES: readonly DashboardRouteRule[] = [
   { path: "/dashboard/cookies", exact: true, capabilities: ["shared"] },
   { path: "/dashboard/support-tickets", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/tasks", capabilities: ["employee"] },
+  { path: "/dashboard/teams", exact: true, capabilities: ["admin"] },
+  // Every Sub Admin may open it; without a team the page explains why it is empty.
+  { path: "/dashboard/team", capabilities: ["subAdmin"] },
   { path: "/dashboard/transactions", exact: true, capabilities: ["transactions"] },
   { path: "/dashboard/users", exact: true, capabilities: ["admin"] },
   {
@@ -610,6 +634,7 @@ function hasCapability(
   ) {
     return false;
   }
+  if ("teamManager" in access && !context.managesTeam) return false;
   if (!("lines" in access)) return true;
 
   const allowedLines = access.lines as readonly BusinessLine[];

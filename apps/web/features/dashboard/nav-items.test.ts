@@ -193,6 +193,21 @@ describe("role-aware dashboard navigation", () => {
     ]);
   });
 
+  it("shows My team only to a Sub Admin who manages a team", () => {
+    const manager = { ...context("sub_admin"), managesTeam: true };
+    expect(navKeys(manager)).toContain("sub-admin-team");
+    expect(navKeys(context("sub_admin"))).not.toContain("sub-admin-team");
+    expect(navKeys({ ...context("telecaller", "loans"), managesTeam: true })).not.toContain(
+      "sub-admin-team",
+    );
+    // The route stays open to every Sub Admin; the page explains an empty team.
+    expect(isDashboardPathAllowed("/dashboard/team", context("sub_admin"))).toBe(true);
+    expect(isDashboardPathAllowed("/dashboard/team/t1/members/m1", context("sub_admin"))).toBe(true);
+    expect(isDashboardPathAllowed("/dashboard/team", context("admin"))).toBe(false);
+    expect(isDashboardPathAllowed("/dashboard/teams", context("admin"))).toBe(true);
+    expect(isDashboardPathAllowed("/dashboard/teams", context("sub_admin"))).toBe(false);
+  });
+
   it("makes every existing Admin workspace reachable in grouped navigation", () => {
     expect(navKeys(context("admin"))).toEqual([
       "home",
@@ -206,6 +221,7 @@ describe("role-aware dashboard navigation", () => {
       "admin-property-review",
       "admin-document-verification",
       "admin-users",
+      "admin-teams",
       "admin-agents",
       "admin-support-tickets",
       "admin-payouts",
