@@ -24,6 +24,7 @@ const LABELS: Record<CalculatorSlug, string> = {
   "credit-card-emi": "Card EMI",
   "term-insurance": "Term Insurance Cover",
   "health-insurance": "Health Insurance Cover",
+  "compound-interest": "Compound Interest",
 };
 
 function group(key: string, heading: string, slugs: CalculatorSlug[]): NavGroup {
@@ -37,7 +38,7 @@ function group(key: string, heading: string, slugs: CalculatorSlug[]): NavGroup 
 }
 
 export const CALCULATORS_MENU: NavColumn[] = [
-  { groups: [group("loans", "Loans", ["emi", "loan-eligibility", "prepayment", "loan-comparison", "loan-against-property", "balance-transfer", "flat-vs-reducing"])] },
+  { groups: [group("loans", "Loans", ["emi", "loan-eligibility", "prepayment", "loan-comparison", "loan-against-property", "balance-transfer", "flat-vs-reducing", "compound-interest"])] },
   { groups: [group("real_estate", "Property", ["home-affordability", "stamp-duty", "gst", "property-appreciation", "rental-yield", "down-payment-planner", "rent-vs-buy"])] },
   { groups: [
     group("credit_cards", "Credit Cards", ["credit-card-payoff", "credit-card-emi"]),
