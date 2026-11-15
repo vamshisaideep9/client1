@@ -19,6 +19,7 @@ Security invariants (see also the security-review checklist in the spec):
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import math
 import re
@@ -51,7 +52,7 @@ from app.schemas.agent_applications import (
     AgentApplyTicketResponse,
     AgentApplyUploadPresignResponse,
 )
-from app.services import storage
+from app.services import media_processing, storage
 from app.services.otp import check_otp_rate_ip, generate_and_store_otp, resend_otp, verify_otp
 from app.services.otp_delivery import deliver_otp
 
@@ -59,6 +60,12 @@ logger = logging.getLogger(__name__)
 
 _PURPOSE = "agent_apply"
 _KEY_PREFIX = "agent-applications/"
+# Verified, scanned copies the application row points at. Applicants can only
+# ever claim keys under their own ticket's ``{_KEY_PREFIX}{jti}/`` prefix, so a
+# canonical key is never presignable or claimable, and it stays inside
+# _KEY_PREFIX so purge_orphaned_uploads still sweeps abandoned copies.
+_CANONICAL_PREFIX = f"{_KEY_PREFIX}canonical/"
+_ACCEPTED_CONTENT_TYPES = frozenset({"image/jpeg", "image/png", "image/webp", "application/pdf"})
 _KEY_RE = re.compile(
     r"^agent-applications/[0-9a-f-]{36}/[0-9a-f]{32}-(aadhaar_front|aadhaar_back|pan|photo)$"
 )
@@ -96,6 +103,10 @@ class ContentTypeUnrecognized(Exception):
     been accepted. This ticket's submit request doesn't carry the originally
     -declared content_type back, so this checks "is it a real file of an
     accepted type" rather than "does it match what was declared"."""
+
+
+class DocumentNotAccepted(Exception):
+    """Malware scanning or image re-encoding refused the document."""
 
 
 class PresignQuotaExceeded(Exception):
@@ -234,7 +245,8 @@ def _check_claimed_key(key: str, jti: str, expected_doc_type: str) -> None:
         raise ObjectKeyMismatch
 
 
-def _verify_upload(key: str) -> None:
+def _verify_upload(key: str) -> str:
+    """Check size and real file type of a staged upload; return that type."""
     try:
         size = storage.head_object(key)
     except Exception as exc:  # transport failure — fail closed, don't swallow
@@ -242,12 +254,57 @@ def _verify_upload(key: str) -> None:
     if size is None or size <= 0 or size > settings.AGENT_APPLICATION_MAX_UPLOAD_BYTES:
         raise UploadMissing
     try:
-        recognized = storage.content_type_is_recognized(key)
+        content_type = storage.sniffed_content_type(key)
     except Exception as exc:  # transport failure — fail closed, don't swallow
         raise StorageUnavailable from exc
-    if not recognized:
+    if content_type not in _ACCEPTED_CONTENT_TYPES:
         storage.delete_object(key)  # never leave a polyglot object under a claimed key
         raise ContentTypeUnrecognized
+    return content_type
+
+
+def canonical_object_key(jti: str, doc_type: str) -> str:
+    return f"{_CANONICAL_PREFIX}{jti}/{uuid.uuid4().hex}-{doc_type}"
+
+
+async def _delete_quietly(keys: list[str]) -> None:
+    await asyncio.gather(*(asyncio.to_thread(storage.delete_object, key) for key in keys))
+
+
+async def _canonicalize_uploads(
+    jti: str, key_map: dict[str, str], content_types: dict[str, str]
+) -> dict[str, str]:
+    """Scan each staged document and write it once to a server-owned key.
+
+    The staged key stays writable through its presigned POST policy until the
+    policy expires, so the bytes that were verified could be replaced before an
+    Admin opens them. Reading them once here, scanning PDFs and re-encoding
+    images (media_processing.canonicalize_object, the same boundary every other
+    upload flow uses) and storing the result under a key no applicant can sign
+    closes that window. Returns doc_type -> canonical key.
+    """
+    canonical: dict[str, str] = {}
+    try:
+        for doc_type, key in key_map.items():
+            destination = canonical_object_key(jti, doc_type)
+            canonical[doc_type] = destination
+            await asyncio.to_thread(
+                media_processing.canonicalize_object,
+                key,
+                destination,
+                content_types[doc_type],
+                max_bytes=settings.AGENT_APPLICATION_MAX_UPLOAD_BYTES,
+            )
+    except (media_processing.ScannerUnavailable, media_processing.MediaProcessorUnavailable) as exc:
+        await _delete_quietly(list(canonical.values()))
+        raise StorageUnavailable from exc
+    except media_processing.MediaProcessingError as exc:
+        await _delete_quietly([*canonical.values(), *key_map.values()])
+        raise DocumentNotAccepted from exc
+    except Exception as exc:  # storage transport failure — fail closed
+        await _delete_quietly(list(canonical.values()))
+        raise StorageUnavailable from exc
+    return canonical
 
 
 async def submit(
@@ -273,8 +330,10 @@ async def submit(
         _check_claimed_key(key, jti, doc_type)
     if len({*key_map.values()}) != 4:
         raise ObjectKeyMismatch
-    for key in key_map.values():
-        _verify_upload(key)
+    content_types = {
+        doc_type: await asyncio.to_thread(_verify_upload, key) for doc_type, key in key_map.items()
+    }
+    canonical = await _canonicalize_uploads(jti, key_map, content_types)
 
     # Burn AFTER validating everything else: a rejected submission (bad key,
     # missing upload) never spends the ticket, so the applicant can retry
@@ -284,6 +343,7 @@ async def submit(
     # on the upsert.
     ttl = max(1, math.ceil(exp - datetime.now(UTC).timestamp()))
     if not await cache.set_nx(jwt_blacklist_key(jti), 1, ttl):
+        await _delete_quietly(list(canonical.values()))
         raise ApplicationTicketAlreadyUsed
 
     async with AsyncSessionLocal() as session:
@@ -298,10 +358,10 @@ async def submit(
             mobile=mobile,
             email=payload.email,
             business_line=payload.business_line,
-            aadhaar_ref=key_map["aadhaar_front"],
-            aadhaar_back_ref=key_map["aadhaar_back"],
-            pan_ref=key_map["pan"],
-            photo_ref=key_map["photo"],
+            aadhaar_ref=canonical["aadhaar_front"],
+            aadhaar_back_ref=canonical["aadhaar_back"],
+            pan_ref=canonical["pan"],
+            photo_ref=canonical["photo"],
             rera_code=payload.rera_code,
             status="pending",
         )
@@ -325,9 +385,17 @@ async def submit(
                 "rera_code": stmt.excluded.rera_code,
             },
         )
-        await session.execute(stmt)
-        await session.commit()
+        try:
+            await session.execute(stmt)
+            await session.commit()
+        except Exception:
+            await _delete_quietly(list(canonical.values()))
+            raise
 
+    # The row now points only at the canonical copies. Staged uploads are
+    # removed best-effort; any that survive become purge_orphaned_uploads
+    # candidates because nothing references them.
+    await _delete_quietly(list(key_map.values()))
     logger.info("agent_application.submitted mobile=%s", mask_mobile(mobile))
 
 

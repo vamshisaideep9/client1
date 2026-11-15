@@ -10,11 +10,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import field_crypto
 from app.core.deps import CurrentUser, require_agent
 from app.db.session import get_db
+from app.models.agent_payout_details import AgentPayoutDetails
 from app.models.field_visibility import FieldTargetRole, FieldVisibilityMode
 from app.models.lead import Lead
 from app.schemas.agent import (
@@ -24,21 +26,27 @@ from app.schemas.agent import (
     AgentLeadUpdate,
     AgentProfileStatusRead,
 )
+from app.schemas.agent_payout_details import AgentPayoutDetailsRead, AgentPayoutDetailsUpdate
 from app.schemas.commissions import AgentEarningsResponse
+from app.services import agent_payout_details as payout_details
 from app.services import commissions
 from app.services.agent import (
     AgentProfileNotFound,
+    InvalidLeadInterest,
     InvalidStatusFilter,
     LeadCaptureFailed,
     LeadCaptureUnavailable,
     LeadLocked,
+    LeadNotResubmittable,
     get_home_summary,
     get_lead_for_agent,
     introduce_lead,
     list_my_leads,
+    resubmit_lead_for_agent,
     update_lead_for_agent,
 )
 from app.services.field_visibility import effective_modes, project_values
+from app.services.leads import is_agent_lead_resubmittable
 
 router = APIRouter()
 
@@ -63,6 +71,7 @@ def _to_agent_lead_read(
         editable=(
             lead.status in {"new", "assigned"} and lead.agent_expired_at is None and within_window
         ),
+        resubmittable=is_agent_lead_resubmittable(lead),
         expires_at=lead.expires_at,
         expired_at=lead.agent_expired_at,
         created_at=lead.created_at,
@@ -132,6 +141,11 @@ async def create_lead(
             status.HTTP_409_CONFLICT,
             "This mobile number is already linked to an existing enquiry.",
         ) from exc
+    except InvalidLeadInterest as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Choose a published property or product from your business line.",
+        ) from exc
     modes = await effective_modes(db, FieldTargetRole.AGENT)
     return _to_agent_lead_read(lead, modes)
 
@@ -196,6 +210,37 @@ async def patch_lead(
     return _to_agent_lead_read(lead, modes)
 
 
+@router.post(
+    "/leads/{lead_id}/resubmit",
+    response_model=AgentLeadRead,
+    response_model_exclude_unset=True,
+)
+async def resubmit_lead(
+    lead_id: UUID,
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+) -> AgentLeadRead:
+    """Resubmit this Agent's expired lead for a fresh 30-day window."""
+    agent_profile_uuid = _agent_profile_uuid(current_user)
+    if await get_lead_for_agent(db, lead_id, agent_profile_uuid) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found.")
+    try:
+        lead = await resubmit_lead_for_agent(
+            db,
+            lead_id,
+            agent_profile_uuid=agent_profile_uuid,
+            auth_user_uuid=current_user.id,
+        )
+    except LeadNotResubmittable as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "This lead can't be resubmitted. Only an expired lead whose client "
+            "hasn't registered can be resubmitted.",
+        ) from exc
+    modes = await effective_modes(db, FieldTargetRole.AGENT)
+    return _to_agent_lead_read(lead, modes)
+
+
 @router.get("/earnings", response_model=AgentEarningsResponse)
 async def earnings(
     current_user: CurrentUser = Depends(require_agent),
@@ -205,3 +250,68 @@ async def earnings(
     needed here — commissions_select RLS already scopes to the caller's own
     agent_auth_user_uuid + business_line."""
     return await commissions.list_for_agent(db)
+
+
+def _payout_details_read(row: AgentPayoutDetails | None) -> AgentPayoutDetailsRead:
+    available = field_crypto.is_available()
+    if row is None:
+        return AgentPayoutDetailsRead(saved=False, available=available)
+    return AgentPayoutDetailsRead(
+        saved=True,
+        upi_hint=row.upi_hint,
+        bank_hint=row.bank_hint,
+        updated_at=row.updated_at,
+        available=available,
+    )
+
+
+@router.get("/payout-details", response_model=AgentPayoutDetailsRead)
+async def get_payout_details(
+    response: Response,
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+) -> AgentPayoutDetailsRead:
+    """The Agent's saved payout destination, masked."""
+    response.headers["Cache-Control"] = "private, no-store"
+    row = await payout_details.get_own(db, _agent_profile_uuid(current_user))
+    return _payout_details_read(row)
+
+
+@router.put("/payout-details", response_model=AgentPayoutDetailsRead)
+async def put_payout_details(
+    payload: AgentPayoutDetailsUpdate,
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+) -> AgentPayoutDetailsRead:
+    """Save or change the bank account and/or UPI ID commissions are paid to."""
+    try:
+        row = await payout_details.save_own(
+            db,
+            agent_profile_uuid=_agent_profile_uuid(current_user),
+            auth_user_uuid=current_user.id,
+            payload=payload,
+        )
+    except payout_details.PayoutDetailsUnavailable as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Saving payout details is not available right now.",
+        ) from exc
+    except payout_details.PayoutDetailsEmpty as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Keep at least a UPI ID or a bank account, or remove all payout details.",
+        ) from exc
+    return _payout_details_read(row)
+
+
+@router.delete("/payout-details", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_payout_details(
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Remove every saved payout destination."""
+    await payout_details.delete_own(
+        db,
+        agent_profile_uuid=_agent_profile_uuid(current_user),
+        auth_user_uuid=current_user.id,
+    )

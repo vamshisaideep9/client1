@@ -137,6 +137,17 @@ class Banner(Base):
         ForeignKey("campaign_media_assets.id", ondelete="RESTRICT"),
         nullable=True,
     )
+    # Optional public-campaign video: a YouTube id (never a URL) or a Media
+    # Library `banner_video` MP4. At most one; never on the dashboard placement
+    # (ck_banners_single_video_source / ck_banners_video_public_only).
+    youtube_video_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    video_media_asset_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("campaign_media_assets.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    # Canonical public MP4 key copied from the chosen asset (like image_key).
+    video_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     deep_link: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Versioned, closed user/workflow/location grammar validated by
     # schemas.personalization and consumed only by the authenticated dashboard.

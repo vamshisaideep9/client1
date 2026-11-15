@@ -5,6 +5,7 @@ import {
   type FieldErrors,
   type ValidationError,
 } from "@/lib/form-validation";
+import { staffNoteLimitError } from "@/features/dashboard/long-note";
 
 export type LoanTransactionField = "bankName" | "amount" | "interestRate" | "txnDate";
 
@@ -61,7 +62,9 @@ export function validateFieldTask(
   now = new Date(),
 ): FieldErrors<FieldTaskField> {
   const errors: FieldErrors<FieldTaskField> = {
-    notes: requiredTextError(values.notes, "Task description", 1000),
+    notes:
+      requiredTextError(values.notes, "Task description") ??
+      staffNoteLimitError(values.notes, "Task description"),
     dueAt: futureLocalDateTimeError(values.dueAt, "Due date and time", { now }),
   };
 
@@ -78,8 +81,7 @@ export function validateCallLog(
 ): FieldErrors<CallLogField> {
   const errors: FieldErrors<CallLogField> = {
     followUpAt: futureLocalDateTimeError(values.followUpAt, "Follow-up date and time", { now }),
-    notes:
-      values.notes.length > 1000 ? "Notes must be 1000 characters or fewer." : undefined,
+    notes: staffNoteLimitError(values.notes),
   };
 
   return Object.fromEntries(
@@ -87,19 +89,35 @@ export function validateCallLog(
   );
 }
 
-export type LoanProgressTermsField = "amountSanctioned" | "interestRate" | "processingFee";
+export type LoanProgressTermsField =
+  | "amountSanctioned"
+  | "bankId"
+  | "interestRate"
+  | "processingFee";
 
+/**
+ * Mirrors services/loan_applications.py: moving to sanctioned or disbursed
+ * needs the sanctioned amount and lending bank, because disbursal opens
+ * commission, fee-cashback and referral eligibility. The API is the real gate.
+ */
 export function validateLoanProgressTerms(values: {
   amountSanctioned: string;
+  bankId?: string;
   interestRate: string;
   processingFee: string;
+  requireSanctionTerms?: boolean;
 }): FieldErrors<LoanProgressTermsField> {
+  const sanctionRequired = values.requireSanctionTerms === true;
   const errors: FieldErrors<LoanProgressTermsField> = {
-    amountSanctioned: decimalError(values.amountSanctioned, "Sanctioned amount", {
-      minExclusive: 0,
-      max: 999_999_999_999.99,
-      decimalPlaces: 2,
-    }),
+    amountSanctioned:
+      sanctionRequired && !values.amountSanctioned.trim()
+        ? "Enter the sanctioned amount."
+        : decimalError(values.amountSanctioned, "Sanctioned amount", {
+            minExclusive: 0,
+            max: 999_999_999_999.99,
+            decimalPlaces: 2,
+          }),
+    bankId: sanctionRequired && !values.bankId ? "Choose the lending bank." : undefined,
     interestRate: decimalError(values.interestRate, "Interest rate", {
       min: 0,
       max: 100,

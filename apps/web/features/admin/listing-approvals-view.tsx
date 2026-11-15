@@ -472,7 +472,7 @@ export function ListingApprovalsView() {
 
                     {activeMedia.some((asset) => asset.kind === "panorama") ? (
                       <div>
-                        <p className="mb-2 text-sm font-medium text-text-primary">360° panorama</p>
+                        <p className="mb-2 text-sm font-medium text-text-primary">360° images</p>
                         {activeMedia
                           .filter((asset) => asset.kind === "panorama")
                           .map((asset) => (

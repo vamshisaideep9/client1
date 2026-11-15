@@ -1,11 +1,13 @@
 """Client property enquiries — raise an enquiry and list own.
 
-Real-estate line. RLS (migration 4d5e6f7a8b9c) is the access boundary: a
-client sees only their own enquiries; real-estate telecaller/employee/
-sub_admin/agent see all real-estate-line enquiries; platform Admin/Sub Admin
-see all. The client never supplies user_uuid/business_line/status — the
-router stamps user_uuid from the authenticated identity and business_line as
-a literal "real_estate" (this table exists for the real-estate line only).
+Real-estate line. RLS (migrations 4d5e6f7a8b9c, b4d6f8a0c2e3) admits the
+owner, real-estate telecaller/employee/sub_admin for their own workflows, and
+the platform Admin; Agents are excluded. This router's list is the client's
+"My Enquiries" and is always filtered to the caller's own rows, so line-scoped
+staff never get a line-wide contact list here. The client never supplies
+user_uuid/business_line/status — the router stamps user_uuid from the
+authenticated identity and business_line as a literal "real_estate" (this
+table exists for the real-estate line only).
 """
 
 from __future__ import annotations
@@ -40,7 +42,14 @@ async def list_enquiries(
     current_user: CurrentUser = Depends(get_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> EnquiryListResponse:
-    result = await db.execute(select(Enquiry).order_by(Enquiry.created_at.desc()))
+    # "My Enquiries": always the caller's own rows. RLS also admits line-scoped
+    # staff for their own workflows (Telecaller lead workspace); this list
+    # must never become a line-wide contact directory for them.
+    result = await db.execute(
+        select(Enquiry)
+        .where(Enquiry.user_uuid == current_user.id)
+        .order_by(Enquiry.created_at.desc())
+    )
     enquiries = result.scalars().all()
     return EnquiryListResponse(
         enquiries=[EnquiryRead.model_validate(e, from_attributes=True) for e in enquiries]
@@ -58,7 +67,7 @@ async def create_enquiry(
     if property_listing is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Property not found.")
     try:
-        await ensure_client_line_lead_for_user(
+        lead_uuid = await ensure_client_line_lead_for_user(
             auth_user_uuid=current_user.id,
             mobile=current_user.mobile,
             business_line="real_estate",
@@ -70,6 +79,7 @@ async def create_enquiry(
         ) from exc
     enquiry = Enquiry(
         user_uuid=current_user.id,
+        lead_uuid=lead_uuid,
         business_line="real_estate",
         property_ref=str(property_listing.id),
         title=property_listing.title,

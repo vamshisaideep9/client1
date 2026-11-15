@@ -49,6 +49,12 @@ TERMINAL_STATUSES = {LoanStatus.CLOSED, LoanStatus.REJECTED}
 _SIDE_BRANCH = {LoanStatus.ON_HOLD, LoanStatus.REJECTED}
 _SUBMITTED_INDEX = _ORDER_INDEX[LoanStatus.SUBMITTED_TO_BANK]
 _SANCTIONED_INDEX = _ORDER_INDEX[LoanStatus.SANCTIONED]
+# Disbursal stamps disbursed_at, which opens commission, fee-cashback and
+# referral-conversion eligibility, so neither status may be reached without
+# the sanctioned amount and lending bank on record. CLOSED is deliberately not
+# listed: it does not stamp disbursed_at, so a never-disbursed close creates no
+# money obligation.
+_TERMS_REQUIRED_STATUSES = {LoanStatus.SANCTIONED, LoanStatus.DISBURSED}
 
 _STATUS_LABEL = {
     LoanStatus.NEW: "new",
@@ -78,6 +84,11 @@ class StatusReasonRequired(Exception):
 
 class TermsNotAllowedAtStage(Exception):
     """Raised when a deal-terms field is set before its stage gate opens."""
+
+
+class SanctionTermsRequired(Exception):
+    """Raised when moving to sanctioned/disbursed without a sanctioned amount
+    and a bank, either already saved or supplied in the same update."""
 
 
 class UnknownBank(Exception):
@@ -203,6 +214,13 @@ async def apply_progress_update(
         application.processing_fee = payload.processing_fee
     if payload.fee_outcome is not None:
         application.fee_outcome = payload.fee_outcome
+
+    if status_changed and application.status in _TERMS_REQUIRED_STATUSES:
+        # bank_id is synchronized from the relationship only on flush, so a
+        # bank supplied in this payload is checked from the payload itself.
+        has_bank = payload.bank_id is not None or application.bank_id is not None
+        if application.amount_sanctioned is None or not has_bank:
+            raise SanctionTermsRequired
 
     # Relationship assignment (bank) synchronizes its foreign key on flush;
     # compare after that synchronization so a bank-only command cannot evade audit.
