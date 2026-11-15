@@ -3,7 +3,7 @@
 Status: **Derived living implementation ledger**
 
 **Implemented — client feedback batch, PR 1: ticker, tablet navigation, banner
-video length, optional amenities** (2026-11-15; open for review), branch
+video length, optional amenities** (2026-11-15; [PR #344](https://github.com/brollysolutions/client1/pull/344), mirror vamshisaideep9/client1#48, open for review), branch
 `feat/public-feedback-batch` from `upstream/main` `06b5ae2`.
 
 Web:

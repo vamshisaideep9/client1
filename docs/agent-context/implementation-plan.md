@@ -61,7 +61,7 @@ default, not permission to skip the pre-implementation announcement.
 ## Prioritized active backlog
 
 **Implemented — client feedback batch, PR 1: public ticker, tablet navigation,
-one-minute banner videos, optional amenities** (2026-11-15; open for review), branch
+one-minute banner videos, optional amenities** (2026-11-15; [PR #344](https://github.com/brollysolutions/client1/pull/344), mirror vamshisaideep9/client1#48, open for review), branch
 `feat/public-feedback-batch` from `upstream/main` `06b5ae2`. Client feedback
 items 1, 2, 5 and 6:
 - The two-line home announcement now scrolls right-to-left, and each line has
