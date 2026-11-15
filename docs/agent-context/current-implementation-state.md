@@ -618,6 +618,36 @@ Evidence:
 - [`apps/api/app/tests/test_team_manager_api.py`](../../apps/api/app/tests/test_team_manager_api.py)
 - [`apps/api/app/tests/test_staff_teams_api.py`](../../apps/api/app/tests/test_staff_teams_api.py)
 
+### CS-020 — Sub Admin managers edit and filter their team's work
+
+**Decision (2026-11-15, user-approved; follow-up to CS-019):** A manager may
+change their own team's **open** work and filter it everywhere. Team roster and
+team settings stay Main-Admin-only (CS-019 unchanged).
+
+- *Leads.* Set status to working, converted or closed (the Telecaller's own
+  choices). Client details stay with their creator (FR-2.8).
+- *Tasks.* Change the due date (future only) or cancel with a reason (saved as a
+  note). Completing a task stays with the Employee, who records the outcome.
+- *Notes.* Append-only notes on a team lead (optional follow-up date) or task,
+  read by the reaching manager, the assigned member and platform Admins; the
+  member sees them on their own lead or task page.
+- *Filters.* A team-wide work list and the member list filter by member,
+  status, task type, search, overdue, loan status, last call (incl. not
+  called), interest, referral source and "referred by". Team and member
+  analytics take the date range, the role filters and a members subset; the
+  team overview adds a combined report.
+- *Field rules.* Manager views follow the Admin's field rules for the team's
+  member role (Telecaller or Employee): a hidden field stays hidden.
+- *Enforcement.* Managers still have no UPDATE or INSERT policy; every edit runs
+  through a confined definer function that re-checks team reach, line, open
+  status and the change. Every edit and note is audited and notifies the
+  member.
+
+Evidence:
+
+- [`apps/api/alembic/versions/b2d4f6a8c0e1_team_manager_edits_and_filters.py`](../../apps/api/alembic/versions/b2d4f6a8c0e1_team_manager_edits_and_filters.py)
+- [`apps/api/app/tests/test_team_manager_edits_api.py`](../../apps/api/app/tests/test_team_manager_edits_api.py)
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in

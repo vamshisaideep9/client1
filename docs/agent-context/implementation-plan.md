@@ -60,6 +60,20 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In progress — manager edits and filters (CS-020)** (2026-11-15), branch
+`feat/team-manager-edits-filters` from `upstream/main` `bda242b`. Two stacked
+PRs. PR 1 (API): migration `b2d4f6a8c0e1` (one head) adds append-only
+`team_work_notes`, confined `team_manager_set_lead_status`,
+`team_manager_update_task`, `team_manager_add_note`,
+`team_manager_reaches_lead` and `team_lead_signals` functions, and a narrow
+field-rules read policy; `/api/v1/manager` gains team work, task detail, lead
+and task edits, notes, and role/member analytics filters with a combined team
+report; member lead/task detail return manager notes. PR 2 (web): team Overview
+and Work tabs with filters, edit/note dialogs, notes on member pages.
+Lead notes are reached only through the lead's Telecaller (review fix).
+Non-goals: roster/team settings for managers, client-detail edits, completing
+tasks for Employees, routing. Recommended: Opus 5.5 / xhigh.
+
 **In review — item 9: Sub Admin managers over teams (CS-019)** (2026-11-15;
 PR 1 [#348](https://github.com/brollysolutions/client1/pull/348), mirror
 vamshisaideep9/client1#52; PR 2 web stacked),

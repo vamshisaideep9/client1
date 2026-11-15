@@ -148,6 +148,10 @@ class AuditAction(enum.StrEnum):
     TEAM_LEAD_VIEWED = "team_lead_viewed"
     TEAM_LEAD_REASSIGNED = "team_lead_reassigned"
     TEAM_TASK_REASSIGNED = "team_task_reassigned"
+    TEAM_LEAD_STATUS_UPDATED = "team_lead_status_updated"
+    TEAM_TASK_UPDATED = "team_task_updated"
+    TEAM_NOTE_ADDED = "team_note_added"
+    TEAM_TASK_VIEWED = "team_task_viewed"
 
 
 _ev = lambda x: [e.value for e in x]  # noqa: E731

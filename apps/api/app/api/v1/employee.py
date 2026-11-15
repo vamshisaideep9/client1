@@ -83,6 +83,7 @@ from app.services.task_feedback import (
     list_feedback_media,
     presign_feedback_upload,
 )
+from app.services.team_manager import work_notes
 
 router = APIRouter()
 
@@ -200,7 +201,9 @@ async def get_task(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Task not found.")
     modes = await effective_modes(db, FieldTargetRole.EMPLOYEE)
     signals = await lead_signals_for_ids(db, [row[0].lead_uuid])
-    return _to_read(*row, modes, signals.get(row[0].lead_uuid, EMPTY_SIGNALS))
+    read = _to_read(*row, modes, signals.get(row[0].lead_uuid, EMPTY_SIGNALS))
+    read.manager_notes = await work_notes(db, task_id=task_id)
+    return read
 
 
 @router.post(

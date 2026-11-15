@@ -89,6 +89,7 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     # each membership so "one team per member per line" is a unique key.
     "staff_team_members": ClassificationMode.OPERATIONAL,
     "staff_teams": ClassificationMode.OPERATIONAL,
+    "team_work_notes": ClassificationMode.OPERATIONAL,
     "staff_feature_grants": ClassificationMode.PLATFORM_CONFIG,
     "staff_invite_links": ClassificationMode.DERIVED,
     "support_tickets": ClassificationMode.IDENTITY,

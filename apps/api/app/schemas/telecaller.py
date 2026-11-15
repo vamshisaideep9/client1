@@ -296,6 +296,16 @@ class TaskRead(BaseModel):
     created_at: datetime
 
 
+class ManagerNoteRead(BaseModel):
+    """A Sub Admin manager's note on a lead or task (CS-020), read-only here."""
+
+    id: UUID
+    author_name: str
+    body: str
+    follow_up_at: datetime | None
+    created_at: datetime
+
+
 class TelecallerLeadDetailRead(TelecallerLeadRead):
     activities: list[LeadActivityRead]
     loan_applications: list[TelecallerLoanApplicationRead] = []
@@ -304,6 +314,7 @@ class TelecallerLeadDetailRead(TelecallerLeadRead):
     site_visits: list[TelecallerSiteVisitRead] = []
     property_deals: list[TelecallerPropertyDealRead] = []
     tasks: list[TaskRead] = []
+    manager_notes: list[ManagerNoteRead] = []
 
 
 class ClientHistoryLead(BaseModel):

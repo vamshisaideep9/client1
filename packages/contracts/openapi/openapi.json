@@ -4760,7 +4760,11 @@
           "staff_team_member_removed",
           "team_lead_viewed",
           "team_lead_reassigned",
-          "team_task_reassigned"
+          "team_task_reassigned",
+          "team_lead_status_updated",
+          "team_task_updated",
+          "team_note_added",
+          "team_task_viewed"
         ],
         "title": "AuditAction",
         "type": "string"
@@ -8269,6 +8273,13 @@
             "title": "Lead Uuid",
             "type": "string"
           },
+          "manager_notes": {
+            "items": {
+              "$ref": "#/components/schemas/ManagerNoteRead"
+            },
+            "title": "Manager Notes",
+            "type": "array"
+          },
           "notes": {
             "anyOf": [
               {
@@ -11016,6 +11027,50 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "ManagerNoteRead": {
+        "description": "A Sub Admin manager's note on a lead or task (CS-020), read-only here.",
+        "properties": {
+          "author_name": {
+            "title": "Author Name",
+            "type": "string"
+          },
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "follow_up_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Up At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "author_name",
+          "body",
+          "follow_up_at",
+          "created_at"
+        ],
+        "title": "ManagerNoteRead",
         "type": "object"
       },
       "ManagerTeamsResponse": {
@@ -19374,6 +19429,30 @@
         "title": "TaskType",
         "type": "string"
       },
+      "TeamAssignee": {
+        "properties": {
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          },
+          "staff_profile_uuid": {
+            "format": "uuid",
+            "title": "Staff Profile Uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "staff_profile_uuid",
+          "first_name",
+          "last_name"
+        ],
+        "title": "TeamAssignee",
+        "type": "object"
+      },
       "TeamEligibleResponse": {
         "description": "Pickers: Sub Admins free to manage a team in this line, and active staff\nof the member role who are not yet in a team in this line.",
         "properties": {
@@ -19457,6 +19536,13 @@
           },
           "lead": {
             "$ref": "#/components/schemas/TeamLeadRow"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/ManagerNoteRead"
+            },
+            "title": "Notes",
+            "type": "array"
           }
         },
         "required": [
@@ -19469,6 +19555,16 @@
       },
       "TeamLeadRow": {
         "properties": {
+          "assigned_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamAssignee"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "business_line": {
             "enum": [
               "loans",
@@ -19481,6 +19577,13 @@
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "hidden_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hidden Fields",
+            "type": "array"
           },
           "id": {
             "format": "uuid",
@@ -19519,6 +19622,9 @@
             "title": "Requests",
             "type": "array"
           },
+          "signals": {
+            "$ref": "#/components/schemas/TeamLeadSignals"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -19541,6 +19647,100 @@
           "last_call"
         ],
         "title": "TeamLeadRow",
+        "type": "object"
+      },
+      "TeamLeadSignals": {
+        "description": "What the Telecaller / Employee lists filter on, for the same filters.",
+        "properties": {
+          "last_disposition": {
+            "anyOf": [
+              {
+                "enum": [
+                  "connected",
+                  "no_answer",
+                  "busy",
+                  "switched_off",
+                  "wrong_number",
+                  "callback_requested",
+                  "not_interested"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Disposition"
+          },
+          "last_interest_level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hot",
+                  "warm",
+                  "cold"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Interest Level"
+          },
+          "loan_statuses": {
+            "items": {
+              "enum": [
+                "new",
+                "assigned",
+                "contacted",
+                "docs_collected",
+                "submitted_to_bank",
+                "under_review",
+                "sanctioned",
+                "agreement_collected",
+                "agreement_submitted_to_bank",
+                "disbursed",
+                "closed",
+                "rejected",
+                "on_hold"
+              ],
+              "type": "string"
+            },
+            "title": "Loan Statuses",
+            "type": "array"
+          },
+          "referrer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadReferrerRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "TeamLeadSignals",
+        "type": "object"
+      },
+      "TeamLeadStatusUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "working",
+              "converted",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "TeamLeadStatusUpdate",
         "type": "object"
       },
       "TeamMemberRead": {
@@ -19652,6 +19852,34 @@
         "title": "TeamMemberWorkResponse",
         "type": "object"
       },
+      "TeamNoteCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "follow_up_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Up At"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "TeamNoteCreate",
+        "type": "object"
+      },
       "TeamOverviewResponse": {
         "properties": {
           "date_from": {
@@ -19674,6 +19902,16 @@
           "range_days": {
             "title": "Range Days",
             "type": "integer"
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StaffAnalyticsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "team": {
             "$ref": "#/components/schemas/StaffTeamRead"
@@ -19832,8 +20070,41 @@
         "title": "TeamReassignResponse",
         "type": "object"
       },
+      "TeamTaskDetailResponse": {
+        "properties": {
+          "assigned_to": {
+            "$ref": "#/components/schemas/TeamMemberRead"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/ManagerNoteRead"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "task": {
+            "$ref": "#/components/schemas/TeamTaskRow"
+          }
+        },
+        "required": [
+          "task",
+          "assigned_to"
+        ],
+        "title": "TeamTaskDetailResponse",
+        "type": "object"
+      },
       "TeamTaskRow": {
         "properties": {
+          "assigned_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamAssignee"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "business_line": {
             "enum": [
               "loans",
@@ -19859,10 +20130,28 @@
             ],
             "title": "Due At"
           },
+          "hidden_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hidden Fields",
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "lead_mobile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Mobile"
           },
           "lead_name": {
             "anyOf": [
@@ -19891,6 +20180,9 @@
             ],
             "title": "Notes"
           },
+          "signals": {
+            "$ref": "#/components/schemas/TeamLeadSignals"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -19918,6 +20210,110 @@
           "updated_at"
         ],
         "title": "TeamTaskRow",
+        "type": "object"
+      },
+      "TeamTaskUpdate": {
+        "additionalProperties": false,
+        "description": "Change the due date, or cancel with a reason; one at a time.",
+        "properties": {
+          "cancel_reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Reason"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          }
+        },
+        "title": "TeamTaskUpdate",
+        "type": "object"
+      },
+      "TeamWorkResponse": {
+        "description": "Every member's work in one list, for the team-wide filters.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "leads",
+              "tasks"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "leads": {
+            "items": {
+              "$ref": "#/components/schemas/TeamLeadRow"
+            },
+            "title": "Leads",
+            "type": "array"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TeamTaskRow"
+            },
+            "title": "Tasks",
+            "type": "array"
+          },
+          "team_id": {
+            "format": "uuid",
+            "title": "Team Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team_id",
+          "kind",
+          "leads",
+          "tasks"
+        ],
+        "title": "TeamWorkResponse",
+        "type": "object"
+      },
+      "TeamWorkUpdateResponse": {
+        "properties": {
+          "due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "TeamWorkUpdateResponse",
         "type": "object"
       },
       "TelecallerClientHistoryResponse": {
@@ -20161,6 +20557,14 @@
               "type": "string"
             },
             "title": "Loan Statuses",
+            "type": "array"
+          },
+          "manager_notes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ManagerNoteRead"
+            },
+            "title": "Manager Notes",
             "type": "array"
           },
           "mobile": {
@@ -33690,6 +34094,140 @@
         "tags": [
           "manager"
         ]
+      },
+      "patch": {
+        "operationId": "patch_lead_api_v1_manager_teams__team_id__leads__lead_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Lead Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamLeadStatusUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamWorkUpdateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Patch Lead",
+        "tags": [
+          "manager"
+        ]
+      }
+    },
+    "/api/v1/manager/teams/{team_id}/leads/{lead_id}/notes": {
+      "post": {
+        "operationId": "post_lead_note_api_v1_manager_teams__team_id__leads__lead_id__notes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Lead Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamNoteCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerNoteRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Post Lead Note",
+        "tags": [
+          "manager"
+        ]
       }
     },
     "/api/v1/manager/teams/{team_id}/leads/{lead_id}/reassign": {
@@ -33834,6 +34372,157 @@
               ],
               "description": "Last IST day of the period, inclusive.",
               "title": "Date To"
+            }
+          },
+          {
+            "description": "Telecaller teams: call outcome.",
+            "in": "query",
+            "name": "call_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "connected",
+                    "no_answer",
+                    "busy",
+                    "switched_off",
+                    "wrong_number",
+                    "callback_requested",
+                    "not_interested"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller teams: call outcome.",
+              "title": "Call Status"
+            }
+          },
+          {
+            "description": "Telecaller teams: interest level.",
+            "in": "query",
+            "name": "interest",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "hot",
+                    "warm",
+                    "cold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller teams: interest level.",
+              "title": "Interest"
+            }
+          },
+          {
+            "description": "Telecaller teams: leads with a loan application in this status.",
+            "in": "query",
+            "name": "loan_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "contacted",
+                    "docs_collected",
+                    "submitted_to_bank",
+                    "under_review",
+                    "sanctioned",
+                    "agreement_collected",
+                    "agreement_submitted_to_bank",
+                    "disbursed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller teams: leads with a loan application in this status.",
+              "title": "Loan Status"
+            }
+          },
+          {
+            "description": "Telecaller teams: leads from this referral source.",
+            "in": "query",
+            "name": "lead_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "direct",
+                    "agent",
+                    "client"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller teams: leads from this referral source.",
+              "title": "Lead Source"
+            }
+          },
+          {
+            "description": "Employee teams: task type.",
+            "in": "query",
+            "name": "task_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "document_collection",
+                    "property_visit",
+                    "background_check"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Employee teams: task type.",
+              "title": "Task Type"
+            }
+          },
+          {
+            "description": "Only these members (repeatable); all when omitted.",
+            "in": "query",
+            "name": "member",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only these members (repeatable); all when omitted.",
+              "title": "Member"
             }
           }
         ],
@@ -34004,6 +34693,157 @@
               "description": "Last IST day of the period, inclusive.",
               "title": "Date To"
             }
+          },
+          {
+            "description": "Telecaller teams: call outcome.",
+            "in": "query",
+            "name": "call_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "connected",
+                    "no_answer",
+                    "busy",
+                    "switched_off",
+                    "wrong_number",
+                    "callback_requested",
+                    "not_interested"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller teams: call outcome.",
+              "title": "Call Status"
+            }
+          },
+          {
+            "description": "Telecaller teams: interest level.",
+            "in": "query",
+            "name": "interest",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "hot",
+                    "warm",
+                    "cold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller teams: interest level.",
+              "title": "Interest"
+            }
+          },
+          {
+            "description": "Telecaller teams: leads with a loan application in this status.",
+            "in": "query",
+            "name": "loan_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "contacted",
+                    "docs_collected",
+                    "submitted_to_bank",
+                    "under_review",
+                    "sanctioned",
+                    "agreement_collected",
+                    "agreement_submitted_to_bank",
+                    "disbursed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller teams: leads with a loan application in this status.",
+              "title": "Loan Status"
+            }
+          },
+          {
+            "description": "Telecaller teams: leads from this referral source.",
+            "in": "query",
+            "name": "lead_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "direct",
+                    "agent",
+                    "client"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller teams: leads from this referral source.",
+              "title": "Lead Source"
+            }
+          },
+          {
+            "description": "Employee teams: task type.",
+            "in": "query",
+            "name": "task_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "document_collection",
+                    "property_visit",
+                    "background_check"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Employee teams: task type.",
+              "title": "Task Type"
+            }
+          },
+          {
+            "description": "Only these members (repeatable); all when omitted.",
+            "in": "query",
+            "name": "member",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only these members (repeatable); all when omitted.",
+              "title": "Member"
+            }
           }
         ],
         "responses": {
@@ -34034,6 +34874,198 @@
           }
         ],
         "summary": "Get Overview",
+        "tags": [
+          "manager"
+        ]
+      }
+    },
+    "/api/v1/manager/teams/{team_id}/tasks/{task_id}": {
+      "get": {
+        "operationId": "get_task_detail_api_v1_manager_teams__team_id__tasks__task_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamTaskDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Task Detail",
+        "tags": [
+          "manager"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_task_api_v1_manager_teams__team_id__tasks__task_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamTaskUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamWorkUpdateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Patch Task",
+        "tags": [
+          "manager"
+        ]
+      }
+    },
+    "/api/v1/manager/teams/{team_id}/tasks/{task_id}/notes": {
+      "post": {
+        "operationId": "post_task_note_api_v1_manager_teams__team_id__tasks__task_id__notes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamNoteCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerNoteRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Post Task Note",
         "tags": [
           "manager"
         ]
@@ -34102,6 +35134,65 @@
           }
         ],
         "summary": "Post Reassign Task",
+        "tags": [
+          "manager"
+        ]
+      }
+    },
+    "/api/v1/manager/teams/{team_id}/work": {
+      "get": {
+        "operationId": "get_team_work_api_v1_manager_teams__team_id__work_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "pattern": "^(open|all)$",
+              "title": "Scope",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamWorkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Team Work",
         "tags": [
           "manager"
         ]

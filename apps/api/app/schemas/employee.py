@@ -14,6 +14,7 @@ from app.schemas.telecaller import (
     InterestLevelLiteral,
     LeadReferrerRead,
     LoanStatusLiteral,
+    ManagerNoteRead,
 )
 
 TaskTypeLiteral = Literal["document_collection", "property_visit", "background_check"]
@@ -59,6 +60,8 @@ class EmployeeTaskRead(BaseModel):
     lead_loan_statuses: list[LoanStatusLiteral] = Field(default_factory=list)
     # Absent when Admin hides the "Referred by" field; null when nobody referred.
     lead_referrer: LeadReferrerRead | None = None
+    # Detail only: notes from the Employee's Sub Admin manager (CS-020).
+    manager_notes: list[ManagerNoteRead] = Field(default_factory=list)
 
 
 class EmployeeTaskUpdate(BaseModel):

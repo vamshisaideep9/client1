@@ -144,6 +144,8 @@ _ALL_PLATFORM_SCOPE_POLICIES = {
     ("referral_bonus_config", "referral_bonus_config_delete"),
     ("staff_teams", "staff_teams_select"),
     ("staff_team_members", "staff_team_members_select"),
+    # b2d4f6a8c0e1 (CS-020): platform Admin, reaching manager, assigned member.
+    ("team_work_notes", "team_work_notes_select"),
 }
 
 
