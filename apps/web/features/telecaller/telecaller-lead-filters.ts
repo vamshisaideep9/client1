@@ -5,9 +5,15 @@
 import { isInDateRange } from "@/lib/date-range";
 import type { TelecallerLead } from "@/lib/telecaller-api";
 
+import {
+  DEFAULT_LEAD_SIGNAL_FILTERS,
+  leadSignalFiltersActive,
+  matchesLeadSignals,
+  type LeadSignalFilters,
+} from "./lead-signal-filters";
 import { DISPOSITION_LABEL, STATUS_LABEL } from "./telecaller-lead-status";
 
-export type TelecallerLeadFilters = {
+export type TelecallerLeadFilters = LeadSignalFilters & {
   search: string;
   status: string; // "all" | TelecallerLead["status"]
   followUpFrom: string; // "YYYY-MM-DD"
@@ -15,11 +21,22 @@ export type TelecallerLeadFilters = {
 };
 
 export const DEFAULT_TELECALLER_LEAD_FILTERS: TelecallerLeadFilters = {
+  ...DEFAULT_LEAD_SIGNAL_FILTERS,
   search: "",
   status: "all",
   followUpFrom: "",
   followUpTo: "",
 };
+
+export function telecallerLeadFiltersActive(filters: TelecallerLeadFilters): boolean {
+  return (
+    filters.search !== "" ||
+    filters.status !== "all" ||
+    filters.followUpFrom !== "" ||
+    filters.followUpTo !== "" ||
+    leadSignalFiltersActive(filters)
+  );
+}
 
 export function filterTelecallerLeads(
   leads: TelecallerLead[],
@@ -29,6 +46,19 @@ export function filterTelecallerLeads(
   return leads.filter((lead) => {
     if (filters.status !== "all" && lead.status !== filters.status) return false;
     if (!isInDateRange(lead.next_follow_up_at, filters.followUpFrom, filters.followUpTo)) return false;
+    if (
+      !matchesLeadSignals(
+        {
+          loanStatuses: lead.loan_statuses,
+          lastDisposition: lead.last_disposition,
+          lastInterestLevel: lead.last_interest_level,
+          referrer: lead.referrer,
+        },
+        filters,
+      )
+    ) {
+      return false;
+    }
     if (!query) return true;
     return `${lead.name ?? ""} ${lead.mobile}`.toLocaleLowerCase().includes(query);
   });

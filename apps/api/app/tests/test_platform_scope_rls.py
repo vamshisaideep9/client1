@@ -49,6 +49,11 @@ _DOCUMENTED_SUB_ADMIN_EXCEPTIONS = {
     ("referral_bonus_config", "referral_bonus_config_insert"),
     ("referral_bonus_config", "referral_bonus_config_update"),
     ("referral_bonus_config", "referral_bonus_config_delete"),
+    # e4f6a8c0b2d5 (CS-019): a platform-Admin disjunct plus a separate branch
+    # that lets a Sub Admin read only the teams they manage (by their own
+    # staff profile), never through the platform bypass.
+    ("staff_teams", "staff_teams_select"),
+    ("staff_team_members", "staff_team_members_select"),
 }
 
 # Every current policy carrying a platform_scope branch. The original
@@ -137,6 +142,8 @@ _ALL_PLATFORM_SCOPE_POLICIES = {
     ("referral_bonus_config", "referral_bonus_config_insert"),
     ("referral_bonus_config", "referral_bonus_config_update"),
     ("referral_bonus_config", "referral_bonus_config_delete"),
+    ("staff_teams", "staff_teams_select"),
+    ("staff_team_members", "staff_team_members_select"),
 }
 
 

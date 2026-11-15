@@ -40,9 +40,9 @@ export function LoanAgainstPropertyCalculator() {
   );
 
   const value = clamp(state.value, 500000, 200000000);
-  const ltv = clamp(state.ltv, 40, 70);
-  const rate = clamp(state.rate, 8, 16);
-  const months = clamp(state.months, 12, 240);
+  const ltv = clamp(state.ltv, 40, 80);
+  const rate = clamp(state.rate, 8, 34);
+  const months = clamp(state.months, 12, 420);
 
   const { maxLoan, schedule } = useMemo(() => {
     const loan = maxLoanFromLtv(value, ltv / 100);
@@ -73,7 +73,7 @@ export function LoanAgainstPropertyCalculator() {
           suffix="%"
           value={ltv}
           min={40}
-          max={70}
+          max={80}
           step={1}
           onChange={(v) => setState({ ltv: Math.round(v) })}
           helper={`${ltv}% of value`}
@@ -84,7 +84,7 @@ export function LoanAgainstPropertyCalculator() {
           suffix="% p.a."
           value={rate}
           min={8}
-          max={16}
+          max={34}
           step={0.05}
           onChange={(v) => setState({ rate: v })}
           helper={`${rate.toFixed(2)}% per year`}
@@ -95,7 +95,7 @@ export function LoanAgainstPropertyCalculator() {
           suffix="months"
           value={months}
           min={12}
-          max={240}
+          max={420}
           step={1}
           onChange={(v) => setState({ months: Math.round(v) })}
           helper={tenureHelper(months)}

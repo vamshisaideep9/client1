@@ -44,6 +44,30 @@ describe("mapPublicBanner()", () => {
     });
   });
 
+  it("keeps a well-formed YouTube id and an allowlisted video URL", () => {
+    const banner = mapPublicBanner(
+      wireBanner({
+        youtube_video_id: "dQw4w9WgXcQ",
+        video_url: "http://localhost:9000/task-documents/public/campaign-media/x/video.mp4",
+      }),
+    );
+    expect(banner.youtubeId).toBe("dQw4w9WgXcQ");
+    expect(banner.videoUrl).toBe(
+      "http://localhost:9000/task-documents/public/campaign-media/x/video.mp4",
+    );
+  });
+
+  it("drops a malformed YouTube id and an off-allowlist video URL", () => {
+    const banner = mapPublicBanner(
+      wireBanner({
+        youtube_video_id: "x\"><script>",
+        video_url: "https://evil.example/video.mp4",
+      }),
+    );
+    expect(banner.youtubeId).toBeUndefined();
+    expect(banner.videoUrl).toBeUndefined();
+  });
+
   it("converts a null subtitle to undefined", () => {
     const banner = mapPublicBanner(wireBanner({ subtitle: null }));
     expect(banner.subtitle).toBeUndefined();

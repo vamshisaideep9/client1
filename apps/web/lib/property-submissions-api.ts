@@ -31,13 +31,13 @@ export async function presignPropertyMedia(
 export async function uploadPropertyMedia(
   images: File[],
   documents: File[],
-  panorama: File | null,
+  panoramas: File[],
   onProgress?: (done: number, total: number) => void,
 ): Promise<{ ok: true; media: SubmissionMediaInput[] } | { ok: false; error: string }> {
   const files = [
     ...images.map((file) => ({ file, kind: "image" as const })),
     ...documents.map((file) => ({ file, kind: "document" as const })),
-    ...(panorama ? [{ file: panorama, kind: "panorama" as const }] : []),
+    ...panoramas.map((file) => ({ file, kind: "panorama" as const })),
   ];
   const media: SubmissionMediaInput[] = [];
   for (let index = 0; index < files.length; index += 1) {
