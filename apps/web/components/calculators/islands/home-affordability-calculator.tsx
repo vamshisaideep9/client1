@@ -41,8 +41,8 @@ export function HomeAffordabilityCalculator() {
   const inc = clamp(state.inc, 10000, 1000000);
   const emi = clamp(state.emi, 0, 500000);
   const dp = clamp(state.dp, 0, 50000000);
-  const rate = clamp(state.rate, 5, 18);
-  const months = clamp(state.months, 12, 360);
+  const rate = clamp(state.rate, 5, 34);
+  const months = clamp(state.months, 12, 420);
 
   const result = useMemo(
     () =>
@@ -105,7 +105,7 @@ export function HomeAffordabilityCalculator() {
           suffix="% p.a."
           value={rate}
           min={5}
-          max={18}
+          max={34}
           step={0.05}
           onChange={(v) => setState({ rate: v })}
           helper={`${rate.toFixed(2)}% per year`}
@@ -117,7 +117,7 @@ export function HomeAffordabilityCalculator() {
           suffix="months"
           value={months}
           min={12}
-          max={360}
+          max={420}
           step={1}
           onChange={(v) => setState({ months: Math.round(v) })}
           helper={tenureHelper(months)}

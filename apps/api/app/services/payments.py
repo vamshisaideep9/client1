@@ -506,9 +506,18 @@ async def reject_payout(
     reason: str,
     rejector_role: str | None = None,
 ) -> None:
-    """Reject a pending payout. Reject is not value-moving, so maker==rejector is allowed."""
+    """Reject a pending payout. Reject is not value-moving, so maker==rejector is allowed.
+
+    The row is locked before the status check. approve_payout's
+    compare-and-swap then waits on this lock and re-reads the row, so the two
+    can never both succeed. Without the lock a concurrent approve and reject
+    each returned success and the payout ended rejected after the approver
+    was told it was approved; a reject reading a stale pending row could also
+    overwrite a paid payout and release its linked commission, cashback or
+    referral for a second payment.
+    """
     async with AsyncSessionLocal() as db:
-        payout = await db.get(Payout, payout_id)
+        payout = await db.scalar(select(Payout).where(Payout.id == payout_id).with_for_update())
         if payout is None:
             raise PayoutNotFound("Payout not found.")
         if payout.status != PayoutStatus.PENDING_APPROVAL:
@@ -822,13 +831,25 @@ async def settle_from_webhook(
         return
     async with AsyncSessionLocal() as db:
         payout = await db.scalar(
-            select(Payout).where(
+            select(Payout)
+            .where(
                 Payout.provider == provider,
                 Payout.gateway_payout_id == gateway_payout_id,
             )
+            .with_for_update()
         )
         if payout is None:
             logger.warning("payout.webhook_unmatched gateway_payout_id=%s", gateway_payout_id)
+            return
+
+        # Serialize the state read with settlement. A failure/reversal that read
+        # INITIATED before another transaction paid must re-read PAID before
+        # deciding whether to ignore the event or post its compensating debit.
+        # Keep our accounting state REVERSED even if its notification preceded
+        # PAID. A late processed event must not recreate a credit. RazorpayX
+        # Current accounts may subsequently label a reversal "failed"; that
+        # does not undo the return of funds or release the obligation again.
+        if payout.status == PayoutStatus.REVERSED:
             return
 
         if target == PayoutStatus.PAID:

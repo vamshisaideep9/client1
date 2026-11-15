@@ -9,6 +9,7 @@ import PartnersLoading from "@/app/(public)/earn-with-us/loading";
 import PartnerApplicationLoading from "@/app/(public)/apply-as-agent/loading";
 import CalculatorsLoading from "@/app/(public)/calculators/loading";
 import CalculatorLoading from "@/app/(public)/calculators/[slug]/loading";
+import AboutLoading from "@/app/(public)/about/loading";
 import PrivacyLoading from "@/app/(public)/privacy/loading";
 import TermsLoading from "@/app/(public)/terms/loading";
 import CookiesLoading from "@/app/(public)/cookies/loading";
@@ -29,6 +30,7 @@ export const loadingFallbacks = [
   { name: "partner-application", path: "(public)/apply-as-agent/loading.tsx", element: React.createElement(PartnerApplicationLoading) },
   { name: "calculators", path: "(public)/calculators/loading.tsx", element: React.createElement(CalculatorsLoading) },
   { name: "calculator", path: "(public)/calculators/[slug]/loading.tsx", element: React.createElement(CalculatorLoading) },
+  { name: "about", path: "(public)/about/loading.tsx", element: React.createElement(AboutLoading) },
   { name: "privacy", path: "(public)/privacy/loading.tsx", element: React.createElement(PrivacyLoading) },
   { name: "terms", path: "(public)/terms/loading.tsx", element: React.createElement(TermsLoading) },
   { name: "cookies", path: "(public)/cookies/loading.tsx", element: React.createElement(CookiesLoading) },

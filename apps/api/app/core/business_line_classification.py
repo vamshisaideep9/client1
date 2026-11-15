@@ -32,6 +32,8 @@ class ClassificationMode(enum.StrEnum):
 TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     "agent_applications": ClassificationMode.OPERATIONAL,
     "agent_invite_links": ClassificationMode.DERIVED,
+    # Per-account payout destination keyed by auth_user_uuid; no line column.
+    "agent_payout_details": ClassificationMode.IDENTITY,
     "agent_profiles": ClassificationMode.OPERATIONAL,
     "audit_log": ClassificationMode.OPTIONAL_AUDIT,
     "auth_events": ClassificationMode.IDENTITY,
@@ -83,6 +85,11 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     "refresh_tokens": ClassificationMode.IDENTITY,
     "site_visits": ClassificationMode.FIXED_REAL_ESTATE,
     "staff_profiles": ClassificationMode.PROFILE_SCOPE,
+    # Sub Admin–led teams (CS-019): one operational line per team, copied onto
+    # each membership so "one team per member per line" is a unique key.
+    "staff_team_members": ClassificationMode.OPERATIONAL,
+    "staff_teams": ClassificationMode.OPERATIONAL,
+    "team_work_notes": ClassificationMode.OPERATIONAL,
     "staff_feature_grants": ClassificationMode.PLATFORM_CONFIG,
     "staff_invite_links": ClassificationMode.DERIVED,
     "support_tickets": ClassificationMode.IDENTITY,

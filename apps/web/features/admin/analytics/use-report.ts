@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { nextSort } from "@/lib/reports";
+import { nextSort, type ReportDetailFilters } from "@/lib/reports";
 import {
   getReport,
   type AgentsReportResponse,
@@ -27,6 +27,7 @@ export type ReportFilterInput = {
   bucket?: ReportBucket;
   businessLine?: ReportBusinessLine;
   agentProfileUuids?: string[];
+  detail?: ReportDetailFilters;
 };
 
 // One generic hook parameterized by report kind rather than four
@@ -44,6 +45,7 @@ export function useReport(kind: ReportKind, filters: ReportFilterInput) {
   const [error, setError] = React.useState<string | null>(null);
 
   const agentKey = (filters.agentProfileUuids ?? []).join(",");
+  const detailKey = JSON.stringify(filters.detail ?? {});
 
   // A filter or sort change invalidates the current page -- reset to the
   // first page. This effect and the load effect below both react to the
@@ -56,7 +58,7 @@ export function useReport(kind: ReportKind, filters: ReportFilterInput) {
   // leave the table showing the wrong page under the new filter.
   React.useEffect(() => {
     setOffset(0);
-  }, [kind, filters.dateFrom, filters.dateTo, filters.bucket, filters.businessLine, agentKey, sortBy, sortDir]);
+  }, [kind, filters.dateFrom, filters.dateTo, filters.bucket, filters.businessLine, agentKey, detailKey, sortBy, sortDir]);
 
   const requestIdRef = React.useRef(0);
 
@@ -70,6 +72,7 @@ export function useReport(kind: ReportKind, filters: ReportFilterInput) {
       bucket: filters.bucket,
       businessLine: filters.businessLine,
       agentProfileUuids: filters.agentProfileUuids,
+      detail: filters.detail,
       sortBy,
       sortDir,
       limit: PAGE_SIZE,
@@ -83,7 +86,7 @@ export function useReport(kind: ReportKind, filters: ReportFilterInput) {
     }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind, filters.dateFrom, filters.dateTo, filters.bucket, filters.businessLine, agentKey, sortBy, sortDir, offset]);
+  }, [kind, filters.dateFrom, filters.dateTo, filters.bucket, filters.businessLine, agentKey, detailKey, sortBy, sortDir, offset]);
 
   React.useEffect(() => {
     void load();
