@@ -3,7 +3,7 @@
 Status: **Derived living implementation ledger**
 
 **Implemented — client feedback batch, PR 2: lead filters and "referred by"**
-(2026-11-15; open for review), branch `feat/lead-filters-referrer` stacked on
+(2026-11-15; [PR #345](https://github.com/brollysolutions/client1/pull/345), mirror vamshisaideep9/client1#49, open for review), branch `feat/lead-filters-referrer` stacked on
 PR 1.
 
 API:
