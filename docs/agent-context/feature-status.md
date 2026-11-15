@@ -4960,13 +4960,15 @@ work than several completed UI requirements.
 
 ## Current work
 
-**In progress - dev droplet serves the production web build** on
-`chore/dev-droplet-prod-web` (direct user request; infrastructure only, no
+**Delivered - dev droplet serves the production web build** via
+[#352](https://github.com/brollysolutions/client1/pull/352) (direct user request; infrastructure only, no
 requirement or completion-percentage change). The droplet's web container ran
 `next dev`, so page-speed results there were not representative. The droplet
 overlay now builds the web production image and Caddy compresses responses.
-Evidence: `scripts/tests/test_dev_droplet.py` (10 tests) passes; droplet
-deploy and Lighthouse before/after are recorded in the PR.
+Evidence: `scripts/tests/test_dev_droplet.py` (10 tests) passes; deployed
+2026-11-15 at `1454770`; Lighthouse homepage medians (3 runs/device) mobile
+perf 83 / LCP 3.2 s (was 33-53 / ~17 s), desktop perf 100 / LCP 0.69 s; full
+before/after table on PR #352.
 
 **In progress - Admin and Sub Admin dashboard UI overhaul, phase 4 of 9** on
 `claude/20260827-admin-subadmin-ui-foundation` (direct user instruction; no

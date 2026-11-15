@@ -60,25 +60,10 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In review — bulk development test data** (2026-11-15; branch
-`chore/bulk-test-seed` from `upstream/main` `1454770`; direct user request,
-development-only scripts, no requirement or completion-percentage change).
-`app.scripts.seed_bulk` (plan in the pure `bulk_catalog`) adds 251 accounts:
-2 Admins, 9 Sub Admins (5 manage the five CS-019 teams, 2 hold the payout
-grant), 15 each of Telecallers, Employees and Agents, and 195 Clients (110
-profiles per line, 25 on both). It seeds 110 listings over all nine subtypes and
-records in every lead, loan, deal, visit, pickup, task, payout, cashback,
-commission, referral, ticket and account state, plus about 30 MB of synthetic
-photos, panoramas and PDFs written at the services' canonical keys. Shared
-published password, `ENV=development` only, idempotent UUIDv5 rows.
-Non-goals: banners, videos, KYC images, any schema or API change. Next: merge,
-then seed the dev droplet once the user confirms its IP allowlist (runbook
-step 8). Queued follow-up (user decision 2026-11-15): a visible
-Razorpay TEST MODE payout simulator for mock-mode payout approval.
-Recommended: Opus 5.5 / high.
-
-**In progress — dev droplet serves the production web build** (2026-11-15;
-branch `chore/dev-droplet-prod-web` from `upstream/main` `9091252`; direct user
+**Delivered — dev droplet serves the production web build** (2026-11-15;
+PR [#352](https://github.com/brollysolutions/client1/pull/352) merged as
+`1454770`, mirror vamshisaideep9/client1#56; branch
+`chore/dev-droplet-prod-web` from `upstream/main` `9091252`; direct user
 request, no requirement or completion-percentage change). A Lighthouse run on
 dev.dhanadhara.com showed the droplet serving `next dev --turbopack`: ~6.8 MB
 of unminified JavaScript, `no-store` caching, no compression, mobile LCP ~17 s.
@@ -86,7 +71,11 @@ of unminified JavaScript, `no-store` caching, no compression, mobile LCP ~17 s.
 `node server.js`, contracts build context, client-confirmed public contact
 defaults, `HOSTNAME=0.0.0.0`, no bind mount) and the Caddyfile adds
 `encode zstd gzip` (Next's `compress:false` defers to the proxy). The API stays
-`ENV=development`. Next: user installs the Caddyfile with sudo, retest, merge.
+`ENV=development`. Deployed on the droplet (Caddyfile installed, zstd live,
+static chunks `immutable`, 43/43 sitemap URLs 200). Lighthouse homepage
+medians, 3 runs/device: mobile perf 83 (was 33-53), LCP 3.2 s (was ~17 s),
+weight 362 KiB (was ~6.8 MB); desktop perf 100 (was 60-66), LCP 0.69 s.
+Next: no follow-up; rebuild web after each droplet pull (README).
 Non-goals: production hardening flags (`read_only`, `cap_drop`) on the dev
 web container, nginx on the droplet. Recommended: Opus 5.5 / high.
 
