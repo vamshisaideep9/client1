@@ -3,8 +3,10 @@
 Status: **Derived living implementation ledger**
 
 **In review — manager edits and filters (CS-020)** (2026-11-15), branch
-`feat/team-manager-edits-filters` from `upstream/main` `bda242b` (PR 1, API)
-with the web PR stacked on it.
+`feat/team-manager-edits-filters` from `upstream/main` `bda242b`: PR 1 (API)
+[#350](https://github.com/brollysolutions/client1/pull/350), mirror
+vamshisaideep9/client1#54; PR 2 (web) on `feat/team-manager-edits-filters-web`
+stacked on it.
 - API: migration `b2d4f6a8c0e1` (one head, upgrade → downgrade → upgrade on a
   fresh database). Manager writes only through confined definer functions
   (lead status, task due date / cancel, notes); notes table is SELECT-only to

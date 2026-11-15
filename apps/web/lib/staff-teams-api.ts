@@ -7,7 +7,7 @@ import type { components } from "@contracts/generated/schema";
 
 import { apiRequest, type ApiResponse } from "@/lib/api/client";
 import type { DateRangeValue } from "@/lib/analytics-range";
-import type { StaffAnalytics } from "@/lib/staff-analytics-api";
+import type { StaffAnalytics, StaffAnalyticsFilterValues } from "@/lib/staff-analytics-api";
 
 type Schemas = components["schemas"];
 
@@ -29,6 +29,15 @@ export type TeamLeadRow = Schemas["TeamLeadRow"];
 export type TeamTaskRow = Schemas["TeamTaskRow"];
 export type TeamLeadDetail = Schemas["TeamLeadDetailResponse"];
 export type TeamReassignResult = Schemas["TeamReassignResponse"];
+export type TeamWork = Schemas["TeamWorkResponse"];
+export type TeamTaskDetail = Schemas["TeamTaskDetailResponse"];
+export type TeamWorkNote = Schemas["ManagerNoteRead"];
+export type TeamWorkUpdate = Schemas["TeamWorkUpdateResponse"];
+export type TeamLeadStatus = Schemas["TeamLeadStatusUpdate"]["status"];
+export type TeamAssignee = Schemas["TeamAssignee"];
+
+/** Analytics filters a manager can apply; the API rejects ones the team's role lacks. */
+export type TeamAnalyticsFilters = StaffAnalyticsFilterValues & { members?: string[] };
 
 export const TEAM_LINE_LABEL: Record<TeamLine, string> = {
   loans: "Loans",
@@ -98,8 +107,14 @@ export function removeTeamMember(
 
 // --- Manager -------------------------------------------------------------------
 
-function rangeQuery(range: DateRangeValue): string {
-  return new URLSearchParams({ date_from: range.dateFrom, date_to: range.dateTo }).toString();
+export function analyticsQuery(range: DateRangeValue, filters: TeamAnalyticsFilters = {}): string {
+  const params = new URLSearchParams({ date_from: range.dateFrom, date_to: range.dateTo });
+  const { members, ...roleFilters } = filters;
+  for (const [key, value] of Object.entries(roleFilters)) {
+    if (value) params.set(key, value);
+  }
+  for (const member of members ?? []) params.append("member", member);
+  return params.toString();
 }
 
 export function getMyTeams(): Promise<ApiResponse<ManagerTeams>> {
@@ -109,18 +124,64 @@ export function getMyTeams(): Promise<ApiResponse<ManagerTeams>> {
 export function getTeamOverview(
   teamId: string,
   range: DateRangeValue,
+  filters: TeamAnalyticsFilters = {},
 ): Promise<ApiResponse<TeamOverview>> {
-  return apiRequest<TeamOverview>(`/api/v1/manager/teams/${teamId}/overview?${rangeQuery(range)}`);
+  return apiRequest<TeamOverview>(
+    `/api/v1/manager/teams/${teamId}/overview?${analyticsQuery(range, filters)}`,
+  );
 }
 
 export function getMemberAnalytics(
   teamId: string,
   memberId: string,
   range: DateRangeValue,
+  filters: StaffAnalyticsFilterValues = {},
 ): Promise<ApiResponse<StaffAnalytics>> {
   return apiRequest<StaffAnalytics>(
-    `/api/v1/manager/teams/${teamId}/members/${memberId}/analytics?${rangeQuery(range)}`,
+    `/api/v1/manager/teams/${teamId}/members/${memberId}/analytics?${analyticsQuery(range, filters)}`,
   );
+}
+
+export function getTeamWork(teamId: string, scope: "open" | "all"): Promise<ApiResponse<TeamWork>> {
+  return apiRequest<TeamWork>(`/api/v1/manager/teams/${teamId}/work?scope=${scope}`);
+}
+
+export function getTeamTask(teamId: string, taskId: string): Promise<ApiResponse<TeamTaskDetail>> {
+  return apiRequest<TeamTaskDetail>(`/api/v1/manager/teams/${teamId}/tasks/${taskId}`);
+}
+
+export function setTeamLeadStatus(
+  teamId: string,
+  leadId: string,
+  status: TeamLeadStatus,
+): Promise<ApiResponse<TeamWorkUpdate>> {
+  return apiRequest<TeamWorkUpdate>(`/api/v1/manager/teams/${teamId}/leads/${leadId}`, {
+    method: "PATCH",
+    body: { status },
+  });
+}
+
+export function updateTeamTask(
+  teamId: string,
+  taskId: string,
+  change: { due_at: string } | { cancel_reason: string },
+): Promise<ApiResponse<TeamWorkUpdate>> {
+  return apiRequest<TeamWorkUpdate>(`/api/v1/manager/teams/${teamId}/tasks/${taskId}`, {
+    method: "PATCH",
+    body: change,
+  });
+}
+
+export function addTeamNote(
+  teamId: string,
+  kind: "leads" | "tasks",
+  id: string,
+  note: { body: string; follow_up_at?: string },
+): Promise<ApiResponse<TeamWorkNote>> {
+  return apiRequest<TeamWorkNote>(`/api/v1/manager/teams/${teamId}/${kind}/${id}/notes`, {
+    method: "POST",
+    body: note,
+  });
 }
 
 export function getMemberWork(
