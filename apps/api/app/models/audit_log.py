@@ -136,6 +136,10 @@ class AuditAction(enum.StrEnum):
     CONTENT_BLOCK_ARCHIVED = "content_block_archived"
     LOAN_APPLICATION_UPDATED = "loan_application_updated"
     PROPERTY_DEAL_UPDATED = "property_deal_updated"
+    AGENT_LEAD_RESUBMITTED = "agent_lead_resubmitted"
+    AGENT_PAYOUT_DETAILS_UPDATED = "agent_payout_details_updated"
+    AGENT_PAYOUT_DETAILS_DELETED = "agent_payout_details_deleted"
+    AGENT_PAYOUT_DETAILS_VIEWED = "agent_payout_details_viewed"
 
 
 _ev = lambda x: [e.value for e in x]  # noqa: E731

@@ -66,12 +66,46 @@ export function formatConversionRate(total: number, converted: number): string {
   return `${Math.round((converted / total) * 1000) / 10}%`;
 }
 
+/** Optional narrowing for the leads/loans/deals reports (the agents report ignores it). */
+export type ReportDetailFilters = {
+  telecallerProfileUuid?: string;
+  leadSource?: "direct" | "agent" | "client";
+  callStatus?: string;
+  interest?: string;
+  leadStatus?: string;
+  loanStatus?: string;
+  loanTypeId?: string;
+  bankId?: string;
+  dealStatus?: string;
+  propertyCity?: string;
+  propertyCategory?: string;
+};
+
+const DETAIL_PARAM: Record<keyof ReportDetailFilters, string> = {
+  telecallerProfileUuid: "telecaller_profile_uuid",
+  leadSource: "lead_source",
+  callStatus: "call_status",
+  interest: "interest",
+  leadStatus: "lead_status",
+  loanStatus: "loan_status",
+  loanTypeId: "loan_type_id",
+  bankId: "bank_id",
+  dealStatus: "deal_status",
+  propertyCity: "property_city",
+  propertyCategory: "property_category",
+};
+
+export function activeDetailCount(detail: ReportDetailFilters | undefined): number {
+  return Object.values(detail ?? {}).filter((value) => typeof value === "string" && value.trim() !== "").length;
+}
+
 export type ReportParamsInput = {
   dateFrom: string;
   dateTo: string;
   bucket?: ReportBucket;
   businessLine?: string;
   agentProfileUuids?: string[];
+  detail?: ReportDetailFilters;
   sortBy?: string;
   sortDir?: SortDir;
   limit?: number;
@@ -85,6 +119,10 @@ export function buildReportParams(filters: ReportParamsInput): URLSearchParams {
   if (filters.bucket) params.set("bucket", filters.bucket);
   if (filters.businessLine) params.set("business_line", filters.businessLine);
   for (const id of filters.agentProfileUuids ?? []) params.append("agent_profile_uuid", id);
+  for (const [key, value] of Object.entries(filters.detail ?? {}) as [keyof ReportDetailFilters, string | undefined][]) {
+    const trimmed = value?.trim();
+    if (trimmed) params.set(DETAIL_PARAM[key], trimmed);
+  }
   if (filters.sortBy) params.set("sort_by", filters.sortBy);
   if (filters.sortDir) params.set("sort_dir", filters.sortDir);
   if (filters.limit !== undefined) params.set("limit", String(filters.limit));

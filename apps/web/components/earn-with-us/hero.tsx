@@ -17,11 +17,11 @@ export function EarnHero() {
         <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
           <div>
             <h1 className="max-w-3xl font-heading text-3xl font-semibold leading-tight tracking-tight text-brand-heading sm:text-5xl lg:text-6xl">
-              Become a partner, or refer and earn
+              Become a loan DSA or property partner, or refer and earn
             </h1>
             <p className="mt-5 max-w-2xl text-lg text-[var(--nav-text)] sm:text-xl">
               Become a partner and earn commission on the deals you bring. Or refer
-              friends and earn cashback when their property purchase or loan goes
+              friends and earn a referral bonus when their property purchase or loan goes
               through. Both are free.
             </p>
             <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">

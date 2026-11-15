@@ -81,6 +81,23 @@ describe("Lead Details validation", () => {
     expect(validateCallLog({ notes: "Spoke to the customer", followUpAt: "" }, now)).toEqual({});
   });
 
+  it("allows call notes and task descriptions up to 1500 words", () => {
+    const fifteenHundred = Array.from({ length: 1500 }, () => "word").join(" ");
+    const tooMany = `${fifteenHundred} extra`;
+
+    expect(validateCallLog({ notes: fifteenHundred, followUpAt: "" })).toEqual({});
+    expect(validateCallLog({ notes: tooMany, followUpAt: "" })).toEqual({
+      notes: "Notes must be 1,500 words or fewer.",
+    });
+    expect(validateFieldTask({ notes: fifteenHundred, dueAt: "" })).toEqual({});
+    expect(validateFieldTask({ notes: tooMany, dueAt: "" })).toEqual({
+      notes: "Task description must be 1,500 words or fewer.",
+    });
+    expect(validateCallLog({ notes: "x".repeat(10_001), followUpAt: "" })).toEqual({
+      notes: "Notes must be 10,000 characters or fewer.",
+    });
+  });
+
   it("validates optional loan progress terms when entered", () => {
     expect(
       validateLoanProgressTerms({
@@ -93,6 +110,45 @@ describe("Lead Details validation", () => {
       interestRate: "Interest rate must be 100 or less.",
       processingFee: "Processing fee must use no more than 2 decimal places.",
     });
+  });
+
+  it("requires the sanctioned amount and bank to sanction or disburse", () => {
+    expect(
+      validateLoanProgressTerms({
+        amountSanctioned: " ",
+        bankId: "",
+        interestRate: "",
+        processingFee: "",
+        requireSanctionTerms: true,
+      }),
+    ).toEqual({
+      amountSanctioned: "Enter the sanctioned amount.",
+      bankId: "Choose the lending bank.",
+    });
+    expect(
+      validateLoanProgressTerms({
+        amountSanctioned: "0",
+        bankId: "bank-1",
+        interestRate: "",
+        processingFee: "",
+        requireSanctionTerms: true,
+      }),
+    ).toEqual({ amountSanctioned: "Sanctioned amount must be greater than 0." });
+    expect(
+      validateLoanProgressTerms({
+        amountSanctioned: "500000",
+        bankId: "bank-1",
+        interestRate: "",
+        processingFee: "",
+        requireSanctionTerms: true,
+      }),
+    ).toEqual({});
+  });
+
+  it("keeps sanction terms optional before sanction", () => {
+    expect(
+      validateLoanProgressTerms({ amountSanctioned: "", interestRate: "", processingFee: "" }),
+    ).toEqual({});
   });
 
   it("requires at least one valid property term", () => {

@@ -325,6 +325,10 @@ async def list_banners_public(
                     property_listing is not None
                     and property_listing.rera_verification_status == ReraVerificationStatus.VERIFIED
                 ),
+                # Only the id leaves the API for YouTube; the processed MP4 is
+                # served from its canonical public key (None if not public/).
+                youtube_video_id=banner.youtube_video_id,
+                video_url=asset_image_url(banner.video_key) if banner.video_key else None,
             )
         )
     return PublicBannerListResponse(banners=response)
