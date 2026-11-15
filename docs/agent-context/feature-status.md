@@ -2,6 +2,43 @@
 
 Status: **Derived living implementation ledger**
 
+**In review — item 9: Sub Admin managers over teams (CS-019)** (2026-11-15),
+branch `feat/sub-admin-team-managers` from `upstream/main` `76dced7` (PR 1,
+API) with the web PR stacked on it.
+- API: migration `e4f6a8c0b2d5` (one head) adds `staff_teams` (one line, one
+  member role, partial-unique live team per manager per line) and
+  `staff_team_members` (one team per member per line), Main-Admin-only write
+  policies, the live `team_manager_reaches()` predicate, SELECT-only manager
+  policies (leads, call logs, tasks, the five request tables, a lead behind a
+  managed Employee's task, members' staff profiles), names via
+  `team_roster_names()` (auth_users stays closed: it holds the password hash,
+  email and income), and `team_manager_reassign_lead/_task` definer functions.
+  Managers have no UPDATE policy. `/api/v1/admin/teams` (list for platform
+  Admins; create, rename, re-manage, archive, add/remove members for the Main
+  Admin) and `/api/v1/manager` (own teams, overview, member analytics and
+  work, audited lead detail, reassignment inside the team). Eight new audit
+  actions; the personal analytics builders gain manager wording.
+- Web (stacked PR): Admin `/dashboard/teams`, Sub Admin `/dashboard/team` and
+  `/dashboard/team/[teamId]/members/[memberId]`; "My team" appears in the menu
+  only when the manager API returns a team. Analytics charts and the calendar
+  date-range picker from upstream PR #346 are reused; manager analytics pin
+  the team's line, so a dual-line member's other-line work never counts.
+- Evidence: `test_staff_teams_api.py` (5) and `test_team_manager_api.py` (7)
+  pass on a fresh database after upgrade → downgrade → upgrade (one head, on
+  top of `a7c9e1b3d5f2`), together with `test_staff_analytics_api.py` (28 in
+  all). They cover
+  cross-team, cross-line, non-member, forged-identity, deactivation, removal,
+  archive, no direct UPDATE, definer-function refusal and audit rows. Ruff
+  clean; contracts regenerated and verified current. Security review found
+  and fixed one issue (member auth rows were readable). PR review found and
+  fixed one (renaming a team with a deactivated manager returned 500).
+  Web: typecheck, lint, unit tests (128 files / 882); Playwright
+  `sub-admin-teams.spec.ts` (4) and `staff-analytics.spec.ts` (3) pass against
+  `pnpm dev` at 1440 and 360 px with screenshots reviewed.
+  `dashboard-navigation.spec.ts` needs a live API on :8000 and was not run.
+  Full API suite and the production web build: see the PR. Completion
+  impact: item 9 delivered pending review; routing unchanged by design.
+
 **Implemented — loan application review and agreement stages** (2026-11-15;
 [PR #347](https://github.com/brollysolutions/client1/pull/347), mirror vamshisaideep9/client1#51, open for review), branch `feat/loan-status-stages` from `upstream/main`
 `e25957f`.

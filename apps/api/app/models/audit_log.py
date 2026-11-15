@@ -140,6 +140,14 @@ class AuditAction(enum.StrEnum):
     AGENT_PAYOUT_DETAILS_UPDATED = "agent_payout_details_updated"
     AGENT_PAYOUT_DETAILS_DELETED = "agent_payout_details_deleted"
     AGENT_PAYOUT_DETAILS_VIEWED = "agent_payout_details_viewed"
+    STAFF_TEAM_CREATED = "staff_team_created"
+    STAFF_TEAM_UPDATED = "staff_team_updated"
+    STAFF_TEAM_ARCHIVED = "staff_team_archived"
+    STAFF_TEAM_MEMBER_ADDED = "staff_team_member_added"
+    STAFF_TEAM_MEMBER_REMOVED = "staff_team_member_removed"
+    TEAM_LEAD_VIEWED = "team_lead_viewed"
+    TEAM_LEAD_REASSIGNED = "team_lead_reassigned"
+    TEAM_TASK_REASSIGNED = "team_task_reassigned"
 
 
 _ev = lambda x: [e.value for e in x]  # noqa: E731

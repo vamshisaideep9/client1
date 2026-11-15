@@ -583,6 +583,41 @@ Evidence:
 - [`apps/web/lib/property-submit.ts`](../../apps/web/lib/property-submit.ts)
 - [`apps/api/app/tests/test_property_media_constraints.py`](../../apps/api/app/tests/test_property_media_constraints.py)
 
+### CS-019 — Sub Admin managers over Telecaller / Employee teams
+
+**Decision (2026-11-15, user-approved; item 9 of the 2026-11-13 staff
+feedback list):** Narrowly amends CS-003. A Sub Admin stays platform-scoped
+content staff, but the Main Admin may make one the manager of a team.
+
+- *Team shape.* A team is one operational line plus one member role: all
+  Telecallers or all Employees. A Sub Admin manages at most one live team per
+  line; a staff member is in at most one team per line (a dual-line member may
+  join one team in each line).
+- *Who edits.* Only the Main Admin creates, renames, re-manages, staffs or
+  archives teams; every platform Admin may view them. Archiving removes the
+  members.
+- *Manager powers.* Read the team's work in the team's line (leads with client
+  name and mobile, applications, enquiries, visits, deals, call outcomes and
+  notes; field tasks and their client), each member's analytics, and move open
+  work between members of the same team. Every lead-detail view and every move
+  is audited. Approvals, payouts, staff creation and pool assignment stay
+  Admin-only.
+- *Routing is unchanged.* New leads and tasks still round-robin across the
+  whole line; teams only supervise.
+- *Enforcement.* Manager reach is not a token claim. Read-only RLS policies
+  call `team_manager_reaches()`, which reads the team tables live, so removing
+  a member, archiving a team, changing its manager or deactivating the Sub
+  Admin ends access on the next request. Managers have no UPDATE policy; moves
+  run through confined database functions that re-check team, line, open
+  status and target.
+
+Evidence:
+
+- [`apps/api/alembic/versions/e4f6a8c0b2d5_staff_teams_and_managers.py`](../../apps/api/alembic/versions/e4f6a8c0b2d5_staff_teams_and_managers.py)
+- [`apps/api/app/services/team_manager.py`](../../apps/api/app/services/team_manager.py)
+- [`apps/api/app/tests/test_team_manager_api.py`](../../apps/api/app/tests/test_team_manager_api.py)
+- [`apps/api/app/tests/test_staff_teams_api.py`](../../apps/api/app/tests/test_staff_teams_api.py)
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in

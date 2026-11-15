@@ -4752,7 +4752,15 @@
           "agent_lead_resubmitted",
           "agent_payout_details_updated",
           "agent_payout_details_deleted",
-          "agent_payout_details_viewed"
+          "agent_payout_details_viewed",
+          "staff_team_created",
+          "staff_team_updated",
+          "staff_team_archived",
+          "staff_team_member_added",
+          "staff_team_member_removed",
+          "team_lead_viewed",
+          "team_lead_reassigned",
+          "team_task_reassigned"
         ],
         "title": "AuditAction",
         "type": "string"
@@ -11008,6 +11016,22 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "ManagerTeamsResponse": {
+        "properties": {
+          "teams": {
+            "items": {
+              "$ref": "#/components/schemas/StaffTeamRead"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "teams"
+        ],
+        "title": "ManagerTeamsResponse",
         "type": "object"
       },
       "ManualChequeIssue": {
@@ -17468,6 +17492,179 @@
         "title": "StaffInvitePreview",
         "type": "object"
       },
+      "StaffTeamCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "manager_staff_profile_uuid": {
+            "format": "uuid",
+            "title": "Manager Staff Profile Uuid",
+            "type": "string"
+          },
+          "member_role": {
+            "enum": [
+              "telecaller",
+              "employee"
+            ],
+            "title": "Member Role",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "business_line",
+          "member_role",
+          "manager_staff_profile_uuid"
+        ],
+        "title": "StaffTeamCreate",
+        "type": "object"
+      },
+      "StaffTeamListResponse": {
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "teams": {
+            "items": {
+              "$ref": "#/components/schemas/StaffTeamRead"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "teams",
+          "can_edit"
+        ],
+        "title": "StaffTeamListResponse",
+        "type": "object"
+      },
+      "StaffTeamRead": {
+        "properties": {
+          "archived_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "manager": {
+            "$ref": "#/components/schemas/TeamPersonRead"
+          },
+          "member_role": {
+            "enum": [
+              "telecaller",
+              "employee"
+            ],
+            "title": "Member Role",
+            "type": "string"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberRead"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "business_line",
+          "member_role",
+          "manager",
+          "members",
+          "archived_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "StaffTeamRead",
+        "type": "object"
+      },
+      "StaffTeamUpdate": {
+        "additionalProperties": false,
+        "description": "Rename, hand to another manager, or archive. Archiving is final.",
+        "properties": {
+          "archive": {
+            "default": false,
+            "title": "Archive",
+            "type": "boolean"
+          },
+          "manager_staff_profile_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Staff Profile Uuid"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "StaffTeamUpdate",
+        "type": "object"
+      },
       "SubAdminHomeResponse": {
         "properties": {
           "content_drafts_count": {
@@ -19177,6 +19374,329 @@
         "title": "TaskType",
         "type": "string"
       },
+      "TeamEligibleResponse": {
+        "description": "Pickers: Sub Admins free to manage a team in this line, and active staff\nof the member role who are not yet in a team in this line.",
+        "properties": {
+          "managers": {
+            "items": {
+              "$ref": "#/components/schemas/TeamPersonRead"
+            },
+            "title": "Managers",
+            "type": "array"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/TeamPersonRead"
+            },
+            "title": "Members",
+            "type": "array"
+          }
+        },
+        "required": [
+          "managers",
+          "members"
+        ],
+        "title": "TeamEligibleResponse",
+        "type": "object"
+      },
+      "TeamLastCall": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "disposition": {
+            "title": "Disposition",
+            "type": "string"
+          },
+          "follow_up_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Up At"
+          },
+          "interest_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interest Level"
+          }
+        },
+        "required": [
+          "disposition",
+          "interest_level",
+          "follow_up_at",
+          "created_at"
+        ],
+        "title": "TeamLastCall",
+        "type": "object"
+      },
+      "TeamLeadDetailResponse": {
+        "properties": {
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/LeadActivityRead"
+            },
+            "title": "Activities",
+            "type": "array"
+          },
+          "assigned_to": {
+            "$ref": "#/components/schemas/TeamMemberRead"
+          },
+          "lead": {
+            "$ref": "#/components/schemas/TeamLeadRow"
+          }
+        },
+        "required": [
+          "lead",
+          "assigned_to",
+          "activities"
+        ],
+        "title": "TeamLeadDetailResponse",
+        "type": "object"
+      },
+      "TeamLeadRow": {
+        "properties": {
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_call": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamLastCall"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mobile": {
+            "title": "Mobile",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/LeadRequestSummary"
+            },
+            "title": "Requests",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "mobile",
+          "status",
+          "business_line",
+          "created_at",
+          "updated_at",
+          "requests",
+          "last_call"
+        ],
+        "title": "TeamLeadRow",
+        "type": "object"
+      },
+      "TeamMemberRead": {
+        "properties": {
+          "added_at": {
+            "format": "date-time",
+            "title": "Added At",
+            "type": "string"
+          },
+          "business_line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Line"
+          },
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          },
+          "staff_code": {
+            "title": "Staff Code",
+            "type": "string"
+          },
+          "staff_profile_uuid": {
+            "format": "uuid",
+            "title": "Staff Profile Uuid",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "staff_profile_uuid",
+          "first_name",
+          "last_name",
+          "staff_code",
+          "status",
+          "business_line",
+          "added_at"
+        ],
+        "title": "TeamMemberRead",
+        "type": "object"
+      },
+      "TeamMemberSummary": {
+        "properties": {
+          "kpis": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsKpi"
+            },
+            "title": "Kpis",
+            "type": "array"
+          },
+          "member": {
+            "$ref": "#/components/schemas/TeamMemberRead"
+          }
+        },
+        "required": [
+          "member",
+          "kpis"
+        ],
+        "title": "TeamMemberSummary",
+        "type": "object"
+      },
+      "TeamMemberWorkResponse": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "leads",
+              "tasks"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "leads": {
+            "items": {
+              "$ref": "#/components/schemas/TeamLeadRow"
+            },
+            "title": "Leads",
+            "type": "array"
+          },
+          "member": {
+            "$ref": "#/components/schemas/TeamMemberRead"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TeamTaskRow"
+            },
+            "title": "Tasks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "member",
+          "kind",
+          "leads",
+          "tasks"
+        ],
+        "title": "TeamMemberWorkResponse",
+        "type": "object"
+      },
+      "TeamOverviewResponse": {
+        "properties": {
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberSummary"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "range_days": {
+            "title": "Range Days",
+            "type": "integer"
+          },
+          "team": {
+            "$ref": "#/components/schemas/StaffTeamRead"
+          },
+          "totals": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsKpi"
+            },
+            "title": "Totals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "team",
+          "date_from",
+          "date_to",
+          "range_days",
+          "totals",
+          "members"
+        ],
+        "title": "TeamOverviewResponse",
+        "type": "object"
+      },
       "TeamPerformanceSummary": {
         "description": "Per-business-line performance summary.\n\nThe established data model has no mutable team-membership entity. Agents\nare permanently line-scoped, so the Loans and Real Estate business lines\nare the authoritative team dimension for FR-16.3.",
         "properties": {
@@ -19224,6 +19744,180 @@
           "deals_converted"
         ],
         "title": "TeamPerformanceSummary",
+        "type": "object"
+      },
+      "TeamPersonRead": {
+        "properties": {
+          "business_line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Line"
+          },
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          },
+          "staff_code": {
+            "title": "Staff Code",
+            "type": "string"
+          },
+          "staff_profile_uuid": {
+            "format": "uuid",
+            "title": "Staff Profile Uuid",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "staff_profile_uuid",
+          "first_name",
+          "last_name",
+          "staff_code",
+          "status",
+          "business_line"
+        ],
+        "title": "TeamPersonRead",
+        "type": "object"
+      },
+      "TeamReassignRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "to_staff_profile_uuid": {
+            "format": "uuid",
+            "title": "To Staff Profile Uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "to_staff_profile_uuid"
+        ],
+        "title": "TeamReassignRequest",
+        "type": "object"
+      },
+      "TeamReassignResponse": {
+        "properties": {
+          "assigned_staff_profile_uuid": {
+            "format": "uuid",
+            "title": "Assigned Staff Profile Uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "assigned_staff_profile_uuid",
+          "status"
+        ],
+        "title": "TeamReassignResponse",
+        "type": "object"
+      },
+      "TeamTaskRow": {
+        "properties": {
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lead_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Name"
+          },
+          "lead_uuid": {
+            "format": "uuid",
+            "title": "Lead Uuid",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "task_type": {
+            "title": "Task Type",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "lead_uuid",
+          "lead_name",
+          "task_type",
+          "status",
+          "business_line",
+          "notes",
+          "due_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TeamTaskRow",
         "type": "object"
       },
       "TelecallerClientHistoryResponse": {
@@ -27495,6 +28189,334 @@
         ]
       }
     },
+    "/api/v1/admin/teams": {
+      "get": {
+        "operationId": "get_teams_api_v1_admin_teams_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Archived",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffTeamListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Teams",
+        "tags": [
+          "teams"
+        ]
+      },
+      "post": {
+        "operationId": "post_team_api_v1_admin_teams_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffTeamCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffTeamRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Post Team",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/api/v1/admin/teams/eligible": {
+      "get": {
+        "operationId": "get_eligible_api_v1_admin_teams_eligible_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "business_line",
+            "required": true,
+            "schema": {
+              "enum": [
+                "loans",
+                "real_estate"
+              ],
+              "title": "Business Line",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "member_role",
+            "required": true,
+            "schema": {
+              "enum": [
+                "telecaller",
+                "employee"
+              ],
+              "title": "Member Role",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamEligibleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Eligible",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/api/v1/admin/teams/{team_id}": {
+      "patch": {
+        "operationId": "patch_team_api_v1_admin_teams__team_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffTeamUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffTeamRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Patch Team",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/api/v1/admin/teams/{team_id}/members/{staff_profile_uuid}": {
+      "delete": {
+        "operationId": "delete_member_api_v1_admin_teams__team_id__members__staff_profile_uuid__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "staff_profile_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Staff Profile Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffTeamRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Member",
+        "tags": [
+          "teams"
+        ]
+      },
+      "post": {
+        "operationId": "post_member_api_v1_admin_teams__team_id__members__staff_profile_uuid__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "staff_profile_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Staff Profile Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffTeamRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Post Member",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
     "/api/v1/admin/users": {
       "get": {
         "description": "The operational account directory.\n\nFiltering is server-side because the console pages this list: filtering only\nthe fetched page meant a match on page three was invisible from page one.\nEvery parameter is optional and omitting all of them preserves the original\nunfiltered behavior.",
@@ -32583,6 +33605,505 @@
         "summary": "Get My Loan Officer Contact",
         "tags": [
           "loans"
+        ]
+      }
+    },
+    "/api/v1/manager/teams": {
+      "get": {
+        "operationId": "get_my_teams_api_v1_manager_teams_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerTeamsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get My Teams",
+        "tags": [
+          "manager"
+        ]
+      }
+    },
+    "/api/v1/manager/teams/{team_id}/leads/{lead_id}": {
+      "get": {
+        "operationId": "get_lead_detail_api_v1_manager_teams__team_id__leads__lead_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Lead Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamLeadDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Lead Detail",
+        "tags": [
+          "manager"
+        ]
+      }
+    },
+    "/api/v1/manager/teams/{team_id}/leads/{lead_id}/reassign": {
+      "post": {
+        "operationId": "post_reassign_lead_api_v1_manager_teams__team_id__leads__lead_id__reassign_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Lead Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamReassignRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamReassignResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Post Reassign Lead",
+        "tags": [
+          "manager"
+        ]
+      }
+    },
+    "/api/v1/manager/teams/{team_id}/members/{member_id}/analytics": {
+      "get": {
+        "operationId": "get_member_analytics_api_v1_manager_teams__team_id__members__member_id__analytics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "member_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Member Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy period in days (7, 30 or 90).",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Legacy period in days (7, 30 or 90).",
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "First IST day of the period, inclusive.",
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "First IST day of the period, inclusive.",
+              "title": "Date From"
+            }
+          },
+          {
+            "description": "Last IST day of the period, inclusive.",
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Last IST day of the period, inclusive.",
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffAnalyticsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Member Analytics",
+        "tags": [
+          "manager"
+        ]
+      }
+    },
+    "/api/v1/manager/teams/{team_id}/members/{member_id}/work": {
+      "get": {
+        "operationId": "get_member_work_api_v1_manager_teams__team_id__members__member_id__work_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "member_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Member Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "pattern": "^(open|all)$",
+              "title": "Scope",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamMemberWorkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Member Work",
+        "tags": [
+          "manager"
+        ]
+      }
+    },
+    "/api/v1/manager/teams/{team_id}/overview": {
+      "get": {
+        "operationId": "get_overview_api_v1_manager_teams__team_id__overview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy period in days (7, 30 or 90).",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Legacy period in days (7, 30 or 90).",
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "First IST day of the period, inclusive.",
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "First IST day of the period, inclusive.",
+              "title": "Date From"
+            }
+          },
+          {
+            "description": "Last IST day of the period, inclusive.",
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Last IST day of the period, inclusive.",
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamOverviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Overview",
+        "tags": [
+          "manager"
+        ]
+      }
+    },
+    "/api/v1/manager/teams/{team_id}/tasks/{task_id}/reassign": {
+      "post": {
+        "operationId": "post_reassign_task_api_v1_manager_teams__team_id__tasks__task_id__reassign_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamReassignRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamReassignResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Post Reassign Task",
+        "tags": [
+          "manager"
         ]
       }
     },

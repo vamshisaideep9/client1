@@ -163,6 +163,41 @@ def _lines(filters: StaffAnalyticsFilters) -> tuple[str, ...] | None:
     return (filters.business_line, "both") if filters.business_line else None
 
 
+class InvalidAnalyticsWindow(ValueError):
+    """A requested period the analytics cannot serve; the message is user-facing."""
+
+
+def resolve_analytics_window(
+    date_from: date | None, date_to: date | None, days: int, now: datetime
+) -> AnalyticsWindow:
+    """Either both IST dates (inclusive, at most MAX_RANGE_DAYS, not in the
+    future) or the legacy ``days`` snapped to 7/30/90 and ending today."""
+    if date_from is None and date_to is None:
+        return AnalyticsWindow.last_days(clamp_range(days), now)
+    if date_from is None or date_to is None:
+        raise InvalidAnalyticsWindow("Send both date_from and date_to, or neither.")
+    if date_from > date_to:
+        raise InvalidAnalyticsWindow("date_from must not be after date_to.")
+    if date_to > today_ist(now):
+        raise InvalidAnalyticsWindow("date_to cannot be in the future.")
+    window = AnalyticsWindow(date_from, date_to)
+    if window.days > MAX_RANGE_DAYS:
+        raise InvalidAnalyticsWindow(f"Choose a period of at most {MAX_RANGE_DAYS} days.")
+    return window
+
+
+def _they(for_manager: bool) -> str:
+    return "they" if for_manager else "you"
+
+
+def _them(for_manager: bool) -> str:
+    return "them" if for_manager else "you"
+
+
+def _their(for_manager: bool) -> str:
+    return "their" if for_manager else "your"
+
+
 def _label(value: str) -> str:
     return value.replace("_", " ").capitalize()
 
@@ -241,6 +276,8 @@ async def telecaller_analytics(
     window: AnalyticsWindow,
     now: datetime,
     filters: StaffAnalyticsFilters = NO_FILTERS,
+    *,
+    for_manager: bool = False,
 ) -> StaffAnalyticsResponse:
     lines = _lines(filters)
     call_stmt = select(LeadActivity).where(
@@ -325,7 +362,7 @@ async def telecaller_analytics(
         ],
         trend=AnalyticsTrend(
             title="Calls per day" if window.bucket == "day" else "Calls per week",
-            description="Every call you logged, by outcome.",
+            description=f"Every call {_they(for_manager)} logged, by outcome.",
             series=_CALL_SERIES,
             points=_points(buckets),
         ),
@@ -343,14 +380,16 @@ async def telecaller_analytics(
             AnalyticsBreakdown(
                 key="request_status",
                 title="Applications by stage",
-                description="Every application, enquiry, visit and deal on your leads.",
+                description=(
+                    f"Every application, enquiry, visit and deal on {_their(for_manager)} leads."
+                ),
                 kind="ranked",
                 items=_counter_items(request_status)[:8],
             ),
         ],
         funnel=AnalyticsFunnel(
             title="Lead funnel",
-            description="All leads assigned to you.",
+            description=f"All leads assigned to {_them(for_manager)}.",
             steps=[
                 FunnelStep(key="assigned", label="Assigned", value=len(leads)),
                 FunnelStep(
@@ -379,6 +418,8 @@ async def employee_analytics(
     window: AnalyticsWindow,
     now: datetime,
     filters: StaffAnalyticsFilters = NO_FILTERS,
+    *,
+    for_manager: bool = False,
 ) -> StaffAnalyticsResponse:
     stmt = select(Task).where(Task.assigned_employee_profile_uuid == staff_profile_uuid)
     lines = _lines(filters)
@@ -439,7 +480,9 @@ async def employee_analytics(
         ],
         trend=AnalyticsTrend(
             title="Tasks per day" if window.bucket == "day" else "Tasks per week",
-            description="Tasks assigned to you and tasks you completed.",
+            description=(
+                f"Tasks assigned to {_them(for_manager)} and tasks {_they(for_manager)} completed."
+            ),
             series=[
                 TrendSeries(key="assigned", label="Assigned"),
                 TrendSeries(key="completed", label="Completed"),
@@ -450,7 +493,7 @@ async def employee_analytics(
             AnalyticsBreakdown(
                 key="status",
                 title="Tasks by status",
-                description="Everything currently assigned to you.",
+                description=f"Everything currently assigned to {_them(for_manager)}.",
                 kind="share",
                 items=_ordered_items(
                     Counter(task.status.value for task in tasks), [s.value for s in TaskStatus]
