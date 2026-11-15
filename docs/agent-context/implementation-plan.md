@@ -60,6 +60,23 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In review — bulk development test data** (2026-11-15; branch
+`chore/bulk-test-seed` from `upstream/main` `1454770`; direct user request,
+development-only scripts, no requirement or completion-percentage change).
+`app.scripts.seed_bulk` (plan in the pure `bulk_catalog`) adds 251 accounts:
+2 Admins, 9 Sub Admins (5 manage the five CS-019 teams, 2 hold the payout
+grant), 15 each of Telecallers, Employees and Agents, and 195 Clients (110
+profiles per line, 25 on both). It seeds 110 listings over all nine subtypes and
+records in every lead, loan, deal, visit, pickup, task, payout, cashback,
+commission, referral, ticket and account state, plus about 30 MB of synthetic
+photos, panoramas and PDFs written at the services' canonical keys. Shared
+published password, `ENV=development` only, idempotent UUIDv5 rows.
+Non-goals: banners, videos, KYC images, any schema or API change. Next: merge,
+then seed the dev droplet once the user confirms its IP allowlist (runbook
+step 8). Queued follow-up (user decision 2026-11-15): a visible
+Razorpay TEST MODE payout simulator for mock-mode payout approval.
+Recommended: Opus 5.5 / high.
+
 **In progress — dev droplet serves the production web build** (2026-11-15;
 branch `chore/dev-droplet-prod-web` from `upstream/main` `9091252`; direct user
 request, no requirement or completion-percentage change). A Lighthouse run on

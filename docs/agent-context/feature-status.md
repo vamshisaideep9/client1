@@ -2,6 +2,29 @@
 
 Status: **Derived living implementation ledger**
 
+**In review — bulk development test data** (2026-11-15), branch
+`chore/bulk-test-seed` from `upstream/main` `1454770`. Development-only
+scripts; no requirement, schema, API, permission or contract change, so the
+completion percentage is unchanged.
+- `bulk_catalog` (pure plan) and `seed_bulk` (writer) add 251 accounts, 110
+  listings, 24 submissions, 290 leads, 145 loan applications, 79 deals, 90
+  tasks and every money/support state; `docs/demo-data.md` lists the roster.
+  `seed_demo` now shares `add_once`/`put_once` from `seed_helpers`.
+- Evidence (fresh, isolated `python:3.13` container on `client1_default`,
+  throwaway databases, an in-container S3 emulator for media):
+  `test_seed_bulk.py` (9) with the demo-media, seed-helper and roster suites:
+  39 passed. A clean `seed_bulk --verify` run wrote 737 media objects and
+  logged in 12 sample accounts across every role with non-empty role APIs; a
+  rerun inserted no rows or objects; `seed_demo --verify` still passes beside
+  it; the Admin payout link-divergence report is empty. `ruff check` and
+  `ruff format --check` pass for the whole API. Full API suite on a fresh
+  database: 2330 passed, 3 failed; the same three
+  (`test_single_alembic_head_includes_this_revision` and the public banner and
+  property `test_response_omits_internal_fields`) also fail on unmodified
+  `upstream/main`, so they are pre-existing.
+- Not verified here: the dev droplet run (needs its Space and the user's
+  allowlist confirmation) and browser screenshots.
+
 **In review — manager edits and filters (CS-020)** (2026-11-15), branch
 `feat/team-manager-edits-filters` from `upstream/main` `bda242b`: PR 1 (API)
 [#350](https://github.com/brollysolutions/client1/pull/350), mirror

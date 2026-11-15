@@ -203,6 +203,15 @@ infra/dev-droplet/dc.sh exec -T api uv run python -m app.scripts.seed_demo --ver
 Demo media is written to the dev Space, so run `configure_storage` (step 4b)
 first.
 
+For volume testing, the bulk dataset adds 251 more accounts (5 Sub Admin
+managers with teams, 15 each of Telecallers, Employees and Agents, 195 Clients),
+110 listings and records in every workflow state, plus about 30 MB of synthetic
+media. It uses the same published password, so the same allowlist rule applies:
+
+```bash
+infra/dev-droplet/dc.sh exec -T api uv run python -m app.scripts.seed_bulk --verify
+```
+
 ## Updating
 
 ```bash

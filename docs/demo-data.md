@@ -69,6 +69,72 @@ create fake KYC references, call email/voice/push/payment providers, or weaken
 authorization/RLS. Those boundaries need their real UI flows or separately
 approved source material.
 
+## Bulk test data
+
+For volume and edge-case testing, a second, much larger dataset sits beside
+the curated demo accounts:
+
+```bash
+docker compose exec -T api uv run python -m app.scripts.seed_bulk --verify
+```
+
+It is development-only, idempotent and resumable (every row has a fixed
+UUIDv5 id in its own namespace and is inserted only when missing), and it
+never touches the demo accounts above or any unrelated row. `--credentials`
+prints the roster; `--skip-media` writes rows only. Like the demo seeder, a
+rerun restores each bulk account's password and planned account status.
+
+The bulk Telecallers and Employees are active staff, so on a shared
+environment the normal round-robin also assigns new real leads and tasks to
+them.
+
+All bulk accounts use the same password as the demo accounts (`Demo@1234`) on
+mobiles `+91 92000 xxxxx`:
+
+| Accounts | Mobiles | Notes |
+| --- | --- | --- |
+| 2 Admins | `+919200000101`-`102` | Ordinary platform Admins; never Main Admin |
+| 9 Sub Admins | `+919200000111`-`119` | 01-05 manage the five teams; 06-07 may prepare payout requests |
+| 15 Telecallers | `+919200000131`-`145` | 01-08 Loans, 09-15 Real Estate; 08 suspended; 07 and 15 in no team |
+| 15 Employees | `+919200000151`-`165` | 01-08 Loans, 09-15 Real Estate; 15 inactive; 08 in no team |
+| 15 Agents | `+919200000171`-`185` | 01-08 Loans, 09-15 Real Estate (with RERA codes); 15 suspended |
+| 195 Clients | `+919200010001`-`10195` | 001-085 Loans, 086-170 Real Estate, 171-195 both lines |
+
+The teams are Loans callers A and B, Real Estate callers, Loans field team and
+Real Estate field team.
+
+What it covers:
+
+- 110 published listings across all nine property subtypes, sale and rent,
+  every RERA applicability, ready and under construction, each passing the
+  same `SubmissionFacts` validation as a real submission; 3-6 gallery photos
+  each and a 360 panorama on every third; 24 submissions (pending, approved,
+  rejected) with photos, panoramas and a PDF.
+- Leads in every status (direct, Agent-introduced, expired Agent protection,
+  released, unassigned) with call activity and overdue, due and upcoming
+  callbacks.
+- Loan applications in all 13 statuses across the configured loan products,
+  with form answers validated against each product's own form, sanction and
+  fee details, transaction history, and loan documents (some verified, some
+  with review notes); credit-card enquiries.
+- Bookmarks, enquiries, site visits, vehicle pickups and property deals in
+  every status.
+- Employee tasks of every type in every status, with collected documents and
+  visit photos.
+- Fee cashbacks, commissions and referrals in every status, and payouts in all
+  eight maker/checker and gateway states with matching ledger rows. Gateway
+  ids are synthetic; no payment provider is called.
+- Support tickets in every status and category, two notifications per staff
+  account and per sampled client, and audit examples.
+- Account states: suspended and pending-password-reset users; pending,
+  suspended and inactive profiles; five profiles per line with no activity at
+  all for empty-state screens.
+
+Not included, on purpose: banners, campaign artwork and videos (use
+`seed_demo` for those), and Aadhaar/PAN or other KYC images. Media is written
+directly at the upload services' canonical keys, so seeding does not use up
+any account's hourly upload quota.
+
 ## Reruns and local state
 
 Rerunning is safe and refreshes the known password for the fixed demo accounts.
