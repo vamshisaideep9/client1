@@ -20,7 +20,7 @@ import logging
 from collections.abc import Sequence
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +28,7 @@ from app.core.config import settings
 from app.core.deps import CurrentUser, get_active_user, is_platform_admin
 from app.db.session import get_db
 from app.models.payout import Payout, PayoutProvider, PayoutStatus, PayoutType
+from app.schemas.agent_payout_details import SavedPayoutDestinationRead
 from app.schemas.payments import (
     ManualChequeIssue,
     PayoutCreate,
@@ -40,6 +41,7 @@ from app.schemas.payments import (
     PayoutReject,
     WebhookAck,
 )
+from app.services import agent_payout_details
 from app.services import payments as payments_service
 from app.services.payout_links import list_link_divergences
 from app.services.payout_recipients import resolve_payout_identities, search_payout_recipients
@@ -358,6 +360,83 @@ async def list_payout_recipients(
             for h in hits
         ]
     )
+
+
+async def _reveal_saved_destination(
+    current_user: CurrentUser,
+    *,
+    recipient_auth_user_uuid: UUID | None = None,
+    agent_profile_uuid: UUID | None = None,
+) -> SavedPayoutDestinationRead:
+    _require_payout_requester(current_user)
+    if recipient_auth_user_uuid == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot create a payout to yourself.",
+        )
+    try:
+        saved = await agent_payout_details.reveal_for_payout(
+            actor_auth_user_uuid=current_user.id,
+            actor_role=current_user.role,
+            recipient_auth_user_uuid=recipient_auth_user_uuid,
+            agent_profile_uuid=agent_profile_uuid,
+        )
+    except agent_payout_details.SelfPayoutDetailsForbidden as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot create a payout to yourself.",
+        ) from exc
+    except agent_payout_details.PayoutDetailsUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Saved payout details are not available right now.",
+        ) from exc
+    except agent_payout_details.PayoutDetailsUnreadable as exc:
+        logger.error("payout.saved_destination_unreadable")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The saved payout details could not be read. Ask the Agent to save them again.",
+        ) from exc
+    if saved is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This recipient has not saved payout details.",
+        )
+    return SavedPayoutDestinationRead(
+        upi_id=saved.upi_id, bank=saved.bank, updated_at=saved.updated_at
+    )
+
+
+@router.get(
+    "/recipients/{user_uuid}/saved-destination",
+    response_model=SavedPayoutDestinationRead,
+)
+async def get_recipient_saved_destination(
+    user_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+) -> SavedPayoutDestinationRead:
+    """Prefill a payout from the bank account / UPI ID an Agent saved.
+
+    Same access as the recipient picker. Every successful read is audited
+    (agent_payout_details_viewed); a maker's own details are refused.
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    return await _reveal_saved_destination(current_user, recipient_auth_user_uuid=user_uuid)
+
+
+@router.get(
+    "/agents/{agent_profile_uuid}/saved-destination",
+    response_model=SavedPayoutDestinationRead,
+)
+async def get_agent_saved_destination(
+    agent_profile_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+) -> SavedPayoutDestinationRead:
+    """Same as the recipient prefill, keyed by Agent profile (commission payouts)."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return await _reveal_saved_destination(current_user, agent_profile_uuid=agent_profile_uuid)
 
 
 @router.get("/link-divergences", response_model=PayoutLinkDivergencesRead)
