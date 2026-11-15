@@ -43,10 +43,10 @@ function mediaSummary(submission: Submission): string {
   const media = submission.media ?? [];
   const images = media.filter((asset) => asset.kind === "image").length;
   const documents = media.filter((asset) => asset.kind === "document").length;
-  const panorama = media.some((asset) => asset.kind === "panorama");
+  const panoramas = media.filter((asset) => asset.kind === "panorama").length;
   return [
     `${images} ${images === 1 ? "image" : "images"}`,
-    panorama ? "360° panorama" : null,
+    panoramas ? `${panoramas} 360° ${panoramas === 1 ? "image" : "images"}` : null,
     documents ? `${documents} private ${documents === 1 ? "document" : "documents"}` : null,
   ].filter(Boolean).join(" · ");
 }

@@ -74,6 +74,7 @@ CATALOGUE: tuple[FieldDefinition, ...] = (
         locked=True,
         lock_reason=_MOBILE_LOCK,
     ),
+    FieldDefinition(FieldTargetRole.TELECALLER, "lead", "referrer", "Referred by (ID)"),
     FieldDefinition(
         FieldTargetRole.TELECALLER,
         "lead",
@@ -164,6 +165,7 @@ CATALOGUE: tuple[FieldDefinition, ...] = (
             FieldVisibilityMode.SHARE_LINK,
         ),
     ),
+    FieldDefinition(FieldTargetRole.EMPLOYEE, "lead", "referrer", "Referred by (ID)"),
 )
 
 _DEFINITIONS = {definition.key: definition for definition in CATALOGUE}

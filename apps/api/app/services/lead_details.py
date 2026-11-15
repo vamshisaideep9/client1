@@ -115,9 +115,14 @@ def editable_paths(lead: Lead, actor: DetailActor) -> list[str]:
 
 def to_read(lead: Lead, actor: DetailActor) -> LeadDetailsRead:
     source_requirement = lead.requirement or {}
-    safe_requirement = (
-        {"notes": source_requirement["notes"]} if "notes" in source_requirement else None
-    )
+    # Notes plus the server-resolved title of the listing/product an Agent
+    # picked at introduction (services/agent._resolve_interest). Other keys
+    # stay internal.
+    safe_requirement = {
+        key: source_requirement[key]
+        for key in ("notes", "interest_title")
+        if key in source_requirement
+    } or None
     safe_owners = {
         path: descriptor["role"]
         for path, descriptor in (lead.detail_ownership or {}).items()

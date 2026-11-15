@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CopyProtected } from "@/components/help/copy-protected";
 import { SITE_NAME } from "@/lib/site";
 
 
@@ -24,7 +25,7 @@ function BulletList({ items }: { items: string[] }) {
 
 export function PrivacyContent({ dashboard = false }: { dashboard?: boolean }) {
   return (
-    <section className="w-full bg-surface-sky px-4 py-10 sm:px-6 sm:py-14">
+    <CopyProtected className="w-full bg-surface-sky px-4 py-10 sm:px-6 sm:py-14">
       <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-surface px-5 py-10 leading-relaxed sm:px-10 sm:py-12">
         <h1 className="font-heading text-3xl font-semibold leading-tight tracking-tight text-[var(--nav-text)] sm:text-4xl">
           Privacy Policy
@@ -55,7 +56,7 @@ export function PrivacyContent({ dashboard = false }: { dashboard?: boolean }) {
               href={dashboard ? "/dashboard/cookies" : "/cookies"}
               className="font-medium text-brand-link underline underline-offset-4"
             >
-              Cookie Notice
+              Cookie Policy
             </Link>{" "}
             lists each cookie and the separate browser storage used by the
             website.
@@ -134,6 +135,6 @@ export function PrivacyContent({ dashboard = false }: { dashboard?: boolean }) {
           Contact us with questions
         </Link>
       </div>
-    </section>
+    </CopyProtected>
   );
 }

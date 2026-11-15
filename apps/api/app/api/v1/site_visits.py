@@ -1,9 +1,11 @@
 """Client site-visit requests — book, list own, and cancel.
 
-Real-estate line. RLS (migration 9c1d2e3f4a5b) is the access boundary: a
-client sees only their own visits; real-estate telecaller/employee/sub_admin/
-agent see all real-estate-line visits; platform Admin/Sub Admin see all. The
-client never supplies user_uuid/business_line/status — the router stamps
+Real-estate line. RLS (migrations 9c1d2e3f4a5b, b4d6f8a0c2e3) admits the
+owner, real-estate telecaller/employee/sub_admin for their own workflows, and
+the platform Admin; Agents are excluded. This router's list is the client's
+"My Site Visits" and is always filtered to the caller's own rows, so
+line-scoped staff never get a line-wide contact list here. The client never
+supplies user_uuid/business_line/status — the router stamps
 user_uuid from the authenticated identity and business_line as a literal
 "real_estate" (this table exists for the real-estate line only).
 """
@@ -70,7 +72,7 @@ async def list_site_visits(
     current_user: CurrentUser = Depends(get_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> SiteVisitListResponse:
-    visits = await list_site_visit_records(db)
+    visits = await list_site_visit_records(db, user_uuid=current_user.id)
     return SiteVisitListResponse(visits=[_to_read(visit) for visit in visits])
 
 
