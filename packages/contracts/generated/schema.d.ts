@@ -8840,7 +8840,7 @@ export interface components {
             /** About Project */
             about_project: string;
             /** Amenities Description */
-            amenities_description: string;
+            amenities_description?: string | null;
             /** Configurations */
             configurations: components["schemas"]["ResidentialConfiguration"][];
             /** @default not_applicable */

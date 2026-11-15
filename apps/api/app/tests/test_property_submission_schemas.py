@@ -187,11 +187,33 @@ def test_rera_number_is_optional_for_claimed_exemption() -> None:
     assert parsed.rera_number is None
 
 
-def test_project_amenities_require_at_least_one_hundred_fifty_words() -> None:
+@pytest.mark.parametrize("omit", [True, False])
+def test_project_amenities_description_is_optional(omit: bool) -> None:
     payload = _payload([_asset(0)])
-    payload["structured_details"]["amenities_description"] = " ".join(["landscaped"] * 149)
+    if omit:
+        del payload["structured_details"]["amenities_description"]
+    else:
+        payload["structured_details"]["amenities_description"] = None
 
-    with pytest.raises(ValidationError, match="at least 150 words"):
+    parsed = SubmissionCreate.model_validate(payload)
+
+    assert parsed.structured_details.amenities_description is None
+
+
+def test_project_amenities_description_has_no_minimum_length() -> None:
+    payload = _payload([_asset(0)])
+    payload["structured_details"]["amenities_description"] = "Clubhouse and pool"
+
+    parsed = SubmissionCreate.model_validate(payload)
+
+    assert parsed.structured_details.amenities_description == "Clubhouse and pool"
+
+
+def test_project_amenities_description_keeps_its_500_word_maximum() -> None:
+    payload = _payload([_asset(0)])
+    payload["structured_details"]["amenities_description"] = " ".join(["pool"] * 501)
+
+    with pytest.raises(ValidationError, match="500 words"):
         SubmissionCreate.model_validate(payload)
 
 

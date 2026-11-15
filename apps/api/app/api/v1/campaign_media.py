@@ -71,11 +71,13 @@ async def confirm_media(
         )
         return await read_asset(db, asset)
     except CampaignMediaInvalid as exc:
+        detail = (
+            "Upload a valid MP4 banner video (H.264 with AAC audio) of up to 60 seconds."
+            if payload.content_type == "video/mp4"
+            else "Upload a valid landscape campaign image with the required placement dimensions."
+        )
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=(
-                "Upload a valid landscape campaign image with the required placement dimensions."
-            ),
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail
         ) from exc
 
 

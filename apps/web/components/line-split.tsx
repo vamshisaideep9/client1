@@ -68,7 +68,7 @@ function Band({ line, paddingClassName }: { line: Line; paddingClassName: string
       id={line.id}
       aria-labelledby={`${line.id}-heading`}
       className={cn(
-        "w-full scroll-mt-16 overflow-x-clip bg-surface-sky",
+        "w-full scroll-mt-[var(--site-header-h)] overflow-x-clip bg-surface-sky",
         paddingClassName
       )}
     >

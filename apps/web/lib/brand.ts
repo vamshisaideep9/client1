@@ -10,7 +10,15 @@ export function brandedFilename(filename: string): string {
   return filename.startsWith("dhanadhara-") ? filename : `dhanadhara-${filename}`;
 }
 
-export type TrustLine = { readonly lead: string; readonly rest: string };
+export type TrustLineKind = "finance" | "property";
+
+export type TrustLine = {
+  readonly kind: TrustLineKind;
+  /** Short business-line name shown as the line's chip in the announcement bar. */
+  readonly label: string;
+  readonly lead: string;
+  readonly rest: string;
+};
 
 // Single-sourced trust sentences, one per business line. The announcement bar
 // shows the line(s) that match the current page, and the footer repeats both
@@ -18,10 +26,14 @@ export type TrustLine = { readonly lead: string; readonly rest: string };
 // the page even after a visitor dismisses the banner).
 export const TRUST_LINES = {
   finance: {
+    kind: "finance",
+    label: "Loans",
     lead: "We connect you with the right banks.",
     rest: "We're the bridge between customers and lenders, not a bank ourselves.",
   },
   property: {
+    kind: "property",
+    label: "Real estate",
     lead: "We connect you with verified sellers and builders.",
     rest: "We're the bridge between buyers and sellers, not the seller ourselves.",
   },

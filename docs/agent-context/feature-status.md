@@ -2,6 +2,54 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — client feedback batch, PR 1: ticker, tablet navigation, banner
+video length, optional amenities** (2026-11-15; open for review), branch
+`feat/public-feedback-batch` from `upstream/main` `06b5ae2`.
+
+Web:
+- `AnnouncementBanner` renders one static line on `/loans*` and
+  `/real-estate*`. On every other page it renders a right-to-left ticker of
+  labelled segments, each with its own icon and chip (`TRUST_LINES` gains
+  `kind` and `label`).
+- The public header shows the links from `md` on a second row (between `md`
+  and `xl`). `--site-header-h` is scoped to `.public-site`, so shared property
+  rows under the dashboard keep their 4rem offset.
+- `AppShell` shows the rail from `md`, collapsed until `lg` (new
+  `useMediaQuery`).
+- The artwork dialog rejects videos over 60s before upload.
+- The project amenities description is optional, and blank is sent as null.
+
+API:
+- `BANNER_VIDEO_MAX_DURATION_SECONDS` raised from 30 to 60.
+- Video confirm failures return a video-specific 422.
+- `ProjectResidenceDetails.amenities_description` is optional, with no
+  minimum.
+- Contracts regenerated: one field becomes optional.
+
+Evidence (2026-11-15, this worktree):
+- Web: lint and typecheck pass; Vitest 125 files / 859 tests pass.
+- Playwright against `pnpm dev`:
+  - The new `tablet-navigation.spec.ts` passes 10/10. It covers 768, 820 and
+    1024 on public and dashboard (collapsed rail, no menu button, no
+    horizontal scroll), the phone fallback, ticker right-to-left movement and
+    the static single lines. Screenshots were reviewed.
+  - In the affected specs (sidebar layout/chrome, service directory, brand,
+    property form, dashboard refinement), every failure also fails on an
+    untouched `upstream/main` checkout under the same no-API dev setup. The
+    branch adds no failure.
+- `pnpm build`: compiled, type-checked and generated 111/111 pages, then
+  stopped at the known Windows standalone symlink EPERM.
+- API:
+  - ruff check and format are clean.
+  - Targeted suites in Docker: 224 passed and 6 failed. One failure was a new
+    test's own fixture, fixed and re-run on the host (schema suite 75 passed).
+    The other five are in developer-name, public properties and public
+    banners: catalogue caps/fields that share the local DB noted under CS-018.
+
+Not run: the five API failures on `upstream/main` (the Docker engine stopped
+mid-session), and the full `mobile-layout.spec.ts` route sweep. Completion
+impact: none (client feedback, no SRS requirement change).
+
 **Implemented — property listing form refinements (CS-018)** (2026-11-14; open
 for review), branch `feat/property-form-refinements` stacked on PR #342.
 - API: `ProjectResidenceDetails` adds `unit_or_plot_area_max_sqft` and

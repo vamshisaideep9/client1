@@ -198,7 +198,7 @@ function CalculatorGroup({
   items: CalculatorDef[];
 }) {
   return (
-    <section id={id} className="w-full scroll-mt-16 border-t border-[var(--nav-border)] bg-[var(--nav-bg)]">
+    <section id={id} className="w-full scroll-mt-[var(--site-header-h)] border-t border-[var(--nav-border)] bg-[var(--nav-bg)]">
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
         <h2 className="font-heading text-3xl font-semibold text-[var(--nav-text)] sm:text-4xl">
           {title}

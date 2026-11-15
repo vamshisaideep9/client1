@@ -89,7 +89,7 @@ export const ARTWORK_SURFACES: Record<ArtworkUsageType, ArtworkSurface> = {
   banner_video: {
     usageType: "banner_video",
     label: "Banner video",
-    description: "Short muted MP4 loop for a public banner (up to 30 seconds, 20 MB)",
+    description: "Short muted MP4 loop for a public banner (up to 60 seconds, 20 MB)",
     width: 1280,
     height: 720,
     aspectClass: "aspect-video",

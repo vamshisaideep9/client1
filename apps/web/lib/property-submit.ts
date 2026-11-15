@@ -343,7 +343,7 @@ function buildStructuredDetails(form: SubmitFormState): StructuredDetails {
         plot_facing: details.plotFacing as Schemas["Facing"],
         entrance_facing: details.facing as Schemas["Facing"],
         local_approval: localApproval(details),
-        amenities_description: details.amenitiesDescription.trim(),
+        amenities_description: orNull(details.amenitiesDescription),
         about_project: details.about.trim(),
       };
     case "individual":
@@ -775,21 +775,14 @@ export function validateForm(
     if (!isRent) requireValue(errors, "saleType", details.saleType, "Sale type");
     requireValue(errors, "facing", details.facing, "Entrance facing");
     requireValue(errors, "about", details.about, "About the project");
-    requireValue(errors, "amenitiesDescription", details.amenitiesDescription, "Amenities description");
     requireValue(errors, "furnishing", form.furnishing, "Furnishing");
     requireValue(errors, "constructionStatus", form.constructionStatus, "Construction status");
     if (form.constructionStatus === "under_construction") {
       requireValue(errors, "expectedHandoverDate", details.expectedHandoverDate, "Expected handover date");
     }
     validateNarrative(errors, "about", details.about, "About the project", 500);
-    validateNarrative(
-      errors,
-      "amenitiesDescription",
-      details.amenitiesDescription,
-      "Amenities description",
-      500,
-      150,
-    );
+    // Optional, with no minimum length; only the 500-word cap applies.
+    validateNarrative(errors, "amenitiesDescription", details.amenitiesDescription, "Amenities description", 500);
   } else if (family === "individual") {
     requireValue(errors, "propertyUse", details.propertyUse, "Property use");
     requirePositive(errors, "totalLandArea", details.totalLandArea, "total land area");

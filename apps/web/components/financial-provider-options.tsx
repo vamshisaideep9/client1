@@ -107,7 +107,7 @@ export function FinancialProviderOptions({ product, query: offerQuery, offers: p
   const sort = offerQuery.sort ?? "recommended";
   const pageCount = Math.max(1, Math.ceil(offers.total / offers.page_size));
   return (
-      <section id="providers" className="scroll-mt-20 bg-[var(--nav-bg)] px-4 py-16 sm:px-6 lg:px-8">
+      <section id="providers" className="scroll-mt-[calc(var(--site-header-h)+1rem)] bg-[var(--nav-bg)] px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-3xl">
             <h2 className="font-heading text-3xl font-semibold text-foreground sm:text-4xl">

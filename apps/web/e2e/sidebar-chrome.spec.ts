@@ -58,7 +58,8 @@ for (const role of ["client", "admin", "sub_admin", "agent", "employee", "teleca
     await page.mouse.move(1300, 820);
     // Muted grey thumb at 40% on the white rail.
     await expect(scroller).toHaveCSS("scrollbar-color", "color(srgb 0.360784 0.360784 0.360784 / 0.4) rgba(0, 0, 0, 0)");
-    for (const width of [320, 390, 768]) {
+    // From 768px (iPad) the rail stays visible, so only phone widths open the drawer.
+    for (const width of [320, 390, 600]) {
       await page.setViewportSize({ width, height: 568 });
       await page.getByRole("button", { name: "Open menu", exact: true }).click();
       const drawer = page.getByRole("dialog");
