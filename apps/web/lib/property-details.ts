@@ -40,7 +40,9 @@ const LABELS: Record<string, string> = {
   sqyd: "Square yards",
   "1_bhk": "1 BHK",
   "2_bhk": "2 BHK",
+  "2_5_bhk": "2.5 BHK",
   "3_bhk": "3 BHK",
+  "3_5_bhk": "3.5 BHK",
   "4_bhk": "4 BHK",
   "5_plus_bhk": "5+ BHK",
   studio: "Studio",
@@ -53,6 +55,24 @@ function label(value: string | null | undefined): string | null {
   // by the renderer rather than shown as an empty "Sale type".
   if (value == null) return null;
   return LABELS[value] ?? value;
+}
+
+/** "1,150 sq ft", or "1,150 – 1,450 sq ft" when a To value is set. */
+function areaRange(from: number, to: number | null | undefined, unit: string): string {
+  const start = from.toLocaleString("en-IN");
+  return to != null && to !== from ? `${start} – ${to.toLocaleString("en-IN")} ${unit}` : `${start} ${unit}`;
+}
+
+function undividedShare(details: Extract<NonNullable<Details>, { kind: "project_residence" }>) {
+  if (details.uds_area_from != null) {
+    return areaRange(details.uds_area_from, details.uds_area_to, details.uds_area_unit === "sqyd" ? "sq yd" : "sq ft");
+  }
+  return details.uds_sqft ? `${details.uds_sqft.toLocaleString("en-IN")} sq ft` : null;
+}
+
+function approval(value: { authority: string; reference_number?: string | null } | null | undefined) {
+  if (!value) return null;
+  return value.reference_number ? `${value.authority} · No. ${value.reference_number}` : value.authority;
 }
 
 function money(paise: number | null | undefined) {
@@ -68,14 +88,14 @@ export function rows(details: NonNullable<Details>): DetailItem[] {
       { label: "Project size", value: `${details.number_of_towers} towers · ${details.total_units} units` },
       { label: "Project area", value: `${details.project_area_acres} acres` },
       { label: "Configurations", value: details.configurations.map(label).join(", ") },
-      { label: "Unit or plot area", value: `${details.unit_or_plot_area_sqft.toLocaleString("en-IN")} sq ft` },
-      { label: "Undivided share", value: details.uds_sqft ? `${details.uds_sqft.toLocaleString("en-IN")} sq ft` : null },
+      { label: "Unit or flat area", value: areaRange(details.unit_or_plot_area_sqft, details.unit_or_plot_area_max_sqft, "sq ft") },
+      { label: "Undivided share", value: undividedShare(details) },
       { label: "Price per sq ft", value: money(details.price_per_sqft_paise) },
       { label: "Sale type", value: label(details.sale_type) },
       { label: "Expected handover", value: details.expected_handover_date },
-      { label: "Plot facing", value: label(details.plot_facing) },
+      { label: "Flat facing", value: label(details.plot_facing) },
       { label: "Entrance facing", value: label(details.entrance_facing) },
-      { label: "Local approval", value: details.local_approval ? `${details.local_approval.authority}${details.local_approval.reference_number ? ` · ${details.local_approval.reference_number}` : ""}` : null },
+      { label: "Local approval", value: approval(details.local_approval) },
       { label: "Amenities", value: details.amenities_description },
       { label: "About the project", value: details.about_project },
     ];
@@ -102,7 +122,7 @@ export function rows(details: NonNullable<Details>): DetailItem[] {
       { label: "Sale type", value: label(details.sale_type) },
       { label: "Rental income starts", value: label(details.rental_income_start) },
       { label: "Monthly rental income", value: money(details.monthly_rental_income_paise) },
-      { label: "Local approval", value: details.local_approval ? `${details.local_approval.authority}${details.local_approval.reference_number ? ` · ${details.local_approval.reference_number}` : ""}` : null },
+      { label: "Local approval", value: approval(details.local_approval) },
       { label: "Amenities", value: details.amenities_description },
       { label: "About the property", value: details.about_property },
       { label: "Additional information", value: details.other_information },
@@ -118,7 +138,7 @@ export function rows(details: NonNullable<Details>): DetailItem[] {
       { label: "Price per sq yd", value: money(details.price_per_sqyd_paise) },
       { label: "Sale type", value: label(details.sale_type) },
       { label: "Project status", value: label(details.project_status) },
-      { label: "Local approval", value: details.local_approval ? `${details.local_approval.authority}${details.local_approval.reference_number ? ` · ${details.local_approval.reference_number}` : ""}` : null },
+      { label: "Local approval", value: approval(details.local_approval) },
       { label: "Amenities", value: details.amenities_description },
       { label: "About the project", value: details.about_project },
       { label: "Additional information", value: details.other_information },

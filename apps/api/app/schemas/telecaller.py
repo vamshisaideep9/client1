@@ -18,7 +18,10 @@ LoanStatusLiteral = Literal[
     "contacted",
     "docs_collected",
     "submitted_to_bank",
+    "under_review",
     "sanctioned",
+    "agreement_collected",
+    "agreement_submitted_to_bank",
     "disbursed",
     "closed",
     "rejected",
@@ -54,11 +57,57 @@ CallDispositionLiteral = Literal[
 InterestLevelLiteral = Literal["hot", "warm", "cold"]
 
 
+class LeadReferrerRead(BaseModel):
+    """Who brought a lead in, as an identifier only (no names or contacts).
+
+    ``agent``: the introducing Agent's ``agent_code``. ``client``: the referral
+    code of the client whose link the lead signed up through.
+    """
+
+    kind: Literal["agent", "client"]
+    reference_id: str
+
+
+# Staff working notes (call logs, field tasks) allow about 1500 words. The
+# columns are TEXT; this cap only bounds request size.
+STAFF_NOTE_MAX_CHARS = 10_000
+
+
+# What a client asked for: each kind maps to one lead_activities link column.
+RequestKindLiteral = Literal[
+    "loan_application",
+    "financial_enquiry",
+    "property_enquiry",
+    "site_visit",
+    "property_deal",
+]
+
+
+class RequestRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: RequestKindLiteral
+    id: UUID
+
+
+class LeadRequestSummary(BaseModel):
+    """One application/enquiry/visit/deal on a lead: what and when."""
+
+    kind: RequestKindLiteral
+    id: UUID
+    title: str
+    status: str
+    applied_at: datetime
+
+
 class LeadActivityCreate(BaseModel):
     disposition: CallDispositionLiteral
     interest_level: InterestLevelLiteral | None = None
-    notes: Annotated[str | None, Field(default=None, max_length=1000)] = None
+    notes: Annotated[str | None, Field(default=None, max_length=STAFF_NOTE_MAX_CHARS)] = None
     follow_up_at: datetime | None = None
+    # Optional: which request on this lead the call was about. Omit for a
+    # general call. Validated server-side against the same lead.
+    request: RequestRef | None = None
 
     @model_validator(mode="after")
     def _interest_level_matches_disposition(self) -> LeadActivityCreate:
@@ -88,6 +137,7 @@ class LeadActivityRead(BaseModel):
     notes: str | None
     follow_up_at: datetime | None
     created_at: datetime
+    request: RequestRef | None = None
 
 
 class TelecallerLeadUpdate(BaseModel):
@@ -110,9 +160,17 @@ class TelecallerLeadRead(BaseModel):
     status: LeadStatusLiteral
     requirement: dict[str, Any] | None = None
     last_disposition: CallDispositionLiteral | None = None
+    # Interest level recorded on that same latest call (set only when connected).
+    last_interest_level: InterestLevelLiteral | None = None
     next_follow_up_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+    # The most recent application/enquiry/visit/deal on the lead, if any.
+    latest_request: LeadRequestSummary | None = None
+    # Distinct statuses across the lead's loan applications (empty for property leads).
+    loan_statuses: list[LoanStatusLiteral] = Field(default_factory=list)
+    # Absent when Admin hides the "Referred by" field; null when nobody referred.
+    referrer: LeadReferrerRead | None = None
 
 
 class LoanTxnCreate(BaseModel):
@@ -149,6 +207,7 @@ class TelecallerLoanApplicationRead(BaseModel):
     fee_outcome: Literal["waived", "cashback", "none"] | None = None
     status: LoanStatusLiteral
     status_reason: str | None = None
+    opened_at: datetime
     closed_at: datetime | None = None
     txns: list[LoanTxnRead]
     form_version: int | None = None
@@ -169,13 +228,50 @@ class TelecallerPropertyDealRead(BaseModel):
     status: PropertyDealStatusLiteral
     status_reason: str | None = None
     site_visit_uuid: UUID | None
+    opened_at: datetime
     closed_at: datetime | None
+
+
+class TelecallerFinancialEnquiryRead(BaseModel):
+    """A credit-card or insurance request (outside the loan pipeline)."""
+
+    id: UUID
+    product_name: str
+    product_category: str
+    status: str
+    submitted_at: datetime
+
+
+class TelecallerPropertyEnquiryRead(BaseModel):
+    id: UUID
+    property_ref: str
+    title: str
+    locality: str
+    city: str
+    message: str | None
+    status: str
+    created_at: datetime
+
+
+class TelecallerSiteVisitRead(BaseModel):
+    id: UUID
+    property_ref: str
+    title: str
+    locality: str
+    city: str
+    preferred_date: date
+    preferred_time_slot: str
+    status: str
+    created_at: datetime
 
 
 class TaskCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    notes: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
+    notes: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=STAFF_NOTE_MAX_CHARS),
+    ]
     due_at: datetime | None = None
 
     @model_validator(mode="after")
@@ -203,8 +299,29 @@ class TaskRead(BaseModel):
 class TelecallerLeadDetailRead(TelecallerLeadRead):
     activities: list[LeadActivityRead]
     loan_applications: list[TelecallerLoanApplicationRead] = []
+    financial_enquiries: list[TelecallerFinancialEnquiryRead] = []
+    property_enquiries: list[TelecallerPropertyEnquiryRead] = []
+    site_visits: list[TelecallerSiteVisitRead] = []
     property_deals: list[TelecallerPropertyDealRead] = []
     tasks: list[TaskRead] = []
+
+
+class ClientHistoryLead(BaseModel):
+    """One lead (journey) of the same client, with this Telecaller's calls."""
+
+    lead_id: UUID
+    status: LeadStatusLiteral
+    created_at: datetime
+    requests: list[LeadRequestSummary]
+    activities: list[LeadActivityRead]
+
+
+class TelecallerClientHistoryResponse(BaseModel):
+    """Every journey of this client on this line that is assigned to the
+    caller, newest first. Calls are the caller's own (lead_activities_rls)."""
+
+    business_line: Literal["loans", "real_estate"]
+    leads: list[ClientHistoryLead]
 
 
 class TelecallerFollowUpItem(BaseModel):
@@ -212,6 +329,7 @@ class TelecallerFollowUpItem(BaseModel):
     name: str | None = None
     mobile: str
     follow_up_at: datetime
+    latest_request: LeadRequestSummary | None = None
 
 
 class TelecallerHomeResponse(BaseModel):

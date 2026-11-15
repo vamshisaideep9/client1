@@ -4,7 +4,7 @@ import React from "react";
 
 import { CalculatorCard } from "@/components/calculators/calculator-card";
 import { Button } from "@/components/ui/button";
-import { getCalculator } from "@/lib/calculators/registry";
+import { CALCULATORS, getCalculator } from "@/lib/calculators/registry";
 import type { CalculatorDef, CalculatorSlug } from "@/lib/calculators/types";
 
 const HOME_CALCULATOR_SLUGS: CalculatorSlug[] = [
@@ -34,8 +34,9 @@ export function HomeCalculators() {
               Calculate before you decide
             </h2>
             <p className="mt-4 text-lg text-text-secondary">
-              Check your EMI, borrowing eligibility, home budget, and stamp duty with calculators
-              built for Indian financial decisions.
+              {CALCULATORS.length} free calculators for EMI, loan eligibility, prepayment, stamp
+              duty and registration charges, GST on property, rent vs buy, credit card payoff and
+              insurance cover. No login, and nothing you type is stored.
             </p>
           </div>
           <Button asChild variant="outline" className="w-full sm:w-auto">
