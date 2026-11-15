@@ -21,6 +21,7 @@ from app.schemas.telecaller import (
     ClientHistoryLead,
     LeadActivityCreate,
     LeadActivityRead,
+    LeadStatusLiteral,
     LoanTxnCreate,
     LoanTxnRead,
     PropertyDealCreate,
@@ -39,6 +40,7 @@ from app.schemas.telecaller import (
     TelecallerSiteVisitRead,
 )
 from app.services.field_visibility import effective_modes, project_values
+from app.services.lead_signals import lead_signals
 from app.services.loan_applications import (
     BankNotAvailableForLoanType,
     SanctionTermsRequired,
@@ -187,7 +189,7 @@ def _staff_profile_uuid(current_user: CurrentUser) -> UUID:
 
 @router.get("/leads", response_model=list[TelecallerLeadRead], response_model_exclude_unset=True)
 async def list_leads(
-    status_filter: str | None = None,
+    status_filter: LeadStatusLiteral | None = None,
     current_user: CurrentUser = Depends(require_telecaller),
     db: AsyncSession = Depends(get_db),
 ) -> list[TelecallerLeadRead]:
@@ -196,11 +198,13 @@ async def list_leads(
     lead_ids = [lead.id for lead in leads]
     last_by_lead = await get_last_activities(db, lead_ids)
     requests_by_lead = await request_summaries_for_leads(db, lead_ids)
+    signals_by_lead = await lead_signals(db, leads)
     modes = await effective_modes(db, FieldTargetRole.TELECALLER)
     out: list[TelecallerLeadRead] = []
     for lead in leads:
         activity = last_by_lead.get(lead.id)
         requests = requests_by_lead.get(lead.id) or []
+        signals = signals_by_lead[lead.id]
         out.append(
             TelecallerLeadRead(
                 id=lead.id,
@@ -208,14 +212,20 @@ async def list_leads(
                 business_line=lead.business_line,
                 status=lead.status,
                 last_disposition=activity.disposition if activity else None,
+                last_interest_level=activity.interest_level if activity else None,
                 next_follow_up_at=activity.follow_up_at if activity else None,
                 created_at=lead.created_at,
                 updated_at=lead.updated_at,
                 latest_request=requests[0] if requests else None,
+                loan_statuses=signals.loan_statuses,
                 **project_values(
                     modes,
                     "lead",
-                    {"name": lead.name, "requirement": lead.requirement},
+                    {
+                        "name": lead.name,
+                        "requirement": lead.requirement,
+                        "referrer": signals.referrer,
+                    },
                 ),
             )
         )
@@ -290,6 +300,7 @@ async def get_lead(
 
     tasks = await list_tasks_for_lead(db, lead_id)
     requests = (await request_summaries_for_leads(db, [lead_id]))[lead_id]
+    signals = (await lead_signals(db, [lead]))[lead.id]
 
     return TelecallerLeadDetailRead(
         id=lead.id,
@@ -297,10 +308,12 @@ async def get_lead(
         business_line=lead.business_line,
         status=lead.status,
         last_disposition=last.disposition if last else None,
+        last_interest_level=last.interest_level if last else None,
         next_follow_up_at=last.follow_up_at if last else None,
         created_at=lead.created_at,
         updated_at=lead.updated_at,
         latest_request=requests[0] if requests else None,
+        loan_statuses=signals.loan_statuses,
         activities=[to_activity_read(a) for a in activities],
         loan_applications=loan_applications,
         financial_enquiries=financial_enquiries,
@@ -311,7 +324,7 @@ async def get_lead(
         **project_values(
             modes,
             "lead",
-            {"name": lead.name, "requirement": lead.requirement},
+            {"name": lead.name, "requirement": lead.requirement, "referrer": signals.referrer},
         ),
     )
 

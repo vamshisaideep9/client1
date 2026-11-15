@@ -2,6 +2,59 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — client feedback batch, PR 2: lead filters and "referred by"**
+(2026-11-15; open for review), branch `feat/lead-filters-referrer` stacked on
+PR 1.
+
+API:
+- Migration `f3a5c7e9b1d2` (one head) adds `lead_list_signals(uuid[])`:
+  SECURITY DEFINER, `search_path` pinned, EXECUTE only for `api_user`, 1000-id
+  cap.
+  - It re-checks role (Telecaller/Employee), staff profile, business line and
+    assignment (Telecaller assigned, or Employee holding/raising a task).
+  - It returns only the client referral code and the latest call's
+    disposition/interest. A Telecaller sees only calls they logged; an
+    Employee sees the lead's latest call by anyone.
+  - No table, grant or policy changes.
+- `services/lead_signals.py` gathers that plus the Agent code (`agent_profiles`
+  RLS) and loan statuses (`loan_applications` RLS) in three queries per page.
+- `TelecallerLeadRead`/detail add `last_interest_level`, `loan_statuses` and
+  `referrer`. `EmployeeTaskRead` adds the `lead_*` equivalents (list, detail,
+  patch, reopen).
+- `status_filter` is an enum (422 on bad input).
+- New field-visibility entries: Telecaller/Employee `lead.referrer` ("Referred
+  by (ID)", default allow).
+- Contracts regenerated.
+
+Web:
+- Shared `lead-signal-filters.ts` and `lead-signal-filter-fields.tsx` on the
+  Telecaller Leads list and the Employee Tasks list (loan status hidden on Real
+  Estate).
+- "Referred by" on list rows, the lead detail page and the task detail page
+  (plus last call, interest and loan status).
+
+Evidence (2026-11-15), API on an isolated `app_feedback` DB migrated from
+scratch:
+- `test_lead_list_signals_rls.py`: 11 passed.
+- Telecaller, Employee and schema suites: 95 passed, including new
+  referrer/interest/loan-status, client-referral, 422 and Admin-hides-referrer
+  tests.
+- Wider lead/RLS/visibility/system sweep: 282 passed and 2 failed. Both
+  failures exist before this branch: `test_single_alembic_head_includes_this_revision`
+  pins an old head, and the classification contract lacks
+  `agent_payout_details`.
+- `alembic downgrade -1` / `upgrade head` round trip passes; ruff is clean.
+
+Evidence, web:
+- lint and typecheck pass; Vitest 126 files / 868 tests pass.
+- Playwright `lead-signal-filters.spec.ts` (3) plus the existing telecaller and
+  staff specs (23) pass against `pnpm dev`. Screenshot reviewed.
+
+Security review: no blocking finding. The deliberate widening is Employees
+seeing the latest call outcome/interest enum on leads they hold a task for.
+
+Completion impact: none (client feedback).
+
 **Implemented — client feedback batch, PR 1: ticker, tablet navigation, banner
 video length, optional amenities** (2026-11-15; [PR #344](https://github.com/brollysolutions/client1/pull/344), mirror vamshisaideep9/client1#48, open for review), branch
 `feat/public-feedback-batch` from `upstream/main` `06b5ae2`.

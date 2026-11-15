@@ -824,3 +824,195 @@ async def test_a_call_links_to_at_most_one_request() -> None:
         )
         with pytest.raises(IntegrityError):
             await db.commit()
+
+
+# --- Lead list signals: referrer, interest level, loan statuses, filters ---
+
+_CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+
+async def _seed_agent_profile(business_line: str = "loans") -> tuple[str, str]:
+    """Returns (agent_profile_uuid, agent_code)."""
+    import app.db.session as _session_mod
+    from app.models.profile import AgentProfile, ProfileStatus
+    from app.models.user import User
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        user = User(
+            first_name="Test",
+            last_name="Agent",
+            mobile=unique_mobile(),
+            email=f"ag_{uuid.uuid4().hex[:12]}@example.com",
+            password_hash="x",
+        )
+        db.add(user)
+        await db.flush()
+        code = f"AG-{uuid.uuid4().hex[:8]}"
+        profile = AgentProfile(
+            auth_user_uuid=user.id,
+            agent_code=code,
+            business_line=business_line,
+            status=ProfileStatus.ACTIVE,
+        )
+        db.add(profile)
+        await db.commit()
+        return str(profile.id), code
+
+
+async def _set_origin_agent(lead_id: str, agent_profile_uuid: str) -> None:
+    import app.db.session as _session_mod
+    from app.models.lead import Lead, LeadOrigin
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        lead = await db.get(Lead, uuid.UUID(lead_id))
+        assert lead is not None
+        lead.origin = LeadOrigin.AGENT
+        lead.origin_agent_profile_uuid = uuid.UUID(agent_profile_uuid)
+        await db.commit()
+
+
+async def _seed_client_referral(lead_id: str) -> str:
+    """A client's referral code claimed by the lead's mobile. Returns the code."""
+    import secrets
+
+    import app.db.session as _session_mod
+    from app.models.lead import Lead
+    from app.models.referral import Referral, ReferralCode
+    from app.models.user import User
+
+    code = "".join(secrets.choice(_CROCKFORD) for _ in range(8))
+    async with _session_mod.AsyncSessionLocal() as db:
+        lead = await db.get(Lead, uuid.UUID(lead_id))
+        assert lead is not None
+        referrer = User(
+            first_name="Ref",
+            last_name="Errer",
+            mobile=unique_mobile(),
+            email=f"ref_{uuid.uuid4().hex[:12]}@example.com",
+            password_hash="x",
+        )
+        db.add(referrer)
+        await db.flush()
+        db.add(ReferralCode(auth_user_uuid=referrer.id, code=code))
+        db.add(Referral(referrer_auth_user_uuid=referrer.id, referred_mobile=lead.mobile))
+        await db.commit()
+    return code
+
+
+async def _log_connected_call(lead_id: str, staff_uuid: str, interest: str) -> None:
+    import app.db.session as _session_mod
+    from app.models.lead_activity import CallDisposition, InterestLevel, LeadActivity
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        db.add(
+            LeadActivity(
+                lead_uuid=uuid.UUID(lead_id),
+                telecaller_staff_profile_uuid=uuid.UUID(staff_uuid),
+                business_line="loans",
+                disposition=CallDisposition.CONNECTED,
+                interest_level=InterestLevel(interest),
+            )
+        )
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_list_and_detail_carry_agent_referrer_interest_and_loan_statuses(
+    client: AsyncClient,
+) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid)
+    agent_uuid, agent_code = await _seed_agent_profile("loans")
+    await _set_origin_agent(lead_id, agent_uuid)
+    await _seed_loan_application(lead_id)
+    await _log_connected_call(lead_id, staff_uuid, "hot")
+    headers = {"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"}
+
+    listed = await client.get("/api/v1/telecaller/leads", headers=headers)
+    detail = await client.get(f"/api/v1/telecaller/leads/{lead_id}", headers=headers)
+
+    assert listed.status_code == 200, listed.text
+    assert detail.status_code == 200, detail.text
+    row = next(item for item in listed.json() if item["id"] == lead_id)
+    for body in (row, detail.json()):
+        assert body["referrer"] == {"kind": "agent", "reference_id": agent_code}
+        assert body["last_disposition"] == "connected"
+        assert body["last_interest_level"] == "hot"
+        assert body["loan_statuses"] == ["new"]
+
+
+@pytest.mark.asyncio
+async def test_client_referral_code_is_the_referrer_of_a_direct_lead(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid)
+    other_lead = await _seed_assigned_lead("loans", staff_uuid)
+    code = await _seed_client_referral(lead_id)
+
+    res = await client.get(
+        "/api/v1/telecaller/leads",
+        headers={"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"},
+    )
+
+    assert res.status_code == 200, res.text
+    by_id = {item["id"]: item for item in res.json()}
+    assert by_id[lead_id]["referrer"] == {"kind": "client", "reference_id": code}
+    assert by_id[other_lead]["referrer"] is None
+    assert by_id[other_lead]["loan_statuses"] == []
+    assert by_id[other_lead]["last_interest_level"] is None
+
+
+@pytest.mark.asyncio
+async def test_unknown_status_filter_is_rejected(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+
+    res = await client.get(
+        "/api/v1/telecaller/leads",
+        params={"status_filter": "nonsense"},
+        headers={"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"},
+    )
+
+    assert res.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_admin_can_hide_the_referrer_from_telecallers(client: AsyncClient) -> None:
+    from sqlalchemy import delete
+
+    import app.db.session as _session_mod
+    from app.models.field_visibility import (
+        FieldTargetRole,
+        FieldVisibilityConfig,
+        FieldVisibilityMode,
+    )
+
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid)
+    await _seed_client_referral(lead_id)
+    scope = (
+        FieldVisibilityConfig.target_role == FieldTargetRole.TELECALLER,
+        FieldVisibilityConfig.entity == "lead",
+        FieldVisibilityConfig.field_key == "referrer",
+    )
+    async with _session_mod.AsyncSessionLocal() as db:
+        await db.execute(delete(FieldVisibilityConfig).where(*scope))
+        db.add(
+            FieldVisibilityConfig(
+                target_role=FieldTargetRole.TELECALLER,
+                entity="lead",
+                field_key="referrer",
+                mode=FieldVisibilityMode.DENY,
+            )
+        )
+        await db.commit()
+    try:
+        headers = {"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"}
+        listed = await client.get("/api/v1/telecaller/leads", headers=headers)
+        detail = await client.get(f"/api/v1/telecaller/leads/{lead_id}", headers=headers)
+    finally:
+        async with _session_mod.AsyncSessionLocal() as db:
+            await db.execute(delete(FieldVisibilityConfig).where(*scope))
+            await db.commit()
+
+    row = next(item for item in listed.json() if item["id"] == lead_id)
+    assert "referrer" not in row
+    assert "referrer" not in detail.json()

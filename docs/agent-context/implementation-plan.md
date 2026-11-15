@@ -60,6 +60,23 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**Implemented — client feedback batch, PR 2: lead filters and "referred by"**
+(2026-11-15; open for review), branch `feat/lead-filters-referrer` stacked on
+PR 1. Client feedback item 3:
+- The Telecaller Leads page filters by loan status, call status, interest
+  (Hot/Warm/Cold), referral source and "Referred by" ID.
+- Each row and the lead detail page show who referred the lead: the
+  introducing Agent's code or the client's referral code.
+- Employees have no Leads page, so the same filters and context go on their
+  Tasks list and task detail (user decision 2026-11-15).
+- The referral code and an Employee's view of the latest call come from the
+  confined SECURITY DEFINER `lead_list_signals` (migration `f3a5c7e9b1d2`,
+  one head) instead of widening `referrals` / `lead_activities` RLS.
+- Admin can hide "Referred by (ID)" per role.
+
+Non-goals: an Employee Leads page, referrer names, analytics (PR 3).
+Recommended: Opus 5.5 / xhigh (SECURITY DEFINER read, referral data).
+
 **Implemented — client feedback batch, PR 1: public ticker, tablet navigation,
 one-minute banner videos, optional amenities** (2026-11-15; [PR #344](https://github.com/brollysolutions/client1/pull/344), mirror vamshisaideep9/client1#48, open for review), branch
 `feat/public-feedback-batch` from `upstream/main` `06b5ae2`. Client feedback
