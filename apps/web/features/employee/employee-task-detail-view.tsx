@@ -35,6 +35,7 @@ import { DISPOSITION_LABEL } from "@/features/telecaller/telecaller-lead-status"
 import { EmployeeTaskDocumentPanel } from "./employee-task-document-panel";
 import { EmployeeTaskFeedbackPanel } from "./employee-task-feedback-panel";
 import { ReopenTaskDialog } from "./reopen-task-dialog";
+import { ManagerNotesPanel } from "@/features/team/manager-notes-panel";
 import { useEmployeeTaskDetail } from "./use-employee-task-detail";
 
 type TaskStatusValue = NonNullable<EmployeeTaskUpdate["status"]>;
@@ -298,6 +299,7 @@ export function EmployeeTaskDetailView({ taskId }: { taskId: string }) {
         </dl>
       </DashboardPanel>
 
+      <ManagerNotesPanel notes={task.manager_notes} />
       <DashboardPanel title="Notes">
         {task.status === "cancelled" && <div className="mb-4"><ReopenTaskDialog taskId={task.id} onReopened={retry} /></div>}
         <LongNoteField

@@ -64,6 +64,7 @@ import {
   type WorkspaceRequest,
 } from "./telecaller-requests";
 import { TelecallerTasksSection } from "./telecaller-tasks-section";
+import { ManagerNotesPanel } from "@/features/team/manager-notes-panel";
 import { useTelecallerLeadDetail } from "./use-telecaller-lead-detail";
 
 type CallFormField = CallLogField | "disposition" | "interestLevel";
@@ -518,6 +519,7 @@ export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
         </aside>
 
         <div className="min-w-0 xl:col-start-1 xl:row-start-2">
+          <ManagerNotesPanel notes={lead.manager_notes} />
           <CallLogPanel activities={lead.activities} requests={requests} selected={selected} />
         </div>
       </div>

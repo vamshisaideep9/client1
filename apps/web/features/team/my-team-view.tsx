@@ -5,11 +5,18 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatMetric } from "@/features/analytics/analytics-format";
 import {
   AnalyticsLoading,
-  KpiTile,
+  AnalyticsReport,
 } from "@/features/analytics/staff-analytics-view";
 import {
   DashboardHeader,
@@ -24,16 +31,18 @@ import {
   resolveRangePreset,
   type DateRangeValue,
 } from "@/lib/analytics-range";
-import { DateRangePicker } from "@/features/analytics/date-range-picker";
 import {
   getMyTeams,
   getTeamOverview,
   personName,
   teamLabel,
   type StaffTeam,
+  type TeamAnalyticsFilters,
   type TeamOverview,
 } from "@/lib/staff-teams-api";
 
+import { TeamAnalyticsFilterBar } from "./team-analytics-filter-bar";
+import { TeamWorkList } from "./team-work-list";
 import { useLoad } from "./use-load";
 
 function MembersTable({ team, overview }: { team: StaffTeam; overview: TeamOverview }) {
@@ -139,32 +148,37 @@ function TeamOverviewPanel({ team }: { team: StaffTeam }) {
   const [range, setRange] = React.useState<DateRangeValue>(() =>
     resolveRangePreset("last_30_days", new Date()),
   );
-  const { state, retry } = useLoad(() => getTeamOverview(team.id, range), [team.id, range]);
+  const [filters, setFilters] = React.useState<TeamAnalyticsFilters>({});
+  const { state, retry } = useLoad(
+    () => getTeamOverview(team.id, range, filters),
+    [team.id, range, filters],
+  );
   const data = state.status === "ready" ? state.data : null;
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-text-secondary">
-          {teamLabel(team)} · {team.members.length}{" "}
-          {team.members.length === 1 ? "member" : "members"}
-        </p>
-        <DateRangePicker value={range} onChange={setRange} />
-      </div>
+      <TeamAnalyticsFilterBar
+        team={team}
+        range={range}
+        onRangeChange={setRange}
+        filters={filters}
+        onFiltersChange={setFilters}
+        withMembers
+      />
       {state.status === "error" ? (
         <FetchError status={state.code} message={state.error} onRetry={retry} />
       ) : !data ? (
         <AnalyticsLoading />
       ) : (
         <>
-          <section aria-label="Team totals" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-            {data.totals.map((kpi) => (
-              <KpiTile key={kpi.key} kpi={kpi} />
-            ))}
-          </section>
+          {data.report ? (
+            <AnalyticsReport data={data.report} />
+          ) : (
+            <ListEmptyState icon={DASHBOARD_ICONS.team} title="No members to show" />
+          )}
           <DashboardPanel
             title="Members"
-            description={`Each member's figures for ${formatRangeLabel({ dateFrom: data.date_from, dateTo: data.date_to })}. Open a member to see their work and move it.`}
+            description={`Each member's figures for ${formatRangeLabel({ dateFrom: data.date_from, dateTo: data.date_to })}. Open a member to see their work.`}
           >
             <MembersTable team={team} overview={data} />
           </DashboardPanel>
@@ -178,6 +192,7 @@ export function MyTeamView() {
   const { state, retry } = useLoad(getMyTeams, []);
   const teams = state.status === "ready" ? state.data.teams : null;
   const [selected, setSelected] = React.useState<string | null>(null);
+  const [section, setSection] = React.useState<"overview" | "work">("overview");
   const team = teams?.find((candidate) => candidate.id === selected) ?? teams?.[0] ?? null;
 
   return (
@@ -192,26 +207,46 @@ export function MyTeamView() {
         <ListLoadingState rows={4} />
       ) : !team ? (
         <ListEmptyState
-        icon={DASHBOARD_ICONS.team}
+          icon={DASHBOARD_ICONS.team}
           title="You don't manage a team yet"
           description="The Main Admin can make you the manager of a Telecaller or Employee team."
         />
       ) : (
         <div className="space-y-5">
-          {teams.length > 1 ? (
-            <Tabs value={team.id} onValueChange={setSelected}>
-              <TabsList aria-label="Your teams">
-                {teams.map((candidate) => (
-                  <TabsTrigger key={candidate.id} value={candidate.id}>
-                    {candidate.name}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          ) : (
-            <h2 className="font-heading text-lg font-semibold text-brand-heading">{team.name}</h2>
-          )}
-          <TeamOverviewPanel key={team.id} team={team} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {teams.length > 1 ? (
+              <Select value={team.id} onValueChange={setSelected}>
+                <SelectTrigger className="w-full sm:w-72" aria-label="Team">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map((candidate) => (
+                    <SelectItem key={candidate.id} value={candidate.id}>
+                      {candidate.name} · {teamLabel(candidate)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <h2 className="font-heading text-lg font-semibold text-brand-heading">{team.name}</h2>
+            )}
+            <p className="text-sm text-text-secondary">
+              {teamLabel(team)} · {team.members.length}{" "}
+              {team.members.length === 1 ? "member" : "members"}
+            </p>
+          </div>
+          <Tabs value={section} onValueChange={(value) => setSection(value as "overview" | "work")}>
+            <TabsList aria-label="Team sections">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="work">Work</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview" className="mt-5">
+              <TeamOverviewPanel key={team.id} team={team} />
+            </TabsContent>
+            <TabsContent value="work" className="mt-5">
+              <TeamWorkList key={team.id} team={team} />
+            </TabsContent>
+          </Tabs>
         </div>
       )}
     </DashboardPage>
