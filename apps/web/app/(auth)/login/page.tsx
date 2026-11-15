@@ -28,6 +28,7 @@ import {
 } from "@/lib/auth";
 import { isValidMobile, normalizeMobile, toE164 } from "@/lib/phone";
 import { dashboardReturnTo } from "@/lib/auth-return";
+import { authHref, isValidReferralCodeFormat, normalizeReferralCode } from "@/lib/referral-share";
 
 export default function LoginPage() {
   return (
@@ -42,8 +43,15 @@ function LoginPageContent() {
   const searchParams = useSearchParams();
   const { setSession } = useAuth();
   const returnTo = dashboardReturnTo(searchParams.get("return_to"));
-  const registerHref =
-    returnTo === "/dashboard" ? "/register" : `/register?return_to=${encodeURIComponent(returnTo)}`;
+  // A Refer link sends people to Register; existing users come here via its
+  // "Log in" link. Keep the code on the way back to Register in case they
+  // turn out to be new, and keep the referred page as the destination.
+  const rawRef = searchParams.get("ref");
+  const referralCode =
+    rawRef && isValidReferralCodeFormat(normalizeReferralCode(rawRef))
+      ? normalizeReferralCode(rawRef)
+      : null;
+  const registerHref = authHref("/register", { code: referralCode, returnTo });
   const [mobile, setMobile] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
@@ -214,6 +222,15 @@ function LoginPageContent() {
         </h1>
         <p className="text-base text-text-secondary">Log in to your account.</p>
       </div>
+      {referralCode ? (
+        <p
+          className="mt-4 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-text-secondary"
+          data-referral-login-note=""
+        >
+          You were invited by a friend. Invite codes apply to new accounts only, so logging in
+          takes you straight to what they shared.
+        </p>
+      ) : null}
 
       <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
         <div className="space-y-2">

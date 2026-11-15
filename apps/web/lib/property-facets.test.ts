@@ -29,6 +29,7 @@ describe("buildSuggestionIndex", () => {
       localities: ["Live locality"],
       cities: ["Live city"],
       pincodes: ["123456"],
+      developers: [],
       subtypes: [],
       properties: [
         {
@@ -38,16 +39,15 @@ describe("buildSuggestionIndex", () => {
           city: "Live city",
         },
       ],
-      priceBounds: { min: 0, max: 75 },
       areaBounds: { min: 0, max: 1100 },
     });
     expect(buildSuggestionIndex([])).toEqual({
       localities: [],
       cities: [],
       pincodes: [],
+      developers: [],
       subtypes: [],
       properties: [],
-      priceBounds: { min: 0, max: 500 },
       areaBounds: { min: 0, max: 5000 },
     });
   });

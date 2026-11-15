@@ -65,9 +65,7 @@ async def generate_and_store_otp(cache: RedisCache, mobile: str, purpose: str) -
     # argon2 is CPU-heavy even for a 6-digit OTP — hash off the event loop.
     otp_hash = await anyio.to_thread.run_sync(_ph.hash, otp, limiter=ARGON2_LIMITER)
     key = _otp_key(mobile, purpose)
-    attempts_key = f"{key}:attempts"
-    await cache.set(key, otp_hash, TTL_OTP)
-    await cache.set(attempts_key, settings.OTP_MAX_ATTEMPTS, TTL_OTP)
+    await cache.store_otp(key, otp_hash, settings.OTP_MAX_ATTEMPTS, TTL_OTP)
     logger.debug("otp.generated mobile=%s purpose=%s", mask_mobile(mobile), purpose)
     return otp
 
@@ -75,18 +73,17 @@ async def generate_and_store_otp(cache: RedisCache, mobile: str, purpose: str) -
 async def verify_otp(cache: RedisCache, mobile: str, purpose: str, code: str) -> None:
     """Verify OTP. Raises 400 on wrong/expired/exceeded. Burns OTP on success."""
     key = _otp_key(mobile, purpose)
-    attempts_key = f"{key}:attempts"
-
-    stored_hash = await cache.get(key)
-    if stored_hash is None:
+    # Reserve before the expensive hash comparison. Checking then decrementing
+    # after hashing lets concurrent requests all use the same final attempt.
+    claim = await cache.claim_otp_attempt(key)
+    if claim is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP expired or not found. Request a new one.",
         )
 
-    remaining_str = await cache.get(attempts_key)
-    remaining = int(remaining_str) if remaining_str else 0
-    if remaining <= 0:
+    stored_hash, remaining = claim
+    if remaining < 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP attempts exhausted. Request a new one.",
@@ -95,31 +92,24 @@ async def verify_otp(cache: RedisCache, mobile: str, purpose: str, code: str) ->
     try:
         await anyio.to_thread.run_sync(_ph.verify, stored_hash, code, limiter=ARGON2_LIMITER)
     except VerifyMismatchError as exc:
-        # Atomic DECR is the authoritative gate: the previous GET -> minus
-        # one -> SET pattern let N concurrent wrong guesses read the same
-        # value and burn a single attempt between them, voiding the 5-try
-        # cap. DECR returns a distinct post-decrement value to each caller.
-        # Keys stay alive at zero (same TTL_OTP window) rather than being
-        # deleted — resend_otp's session check needs the OTP key to still
-        # exist so "Request a new one" can be satisfied by hitting resend.
-        new_remaining = await cache.decr(attempts_key)
-        if new_remaining < 0:
-            # DECR recreated a missing/expired counter without a TTL —
-            # pin it back to zero with a bounded lifetime.
-            await cache.set(attempts_key, 0, TTL_OTP)
-            new_remaining = 0
-        if new_remaining <= 0:
+        # Keep the exhausted challenge alive for the existing resend flow.
+        # Never mutate here: a resend may have replaced it while hashing.
+        if remaining == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Incorrect OTP. No attempts remaining. Request a new one.",
             ) from exc
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Incorrect OTP. {new_remaining} attempt(s) remaining.",
+            detail=f"Incorrect OTP. {remaining} attempt(s) remaining.",
         ) from exc
 
-    # Success — burn the OTP
-    await cache.delete(key, attempts_key, otp_resend_key(mobile), otp_lock_key(mobile))
+    # Compare-and-delete prevents replay and never burns a concurrent resend.
+    if not await cache.consume_otp(key, stored_hash, otp_resend_key(mobile), otp_lock_key(mobile)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OTP expired, replaced or already used. Request a new one.",
+        )
     logger.debug("otp.verified mobile=%s purpose=%s", mask_mobile(mobile), purpose)
 
 

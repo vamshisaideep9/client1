@@ -67,3 +67,23 @@ async def test_email_mock_does_not_dispatch(monkeypatch):
 
     monkeypatch.setattr(email.aiosmtplib, "send", forbidden)
     assert await send_email("recipient@example.com", "Update", "Body") is False
+
+
+async def test_smtp_failure_does_not_log_recipient_or_provider_text(monkeypatch, caplog):
+    from aiosmtplib.errors import SMTPRecipientRefused
+
+    from app.services import email
+
+    monkeypatch.setattr(email.settings, "EMAIL_ENABLED", True)
+    monkeypatch.setattr(email.settings, "SMTP_HOST", "smtp.example.test")
+
+    async def rejected(*args, **kwargs):
+        raise SMTPRecipientRefused(
+            550, "Provider echoed private message text", "private@example.test"
+        )
+
+    monkeypatch.setattr(email.aiosmtplib, "send", rejected)
+    assert await send_email("private@example.test", "Update", "Body") is False
+    assert "email.failed" in caplog.text
+    assert "private@example.test" not in caplog.text
+    assert "Provider echoed" not in caplog.text

@@ -24,7 +24,8 @@ export type CalculatorSlug =
   | "credit-card-payoff"
   | "credit-card-emi"
   | "term-insurance"
-  | "health-insurance";
+  | "health-insurance"
+  | "compound-interest";
 
 /**
  * Hub section a calculator sits under. Leads still route on businessLine

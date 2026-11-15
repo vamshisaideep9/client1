@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { TelecallerLead } from "@/lib/telecaller-api";
 
-import { filterTelecallerLeads, sortTelecallerLeads } from "./telecaller-lead-filters";
+import { DEFAULT_TELECALLER_LEAD_FILTERS, filterTelecallerLeads, sortTelecallerLeads } from "./telecaller-lead-filters";
 
 function lead(overrides: Partial<TelecallerLead>): TelecallerLead {
   return {
@@ -28,12 +28,12 @@ describe("filterTelecallerLeads", () => {
   ];
 
   it("matches search against name and mobile", () => {
-    expect(filterTelecallerLeads(leads, { search: "asha", status: "all", followUpFrom: "", followUpTo: "" })).toEqual([leads[0]]);
-    expect(filterTelecallerLeads(leads, { search: "7000011111", status: "all", followUpFrom: "", followUpTo: "" })).toEqual([leads[2]]);
+    expect(filterTelecallerLeads(leads, { ...DEFAULT_TELECALLER_LEAD_FILTERS, search: "asha", status: "all" })).toEqual([leads[0]]);
+    expect(filterTelecallerLeads(leads, { ...DEFAULT_TELECALLER_LEAD_FILTERS, search: "7000011111", status: "all" })).toEqual([leads[2]]);
   });
 
   it("filters by status", () => {
-    expect(filterTelecallerLeads(leads, { search: "", status: "converted", followUpFrom: "", followUpTo: "" })).toEqual([leads[1]]);
+    expect(filterTelecallerLeads(leads, { ...DEFAULT_TELECALLER_LEAD_FILTERS, search: "", status: "converted" })).toEqual([leads[1]]);
   });
 
   it("filters by follow-up date range", () => {
@@ -44,6 +44,7 @@ describe("filterTelecallerLeads", () => {
     ];
     expect(
       filterTelecallerLeads(withFollowUp, {
+        ...DEFAULT_TELECALLER_LEAD_FILTERS,
         search: "",
         status: "all",
         followUpFrom: "2026-02-01",
@@ -54,10 +55,10 @@ describe("filterTelecallerLeads", () => {
 
   it("combines search and status filters", () => {
     expect(
-      filterTelecallerLeads(leads, { search: "shah", status: "converted", followUpFrom: "", followUpTo: "" }),
+      filterTelecallerLeads(leads, { ...DEFAULT_TELECALLER_LEAD_FILTERS, search: "shah", status: "converted" }),
     ).toEqual([leads[1]]);
     expect(
-      filterTelecallerLeads(leads, { search: "shah", status: "working", followUpFrom: "", followUpTo: "" }),
+      filterTelecallerLeads(leads, { ...DEFAULT_TELECALLER_LEAD_FILTERS, search: "shah", status: "working" }),
     ).toEqual([]);
   });
 });
