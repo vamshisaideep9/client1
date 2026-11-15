@@ -70,6 +70,7 @@ field-rules read policy; `/api/v1/manager` gains team work, task detail, lead
 and task edits, notes, and role/member analytics filters with a combined team
 report; member lead/task detail return manager notes. PR 2 (web): team Overview
 and Work tabs with filters, edit/note dialogs, notes on member pages.
+Lead notes are reached only through the lead's Telecaller (review fix).
 Non-goals: roster/team settings for managers, client-detail edits, completing
 tasks for Employees, routing. Recommended: Opus 5.5 / xhigh.
 

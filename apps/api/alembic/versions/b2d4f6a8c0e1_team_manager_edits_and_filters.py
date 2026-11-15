@@ -11,6 +11,8 @@ Revises: e4f6a8c0b2d5
   Employee, who must record the outcome and evidence);
 - add an append-only note to a team lead or task, with an optional follow-up
   date on leads. The assigned Telecaller / Employee reads it on their own page.
+  Lead notes are reached only through the lead's Telecaller, so an
+  Employee-team manager never reads or writes another team's lead coaching.
 
 Managers still have NO UPDATE or INSERT policy on any operational table. Every
 write goes through a confined SECURITY DEFINER function that re-checks, under a
@@ -183,7 +185,19 @@ def upgrade() -> None:
         FOR SELECT
         USING (
             {_PLATFORM_ADMIN}
-            OR (lead_uuid IS NOT NULL AND team_manager_reaches_lead(lead_uuid))
+            -- Lead notes are coaching for the lead's Telecaller: only the
+            -- manager reaching that Telecaller reads them (not a manager who
+            -- reaches the lead through an Employee's task on it).
+            OR (
+                lead_uuid IS NOT NULL
+                AND EXISTS (
+                    SELECT 1 FROM public.leads AS l
+                    WHERE l.id = team_work_notes.lead_uuid
+                      AND team_manager_reaches(
+                          l.assigned_telecaller_profile_uuid, l.business_line::text
+                      )
+                )
+            )
             OR (
                 task_uuid IS NOT NULL
                 AND EXISTS (
@@ -340,12 +354,16 @@ def upgrade() -> None:
                     USING ERRCODE = 'check_violation';
             END IF;
             IF target_lead_uuid IS NOT NULL THEN
-                IF NOT team_manager_reaches_lead(target_lead_uuid) THEN
+                SELECT l.business_line::text INTO note_line
+                  FROM public.leads AS l
+                 WHERE l.id = target_lead_uuid
+                   AND team_manager_reaches(
+                       l.assigned_telecaller_profile_uuid, l.business_line::text
+                   );
+                IF note_line IS NULL THEN
                     RAISE EXCEPTION 'lead is not in the caller''s team'
                         USING ERRCODE = 'insufficient_privilege';
                 END IF;
-                SELECT business_line::text INTO note_line
-                  FROM public.leads WHERE id = target_lead_uuid;
             ELSE
                 SELECT t.business_line::text INTO note_line
                   FROM public.tasks AS t

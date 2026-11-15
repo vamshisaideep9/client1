@@ -21,8 +21,13 @@ with the web PR stacked on it.
   suites (109), field-visibility tests (16). Web: typecheck, lint, unit tests
   (129 files / 886 incl. the new filter logic), Playwright
   `sub-admin-teams.spec.ts` (6) at 1440 and 360 px with screenshots reviewed.
-  Full API suite and the production web build: see the PR. Completion impact:
-  manager tooling complete for this phase.
+  Full API suite: 2318 passed, 4 failed (3 pre-existing on upstream; 1 was
+  leftover data in the reused test database and passes on a fresh one).
+  Production `pnpm build` passes in a `node:22-alpine` container. Security
+  fix after review: lead notes are reached only through the lead's Telecaller,
+  so an Employee-team manager cannot read or add another team's lead notes
+  (regression test added). Completion impact: manager tooling complete for
+  this phase.
 
 **In review — item 9: Sub Admin managers over teams (CS-019)** (2026-11-15),
 branch `feat/sub-admin-team-managers` from `upstream/main` `76dced7`: PR 1 (API)

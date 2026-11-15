@@ -415,3 +415,42 @@ async def test_team_analytics_filters_members_and_aggregated_report(client: Asyn
         f"{base}/members/{asha}/analytics?days=7&call_status=busy", headers=_headers(token)
     )
     assert {k["key"]: k["value"] for k in member.json()["kpis"]}["calls"] == 1
+
+
+@pytest.mark.asyncio
+async def test_lead_notes_stay_with_the_telecallers_manager(client: AsyncClient) -> None:
+    """An Employee-team manager reaches a lead through a member's task on it,
+    but never the Telecaller manager's lead notes, and cannot add one."""
+    tele_token, _, _, tele_team, asha, _, _ = await _telecaller_team(client)
+    _, emp_manager_auth, emp_manager, _ = await _sub_admin(client)
+    _, emp = await seed_line_staff("employee")
+    await seed_team(emp_manager, [emp], member_role="employee")
+    task_id, lead_id = await _seed_task(emp, asha)
+
+    note = await client.post(
+        f"/api/v1/manager/teams/{tele_team}/leads/{lead_id}/notes",
+        headers=_headers(tele_token),
+        json={"body": "Coaching for Asha only."},
+    )
+    assert note.status_code == 201, note.text
+
+    visible = await _as_manager(
+        emp_manager_auth,
+        emp_manager,
+        "SELECT id FROM team_work_notes WHERE lead_uuid = :id",
+        {"id": lead_id},
+    )
+    assert visible == []
+    with pytest.raises(DBAPIError, match="not in the caller's team"):
+        await _as_manager(
+            emp_manager_auth,
+            emp_manager,
+            "SELECT team_manager_add_note(:id, NULL, 'not mine', NULL)",
+            {"id": lead_id},
+        )
+    # The Employee-team manager still reaches the lead for its task's context.
+    rows = await _as_manager(
+        emp_manager_auth, emp_manager, "SELECT id FROM leads WHERE id = :id", {"id": lead_id}
+    )
+    assert rows == [(lead_id,)]
+    assert task_id
