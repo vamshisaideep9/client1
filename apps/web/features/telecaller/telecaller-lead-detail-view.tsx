@@ -35,6 +35,7 @@ import { formatMobile } from "@/lib/phone";
 import type { LeadActivityCreate, TelecallerLeadDetail } from "@/lib/telecaller-api";
 import { cn } from "@/lib/utils";
 
+import { formatReferrer } from "./lead-signal-filters";
 import { CallLogPanel } from "./telecaller-call-log";
 import { ClientHistoryButton } from "./telecaller-client-history";
 import {
@@ -312,6 +313,15 @@ export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
                 <div className="min-w-0">
                   <p className="truncate font-medium text-text-primary">{leadName}</p>
                   <p className="text-sm text-text-secondary">{formatMobile(lead.mobile)}</p>
+                  {/* Absent when Admin hides "Referred by"; null when nobody referred. */}
+                  {lead.referrer !== undefined ? (
+                    <p className="mt-0.5 text-xs text-text-secondary" data-testid="lead-referrer">
+                      Referred by{" "}
+                      <span className="font-medium text-text-primary">
+                        {formatReferrer(lead.referrer) ?? "No one (direct lead)"}
+                      </span>
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <span

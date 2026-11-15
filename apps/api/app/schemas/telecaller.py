@@ -53,6 +53,18 @@ CallDispositionLiteral = Literal[
 ]
 InterestLevelLiteral = Literal["hot", "warm", "cold"]
 
+
+class LeadReferrerRead(BaseModel):
+    """Who brought a lead in, as an identifier only (no names or contacts).
+
+    ``agent``: the introducing Agent's ``agent_code``. ``client``: the referral
+    code of the client whose link the lead signed up through.
+    """
+
+    kind: Literal["agent", "client"]
+    reference_id: str
+
+
 # Staff working notes (call logs, field tasks) allow about 1500 words. The
 # columns are TEXT; this cap only bounds request size.
 STAFF_NOTE_MAX_CHARS = 10_000
@@ -145,11 +157,17 @@ class TelecallerLeadRead(BaseModel):
     status: LeadStatusLiteral
     requirement: dict[str, Any] | None = None
     last_disposition: CallDispositionLiteral | None = None
+    # Interest level recorded on that same latest call (set only when connected).
+    last_interest_level: InterestLevelLiteral | None = None
     next_follow_up_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
     # The most recent application/enquiry/visit/deal on the lead, if any.
     latest_request: LeadRequestSummary | None = None
+    # Distinct statuses across the lead's loan applications (empty for property leads).
+    loan_statuses: list[LoanStatusLiteral] = Field(default_factory=list)
+    # Absent when Admin hides the "Referred by" field; null when nobody referred.
+    referrer: LeadReferrerRead | None = None
 
 
 class LoanTxnCreate(BaseModel):

@@ -8163,6 +8163,61 @@
             "title": "Lead Contact Mode",
             "type": "string"
           },
+          "lead_last_disposition": {
+            "anyOf": [
+              {
+                "enum": [
+                  "connected",
+                  "no_answer",
+                  "busy",
+                  "switched_off",
+                  "wrong_number",
+                  "callback_requested",
+                  "not_interested"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Last Disposition"
+          },
+          "lead_last_interest_level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hot",
+                  "warm",
+                  "cold"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Last Interest Level"
+          },
+          "lead_loan_statuses": {
+            "items": {
+              "enum": [
+                "new",
+                "assigned",
+                "contacted",
+                "docs_collected",
+                "submitted_to_bank",
+                "sanctioned",
+                "disbursed",
+                "closed",
+                "rejected",
+                "on_hold"
+              ],
+              "type": "string"
+            },
+            "title": "Lead Loan Statuses",
+            "type": "array"
+          },
           "lead_mobile": {
             "anyOf": [
               {
@@ -8184,6 +8239,16 @@
               }
             ],
             "title": "Lead Name"
+          },
+          "lead_referrer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadReferrerRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "lead_uuid": {
             "format": "uuid",
@@ -9584,6 +9649,29 @@
           "updated_at"
         ],
         "title": "LeadDetailsRead",
+        "type": "object"
+      },
+      "LeadReferrerRead": {
+        "description": "Who brought a lead in, as an identifier only (no names or contacts).\n\n``agent``: the introducing Agent's ``agent_code``. ``client``: the referral\ncode of the client whose link the lead signed up through.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "agent",
+              "client"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "reference_id": {
+            "title": "Reference Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "reference_id"
+        ],
+        "title": "LeadReferrerRead",
         "type": "object"
       },
       "LeadRequestSummary": {
@@ -19258,6 +19346,22 @@
             ],
             "title": "Last Disposition"
           },
+          "last_interest_level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hot",
+                  "warm",
+                  "cold"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Interest Level"
+          },
           "latest_request": {
             "anyOf": [
               {
@@ -19274,6 +19378,25 @@
               "$ref": "#/components/schemas/TelecallerLoanApplicationRead"
             },
             "title": "Loan Applications",
+            "type": "array"
+          },
+          "loan_statuses": {
+            "items": {
+              "enum": [
+                "new",
+                "assigned",
+                "contacted",
+                "docs_collected",
+                "submitted_to_bank",
+                "sanctioned",
+                "disbursed",
+                "closed",
+                "rejected",
+                "on_hold"
+              ],
+              "type": "string"
+            },
+            "title": "Loan Statuses",
             "type": "array"
           },
           "mobile": {
@@ -19318,6 +19441,16 @@
             },
             "title": "Property Enquiries",
             "type": "array"
+          },
+          "referrer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadReferrerRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "requirement": {
             "anyOf": [
@@ -19417,6 +19550,22 @@
             ],
             "title": "Last Disposition"
           },
+          "last_interest_level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hot",
+                  "warm",
+                  "cold"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Interest Level"
+          },
           "latest_request": {
             "anyOf": [
               {
@@ -19426,6 +19575,25 @@
                 "type": "null"
               }
             ]
+          },
+          "loan_statuses": {
+            "items": {
+              "enum": [
+                "new",
+                "assigned",
+                "contacted",
+                "docs_collected",
+                "submitted_to_bank",
+                "sanctioned",
+                "disbursed",
+                "closed",
+                "rejected",
+                "on_hold"
+              ],
+              "type": "string"
+            },
+            "title": "Loan Statuses",
+            "type": "array"
           },
           "mobile": {
             "title": "Mobile",
@@ -19453,6 +19621,16 @@
               }
             ],
             "title": "Next Follow Up At"
+          },
+          "referrer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadReferrerRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "requirement": {
             "anyOf": [
@@ -35187,6 +35365,14 @@
             "schema": {
               "anyOf": [
                 {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "working",
+                    "converted",
+                    "closed",
+                    "released"
+                  ],
                   "type": "string"
                 },
                 {

@@ -7195,10 +7195,17 @@ export interface components {
              * @enum {string}
              */
             lead_contact_mode: "allow" | "deny" | "share_link";
+            /** Lead Last Disposition */
+            lead_last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+            /** Lead Last Interest Level */
+            lead_last_interest_level?: ("hot" | "warm" | "cold") | null;
+            /** Lead Loan Statuses */
+            lead_loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold")[];
             /** Lead Mobile */
             lead_mobile?: string | null;
             /** Lead Name */
             lead_name?: string | null;
+            lead_referrer?: components["schemas"]["LeadReferrerRead"] | null;
             /**
              * Lead Uuid
              * Format: uuid
@@ -7679,6 +7686,22 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * LeadReferrerRead
+         * @description Who brought a lead in, as an identifier only (no names or contacts).
+         *
+         *     ``agent``: the introducing Agent's ``agent_code``. ``client``: the referral
+         *     code of the client whose link the lead signed up through.
+         */
+        LeadReferrerRead: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "agent" | "client";
+            /** Reference Id */
+            reference_id: string;
         };
         /**
          * LeadRequestSummary
@@ -10861,12 +10884,16 @@ export interface components {
             id: string;
             /** Last Disposition */
             last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+            /** Last Interest Level */
+            last_interest_level?: ("hot" | "warm" | "cold") | null;
             latest_request?: components["schemas"]["LeadRequestSummary"] | null;
             /**
              * Loan Applications
              * @default []
              */
             loan_applications: components["schemas"]["TelecallerLoanApplicationRead"][];
+            /** Loan Statuses */
+            loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold")[];
             /** Mobile */
             mobile: string;
             /** Name */
@@ -10883,6 +10910,7 @@ export interface components {
              * @default []
              */
             property_enquiries: components["schemas"]["TelecallerPropertyEnquiryRead"][];
+            referrer?: components["schemas"]["LeadReferrerRead"] | null;
             /** Requirement */
             requirement?: {
                 [key: string]: unknown;
@@ -10927,13 +10955,18 @@ export interface components {
             id: string;
             /** Last Disposition */
             last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+            /** Last Interest Level */
+            last_interest_level?: ("hot" | "warm" | "cold") | null;
             latest_request?: components["schemas"]["LeadRequestSummary"] | null;
+            /** Loan Statuses */
+            loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold")[];
             /** Mobile */
             mobile: string;
             /** Name */
             name?: string | null;
             /** Next Follow Up At */
             next_follow_up_at?: string | null;
+            referrer?: components["schemas"]["LeadReferrerRead"] | null;
             /** Requirement */
             requirement?: {
                 [key: string]: unknown;
@@ -19818,7 +19851,7 @@ export interface operations {
     list_leads_api_v1_telecaller_leads_get: {
         parameters: {
             query?: {
-                status_filter?: string | null;
+                status_filter?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
             };
             header?: never;
             path?: never;

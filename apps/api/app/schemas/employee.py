@@ -8,7 +8,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.schemas.telecaller import STAFF_NOTE_MAX_CHARS
+from app.schemas.telecaller import (
+    STAFF_NOTE_MAX_CHARS,
+    CallDispositionLiteral,
+    InterestLevelLiteral,
+    LeadReferrerRead,
+    LoanStatusLiteral,
+)
 
 TaskTypeLiteral = Literal["document_collection", "property_visit", "background_check"]
 # 'unassigned' intentionally excluded: tasks_rls never surfaces an unassigned
@@ -46,6 +52,13 @@ class EmployeeTaskRead(BaseModel):
     due_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    # Lead context for filtering the task list: the lead's latest call outcome
+    # and interest, its loan application statuses, and who referred it.
+    lead_last_disposition: CallDispositionLiteral | None = None
+    lead_last_interest_level: InterestLevelLiteral | None = None
+    lead_loan_statuses: list[LoanStatusLiteral] = Field(default_factory=list)
+    # Absent when Admin hides the "Referred by" field; null when nobody referred.
+    lead_referrer: LeadReferrerRead | None = None
 
 
 class EmployeeTaskUpdate(BaseModel):
