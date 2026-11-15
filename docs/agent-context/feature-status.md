@@ -3,7 +3,7 @@
 Status: **Derived living implementation ledger**
 
 **Implemented — client feedback batch, PR 3: analytics calendar range and
-filters** (2026-11-15; open for review), branch
+filters** (2026-11-15; [PR #346](https://github.com/brollysolutions/client1/pull/346), mirror vamshisaideep9/client1#50, open for review), branch
 `feat/analytics-date-range-filters` stacked on PR 2.
 
 API, `GET /me/analytics`:
