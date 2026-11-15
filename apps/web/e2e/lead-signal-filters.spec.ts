@@ -86,7 +86,7 @@ test("telecaller filters leads by loan status, call status, interest and referre
   await expect(page.getByText("Client referral · 7K2M9QXA")).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("telecaller-leads-filters.png"), fullPage: true, animations: "disabled" });
 
-  await pick(page, "Filter by loan status", "Sanctioned");
+  await pick(page, "Filter by loan status", "Approved");
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText("Agent Lead");
   await page.getByRole("button", { name: "Clear filters" }).first().click();

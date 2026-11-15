@@ -2,6 +2,48 @@
 
 Status: **Derived living implementation ledger**
 
+**Implemented — loan application review and agreement stages** (2026-11-15;
+open for review), branch `feat/loan-status-stages` from `upstream/main`
+`e25957f`.
+
+API:
+- `LoanStatus` gains `under_review`, `agreement_collected` and
+  `agreement_submitted_to_bank`. Migration `a7c9e1b3d5f2` adds them with
+  `ALTER TYPE ... ADD VALUE ... AFTER`; the downgrade is a no-op, and api and
+  scheduler must be restarted after it.
+- The forward-only order is: new, assigned, contacted, docs collected,
+  submitted to bank, under review, sanctioned ("Approved"), agreement
+  collected, agreement submitted to bank, disbursed, closed. on_hold and
+  rejected stay side branches.
+- `_TERMS_REQUIRED_STATUSES` adds both agreement stages.
+- Client notification text: "approved", plus new stage phrases.
+- The 422 says "approved amount and bank".
+- The telecaller, admin, reporting and analytics status literals are updated.
+- Contracts regenerated.
+
+Web:
+- Every status map (progress form, Admin loans, telecaller requests,
+  lead-signal filters, the client journey) has the new stages, with
+  "Sanctioned" shown as "Approved".
+- The client's "Under review" now belongs to the real `under_review` stage;
+  `submitted_to_bank` reads "Submitted to bank".
+- The amount field reads "Approved amount (₹)".
+
+Evidence (2026-11-15):
+- API on the isolated `app_feedback` DB (migrated to `a7c9e1b3d5f2`, one
+  head, enum order verified): loan progress/loans/config/telecaller/referral
+  conversion/reporting/analytics suites, 195 passed. New tests cover the full
+  journey through the new stages, no moving backwards, the "approved"
+  notification, and terms required at both agreement stages. ruff is clean.
+- Web: lint and typecheck pass; Vitest 128 files / 881 tests pass (new
+  `loan-format.test.ts`).
+- Playwright (sanction terms, lead filters, telecaller workspace, dashboard
+  repairs, staff shell): 25 passed. `loan-media.spec.ts` needs a live API on
+  :8000 and was not runnable here.
+
+Security review: terms gating is stricter, disbursal and money flow are
+unchanged, and there are no grant or RLS changes. Completion impact: none.
+
 **Implemented — client feedback batch, PR 3: analytics calendar range and
 filters** (2026-11-15; [PR #346](https://github.com/brollysolutions/client1/pull/346), mirror vamshisaideep9/client1#50, open for review), branch
 `feat/analytics-date-range-filters` stacked on PR 2.

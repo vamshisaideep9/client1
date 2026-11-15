@@ -1015,7 +1015,7 @@ async def update_loan_application_progress(
     except SanctionTermsRequired as exc:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "Add the sanctioned amount and bank before marking the loan sanctioned or disbursed.",
+            "Add the approved amount and bank before moving the loan to Approved or a later stage.",
         ) from exc
     except UnknownBank as exc:
         raise HTTPException(

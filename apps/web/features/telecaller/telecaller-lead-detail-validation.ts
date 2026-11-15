@@ -96,8 +96,9 @@ export type LoanProgressTermsField =
   | "processingFee";
 
 /**
- * Mirrors services/loan_applications.py: moving to sanctioned or disbursed
- * needs the sanctioned amount and lending bank, because disbursal opens
+ * Mirrors services/loan_applications.py: moving to Approved (stored as
+ * "sanctioned"), either agreement stage or disbursed
+ * needs the approved amount and lending bank, because disbursal opens
  * commission, fee-cashback and referral eligibility. The API is the real gate.
  */
 export function validateLoanProgressTerms(values: {
@@ -111,8 +112,8 @@ export function validateLoanProgressTerms(values: {
   const errors: FieldErrors<LoanProgressTermsField> = {
     amountSanctioned:
       sanctionRequired && !values.amountSanctioned.trim()
-        ? "Enter the sanctioned amount."
-        : decimalError(values.amountSanctioned, "Sanctioned amount", {
+        ? "Enter the approved amount."
+        : decimalError(values.amountSanctioned, "Approved amount", {
             minExclusive: 0,
             max: 999_999_999_999.99,
             decimalPlaces: 2,

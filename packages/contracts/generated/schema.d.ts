@@ -4812,7 +4812,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold";
+            status: "new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold";
             /** Status Reason */
             status_reason: string | null;
         };
@@ -7220,7 +7220,7 @@ export interface components {
             /** Lead Last Interest Level */
             lead_last_interest_level?: ("hot" | "warm" | "cold") | null;
             /** Lead Loan Statuses */
-            lead_loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold")[];
+            lead_loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold")[];
             /** Lead Mobile */
             lead_mobile?: string | null;
             /** Lead Name */
@@ -7983,7 +7983,7 @@ export interface components {
          * LoanStatus
          * @enum {string}
          */
-        LoanStatus: "new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold";
+        LoanStatus: "new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold";
         /** LoanTxnCreate */
         LoanTxnCreate: {
             /** Amount */
@@ -10946,7 +10946,7 @@ export interface components {
              */
             loan_applications: components["schemas"]["TelecallerLoanApplicationRead"][];
             /** Loan Statuses */
-            loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold")[];
+            loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold")[];
             /** Mobile */
             mobile: string;
             /** Name */
@@ -11012,7 +11012,7 @@ export interface components {
             last_interest_level?: ("hot" | "warm" | "cold") | null;
             latest_request?: components["schemas"]["LeadRequestSummary"] | null;
             /** Loan Statuses */
-            loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold")[];
+            loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold")[];
             /** Mobile */
             mobile: string;
             /** Name */
@@ -11086,7 +11086,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold";
+            status: "new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold";
             /** Status Reason */
             status_reason?: string | null;
             /** Txns */
@@ -13708,7 +13708,7 @@ export interface operations {
                 sort_dir?: "asc" | "desc";
                 limit?: number;
                 offset?: number;
-                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
                 loan_type_id?: string | null;
                 bank_id?: string | null;
                 telecaller_profile_uuid?: string[] | null;
@@ -13752,7 +13752,7 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
-                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
                 loan_type_id?: string | null;
                 bank_id?: string | null;
                 telecaller_profile_uuid?: string[] | null;
@@ -13796,7 +13796,7 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
-                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
                 loan_type_id?: string | null;
                 bank_id?: string | null;
                 telecaller_profile_uuid?: string[] | null;
@@ -17356,7 +17356,7 @@ export interface operations {
                 /** @description Telecaller: calls with this interest level. */
                 interest?: ("hot" | "warm" | "cold") | null;
                 /** @description Telecaller: leads with a loan application in this status. */
-                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
                 /** @description Telecaller: leads from this referral source. */
                 lead_source?: ("direct" | "agent" | "client") | null;
                 /** @description Agent: leads in this status. */
