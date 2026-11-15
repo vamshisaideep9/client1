@@ -3,7 +3,9 @@
 Status: **development/staging only — never production, customer, or KYC data**
 
 This runs the development stack (`docker-compose.yml` + `docker-compose.dev.yml`)
-on one DigitalOcean droplet so the team can review work over HTTPS. The
+on one DigitalOcean droplet so the team can review work over HTTPS. The API runs
+in `ENV=development`; the web app runs as the production standalone image so
+page speed on this host reflects what users will get. The
 production topology, images, and launch gates are separate:
 `docker-compose.prod.example.yml` and `docs/agent-context/pre-deployment-checklist.md`.
 
@@ -11,8 +13,8 @@ What this directory adds:
 
 | File | Purpose |
 | --- | --- |
-| `compose.droplet.yml` | Removes datastore ports, replaces MinIO with a dedicated DigitalOcean Space, binds the proxied ports to `127.0.0.1`, injects fresh credentials and public HTTPS origins, and adds restart policies. |
-| `Caddyfile` | Host HTTPS proxy with automatic certificates and an IP allowlist. |
+| `compose.droplet.yml` | Builds the web app's production image, removes datastore ports, replaces MinIO with a dedicated DigitalOcean Space, binds the proxied ports to `127.0.0.1`, injects fresh credentials and public HTTPS origins, and adds restart policies. |
+| `Caddyfile` | Host HTTPS proxy with automatic certificates, an IP allowlist, and response compression. |
 | `init-env.sh` | Writes the repository-root `.env` with fresh random credentials. |
 | `dc.sh` | `docker compose` with the three files in the right order. |
 
@@ -72,7 +74,7 @@ sudo install -d -o deploy -g deploy /opt/dhanadhara
 git clone --filter=blob:none --sparse --branch main <repo-ssh-url> /opt/dhanadhara
 cd /opt/dhanadhara
 git sparse-checkout init --cone
-git sparse-checkout set apps/api apps/web apps/media-runtime infra/dev-droplet
+git sparse-checkout set apps/api apps/web apps/media-runtime infra/dev-droplet packages/contracts
 git config core.sparseCheckoutCone && ls   # expect "true" and docker-compose*.yml
 ```
 
@@ -165,7 +167,7 @@ sudo systemctl status caddy --no-pager
 infra/dev-droplet/dc.sh config --quiet   # fails if .env is missing a value, including SPACES_*
 infra/dev-droplet/dc.sh up -d --build
 infra/dev-droplet/dc.sh ps               # wait until every service is healthy
-infra/dev-droplet/dc.sh logs -f web      # first start installs packages; wait for "Ready in"
+infra/dev-droplet/dc.sh logs -f web      # wait for "Ready in"
 ```
 
 The API applies `alembic upgrade head` before serving, so a fresh database is
@@ -208,8 +210,26 @@ cd /opt/dhanadhara && git pull --ff-only
 infra/dev-droplet/dc.sh restart api scheduler   # applies new migrations; the scheduler has no hot reload
 ```
 
-The web dev server reloads by itself. After `uv.lock` or `pnpm-lock.yaml`
-changes, run `infra/dev-droplet/dc.sh up -d --build api scheduler web`.
+The web app is a production build with no hot reload, so rebuild it after
+every pull (the `next build` takes a few minutes; the old container keeps
+serving until the new one starts):
+
+```bash
+infra/dev-droplet/dc.sh up -d --build web
+```
+
+After `uv.lock` changes, also run `infra/dev-droplet/dc.sh up -d --build api scheduler`.
+
+### Moving an existing droplet from `next dev` to the production web build
+
+Once, as `deploy`, then reinstall the Caddyfile (step 5's first command plus
+`sudo systemctl reload caddy`) so responses are compressed:
+
+```bash
+cd /opt/dhanadhara && git pull --ff-only
+git sparse-checkout add packages/contracts
+infra/dev-droplet/dc.sh up -d --build web
+```
 
 ## Starting fresh again
 

@@ -60,6 +60,19 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In progress — dev droplet serves the production web build** (2026-11-15;
+branch `chore/dev-droplet-prod-web` from `upstream/main` `9091252`; direct user
+request, no requirement or completion-percentage change). A Lighthouse run on
+dev.dhanadhara.com showed the droplet serving `next dev --turbopack`: ~6.8 MB
+of unminified JavaScript, `no-store` caching, no compression, mobile LCP ~17 s.
+`compose.droplet.yml` now builds the web `prod` target (standalone
+`node server.js`, contracts build context, client-confirmed public contact
+defaults, `HOSTNAME=0.0.0.0`, no bind mount) and the Caddyfile adds
+`encode zstd gzip` (Next's `compress:false` defers to the proxy). The API stays
+`ENV=development`. Next: user installs the Caddyfile with sudo, retest, merge.
+Non-goals: production hardening flags (`read_only`, `cap_drop`) on the dev
+web container, nginx on the droplet. Recommended: Opus 5.5 / high.
+
 **In review — manager edits and filters (CS-020)** (2026-11-15; PR 1
 [#350](https://github.com/brollysolutions/client1/pull/350), mirror
 vamshisaideep9/client1#54; PR 2 web stacked), branch
