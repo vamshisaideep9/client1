@@ -11,10 +11,19 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.schemas.staff_analytics import AnalyticsKpi
-from app.schemas.telecaller import LeadActivityRead, LeadRequestSummary
+from app.schemas.staff_analytics import AnalyticsKpi, StaffAnalyticsResponse
+from app.schemas.telecaller import (
+    STAFF_NOTE_MAX_CHARS,
+    CallDispositionLiteral,
+    InterestLevelLiteral,
+    LeadActivityRead,
+    LeadReferrerRead,
+    LeadRequestSummary,
+    LoanStatusLiteral,
+    ManagerNoteRead,
+)
 
 TeamLine = Literal["loans", "real_estate"]
 TeamMemberRoleLiteral = Literal["telecaller", "employee"]
@@ -113,6 +122,9 @@ class TeamOverviewResponse(BaseModel):
     range_days: int
     totals: list[AnalyticsKpi]
     members: list[TeamMemberSummary]
+    # The chosen members' analytics summed into one report (KPIs, trend,
+    # breakdowns, funnel); null when no member is selected.
+    report: StaffAnalyticsResponse | None = None
 
 
 class TeamLastCall(BaseModel):
@@ -122,8 +134,25 @@ class TeamLastCall(BaseModel):
     created_at: datetime
 
 
+class TeamAssignee(BaseModel):
+    staff_profile_uuid: UUID
+    first_name: str
+    last_name: str
+
+
+class TeamLeadSignals(BaseModel):
+    """What the Telecaller / Employee lists filter on, for the same filters."""
+
+    loan_statuses: list[LoanStatusLiteral] = Field(default_factory=list)
+    last_disposition: CallDispositionLiteral | None = None
+    last_interest_level: InterestLevelLiteral | None = None
+    referrer: LeadReferrerRead | None = None
+
+
 class TeamLeadRow(BaseModel):
     id: UUID
+    # Null when the Admin hides it from this team's member role; the key is
+    # then listed in hidden_fields so the page can say so.
     name: str | None
     mobile: str
     status: str
@@ -132,12 +161,16 @@ class TeamLeadRow(BaseModel):
     updated_at: datetime
     requests: list[LeadRequestSummary]
     last_call: TeamLastCall | None
+    assigned_to: TeamAssignee | None = None
+    signals: TeamLeadSignals = Field(default_factory=TeamLeadSignals)
+    hidden_fields: list[str] = Field(default_factory=list)
 
 
 class TeamTaskRow(BaseModel):
     id: UUID
     lead_uuid: UUID
     lead_name: str | None
+    lead_mobile: str | None = None
     task_type: str
     status: str
     business_line: TeamLine
@@ -145,6 +178,9 @@ class TeamTaskRow(BaseModel):
     due_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    assigned_to: TeamAssignee | None = None
+    signals: TeamLeadSignals = Field(default_factory=TeamLeadSignals)
+    hidden_fields: list[str] = Field(default_factory=list)
 
 
 class TeamMemberWorkResponse(BaseModel):
@@ -154,10 +190,73 @@ class TeamMemberWorkResponse(BaseModel):
     tasks: list[TeamTaskRow]
 
 
+class TeamWorkResponse(BaseModel):
+    """Every member's work in one list, for the team-wide filters."""
+
+    team_id: UUID
+    kind: Literal["leads", "tasks"]
+    leads: list[TeamLeadRow]
+    tasks: list[TeamTaskRow]
+
+
+TeamWorkNoteRead = ManagerNoteRead
+
+
 class TeamLeadDetailResponse(BaseModel):
     lead: TeamLeadRow
     assigned_to: TeamMemberRead
     activities: list[LeadActivityRead]
+    notes: list[TeamWorkNoteRead] = Field(default_factory=list)
+
+
+class TeamTaskDetailResponse(BaseModel):
+    task: TeamTaskRow
+    assigned_to: TeamMemberRead
+    notes: list[TeamWorkNoteRead] = Field(default_factory=list)
+
+
+class TeamLeadStatusUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["working", "converted", "closed"]
+
+
+class TeamTaskUpdate(BaseModel):
+    """Change the due date, or cancel with a reason; one at a time."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    due_at: datetime | None = None
+    cancel_reason: str | None = Field(default=None, min_length=3, max_length=500)
+
+    @model_validator(mode="after")
+    def _one_change(self) -> TeamTaskUpdate:
+        if (self.due_at is None) == (self.cancel_reason is None):
+            raise ValueError("Send either due_at or cancel_reason.")
+        if self.due_at is not None and self.due_at.tzinfo is None:
+            raise ValueError("due_at must include a timezone.")
+        return self
+
+
+class TeamNoteCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    body: str = Field(min_length=1, max_length=STAFF_NOTE_MAX_CHARS)
+    follow_up_at: datetime | None = None
+
+    @field_validator("body")
+    @classmethod
+    def _body(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Write a note.")
+        return value
+
+
+class TeamWorkUpdateResponse(BaseModel):
+    id: UUID
+    status: str
+    due_at: datetime | None = None
 
 
 class TeamReassignRequest(BaseModel):

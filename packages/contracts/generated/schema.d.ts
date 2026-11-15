@@ -2852,6 +2852,24 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** Patch Lead */
+        patch: operations["patch_lead_api_v1_manager_teams__team_id__leads__lead_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/manager/teams/{team_id}/leads/{lead_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Lead Note */
+        post: operations["post_lead_note_api_v1_manager_teams__team_id__leads__lead_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -2923,6 +2941,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/manager/teams/{team_id}/tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Task Detail */
+        get: operations["get_task_detail_api_v1_manager_teams__team_id__tasks__task_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Task */
+        patch: operations["patch_task_api_v1_manager_teams__team_id__tasks__task_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/manager/teams/{team_id}/tasks/{task_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Task Note */
+        post: operations["post_task_note_api_v1_manager_teams__team_id__tasks__task_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/manager/teams/{team_id}/tasks/{task_id}/reassign": {
         parameters: {
             query?: never;
@@ -2934,6 +2987,23 @@ export interface paths {
         put?: never;
         /** Post Reassign Task */
         post: operations["post_reassign_task_api_v1_manager_teams__team_id__tasks__task_id__reassign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manager/teams/{team_id}/work": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Team Work */
+        get: operations["get_team_work_api_v1_manager_teams__team_id__work_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6238,7 +6308,7 @@ export interface components {
          *     `services/fee_cashbacks.py` (FR-6.6 processing-fee cashback).
          * @enum {string}
          */
-        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned";
+        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed";
         /** AuditLogListResponse */
         AuditLogListResponse: {
             /** Entries */
@@ -7420,6 +7490,8 @@ export interface components {
              * Format: uuid
              */
             lead_uuid: string;
+            /** Manager Notes */
+            manager_notes?: components["schemas"]["ManagerNoteRead"][];
             /** Notes */
             notes: string | null;
             /** Outcome */
@@ -8335,6 +8407,28 @@ export interface components {
             mobile: string;
             /** Password */
             password: string;
+        };
+        /**
+         * ManagerNoteRead
+         * @description A Sub Admin manager's note on a lead or task (CS-020), read-only here.
+         */
+        ManagerNoteRead: {
+            /** Author Name */
+            author_name: string;
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Follow Up At */
+            follow_up_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
         };
         /** ManagerTeamsResponse */
         ManagerTeamsResponse: {
@@ -11093,6 +11187,18 @@ export interface components {
          * @enum {string}
          */
         TaskType: "document_collection" | "property_visit" | "background_check";
+        /** TeamAssignee */
+        TeamAssignee: {
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
+            /**
+             * Staff Profile Uuid
+             * Format: uuid
+             */
+            staff_profile_uuid: string;
+        };
         /**
          * TeamEligibleResponse
          * @description Pickers: Sub Admins free to manage a team in this line, and active staff
@@ -11124,9 +11230,12 @@ export interface components {
             activities: components["schemas"]["LeadActivityRead"][];
             assigned_to: components["schemas"]["TeamMemberRead"];
             lead: components["schemas"]["TeamLeadRow"];
+            /** Notes */
+            notes?: components["schemas"]["ManagerNoteRead"][];
         };
         /** TeamLeadRow */
         TeamLeadRow: {
+            assigned_to?: components["schemas"]["TeamAssignee"] | null;
             /**
              * Business Line
              * @enum {string}
@@ -11137,6 +11246,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Hidden Fields */
+            hidden_fields?: string[];
             /**
              * Id
              * Format: uuid
@@ -11149,6 +11260,7 @@ export interface components {
             name: string | null;
             /** Requests */
             requests: components["schemas"]["LeadRequestSummary"][];
+            signals?: components["schemas"]["TeamLeadSignals"];
             /** Status */
             status: string;
             /**
@@ -11156,6 +11268,27 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * TeamLeadSignals
+         * @description What the Telecaller / Employee lists filter on, for the same filters.
+         */
+        TeamLeadSignals: {
+            /** Last Disposition */
+            last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+            /** Last Interest Level */
+            last_interest_level?: ("hot" | "warm" | "cold") | null;
+            /** Loan Statuses */
+            loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold")[];
+            referrer?: components["schemas"]["LeadReferrerRead"] | null;
+        };
+        /** TeamLeadStatusUpdate */
+        TeamLeadStatusUpdate: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "working" | "converted" | "closed";
         };
         /** TeamMemberRead */
         TeamMemberRead: {
@@ -11199,6 +11332,13 @@ export interface components {
             /** Tasks */
             tasks: components["schemas"]["TeamTaskRow"][];
         };
+        /** TeamNoteCreate */
+        TeamNoteCreate: {
+            /** Body */
+            body: string;
+            /** Follow Up At */
+            follow_up_at?: string | null;
+        };
         /** TeamOverviewResponse */
         TeamOverviewResponse: {
             /**
@@ -11215,6 +11355,7 @@ export interface components {
             members: components["schemas"]["TeamMemberSummary"][];
             /** Range Days */
             range_days: number;
+            report?: components["schemas"]["StaffAnalyticsResponse"] | null;
             team: components["schemas"]["StaffTeamRead"];
             /** Totals */
             totals: components["schemas"]["AnalyticsKpi"][];
@@ -11286,8 +11427,16 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** TeamTaskDetailResponse */
+        TeamTaskDetailResponse: {
+            assigned_to: components["schemas"]["TeamMemberRead"];
+            /** Notes */
+            notes?: components["schemas"]["ManagerNoteRead"][];
+            task: components["schemas"]["TeamTaskRow"];
+        };
         /** TeamTaskRow */
         TeamTaskRow: {
+            assigned_to?: components["schemas"]["TeamAssignee"] | null;
             /**
              * Business Line
              * @enum {string}
@@ -11300,11 +11449,15 @@ export interface components {
             created_at: string;
             /** Due At */
             due_at: string | null;
+            /** Hidden Fields */
+            hidden_fields?: string[];
             /**
              * Id
              * Format: uuid
              */
             id: string;
+            /** Lead Mobile */
+            lead_mobile?: string | null;
             /** Lead Name */
             lead_name: string | null;
             /**
@@ -11314,6 +11467,7 @@ export interface components {
             lead_uuid: string;
             /** Notes */
             notes: string | null;
+            signals?: components["schemas"]["TeamLeadSignals"];
             /** Status */
             status: string;
             /** Task Type */
@@ -11323,6 +11477,48 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * TeamTaskUpdate
+         * @description Change the due date, or cancel with a reason; one at a time.
+         */
+        TeamTaskUpdate: {
+            /** Cancel Reason */
+            cancel_reason?: string | null;
+            /** Due At */
+            due_at?: string | null;
+        };
+        /**
+         * TeamWorkResponse
+         * @description Every member's work in one list, for the team-wide filters.
+         */
+        TeamWorkResponse: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "leads" | "tasks";
+            /** Leads */
+            leads: components["schemas"]["TeamLeadRow"][];
+            /** Tasks */
+            tasks: components["schemas"]["TeamTaskRow"][];
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+        };
+        /** TeamWorkUpdateResponse */
+        TeamWorkUpdateResponse: {
+            /** Due At */
+            due_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
         };
         /**
          * TelecallerClientHistoryResponse
@@ -11423,6 +11619,11 @@ export interface components {
             loan_applications: components["schemas"]["TelecallerLoanApplicationRead"][];
             /** Loan Statuses */
             loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold")[];
+            /**
+             * Manager Notes
+             * @default []
+             */
+            manager_notes: components["schemas"]["ManagerNoteRead"][];
             /** Mobile */
             mobile: string;
             /** Name */
@@ -18065,6 +18266,78 @@ export interface operations {
             };
         };
     };
+    patch_lead_api_v1_manager_teams__team_id__leads__lead_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamLeadStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamWorkUpdateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_lead_note_api_v1_manager_teams__team_id__leads__lead_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamNoteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagerNoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     post_reassign_lead_api_v1_manager_teams__team_id__leads__lead_id__reassign_post: {
         parameters: {
             query?: never;
@@ -18110,6 +18383,18 @@ export interface operations {
                 date_from?: string | null;
                 /** @description Last IST day of the period, inclusive. */
                 date_to?: string | null;
+                /** @description Telecaller teams: call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Telecaller teams: interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Telecaller teams: leads with a loan application in this status. */
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Telecaller teams: leads from this referral source. */
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Employee teams: task type. */
+                task_type?: ("document_collection" | "property_visit" | "background_check") | null;
+                /** @description Only these members (repeatable); all when omitted. */
+                member?: string[] | null;
             };
             header?: never;
             path: {
@@ -18183,6 +18468,18 @@ export interface operations {
                 date_from?: string | null;
                 /** @description Last IST day of the period, inclusive. */
                 date_to?: string | null;
+                /** @description Telecaller teams: call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Telecaller teams: interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Telecaller teams: leads with a loan application in this status. */
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Telecaller teams: leads from this referral source. */
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Employee teams: task type. */
+                task_type?: ("document_collection" | "property_visit" | "background_check") | null;
+                /** @description Only these members (repeatable); all when omitted. */
+                member?: string[] | null;
             };
             header?: never;
             path: {
@@ -18199,6 +18496,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TeamOverviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_task_detail_api_v1_manager_teams__team_id__tasks__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamTaskDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_task_api_v1_manager_teams__team_id__tasks__task_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamTaskUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamWorkUpdateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_task_note_api_v1_manager_teams__team_id__tasks__task_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamNoteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagerNoteRead"];
                 };
             };
             /** @description Validation Error */
@@ -18235,6 +18636,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TeamReassignResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_team_work_api_v1_manager_teams__team_id__work_get: {
+        parameters: {
+            query?: {
+                scope?: string;
+            };
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamWorkResponse"];
                 };
             };
             /** @description Validation Error */

@@ -2,6 +2,28 @@
 
 Status: **Derived living implementation ledger**
 
+**In review — manager edits and filters (CS-020)** (2026-11-15), branch
+`feat/team-manager-edits-filters` from `upstream/main` `bda242b` (PR 1, API)
+with the web PR stacked on it.
+- API: migration `b2d4f6a8c0e1` (one head, upgrade → downgrade → upgrade on a
+  fresh database). Manager writes only through confined definer functions
+  (lead status, task due date / cancel, notes); notes table is SELECT-only to
+  `api_user`; `team_lead_signals` returns referral/agent codes, loan statuses
+  and last call only for leads the manager reaches; manager views apply the
+  Admin's field rules for the member role.
+- Web: team Overview (date range, members, role filters, combined report,
+  member table) and Work (team-wide filtered list) tabs; member page uses the
+  same list and filtered analytics; edit, note, details and move dialogs;
+  "Notes from your manager" on Telecaller lead and Employee task pages; phone
+  filters fold behind one button.
+- Evidence: `test_team_manager_edits_api.py` (7) with the CS-019 team tests
+  (19 in all), affected Telecaller/Employee/analytics/lead-signal/contract
+  suites (109), field-visibility tests (16). Web: typecheck, lint, unit tests
+  (129 files / 886 incl. the new filter logic), Playwright
+  `sub-admin-teams.spec.ts` (6) at 1440 and 360 px with screenshots reviewed.
+  Full API suite and the production web build: see the PR. Completion impact:
+  manager tooling complete for this phase.
+
 **In review — item 9: Sub Admin managers over teams (CS-019)** (2026-11-15),
 branch `feat/sub-admin-team-managers` from `upstream/main` `76dced7`: PR 1 (API)
 [#348](https://github.com/brollysolutions/client1/pull/348), mirror

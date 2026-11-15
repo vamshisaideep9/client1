@@ -12,7 +12,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -75,6 +75,46 @@ class StaffTeamMember(Base):
     added_by_auth_user_uuid: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("auth_users.id", ondelete="SET NULL"), nullable=True
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=datetime.utcnow
+    )
+
+
+class TeamWorkNote(Base):
+    """Append-only manager note on a team lead or task (CS-020).
+
+    Written only through the ``team_manager_add_note`` definer function, which
+    takes the author from the caller's session. Read by the reaching manager,
+    the assigned Telecaller / Employee and platform Admins.
+    """
+
+    __tablename__ = "team_work_notes"
+    __table_args__ = (
+        CheckConstraint("num_nonnulls(lead_uuid, task_uuid) = 1", name="one_subject"),
+        CheckConstraint(
+            "business_line::text IN ('loans', 'real_estate')", name="business_line_operational"
+        ),
+        CheckConstraint("length(btrim(body)) BETWEEN 1 AND 10000", name="body_length"),
+        CheckConstraint("follow_up_at IS NULL OR lead_uuid IS NOT NULL", name="follow_up_on_leads"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    lead_uuid: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("leads.id", ondelete="CASCADE"), nullable=True
+    )
+    task_uuid: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True
+    )
+    business_line: Mapped[str] = mapped_column(business_line_enum, nullable=False)
+    author_staff_profile_uuid: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("staff_profiles.id", ondelete="SET NULL"), nullable=True
+    )
+    author_auth_user_uuid: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("auth_users.id", ondelete="SET NULL"), nullable=True
+    )
+    author_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    follow_up_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
     )

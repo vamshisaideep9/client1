@@ -820,6 +820,20 @@ ADMIN_OPERATIONAL_COVERAGE: dict[str, AdminCoverageEntry] = {
         audit_expectation="Create, update and archive append events; archive records the removed members.",
         rationale="Teams supervise existing work and never change routing; archive keeps history instead of deleting.",
     ),
+    "team_work_notes": _entry(
+        domain="Manager notes on team leads and tasks (CS-020)",
+        sensitivity=(DataSensitivity.CONTACT_PII,),
+        view_mode=AdminViewMode.AUDIT_ONLY,
+        view_coverage=CoverageState.COVERED,
+        update_mode=AdminUpdateMode.APPEND_ONLY,
+        update_coverage=CoverageState.PROTECTED,
+        audit_coverage=CoverageState.COVERED,
+        api_surfaces=("/api/v1/manager/teams",),
+        ui_surfaces=("/dashboard/team",),
+        rls_expectation="Platform Admin, the reaching manager and the assigned Telecaller or Employee read; writes only through the team_manager_add_note definer function; no UPDATE or DELETE grant.",
+        audit_expectation="Every note appends a team_note_added event with the subject and line.",
+        rationale="Free-text coaching notes may mention the client, so they stay append-only and audited rather than Admin-editable.",
+    ),
     "staff_invite_links": _entry(
         domain="Staff first-login invitations",
         # Deliberately NOT tagged SESSION_SECRET, unlike contact_share_links.

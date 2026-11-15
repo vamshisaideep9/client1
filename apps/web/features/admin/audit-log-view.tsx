@@ -381,6 +381,10 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   team_lead_viewed: { label: "Manager viewed a lead", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
   team_lead_reassigned: { label: "Manager moved a lead", icon: RefreshCw, tone: "bg-loans-soft text-brand-link" },
   team_task_reassigned: { label: "Manager moved a task", icon: RefreshCw, tone: "bg-loans-soft text-brand-link" },
+  team_lead_status_updated: { label: "Manager changed a lead status", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  team_task_updated: { label: "Manager changed a task", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  team_note_added: { label: "Manager added a note", icon: ScrollText, tone: "bg-muted text-text-secondary" },
+  team_task_viewed: { label: "Manager viewed a task", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
   vehicle_arrangement_updated: {
     label: "Vehicle arrangement updated",
     icon: CarFront,

@@ -68,4 +68,4 @@ from app.models.agent_invite import AgentInviteLink  # noqa
 from app.models.mobile_change import MobileChangeRequest  # noqa
 from app.models.personalization import PersonalizationPreference  # noqa
 from app.models.agent_payout_details import AgentPayoutDetails  # noqa
-from app.models.staff_team import StaffTeam, StaffTeamMember  # noqa
+from app.models.staff_team import StaffTeam, StaffTeamMember, TeamWorkNote  # noqa

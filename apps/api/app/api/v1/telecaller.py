@@ -69,6 +69,7 @@ from app.services.property_deals import (
 from app.services.property_deals import (
     apply_progress_update as apply_deal_progress_update,
 )
+from app.services.team_manager import work_notes
 from app.services.telecaller import (
     LoanApplicationNotFound,
     LoanApplicationNotLoansLine,
@@ -321,6 +322,7 @@ async def get_lead(
         site_visits=site_visits,
         property_deals=property_deals,
         tasks=[TaskRead.model_validate(t, from_attributes=True) for t in tasks],
+        manager_notes=await work_notes(db, lead_id=lead.id),
         **project_values(
             modes,
             "lead",
