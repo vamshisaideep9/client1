@@ -60,6 +60,16 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**Implemented — loan application review and agreement stages** (2026-11-15;
+[PR #347](https://github.com/brollysolutions/client1/pull/347), mirror vamshisaideep9/client1#51, open for review), branch `feat/loan-status-stages` from `upstream/main`
+`e25957f`. Client request: after "Submitted to bank" comes "Under review";
+"Sanctioned" is shown as "Approved"; after it come "Agreement collected" and
+"Agreement submitted to bank", then "Disbursed". Additive enum migration
+`a7c9e1b3d5f2`. The stored value `sanctioned` is kept (label only) so sanction
+terms, history and reports need no rewrite. The approved amount and bank are
+required from approval onwards, which now includes both agreement stages.
+Recommended: Opus 5.5 / high (status pipeline next to money flow).
+
 **Implemented — client feedback batch, PR 3: analytics calendar range and
 filters** (2026-11-15; [PR #346](https://github.com/brollysolutions/client1/pull/346), mirror vamshisaideep9/client1#50, open for review), branch
 `feat/analytics-date-range-filters` stacked on PR 2. Client feedback item 4:

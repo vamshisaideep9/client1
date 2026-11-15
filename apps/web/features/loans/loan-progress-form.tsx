@@ -40,7 +40,10 @@ export type LoanStatusValue =
   | "contacted"
   | "docs_collected"
   | "submitted_to_bank"
+  | "under_review"
   | "sanctioned"
+  | "agreement_collected"
+  | "agreement_submitted_to_bank"
   | "disbursed"
   | "closed"
   | "rejected"
@@ -75,7 +78,10 @@ const ORDER = [
   "contacted",
   "docs_collected",
   "submitted_to_bank",
+  "under_review",
   "sanctioned",
+  "agreement_collected",
+  "agreement_submitted_to_bank",
   "disbursed",
   "closed",
 ] as const;
@@ -86,7 +92,10 @@ const STATUS_LABEL: Record<string, string> = {
   contacted: "Contacted",
   docs_collected: "Docs collected",
   submitted_to_bank: "Submitted to bank",
-  sanctioned: "Sanctioned",
+  under_review: "Under review",
+  sanctioned: "Approved",
+  agreement_collected: "Agreement collected",
+  agreement_submitted_to_bank: "Agreement submitted to bank",
   disbursed: "Disbursed",
   closed: "Closed",
   rejected: "Rejected",
@@ -94,6 +103,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const TERMINAL = new Set(["closed", "rejected"]);
+const SANCTION_TERMS_STATUSES = new Set<string>(["sanctioned", "agreement_collected", "agreement_submitted_to_bank", "disbursed"]);
 const SUBMITTED_INDEX = ORDER.indexOf("submitted_to_bank");
 const SANCTIONED_INDEX = ORDER.indexOf("sanctioned");
 
@@ -168,7 +178,8 @@ export function LoanProgressForm({
   const feeOutcomeEnabled = effectiveIndex(application.status) >= SANCTIONED_INDEX && !isTerminal;
   const options = nextStatusOptions(application.status);
   const requiresReason = status === "rejected" || status === "on_hold";
-  const requiresSanctionTerms = status === "sanctioned" || status === "disbursed";
+  // Approval onwards needs the approved amount and bank (mirrors the API).
+  const requiresSanctionTerms = SANCTION_TERMS_STATUSES.has(status);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -300,7 +311,7 @@ export function LoanProgressForm({
         <div className="grid gap-4 sm:grid-cols-4">
           <div>
             <Label htmlFor={`loan-progress-sanctioned-${application.id}`}>
-              Sanctioned (₹)
+              Approved amount (₹)
               {requiresSanctionTerms ? <RequiredIndicator /> : null}
             </Label>
             <Input

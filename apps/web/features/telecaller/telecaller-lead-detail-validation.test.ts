@@ -106,13 +106,13 @@ describe("Lead Details validation", () => {
         processingFee: "1.001",
       }),
     ).toEqual({
-      amountSanctioned: "Sanctioned amount must be greater than 0.",
+      amountSanctioned: "Approved amount must be greater than 0.",
       interestRate: "Interest rate must be 100 or less.",
       processingFee: "Processing fee must use no more than 2 decimal places.",
     });
   });
 
-  it("requires the sanctioned amount and bank to sanction or disburse", () => {
+  it("requires the approved amount and bank from approval to disbursal", () => {
     expect(
       validateLoanProgressTerms({
         amountSanctioned: " ",
@@ -122,7 +122,7 @@ describe("Lead Details validation", () => {
         requireSanctionTerms: true,
       }),
     ).toEqual({
-      amountSanctioned: "Enter the sanctioned amount.",
+      amountSanctioned: "Enter the approved amount.",
       bankId: "Choose the lending bank.",
     });
     expect(
@@ -133,7 +133,7 @@ describe("Lead Details validation", () => {
         processingFee: "",
         requireSanctionTerms: true,
       }),
-    ).toEqual({ amountSanctioned: "Sanctioned amount must be greater than 0." });
+    ).toEqual({ amountSanctioned: "Approved amount must be greater than 0." });
     expect(
       validateLoanProgressTerms({
         amountSanctioned: "500000",

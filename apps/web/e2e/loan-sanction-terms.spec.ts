@@ -90,14 +90,14 @@ test("sanctioning a new loan asks for the amount and bank first", async ({ page,
   await expect(page.locator(`#loan-progress-sanctioned-${APP_ID}`)).toHaveCount(0);
 
   await status.click();
-  await page.getByRole("option", { name: "Sanctioned", exact: true }).click();
+  await page.getByRole("option", { name: "Approved", exact: true }).click();
   const amount = page.locator(`#loan-progress-sanctioned-${APP_ID}`);
   const bank = page.locator(`#loan-progress-bank-${APP_ID}`);
   await expect(amount).toBeVisible();
   await expect(amount).toHaveAttribute("aria-required", "true");
 
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("Enter the sanctioned amount.")).toBeVisible();
+  await expect(page.getByText("Enter the approved amount.")).toBeVisible();
   await expect(page.getByText("Choose the lending bank.")).toBeVisible();
   await expect(amount).toBeFocused();
   await expect(bank).toHaveAttribute("aria-invalid", "true");

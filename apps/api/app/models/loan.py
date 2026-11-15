@@ -30,7 +30,12 @@ class LoanStatus(enum.StrEnum):
     CONTACTED = "contacted"
     DOCS_COLLECTED = "docs_collected"
     SUBMITTED_TO_BANK = "submitted_to_bank"
+    UNDER_REVIEW = "under_review"
+    # Shown to people as "Approved"; the stored value stays "sanctioned" so
+    # sanction terms, history and reports keep their meaning.
     SANCTIONED = "sanctioned"
+    AGREEMENT_COLLECTED = "agreement_collected"
+    AGREEMENT_SUBMITTED_TO_BANK = "agreement_submitted_to_bank"
     DISBURSED = "disbursed"
     CLOSED = "closed"
     REJECTED = "rejected"

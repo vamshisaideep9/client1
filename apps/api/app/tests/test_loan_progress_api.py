@@ -348,7 +348,9 @@ async def _disbursed_at(application_id: str) -> str | None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("target", ["sanctioned", "disbursed"])
+@pytest.mark.parametrize(
+    "target", ["sanctioned", "agreement_collected", "agreement_submitted_to_bank", "disbursed"]
+)
 @pytest.mark.parametrize(
     "terms",
     [{}, {"amount_sanctioned": "500000"}, {"bank_id": "ACTIVE_BANK"}],
@@ -382,7 +384,7 @@ async def test_sanction_or_disbursal_requires_amount_and_bank(
         f"/api/v1/telecaller/loan-applications/{application_id}", json=body, headers=headers
     )
     assert res.status_code == 422, res.text
-    assert "sanctioned amount and bank" in res.json()["detail"]
+    assert "approved amount and bank" in res.json()["detail"]
     assert await _disbursed_at(application_id) is None
 
     async with _session_mod.AsyncSessionLocal() as db:
@@ -697,3 +699,90 @@ async def test_admin_patch_not_found(client: AsyncClient) -> None:
         headers={"Authorization": f"Bearer {await _admin_token(client)}"},
     )
     assert res.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Review and agreement stages (client request 2026-11-15)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_journey_runs_through_review_approval_and_agreement_stages(
+    client: AsyncClient,
+) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid)
+    application_id = await _seed_loan_application(lead_id, "loans")
+    headers = {"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"}
+    url = f"/api/v1/telecaller/loan-applications/{application_id}"
+    bank_id = await _active_bank_id()
+
+    steps = [
+        {"status": "submitted_to_bank"},
+        {"status": "under_review"},
+        {"status": "sanctioned", "amount_sanctioned": "750000", "bank_id": bank_id},
+        {"status": "agreement_collected"},
+        {"status": "agreement_submitted_to_bank"},
+        {"status": "disbursed"},
+    ]
+    for step in steps:
+        res = await client.patch(url, json=step, headers=headers)
+        assert res.status_code == 200, (step, res.text)
+        assert res.json()["status"] == step["status"]
+    assert await _disbursed_at(application_id) is not None
+
+
+@pytest.mark.asyncio
+async def test_agreement_stages_cannot_move_backwards(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid)
+    application_id = await _seed_loan_application(lead_id, "loans")
+    headers = {"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"}
+    url = f"/api/v1/telecaller/loan-applications/{application_id}"
+
+    ok = await client.patch(
+        url,
+        json={
+            "status": "agreement_collected",
+            "amount_sanctioned": "600000",
+            "bank_id": await _active_bank_id(),
+        },
+        headers=headers,
+    )
+    back = await client.patch(url, json={"status": "under_review"}, headers=headers)
+
+    assert ok.status_code == 200, ok.text
+    assert back.status_code in (409, 422), back.text
+
+
+@pytest.mark.asyncio
+async def test_client_notification_calls_sanctioned_approved(client: AsyncClient) -> None:
+    import app.db.session as _session_mod
+
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid)
+    application_id = await _seed_loan_application(lead_id, "loans")
+
+    res = await client.patch(
+        f"/api/v1/telecaller/loan-applications/{application_id}",
+        json={
+            "status": "sanctioned",
+            "amount_sanctioned": "500000",
+            "bank_id": await _active_bank_id(),
+        },
+        headers={"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"},
+    )
+    assert res.status_code == 200, res.text
+
+    client_auth_uuid = await _client_auth_uuid_for_application(application_id)
+    async with _session_mod.AsyncSessionLocal() as db:
+        body = (
+            await db.execute(
+                text(
+                    "SELECT body FROM notifications WHERE user_uuid = :u "
+                    "ORDER BY created_at DESC LIMIT 1"
+                ),
+                {"u": client_auth_uuid},
+            )
+        ).scalar_one()
+    assert body == "Your loan application is now approved."

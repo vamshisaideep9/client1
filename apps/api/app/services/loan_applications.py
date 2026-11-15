@@ -40,7 +40,10 @@ _ORDER = [
     LoanStatus.CONTACTED,
     LoanStatus.DOCS_COLLECTED,
     LoanStatus.SUBMITTED_TO_BANK,
-    LoanStatus.SANCTIONED,
+    LoanStatus.UNDER_REVIEW,
+    LoanStatus.SANCTIONED,  # labelled "Approved"
+    LoanStatus.AGREEMENT_COLLECTED,
+    LoanStatus.AGREEMENT_SUBMITTED_TO_BANK,
     LoanStatus.DISBURSED,
     LoanStatus.CLOSED,
 ]
@@ -50,11 +53,17 @@ _SIDE_BRANCH = {LoanStatus.ON_HOLD, LoanStatus.REJECTED}
 _SUBMITTED_INDEX = _ORDER_INDEX[LoanStatus.SUBMITTED_TO_BANK]
 _SANCTIONED_INDEX = _ORDER_INDEX[LoanStatus.SANCTIONED]
 # Disbursal stamps disbursed_at, which opens commission, fee-cashback and
-# referral-conversion eligibility, so neither status may be reached without
-# the sanctioned amount and lending bank on record. CLOSED is deliberately not
-# listed: it does not stamp disbursed_at, so a never-disbursed close creates no
-# money obligation.
-_TERMS_REQUIRED_STATUSES = {LoanStatus.SANCTIONED, LoanStatus.DISBURSED}
+# referral-conversion eligibility, so no status from approval onwards may be
+# reached without the sanctioned amount and lending bank on record (the two
+# agreement stages sit between approval and disbursal). CLOSED is deliberately
+# not listed: it does not stamp disbursed_at, so a never-disbursed close
+# creates no money obligation.
+_TERMS_REQUIRED_STATUSES = {
+    LoanStatus.SANCTIONED,
+    LoanStatus.AGREEMENT_COLLECTED,
+    LoanStatus.AGREEMENT_SUBMITTED_TO_BANK,
+    LoanStatus.DISBURSED,
+}
 
 _STATUS_LABEL = {
     LoanStatus.NEW: "new",
@@ -62,7 +71,13 @@ _STATUS_LABEL = {
     LoanStatus.CONTACTED: "contacted",
     LoanStatus.DOCS_COLLECTED: "in document collection",
     LoanStatus.SUBMITTED_TO_BANK: "submitted to the bank",
-    LoanStatus.SANCTIONED: "sanctioned",
+    LoanStatus.UNDER_REVIEW: "under review at the bank",
+    LoanStatus.SANCTIONED: "approved",
+    # Read in "Your loan application is now {label}."
+    LoanStatus.AGREEMENT_COLLECTED: "at the stage where your loan agreement has been collected",
+    LoanStatus.AGREEMENT_SUBMITTED_TO_BANK: (
+        "at the stage where your loan agreement has been submitted to the bank"
+    ),
     LoanStatus.DISBURSED: "disbursed",
     LoanStatus.CLOSED: "closed",
     LoanStatus.REJECTED: "rejected",
@@ -87,7 +102,7 @@ class TermsNotAllowedAtStage(Exception):
 
 
 class SanctionTermsRequired(Exception):
-    """Raised when moving to sanctioned/disbursed without a sanctioned amount
+    """Raised when moving to approved (sanctioned) or later without a sanctioned amount
     and a bank, either already saved or supplied in the same update."""
 
 
