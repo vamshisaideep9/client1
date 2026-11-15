@@ -3,7 +3,7 @@
 Status: **Derived living implementation ledger**
 
 **Implemented — loan application review and agreement stages** (2026-11-15;
-open for review), branch `feat/loan-status-stages` from `upstream/main`
+[PR #347](https://github.com/brollysolutions/client1/pull/347), mirror vamshisaideep9/client1#51, open for review), branch `feat/loan-status-stages` from `upstream/main`
 `e25957f`.
 
 API:
