@@ -81,11 +81,14 @@ function telecallerAnalytics(range: number) {
 
 async function mockAnalytics(page: Page) {
   await mockMobileApi(page, "telecaller");
-  const requested: string[] = [];
+  const requested: URLSearchParams[] = [];
   await page.route("**/api/v1/me/analytics*", async (route) => {
-    const range = Number(new URL(route.request().url()).searchParams.get("days") ?? 30);
-    requested.push(String(range));
-    await route.fulfill({ json: telecallerAnalytics(range) });
+    const params = new URL(route.request().url()).searchParams;
+    requested.push(params);
+    const from = params.get("date_from");
+    const to = params.get("date_to");
+    const range = from && to ? Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000) + 1 : 30;
+    await route.fulfill({ json: { ...telecallerAnalytics(range), date_from: from, date_to: to, bucket: "day" } });
   });
   return requested;
 }
@@ -116,9 +119,29 @@ test("telecaller analytics shows figures, a daily chart and breakdowns", async (
   await expect(page.locator('nav[aria-label="Workspace"]:visible').getByRole("link", { name: "My analytics" })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("analytics-1440.png"), fullPage: true });
 
-  await page.getByRole("radio", { name: "7 days" }).click();
-  await expect.poll(() => requested.includes("7")).toBe(true);
+  // The calendar range picker replaces the old 7/30/90 toggle.
+  const first = requested[0];
+  expect(first.get("date_from")).toBeTruthy();
+  expect(first.has("days")).toBe(false);
+  await page.getByRole("button", { name: /^Date range:/ }).click();
+  await expect(page.getByRole("dialog").getByRole("grid").first()).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("analytics-range-picker.png"), animations: "disabled" });
+  await page.getByRole("group", { name: "Quick ranges" }).getByRole("button", { name: "Last 7 days" }).click();
+  await expect
+    .poll(() => requested.some((params) => {
+      const from = params.get("date_from");
+      const to = params.get("date_to");
+      return Boolean(from && to) && Math.round((Date.parse(to!) - Date.parse(from!)) / 86_400_000) === 6;
+    }))
+    .toBe(true);
   await expect(page.getByRole("table").first().getByRole("row")).toHaveCount(8);
+
+  // Role filters travel to the API.
+  await page.getByRole("combobox", { name: "Call status" }).click();
+  await page.getByRole("option", { name: "Busy", exact: true }).click();
+  await expect.poll(() => requested.some((params) => params.get("call_status") === "busy")).toBe(true);
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect.poll(() => requested.at(-1)?.has("call_status")).toBe(false);
 });
 
 test("analytics fits a 360px phone", async ({ page, baseURL }, testInfo) => {

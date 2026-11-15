@@ -16568,6 +16568,43 @@
         "title": "ReportSummary",
         "type": "object"
       },
+      "ReportTelecallerOption": {
+        "description": "One Telecaller for the Analytics \"Telecaller\" filter (ids and names only).",
+        "properties": {
+          "business_line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Line"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "staff_code": {
+            "title": "Staff Code",
+            "type": "string"
+          },
+          "staff_profile_uuid": {
+            "format": "uuid",
+            "title": "Staff Profile Uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "staff_profile_uuid",
+          "staff_code",
+          "name",
+          "business_line"
+        ],
+        "title": "ReportTelecallerOption",
+        "type": "object"
+      },
       "RequestRef": {
         "additionalProperties": false,
         "properties": {
@@ -17136,6 +17173,25 @@
             "title": "Breakdowns",
             "type": "array"
           },
+          "bucket": {
+            "default": "day",
+            "enum": [
+              "day",
+              "week"
+            ],
+            "title": "Bucket",
+            "type": "string"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
           "funnel": {
             "anyOf": [
               {
@@ -17174,6 +17230,8 @@
         "required": [
           "role",
           "range_days",
+          "date_from",
+          "date_to",
           "kpis",
           "trend",
           "breakdowns"
@@ -24698,6 +24756,166 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "deal_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "contacted",
+                    "site_visit_done",
+                    "negotiation",
+                    "booked",
+                    "agreement_signed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Deal Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "property_city",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property City"
+            }
+          },
+          {
+            "in": "query",
+            "name": "property_category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "houses",
+                    "apartments",
+                    "villas",
+                    "plots",
+                    "commercial"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telecaller_profile_uuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "maxItems": 50,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Telecaller Profile Uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lead_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "direct",
+                    "agent",
+                    "client"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead Source"
+            }
+          },
+          {
+            "description": "Latest call outcome.",
+            "in": "query",
+            "name": "call_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "connected",
+                    "no_answer",
+                    "busy",
+                    "switched_off",
+                    "wrong_number",
+                    "callback_requested",
+                    "not_interested"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call outcome.",
+              "title": "Call Status"
+            }
+          },
+          {
+            "description": "Latest call interest level.",
+            "in": "query",
+            "name": "interest",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "hot",
+                    "warm",
+                    "cold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call interest level.",
+              "title": "Interest"
+            }
           }
         ],
         "responses": {
@@ -24810,6 +25028,166 @@
               ],
               "title": "Agent Profile Uuid"
             }
+          },
+          {
+            "in": "query",
+            "name": "deal_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "contacted",
+                    "site_visit_done",
+                    "negotiation",
+                    "booked",
+                    "agreement_signed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Deal Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "property_city",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property City"
+            }
+          },
+          {
+            "in": "query",
+            "name": "property_category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "houses",
+                    "apartments",
+                    "villas",
+                    "plots",
+                    "commercial"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telecaller_profile_uuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "maxItems": 50,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Telecaller Profile Uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lead_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "direct",
+                    "agent",
+                    "client"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead Source"
+            }
+          },
+          {
+            "description": "Latest call outcome.",
+            "in": "query",
+            "name": "call_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "connected",
+                    "no_answer",
+                    "busy",
+                    "switched_off",
+                    "wrong_number",
+                    "callback_requested",
+                    "not_interested"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call outcome.",
+              "title": "Call Status"
+            }
+          },
+          {
+            "description": "Latest call interest level.",
+            "in": "query",
+            "name": "interest",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "hot",
+                    "warm",
+                    "cold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call interest level.",
+              "title": "Interest"
+            }
           }
         ],
         "responses": {
@@ -24919,6 +25297,166 @@
                 }
               ],
               "title": "Agent Profile Uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "deal_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "contacted",
+                    "site_visit_done",
+                    "negotiation",
+                    "booked",
+                    "agreement_signed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Deal Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "property_city",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property City"
+            }
+          },
+          {
+            "in": "query",
+            "name": "property_category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "houses",
+                    "apartments",
+                    "villas",
+                    "plots",
+                    "commercial"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telecaller_profile_uuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "maxItems": 50,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Telecaller Profile Uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lead_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "direct",
+                    "agent",
+                    "client"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead Source"
+            }
+          },
+          {
+            "description": "Latest call outcome.",
+            "in": "query",
+            "name": "call_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "connected",
+                    "no_answer",
+                    "busy",
+                    "switched_off",
+                    "wrong_number",
+                    "callback_requested",
+                    "not_interested"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call outcome.",
+              "title": "Call Status"
+            }
+          },
+          {
+            "description": "Latest call interest level.",
+            "in": "query",
+            "name": "interest",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "hot",
+                    "warm",
+                    "cold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call interest level.",
+              "title": "Interest"
             }
           }
         ],
@@ -25083,6 +25621,122 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "lead_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "working",
+                    "converted",
+                    "closed",
+                    "released"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telecaller_profile_uuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "maxItems": 50,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Telecaller Profile Uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lead_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "direct",
+                    "agent",
+                    "client"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead Source"
+            }
+          },
+          {
+            "description": "Latest call outcome.",
+            "in": "query",
+            "name": "call_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "connected",
+                    "no_answer",
+                    "busy",
+                    "switched_off",
+                    "wrong_number",
+                    "callback_requested",
+                    "not_interested"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call outcome.",
+              "title": "Call Status"
+            }
+          },
+          {
+            "description": "Latest call interest level.",
+            "in": "query",
+            "name": "interest",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "hot",
+                    "warm",
+                    "cold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call interest level.",
+              "title": "Interest"
+            }
           }
         ],
         "responses": {
@@ -25195,6 +25849,122 @@
               ],
               "title": "Agent Profile Uuid"
             }
+          },
+          {
+            "in": "query",
+            "name": "lead_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "working",
+                    "converted",
+                    "closed",
+                    "released"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telecaller_profile_uuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "maxItems": 50,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Telecaller Profile Uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lead_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "direct",
+                    "agent",
+                    "client"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead Source"
+            }
+          },
+          {
+            "description": "Latest call outcome.",
+            "in": "query",
+            "name": "call_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "connected",
+                    "no_answer",
+                    "busy",
+                    "switched_off",
+                    "wrong_number",
+                    "callback_requested",
+                    "not_interested"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call outcome.",
+              "title": "Call Status"
+            }
+          },
+          {
+            "description": "Latest call interest level.",
+            "in": "query",
+            "name": "interest",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "hot",
+                    "warm",
+                    "cold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call interest level.",
+              "title": "Interest"
+            }
           }
         ],
         "responses": {
@@ -25304,6 +26074,122 @@
                 }
               ],
               "title": "Agent Profile Uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lead_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "working",
+                    "converted",
+                    "closed",
+                    "released"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telecaller_profile_uuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "maxItems": 50,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Telecaller Profile Uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lead_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "direct",
+                    "agent",
+                    "client"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead Source"
+            }
+          },
+          {
+            "description": "Latest call outcome.",
+            "in": "query",
+            "name": "call_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "connected",
+                    "no_answer",
+                    "busy",
+                    "switched_off",
+                    "wrong_number",
+                    "callback_requested",
+                    "not_interested"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call outcome.",
+              "title": "Call Status"
+            }
+          },
+          {
+            "description": "Latest call interest level.",
+            "in": "query",
+            "name": "interest",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "hot",
+                    "warm",
+                    "cold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call interest level.",
+              "title": "Interest"
             }
           }
         ],
@@ -25468,6 +26354,160 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "loan_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "contacted",
+                    "docs_collected",
+                    "submitted_to_bank",
+                    "sanctioned",
+                    "disbursed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loan Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "loan_type_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loan Type Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "bank_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Bank Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telecaller_profile_uuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "maxItems": 50,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Telecaller Profile Uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lead_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "direct",
+                    "agent",
+                    "client"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead Source"
+            }
+          },
+          {
+            "description": "Latest call outcome.",
+            "in": "query",
+            "name": "call_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "connected",
+                    "no_answer",
+                    "busy",
+                    "switched_off",
+                    "wrong_number",
+                    "callback_requested",
+                    "not_interested"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call outcome.",
+              "title": "Call Status"
+            }
+          },
+          {
+            "description": "Latest call interest level.",
+            "in": "query",
+            "name": "interest",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "hot",
+                    "warm",
+                    "cold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call interest level.",
+              "title": "Interest"
+            }
           }
         ],
         "responses": {
@@ -25580,6 +26620,160 @@
               ],
               "title": "Agent Profile Uuid"
             }
+          },
+          {
+            "in": "query",
+            "name": "loan_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "contacted",
+                    "docs_collected",
+                    "submitted_to_bank",
+                    "sanctioned",
+                    "disbursed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loan Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "loan_type_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loan Type Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "bank_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Bank Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telecaller_profile_uuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "maxItems": 50,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Telecaller Profile Uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lead_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "direct",
+                    "agent",
+                    "client"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead Source"
+            }
+          },
+          {
+            "description": "Latest call outcome.",
+            "in": "query",
+            "name": "call_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "connected",
+                    "no_answer",
+                    "busy",
+                    "switched_off",
+                    "wrong_number",
+                    "callback_requested",
+                    "not_interested"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call outcome.",
+              "title": "Call Status"
+            }
+          },
+          {
+            "description": "Latest call interest level.",
+            "in": "query",
+            "name": "interest",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "hot",
+                    "warm",
+                    "cold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call interest level.",
+              "title": "Interest"
+            }
           }
         ],
         "responses": {
@@ -25690,6 +26884,160 @@
               ],
               "title": "Agent Profile Uuid"
             }
+          },
+          {
+            "in": "query",
+            "name": "loan_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "contacted",
+                    "docs_collected",
+                    "submitted_to_bank",
+                    "sanctioned",
+                    "disbursed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loan Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "loan_type_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loan Type Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "bank_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Bank Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telecaller_profile_uuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "maxItems": 50,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Telecaller Profile Uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lead_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "direct",
+                    "agent",
+                    "client"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead Source"
+            }
+          },
+          {
+            "description": "Latest call outcome.",
+            "in": "query",
+            "name": "call_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "connected",
+                    "no_answer",
+                    "busy",
+                    "switched_off",
+                    "wrong_number",
+                    "callback_requested",
+                    "not_interested"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call outcome.",
+              "title": "Call Status"
+            }
+          },
+          {
+            "description": "Latest call interest level.",
+            "in": "query",
+            "name": "interest",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "hot",
+                    "warm",
+                    "cold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest call interest level.",
+              "title": "Interest"
+            }
           }
         ],
         "responses": {
@@ -25718,6 +27066,69 @@
           }
         ],
         "summary": "Export Loans Report Xlsx",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/admin/reports/telecallers": {
+      "get": {
+        "description": "Telecallers for the Analytics \"Telecaller\" filter (platform Admin only).",
+        "operationId": "list_report_telecallers_api_v1_admin_reports_telecallers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "business_line",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "loans",
+                    "real_estate"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Business Line"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReportTelecallerOption"
+                  },
+                  "title": "Response List Report Telecallers Api V1 Admin Reports Telecallers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Report Telecallers",
         "tags": [
           "reports"
         ]
@@ -31153,17 +32564,207 @@
         "operationId": "my_analytics_api_v1_me_analytics_get",
         "parameters": [
           {
-            "description": "Period in days (7, 30 or 90).",
+            "description": "Legacy period in days (7, 30 or 90).",
             "in": "query",
             "name": "days",
             "required": false,
             "schema": {
               "default": 30,
-              "description": "Period in days (7, 30 or 90).",
+              "description": "Legacy period in days (7, 30 or 90).",
               "maximum": 365,
               "minimum": 1,
               "title": "Days",
               "type": "integer"
+            }
+          },
+          {
+            "description": "First IST day of the period, inclusive.",
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "First IST day of the period, inclusive.",
+              "title": "Date From"
+            }
+          },
+          {
+            "description": "Last IST day of the period, inclusive.",
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Last IST day of the period, inclusive.",
+              "title": "Date To"
+            }
+          },
+          {
+            "description": "Telecaller: calls with outcome.",
+            "in": "query",
+            "name": "call_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "connected",
+                    "no_answer",
+                    "busy",
+                    "switched_off",
+                    "wrong_number",
+                    "callback_requested",
+                    "not_interested"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller: calls with outcome.",
+              "title": "Call Status"
+            }
+          },
+          {
+            "description": "Telecaller: calls with this interest level.",
+            "in": "query",
+            "name": "interest",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "hot",
+                    "warm",
+                    "cold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller: calls with this interest level.",
+              "title": "Interest"
+            }
+          },
+          {
+            "description": "Telecaller: leads with a loan application in this status.",
+            "in": "query",
+            "name": "loan_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "contacted",
+                    "docs_collected",
+                    "submitted_to_bank",
+                    "sanctioned",
+                    "disbursed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller: leads with a loan application in this status.",
+              "title": "Loan Status"
+            }
+          },
+          {
+            "description": "Telecaller: leads from this referral source.",
+            "in": "query",
+            "name": "lead_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "direct",
+                    "agent",
+                    "client"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller: leads from this referral source.",
+              "title": "Lead Source"
+            }
+          },
+          {
+            "description": "Agent: leads in this status.",
+            "in": "query",
+            "name": "lead_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "working",
+                    "converted",
+                    "closed",
+                    "released"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Agent: leads in this status.",
+              "title": "Lead Status"
+            }
+          },
+          {
+            "description": "Employee: tasks of this type.",
+            "in": "query",
+            "name": "task_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "document_collection",
+                    "property_visit",
+                    "background_check"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Employee: tasks of this type.",
+              "title": "Task Type"
             }
           }
         ],
