@@ -88,3 +88,19 @@ export async function searchPayoutRecipients(
   if (!res.ok) return res;
   return { ok: true, status: res.status, data: res.data.recipients };
 }
+
+export type SavedPayoutDestination = Schemas["SavedPayoutDestinationRead"];
+
+/**
+ * The bank account / UPI ID an Agent saved, for prefilling one payout. Every
+ * call is audited server-side, so only fetch on an explicit maker action.
+ */
+export async function getSavedPayoutDestination(
+  target: { recipientUserUuid: string } | { agentProfileUuid: string },
+): Promise<ApiResponse<SavedPayoutDestination>> {
+  const path =
+    "agentProfileUuid" in target
+      ? `/api/v1/payouts/agents/${encodeURIComponent(target.agentProfileUuid)}/saved-destination`
+      : `/api/v1/payouts/recipients/${encodeURIComponent(target.recipientUserUuid)}/saved-destination`;
+  return apiRequest<SavedPayoutDestination>(path);
+}

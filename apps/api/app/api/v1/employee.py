@@ -69,6 +69,7 @@ from app.services.field_visibility import (
 from app.services.field_visibility import (
     create_contact_share_link as create_contact_share_link_record,
 )
+from app.services.lead_signals import EMPTY_SIGNALS, LeadSignals, lead_signals_for_ids
 from app.services.task_feedback import (
     FeedbackLimitReached,
     FeedbackRateExceeded,
@@ -134,9 +135,20 @@ def _to_read(
     lead_name: str | None,
     lead_mobile: str,
     modes: dict[tuple[str, str], FieldVisibilityMode],
+    signals: LeadSignals | None = None,
 ) -> EmployeeTaskRead:
     mode = contact_mode(modes)
+    lead_values: dict[str, object] = {"name": lead_name, "mobile": lead_mobile}
+    signal_fields: dict[str, object] = {}
+    if signals is not None:
+        lead_values["referrer"] = signals.referrer
+        signal_fields = {
+            "lead_last_disposition": signals.last_disposition,
+            "lead_last_interest_level": signals.last_interest_level,
+            "lead_loan_statuses": signals.loan_statuses,
+        }
     return EmployeeTaskRead(
+        **signal_fields,
         id=task.id,
         lead_uuid=task.lead_uuid,
         lead_contact_mode=mode,
@@ -153,7 +165,7 @@ def _to_read(
             for field_key, value in project_values(
                 modes,
                 "lead",
-                {"name": lead_name, "mobile": lead_mobile},
+                lead_values,
             ).items()
         },
     )
@@ -169,7 +181,11 @@ async def list_tasks(
     staff_profile_uuid = _staff_profile_uuid(current_user)
     rows = await list_tasks_for_employee(db, staff_profile_uuid, status_filter, task_type_filter)
     modes = await effective_modes(db, FieldTargetRole.EMPLOYEE)
-    return [_to_read(task, name, mobile, modes) for task, name, mobile in rows]
+    signals = await lead_signals_for_ids(db, (task.lead_uuid for task, _, _ in rows))
+    return [
+        _to_read(task, name, mobile, modes, signals.get(task.lead_uuid, EMPTY_SIGNALS))
+        for task, name, mobile in rows
+    ]
 
 
 @router.get("/tasks/{task_id}", response_model=EmployeeTaskRead, response_model_exclude_unset=True)
@@ -183,7 +199,8 @@ async def get_task(
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Task not found.")
     modes = await effective_modes(db, FieldTargetRole.EMPLOYEE)
-    return _to_read(*row, modes)
+    signals = await lead_signals_for_ids(db, [row[0].lead_uuid])
+    return _to_read(*row, modes, signals.get(row[0].lead_uuid, EMPTY_SIGNALS))
 
 
 @router.post(
@@ -206,7 +223,14 @@ async def reopen_employee_task(
         ) from exc
     lead = await db.get(Lead, task.lead_uuid)
     modes = await effective_modes(db, FieldTargetRole.EMPLOYEE)
-    return _to_read(task, lead.name if lead else None, lead.mobile if lead else "", modes)
+    signals = await lead_signals_for_ids(db, [task.lead_uuid])
+    return _to_read(
+        task,
+        lead.name if lead else None,
+        lead.mobile if lead else "",
+        modes,
+        signals.get(task.lead_uuid, EMPTY_SIGNALS),
+    )
 
 
 @router.patch(
@@ -246,7 +270,14 @@ async def patch_task(
         ) from exc
     lead = await db.get(Lead, task.lead_uuid)
     modes = await effective_modes(db, FieldTargetRole.EMPLOYEE)
-    return _to_read(task, lead.name if lead else None, lead.mobile if lead else "", modes)
+    signals = await lead_signals_for_ids(db, [task.lead_uuid])
+    return _to_read(
+        task,
+        lead.name if lead else None,
+        lead.mobile if lead else "",
+        modes,
+        signals.get(task.lead_uuid, EMPTY_SIGNALS),
+    )
 
 
 def _to_document_read(document: TaskDocument) -> TaskDocumentRead:

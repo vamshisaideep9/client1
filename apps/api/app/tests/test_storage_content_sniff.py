@@ -29,6 +29,17 @@ def test_sniff_webp() -> None:
     assert storage.sniff_content_type(head) == "image/webp"
 
 
+@pytest.mark.parametrize("brand", [b"avif", b"avis"])
+def test_sniff_avif(brand: bytes) -> None:
+    head = b"\x00\x00\x00\x20ftyp" + brand + b"\x00\x00\x00\x00mif1miaf"
+    assert storage.sniff_content_type(head) == "image/avif"
+
+
+def test_sniff_keeps_mp4_distinct_from_avif() -> None:
+    head = b"\x00\x00\x00\x20ftypisom\x00\x00\x02\x00isomiso2"
+    assert storage.sniff_content_type(head) == "video/mp4"
+
+
 def test_sniff_rejects_html_polyglot_declared_as_pdf() -> None:
     """The actual security concern: an HTML/script document, whatever it
     claims to be at presign time, must never sniff to a real type."""
