@@ -70,12 +70,8 @@ def _amenities_description(value: str) -> str:
 
 
 def _project_amenities_description(value: str) -> str:
-    return _normalize_public_text(
-        value,
-        min_words=150,
-        max_words=500,
-        field_name="Amenities description",
-    )
+    # Optional for every listing type; when given, projects allow a longer text.
+    return _normalize_public_text(value, max_words=500, field_name="Amenities description")
 
 
 def _other_information(value: str) -> str:
@@ -220,7 +216,7 @@ class ProjectResidenceDetails(_DetailsBase):
     plot_facing: Facing = Facing.NOT_APPLICABLE
     entrance_facing: Facing = Facing.NOT_APPLICABLE
     local_approval: LocalApproval | None = None
-    amenities_description: ProjectAmenitiesDescription
+    amenities_description: ProjectAmenitiesDescription | None = None
     about_project: ProjectAbout
 
     @model_validator(mode="after")

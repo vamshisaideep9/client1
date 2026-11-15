@@ -53,7 +53,7 @@ test("desktop and mobile navigation open the same published service", async ({ p
   for (const width of [1365, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/");
-    if (width < 1280) {
+    if (width < 768) {
       await page.locator("header").getByRole("button", { name: "Open menu", exact: true }).click();
       await page.getByRole("dialog").locator("summary").filter({ hasText: "Financial Services" }).click();
       await page.getByRole("dialog").getByRole("link", { name: product.label, exact: true }).click();

@@ -63,9 +63,35 @@ export async function deleteCampaignMedia(id: string): Promise<ApiResponse<undef
 export const CAMPAIGN_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
 export const CAMPAIGN_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 // Banner videos: MP4 only (the isolated processor transcodes to MP4). The API
-// re-checks size and enforces the 30-second duration cap after upload.
+// re-checks size and enforces the one-minute duration cap after upload; the
+// browser pre-check below only saves a pointless upload.
 export const CAMPAIGN_VIDEO_ACCEPT = "video/mp4";
 export const CAMPAIGN_VIDEO_MAX_BYTES = 20 * 1024 * 1024;
+export const CAMPAIGN_VIDEO_MAX_SECONDS = 60;
+
+/** True only for a known duration above the cap. An unreadable duration
+ *  (null/NaN/Infinity) is left for the server to decide. */
+export function exceedsBannerVideoLength(seconds: number | null): boolean {
+  return seconds !== null && Number.isFinite(seconds) && seconds > CAMPAIGN_VIDEO_MAX_SECONDS;
+}
+
+/** Reads a local video file's duration from its metadata, or null if the
+ *  browser cannot decode it. */
+export function readVideoDuration(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    const finish = (value: number | null) => {
+      URL.revokeObjectURL(url);
+      video.removeAttribute("src");
+      resolve(value);
+    };
+    video.preload = "metadata";
+    video.onloadedmetadata = () => finish(video.duration);
+    video.onerror = () => finish(null);
+    video.src = url;
+  });
+}
 
 /**
  * Presign, upload, then register one artwork file.

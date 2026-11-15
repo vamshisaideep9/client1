@@ -13382,10 +13382,17 @@
             "type": "string"
           },
           "amenities_description": {
-            "maxLength": 5000,
-            "minLength": 1,
-            "title": "Amenities Description",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amenities Description"
           },
           "configurations": {
             "items": {
@@ -13548,7 +13555,6 @@
           "configurations",
           "unit_or_plot_area_sqft",
           "price_per_sqft_paise",
-          "amenities_description",
           "about_project"
         ],
         "title": "ProjectResidenceDetails",

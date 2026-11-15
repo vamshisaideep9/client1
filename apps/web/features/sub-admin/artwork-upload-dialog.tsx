@@ -30,6 +30,9 @@ import {
   CAMPAIGN_IMAGE_MAX_BYTES,
   CAMPAIGN_VIDEO_ACCEPT,
   CAMPAIGN_VIDEO_MAX_BYTES,
+  CAMPAIGN_VIDEO_MAX_SECONDS,
+  exceedsBannerVideoLength,
+  readVideoDuration,
   uploadCampaignArtwork,
   type CampaignMediaAsset,
 } from "@/lib/campaign-media-api";
@@ -119,6 +122,13 @@ export function ArtworkUploadDialog({
       return;
     }
     setBusy(true);
+    if (isVideo && exceedsBannerVideoLength(await readVideoDuration(file))) {
+      setBusy(false);
+      toast.error("This video is too long", {
+        description: `Banner videos can be up to ${CAMPAIGN_VIDEO_MAX_SECONDS} seconds. Trim it or link a YouTube video instead.`,
+      });
+      return;
+    }
     const result = await uploadCampaignArtwork({
       file,
       title: title.trim(),
@@ -160,7 +170,7 @@ export function ArtworkUploadDialog({
               onChange={setFile}
               accept={isVideo ? CAMPAIGN_VIDEO_ACCEPT : CAMPAIGN_IMAGE_ACCEPT}
               maxBytes={isVideo ? CAMPAIGN_VIDEO_MAX_BYTES : CAMPAIGN_IMAGE_MAX_BYTES}
-              hint={isVideo ? "MP4 · max 20 MB · up to 30 seconds" : "JPG, PNG or WEBP · max 5 MB"}
+              hint={isVideo ? `MP4 · max 20 MB · up to ${CAMPAIGN_VIDEO_MAX_SECONDS} seconds` : "JPG, PNG or WEBP · max 5 MB"}
               disabled={busy}
             />
             <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs leading-5 text-text-secondary">

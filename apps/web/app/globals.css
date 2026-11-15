@@ -508,14 +508,26 @@
   [class*="auth-anim"] { animation: none !important; }
 }
 
-/* Announcement ticker: single-line left-to-right scroll at every width. The
-   message (icon + text) is duplicated in the markup; moving from -50% to 0
-   advances exactly one copy for a seamless loop. The component sets
-   --marquee-duration from the number of lines so the speed stays constant.
-   Paused on hover; disabled + allowed to wrap under reduced-motion. */
+/* Public SiteHeader height. Phones get one 4rem bar (links live in the menu
+   drawer), and so does xl+. Tablets (md up to xl, i.e. every iPad) get a second
+   2.75rem row carrying the full navigation instead of the menu button. Sticky
+   bars and anchor offsets under the header read this variable. The override
+   is scoped to the public layout wrapper because shared components (property
+   rows and browsers) also render under the dashboard's 4rem top bar. */
+:root { --site-header-h: 4rem; }
+@media (width >= 48rem) and (width < 80rem) {
+  .public-site { --site-header-h: 6.75rem; }
+}
+
+/* Announcement ticker: single-line right-to-left scroll, used only when the
+   page shows more than one trust line (a single line renders statically). The
+   message is duplicated in the markup; moving from 0 to -50% advances exactly
+   one copy for a seamless loop. The component sets --marquee-duration from the
+   number of lines so the speed stays constant. Paused on hover; disabled +
+   allowed to wrap under reduced-motion. */
 @keyframes announcement-marquee {
-  from { transform: translateX(-50%); }
-  to   { transform: translateX(0); }
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
 }
 .announcement-track {
   animation: announcement-marquee var(--marquee-duration, 22s) linear infinite;

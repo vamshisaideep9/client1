@@ -113,13 +113,26 @@ describe("validateForm()", () => {
     expect(validateForm(VALID)).toEqual({});
   });
 
-  it("requires at least 150 words for project amenities", () => {
+  it.each(["", "Clubhouse and pool"])("accepts an optional project amenities description (%j)", (amenitiesDescription) => {
+    const details = { ...VALID.details, amenitiesDescription };
+
+    expect(validateForm({ ...VALID, details }).amenitiesDescription).toBeUndefined();
+  });
+
+  it("still caps project amenities at 500 words", () => {
     const details = {
       ...VALID.details,
-      amenitiesDescription: Array.from({ length: 149 }, () => "landscaped").join(" "),
+      amenitiesDescription: Array.from({ length: 501 }, () => "landscaped").join(" "),
     };
 
-    expect(validateForm({ ...VALID, details }).amenitiesDescription).toContain("at least 150 words");
+    expect(validateForm({ ...VALID, details }).amenitiesDescription).toContain("500 words");
+  });
+
+  it("sends null when the project amenities description is blank", () => {
+    const details = { ...VALID.details, amenitiesDescription: "   " };
+    const p = buildSubmissionPayload({ ...VALID, details }, MEDIA);
+
+    expect(p.structured_details).toMatchObject({ kind: "project_residence", amenities_description: null });
   });
 
   it("flags a non-6-digit pincode", () => {

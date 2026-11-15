@@ -512,10 +512,10 @@ export function PropertyDescriptionFields({
             label="Amenities description"
             value={d.amenitiesDescription}
             onChange={(value) => setDetailField("amenitiesDescription", value)}
-            minWords={family === "project" ? 150 : 0}
+            minWords={0}
             maxWords={family === "project" ? 500 : 150}
             error={errors.amenitiesDescription}
-            optional={family !== "project"}
+            optional
           />
         ) : null}
         {family !== "agricultural" ? (

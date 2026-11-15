@@ -8,6 +8,7 @@ import { useAuth } from "@/components/auth/session-provider";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { LoanCompareProvider } from "@/features/loans/loan-offers-store";
 import { RealEstateProvider } from "@/features/real-estate/store";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 import { AppSidebar } from "./app-sidebar";
@@ -40,10 +41,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // read in render once the role is known — no expanded-then-collapsed flash.
   const [toggledPreference, setRailPreference] = React.useState<boolean | null>(null);
   const storedPreference = React.useMemo(() => readStoredSidebarPreference(role), [role]);
-  const desktopSidebarExpanded = isDesktopSidebarExpanded(
-    role,
-    toggledPreference ?? storedPreference,
-  );
+  // Tablets (md up to lg, e.g. iPad portrait) keep the rail visible instead of
+  // the menu button, but always as the collapsed icon rail so the content keeps
+  // its width; the expand toggle only applies from lg up.
+  const wideEnoughToExpand = useMediaQuery("(min-width: 64rem)");
+  const desktopSidebarExpanded =
+    wideEnoughToExpand && isDesktopSidebarExpanded(role, toggledPreference ?? storedPreference);
 
   const toggleRail = React.useCallback(() => {
     const next = !desktopSidebarExpanded;
@@ -60,8 +63,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <AssignmentToaster />
               <div
                 className={cn(
-                  "font-geist min-h-dvh bg-background transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none lg:grid",
-                  desktopSidebarExpanded ? "lg:grid-cols-[15.5rem_minmax(0,1fr)]" : "lg:grid-cols-[6rem_minmax(0,1fr)]",
+                  "font-geist min-h-dvh bg-background transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none md:grid md:grid-cols-[6rem_minmax(0,1fr)]",
+                  desktopSidebarExpanded && "lg:grid-cols-[15.5rem_minmax(0,1fr)]",
                 )}
               >
                 <a
@@ -72,11 +75,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </a>
               {/* The grid stretches the rail with the page; only its navigation
                   stays in the viewport. Width and content offset share one track. */}
-              <aside className="relative z-30 hidden min-w-0 bg-dash-rail lg:block">
+              <aside className="relative z-30 hidden min-w-0 bg-dash-rail md:block">
                 <div className="sticky top-0 h-dvh min-h-0">
                   <AppSidebar
                     expanded={desktopSidebarExpanded}
-                    onToggle={session ? toggleRail : undefined}
+                    onToggle={session && wideEnoughToExpand ? toggleRail : undefined}
                   />
                 </div>
               </aside>
@@ -105,11 +108,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     type="button"
                     aria-label="Open menu"
                     onClick={() => setMobileOpen(true)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-brand-heading transition-[background-color,color,transform] duration-150 ease-out hover:bg-brand-cta-tint active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:active:scale-100 lg:hidden"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-brand-heading transition-[background-color,color,transform] duration-150 ease-out hover:bg-brand-cta-tint active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:active:scale-100 md:hidden"
                   >
                     <Menu className="h-5 w-5" />
                   </button>
-                  <Logo variant="symbol" tone="navy" href="/dashboard" className="h-11 w-8 lg:hidden" sizes="32px" />
+                  <Logo variant="symbol" tone="navy" href="/dashboard" className="h-11 w-8 md:hidden" sizes="32px" />
                   <div className="flex-1" />
                   <NotificationBell />
                   <LineSwitcher />
