@@ -423,7 +423,7 @@ async def list_loan_documents(db: AsyncSession, application_id: uuid.UUID) -> li
 async def list_for_client(db: AsyncSession) -> list[LoanDocument]:
     """All of the caller's own documents across every application — RLS's
     client-owner branch is the only filter that matters, same trust-RLS
-    stance list_for_agent (commissions) takes."""
+    stance the admin commission oversight read takes."""
     stmt = select(LoanDocument).order_by(LoanDocument.uploaded_at.desc())
     return list((await db.scalars(stmt)).all())
 

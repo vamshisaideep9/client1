@@ -353,3 +353,162 @@ async def test_update_rejected_once_live(client: AsyncClient) -> None:
             assert result.rowcount == 0
     finally:
         await engine.dispose()
+
+
+# --- banners_delete (migration c5e7a9b1d3f4): Sub Admin only, until live ---
+
+
+async def _delete_as(
+    banner_id: str, *, auth_user_uuid: str, role: str, platform_scope: str, business_line: str
+) -> int:
+    """DELETE one banner as api_user with the given RLS context; returns rowcount."""
+    engine = _engine()
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("SET LOCAL ROLE api_user"))
+            await conn.execute(
+                text(
+                    "SELECT set_config('app.auth_user_uuid', :uuid, true),"
+                    "set_config('app.role', :role, true),"
+                    "set_config('app.business_line', :bl, true),"
+                    "set_config('app.client_profile_uuid', '', true),"
+                    "set_config('app.agent_profile_uuid', '', true),"
+                    "set_config('app.staff_profile_uuid', '', true),"
+                    "set_config('app.platform_scope', :ps, true)"
+                ),
+                {"uuid": auth_user_uuid, "role": role, "bl": business_line, "ps": platform_scope},
+            )
+            result = await conn.execute(
+                text("DELETE FROM banners WHERE id = :id RETURNING id"), {"id": banner_id}
+            )
+            return len(result.fetchall())
+    finally:
+        await engine.dispose()
+
+
+async def _banner_exists(banner_id: str) -> bool:
+    import app.db.session as _session_mod
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        found = await db.scalar(text("SELECT 1 FROM banners WHERE id = :id"), {"id": banner_id})
+        return found is not None
+
+
+async def _cleanup(*banner_ids: str) -> None:
+    import app.db.session as _session_mod
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        await db.execute(
+            text("DELETE FROM banners WHERE id = ANY(:ids)"),
+            {"ids": [uuid.UUID(item) for item in banner_ids]},
+        )
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", ["draft", "pending_approval", "rejected", "approved"])
+async def test_sub_admin_delete_policy_allows_every_status_before_live(
+    client: AsyncClient, status: str
+) -> None:
+    _, owner_mobile = await full_registration(client, lines=["loans"])
+    owner_uid = await _auth_user_uuid(owner_mobile)
+    _, teammate_mobile = await full_registration(client, lines=["loans"])
+    teammate_uid = await _auth_user_uuid(teammate_mobile)
+    banner_id = await _seed_banner(owner_uid, status=status)
+    try:
+        # The queue is shared across the Sub Admin team: a teammate may delete.
+        deleted = await _delete_as(
+            banner_id,
+            auth_user_uuid=teammate_uid,
+            role="sub_admin",
+            platform_scope="true",
+            business_line="both",
+        )
+        assert deleted == 1
+        assert not await _banner_exists(banner_id)
+    finally:
+        await _cleanup(banner_id)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", ["live", "archived"])
+async def test_sub_admin_delete_policy_keeps_live_and_archived_rows(
+    client: AsyncClient, status: str
+) -> None:
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    banner_id = await _seed_banner(uid, status=status)
+    try:
+        deleted = await _delete_as(
+            banner_id,
+            auth_user_uuid=uid,
+            role="sub_admin",
+            platform_scope="true",
+            business_line="both",
+        )
+        assert deleted == 0
+        assert await _banner_exists(banner_id)
+    finally:
+        await _cleanup(banner_id)
+
+
+@pytest.mark.asyncio
+async def test_sub_admin_delete_policy_keeps_soft_removed_rows(client: AsyncClient) -> None:
+    import app.db.session as _session_mod
+
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    banner_id = await _seed_banner(uid, status="approved")
+    async with _session_mod.AsyncSessionLocal() as db:
+        await db.execute(
+            text(
+                "UPDATE banners SET removed_at = now(), removed_by_uuid = :uid, "
+                "removal_reason = 'Admin removed' WHERE id = :id"
+            ),
+            {"uid": uid, "id": banner_id},
+        )
+        await db.commit()
+    try:
+        deleted = await _delete_as(
+            banner_id,
+            auth_user_uuid=uid,
+            role="sub_admin",
+            platform_scope="true",
+            business_line="both",
+        )
+        assert deleted == 0
+        assert await _banner_exists(banner_id)
+    finally:
+        await _cleanup(banner_id)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("role", "platform_scope", "business_line"),
+    [
+        ("admin", "true", "both"),
+        ("admin", "false", "loans"),
+        ("client", "false", ""),
+        ("telecaller", "false", "loans"),
+        ("employee", "false", "loans"),
+        ("agent", "false", "loans"),
+    ],
+)
+async def test_no_other_role_can_delete_a_banner(
+    client: AsyncClient, role: str, platform_scope: str, business_line: str
+) -> None:
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    banner_id = await _seed_banner(uid, status="pending_approval")
+    try:
+        deleted = await _delete_as(
+            banner_id,
+            auth_user_uuid=uid,
+            role=role,
+            platform_scope=platform_scope,
+            business_line=business_line,
+        )
+        assert deleted == 0
+        assert await _banner_exists(banner_id)
+    finally:
+        await _cleanup(banner_id)

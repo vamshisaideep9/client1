@@ -85,7 +85,8 @@ for (const route of routes) {
       await page.waitForLoadState("networkidle");
       await expect(page.locator('main [data-slot="skeleton"]:visible').first()).not.toBeVisible();
       await page.evaluate(() => document.fonts.ready);
-      for (const width of [320, 390, 768, 1365]) {
+      // 768 and 1024 cover iPad portrait/landscape, where the full navigation shows.
+      for (const width of [320, 390, 768, 1024, 1365]) {
         await page.setViewportSize({ width, height: 844 });
         await expectContained(page);
         if (width === 390) await page.screenshot({ path: testInfo.outputPath("mobile.png"), animations: "disabled" });

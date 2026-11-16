@@ -206,3 +206,56 @@ async def test_inconsistent_optional_profile_values_are_422(
         json={"first_name": "Aarav", "last_name": "Sharma", **profile},
     )
     assert resp.status_code == 422
+
+
+async def _role_token(mobile: str, role: str) -> dict[str, str]:
+    """A signed session for the same account under another role (claims only)."""
+    from sqlalchemy import text
+
+    import app.db.session as _session_mod
+    from app.core.security import create_access_token
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        uid = await db.scalar(text("SELECT id FROM auth_users WHERE mobile = :m"), {"m": mobile})
+    token = create_access_token(
+        {
+            "sub": str(uid),
+            "role": role,
+            "business_line": "loans",
+            "platform_scope": "true" if role == "admin" else "false",
+        }
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", ["telecaller", "employee", "sub_admin"])
+async def test_admin_managed_staff_cannot_edit_their_profile(
+    client: AsyncClient, role: str
+) -> None:
+    """CS-021: Telecaller, Employee and Sub Admin profiles are read-only."""
+    token, mobile = await full_registration(client, lines=["loans"])
+    headers = await _role_token(mobile, role)
+
+    resp = await client.patch(
+        "/api/v1/auth/me",
+        headers=headers,
+        json={"first_name": "Changed", "last_name": "Name", "email": unique_email()},
+    )
+    assert resp.status_code == 403, resp.text
+    assert "Admin" in resp.json()["detail"]
+
+    me = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.json()["first_name"] != "Changed"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", ["agent", "admin"])
+async def test_agents_and_admins_keep_editing_their_profile(client: AsyncClient, role: str) -> None:
+    _, mobile = await full_registration(client, lines=["loans"])
+    headers = await _role_token(mobile, role)
+    resp = await client.patch(
+        "/api/v1/auth/me", headers=headers, json={"first_name": "Kept", "last_name": "Editable"}
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["first_name"] == "Kept"

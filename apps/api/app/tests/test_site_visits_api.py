@@ -105,6 +105,26 @@ async def test_list_empty_for_new_client(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_visit_is_linked_to_the_clients_real_estate_lead(client: AsyncClient) -> None:
+    import app.db.session as _session_mod
+    from app.models.lead import Lead
+    from app.models.site_visit import SiteVisit
+
+    token, _ = await full_registration(client, lines=["real_estate"])
+    created = await client.post(
+        "/api/v1/site-visits", headers={"Authorization": f"Bearer {token}"}, json=_payload()
+    )
+    assert created.status_code == 201, created.text
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        visit = await db.get(SiteVisit, uuid.UUID(created.json()["id"]))
+        assert visit is not None and visit.lead_uuid is not None
+        lead = await db.get(Lead, visit.lead_uuid)
+        assert lead is not None
+        assert lead.business_line == "real_estate"
+
+
+@pytest.mark.asyncio
 async def test_create_then_list_own_visit(client: AsyncClient) -> None:
     token, _ = await full_registration(client, lines=["real_estate"])
     headers = {"Authorization": f"Bearer {token}"}
@@ -334,3 +354,41 @@ async def test_real_estate_staff_cannot_cancel_clients_visit(client: AsyncClient
         "/api/v1/site-visits", headers={"Authorization": f"Bearer {owner_token}"}
     )
     assert still.json()["visits"][0]["status"] == "requested"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", ["telecaller", "employee", "agent"])
+async def test_line_staff_list_never_shows_other_clients_visits(
+    client: AsyncClient, role: str
+) -> None:
+    """Audit finding #3: GET /site-visits is "My Site Visits" for every caller.
+
+    RLS admits real-estate Telecallers/Employees for their own workflows, but
+    this list must not turn into a line-wide directory of client contacts.
+    """
+    owner_token, _ = await full_registration(client, lines=["real_estate"])
+    created = await client.post(
+        "/api/v1/site-visits",
+        headers={"Authorization": f"Bearer {owner_token}"},
+        json=_payload(),
+    )
+    assert created.status_code == 201, created.text
+
+    from sqlalchemy import text as _text
+
+    import app.db.session as _session_mod
+
+    _, staff_mobile = await full_registration(client, lines=["real_estate"])
+    async with _session_mod.AsyncSessionLocal() as db:
+        staff_id = (
+            await db.execute(
+                _text("SELECT id FROM auth_users WHERE mobile = :m"), {"m": staff_mobile}
+            )
+        ).scalar_one()
+
+    resp = await client.get(
+        "/api/v1/site-visits",
+        headers={"Authorization": f"Bearer {_staff_token(str(staff_id), role)}"},
+    )
+    assert resp.status_code == 200
+    assert created.json()["id"] not in [v["id"] for v in resp.json()["visits"]]

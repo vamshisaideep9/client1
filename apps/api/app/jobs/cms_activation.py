@@ -1,10 +1,12 @@
 """CMS activation job — writes BannerStatus.LIVE/ARCHIVED and OfferStatus.ACTIVE/EXPIRED.
 
 Before this job existed, BannerStatus.LIVE and OfferStatus.EXPIRED were dead enum
-values: services/banners.py's approve_banner terminates at APPROVED, and
-services/offers.py's request transition maps give EXPIRED no incoming edge (it is
-scheduler-owned by design, see that module's comment). This job is that
-scheduler.
+values: services/offers.py's request transition maps give EXPIRED no incoming
+edge (it is scheduler-owned by design, see that module's comment). This job is
+that scheduler. Since 2026-11-16 services/banners.py's approve_banner also calls
+activate_banner_if_due (below) in its own transaction, so a banner that is due
+and whose slot is free goes live at approval; future-dated or blocked banners
+still wait for this job.
 
 NULL-timestamp semantics, one rule for both resources: a NULL bound is an OPEN
 bound. NULL starts_at means "already started"; NULL ends_at means "never
@@ -46,8 +48,10 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime
+from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
@@ -61,75 +65,111 @@ from app.services.audit_log import record as record_audit
 logger = logging.getLogger("scheduler")
 
 
+def _due_approved_banners(now: datetime | None = None) -> Select[tuple[Banner]]:
+    """Approved, not removed, and started (NULL start = already started)."""
+    start_bound = func.now() if now is None else now
+    return select(Banner).where(
+        Banner.status == BannerStatus.APPROVED,
+        Banner.removed_at.is_(None),
+        or_(Banner.starts_at.is_(None), Banner.starts_at <= start_bound),
+    )
+
+
+async def _activate_if_eligible(session: AsyncSession, banner: Banner) -> bool:
+    """Flip one locked, due, approved banner to LIVE when its slot allows it.
+
+    The caller must already hold the row lock on ``banner`` and have checked
+    that it is due. Returns False, leaving the row untouched, when the linked
+    property is no longer publishable or another campaign holds its slot.
+    """
+    if banner.property_id is not None:
+        property_listing = await session.get(Property, banner.property_id)
+        if (
+            property_listing is None
+            or not property_listing.active
+            or property_listing.rera_verification_status
+            not in {
+                ReraVerificationStatus.VERIFIED,
+                ReraVerificationStatus.EXEMPTION_VERIFIED,
+            }
+        ):
+            return False
+    # Offer links are legacy metadata only. Coupons are now authenticated
+    # dashboard placements, so banner publication must not depend on the
+    # linked offer state or expose its code.
+    if banner.category_key is not None:
+        live_scope = [
+            Banner.status == BannerStatus.LIVE,
+            Banner.removed_at.is_(None),
+            Banner.placement == banner.placement,
+        ]
+        # Public sponsor themes share one physical slot. Every other
+        # public placement still allows one live campaign per category.
+        if banner.placement != BannerPlacement.HOMEPAGE_AD:
+            live_scope.append(Banner.category_key == banner.category_key)
+        current = await session.scalar(select(Banner).where(*live_scope).with_for_update())
+        if current is not None:
+            if banner.replaces_banner_id != current.id:
+                return False
+            current.status = BannerStatus.ARCHIVED
+            current.updated_at = func.now()
+            await record_audit(
+                session,
+                action=AuditAction.BANNER_ARCHIVED,
+                entity_type="banner",
+                entity_uuid=current.id,
+                actor_uuid=None,
+                actor_role="system",
+                business_line=current.business_line,
+                detail={"placement": current.placement.value, "replaced": True},
+            )
+    banner.status = BannerStatus.LIVE
+    banner.updated_at = func.now()
+    await record_audit(
+        session,
+        action=AuditAction.BANNER_ACTIVATED,
+        entity_type="banner",
+        entity_uuid=banner.id,
+        actor_uuid=None,
+        actor_role="system",
+        business_line=banner.business_line,
+        detail={"placement": banner.placement.value},
+    )
+    return True
+
+
+async def activate_banner_if_due(
+    session: AsyncSession, banner_id: UUID, now: datetime | None = None
+) -> bool:
+    """Run the job's activation rules for one banner, inside the caller's transaction.
+
+    Used by Admin approval so a banner that is due and whose slot is free goes
+    live in the same commit instead of waiting for the next job tick. A banner
+    that is not due, has an unpublishable property, or whose slot is taken
+    stays ``approved`` and the job picks it up later. ``now`` defaults to the
+    database transaction time, exactly like the job. The caller must flush
+    pending changes first (sessions here run with autoflush off).
+    """
+    banner = await session.scalar(
+        _due_approved_banners(now).where(Banner.id == banner_id).with_for_update()
+    )
+    if banner is None:
+        return False
+    return await _activate_if_eligible(session, banner)
+
+
 async def _activate_banners(session: AsyncSession) -> int:
     candidates = (
         await session.scalars(
-            select(Banner)
-            .where(
-                Banner.status == BannerStatus.APPROVED,
-                Banner.removed_at.is_(None),
-                or_(Banner.starts_at.is_(None), Banner.starts_at <= func.now()),
-            )
+            _due_approved_banners()
             .order_by(Banner.priority.desc(), Banner.created_at.asc(), Banner.id.asc())
             .with_for_update()
         )
     ).all()
     activated = 0
     for banner in candidates:
-        if banner.property_id is not None:
-            property_listing = await session.get(Property, banner.property_id)
-            if (
-                property_listing is None
-                or not property_listing.active
-                or property_listing.rera_verification_status
-                not in {
-                    ReraVerificationStatus.VERIFIED,
-                    ReraVerificationStatus.EXEMPTION_VERIFIED,
-                }
-            ):
-                continue
-        # Offer links are legacy metadata only. Coupons are now authenticated
-        # dashboard placements, so banner publication must not depend on the
-        # linked offer state or expose its code.
-        if banner.category_key is not None:
-            live_scope = [
-                Banner.status == BannerStatus.LIVE,
-                Banner.removed_at.is_(None),
-                Banner.placement == banner.placement,
-            ]
-            # Public sponsor themes share one physical slot. Every other
-            # public placement still allows one live campaign per category.
-            if banner.placement != BannerPlacement.HOMEPAGE_AD:
-                live_scope.append(Banner.category_key == banner.category_key)
-            current = await session.scalar(select(Banner).where(*live_scope).with_for_update())
-            if current is not None:
-                if banner.replaces_banner_id != current.id:
-                    continue
-                current.status = BannerStatus.ARCHIVED
-                current.updated_at = func.now()
-                await record_audit(
-                    session,
-                    action=AuditAction.BANNER_ARCHIVED,
-                    entity_type="banner",
-                    entity_uuid=current.id,
-                    actor_uuid=None,
-                    actor_role="system",
-                    business_line=current.business_line,
-                    detail={"placement": current.placement.value, "replaced": True},
-                )
-        banner.status = BannerStatus.LIVE
-        banner.updated_at = func.now()
-        await record_audit(
-            session,
-            action=AuditAction.BANNER_ACTIVATED,
-            entity_type="banner",
-            entity_uuid=banner.id,
-            actor_uuid=None,
-            actor_role="system",
-            business_line=banner.business_line,
-            detail={"placement": banner.placement.value},
-        )
-        activated += 1
+        if await _activate_if_eligible(session, banner):
+            activated += 1
     return activated
 
 

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Building2, LayoutGrid, MapPin } from "lucide-react";
+import { Building2, HardHat, LayoutGrid, MapPin } from "lucide-react";
 
 import { CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { subtypeGroupsFor } from "@/lib/property-facet-map";
@@ -11,6 +11,7 @@ import type { RECategory, RESubtype } from "@/lib/real-estate";
 const MAX_SUGGESTIONS_PER_GROUP = 4;
 
 export type SuggestionMatches = {
+  developers: string[];
   localities: string[];
   cities: string[];
   pincodes: string[];
@@ -44,6 +45,7 @@ export function useSuggestionMatches(
     if (!query) return null;
     const contains = (value: string) => value.toLowerCase().includes(query);
     return {
+      developers: suggestionIndex.developers.filter(contains).slice(0, MAX_SUGGESTIONS_PER_GROUP),
       localities: suggestionIndex.localities.filter(contains).slice(0, MAX_SUGGESTIONS_PER_GROUP),
       cities: suggestionIndex.cities.filter(contains).slice(0, MAX_SUGGESTIONS_PER_GROUP),
       pincodes: suggestionIndex.pincodes.filter(contains).slice(0, MAX_SUGGESTIONS_PER_GROUP),
@@ -54,7 +56,8 @@ export function useSuggestionMatches(
 
   const hasMatches = Boolean(
     matches &&
-      (matches.localities.length ||
+      (matches.developers.length ||
+        matches.localities.length ||
         matches.cities.length ||
         matches.pincodes.length ||
         matches.subtypes.length ||
@@ -77,6 +80,7 @@ export function SuggestionsList({
   onPickPincode,
   onPickSubtype,
   onPickProperty,
+  onPickDeveloper,
 }: {
   matches: SuggestionMatches | null;
   hasMatches: boolean;
@@ -86,10 +90,20 @@ export function SuggestionsList({
   onPickPincode: (value: string) => void;
   onPickSubtype: (value: RESubtype) => void;
   onPickProperty: (title: string) => void;
+  onPickDeveloper: (value: string) => void;
 }) {
   return (
     <CommandList>
       {!hasMatches ? <CommandEmpty>No matches for &quot;{queryText}&quot;</CommandEmpty> : null}
+      {matches?.developers.length ? (
+        <CommandGroup heading="Developers">
+          {matches.developers.map((value) => (
+            <CommandItem key={value} value={`developer:${value}`} onSelect={() => onPickDeveloper(value)}>
+              <HardHat /> {value}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      ) : null}
       {matches?.localities.length ? (
         <CommandGroup heading="Localities">
           {matches.localities.map((value) => (
