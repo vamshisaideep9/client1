@@ -74,7 +74,9 @@ no requirement or completion-percentage change). Two stacked PRs, both
 opened against `main`, stacked on Batch C PR 2:
 
 - *PR D1 — API, migration, contracts*, branch `feat/batch-d-eligibility-api`
-  from `feat/batch-c-filters-web` `08144773`. Migration `c7e9a1b3d5f8`
+  from `feat/batch-c-filters-web` `08144773`; PR
+  [#373](https://github.com/brollysolutions/client1/pull/373), mirror
+  vamshisaideep9/client1#74. Migration `c7e9a1b3d5f8`
   (revises `f1b3d5a7c9e2`, single head) adds `lead_intake_attempts`: actor
   (`agent` + Agent profile, or `referrer` + account), owning account, last
   four digits and a keyed HMAC-SHA256 fingerprint of the number (never the

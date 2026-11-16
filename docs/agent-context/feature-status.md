@@ -3,7 +3,9 @@
 Status: **Derived living implementation ledger**
 
 **In progress — Batch D PR 1: lead and referral eligibility (API)**
-(2026-11-17; CS-024), branch `feat/batch-d-eligibility-api` stacked on
+(2026-11-17; CS-024; PR
+[#373](https://github.com/brollysolutions/client1/pull/373), mirror
+vamshisaideep9/client1#74), branch `feat/batch-d-eligibility-api` stacked on
 Batch C PR 2. API, one migration and regenerated contracts; no
 requirement-percentage change.
 - Store: migration `c7e9a1b3d5f8` (revises `f1b3d5a7c9e2`) adds

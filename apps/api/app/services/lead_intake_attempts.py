@@ -14,7 +14,9 @@ The fingerprint is an HMAC-SHA256 under ``SECRET_KEY`` with a purpose prefix
 being reversible by hashing every possible mobile.
 
 An identical attempt (same owner, number and reason) within 24 hours is not
-stored again, so a double submit or a retry does not inflate the counts.
+stored again, so a retry does not inflate the counts. The check is a plain
+read before the insert, so two submits landing at the same instant may both
+be stored; that only over-counts and needs no lock.
 
 Reads run on the caller's request session; ``lead_intake_attempts`` RLS
 returns only the caller's own rows, and every query also names the actor.
