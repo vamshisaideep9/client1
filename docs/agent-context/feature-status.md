@@ -2,6 +2,41 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch E PR 3: staff contact-change requests and one-Admin
+approval (API)** (2026-11-17; CS-025), branch `feat/batch-e-staff-requests-api`
+stacked on Batch E PR 2. API and regenerated contracts; no migration; no
+requirement-percentage change.
+- Staff (Telecaller, Employee, Sub Admin incl. managers): `POST
+  /auth/contact-change/requests` (field, new value, current password; same
+  budgets, login lock, one-change rule and pre-checks as self-service) sends a
+  code to the new value; `requests/verify` moves it to `pending_approval` for
+  `CONTACT_CHANGE_REQUEST_EXPIRE_DAYS` (7), audits `contact_change_requested`
+  and notifies every active Admin; `requests/resend`; withdraw through the
+  shared `cancel`. These three admit an account still owing the email step,
+  so an employee whose Admin-set address is wrong can fix it through an
+  Admin. Clients, Agents and Admins get 403 (they self-serve).
+- Admin: `GET /admin/contact-change-requests` (platform Admin; live Admin
+  profile re-checked; `private, no-store`) lists pending requests oldest
+  first with name, role, field, live current value, requested value and a
+  "changed since" flag; `/{id}/approve` (password re-entry sharing the login
+  lock) applies it exactly like a self-service change (session version,
+  refresh tokens, push, history `admin_approved` with the approver, audit
+  `contact_changed` by the Admin, notices; an Admin-set address that was
+  never verified is not recorded as a previous email); `/{id}/reject` (password, PII-free reason
+  as in the lost-number flow) notifies the requester and audits
+  `contact_change_rejected`. The requester's own account can never be
+  decided by them (409); expired requests leave the queue.
+- Evidence: new `test_contact_change_staff.py` (13: phone change for each
+  staff role with one Admin, sessions ended, history with approver, audit
+  trail; email request clears the email step for an enforced employee;
+  Admin cannot file or decide their own; wrong password and a forged Admin
+  token without a live profile refused, Sub Admin cannot see the queue;
+  rejection with password and PII-free reason (a number in the reason 422)
+  and notice; not reviewable before the code; one active request; another
+  staff member cannot verify it; Client 403; wrong password / registered
+  number / malformed number; expiry; withdraw; Admins notified). Full API
+  suite: see Batch E PR 4 (run before the last slice).
+
 **In progress — Batch E PR 2: self-service phone/email change and contact
 history (API)** (2026-11-17; CS-025; PR
 [#376](https://github.com/brollysolutions/client1/pull/376), mirror

@@ -9,6 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.schemas.auth import DeliveryChannel
+from app.schemas.mobile_change import _normalize_pii_free as normalize_pii_free
 
 ContactFieldLiteral = Literal["mobile", "email"]
 ContactChangeKindLiteral = Literal["self_service", "email_add", "staff_request"]
@@ -148,3 +149,48 @@ class ContactHistoryEntry(BaseModel):
 
 class ContactHistoryResponse(BaseModel):
     entries: list[ContactHistoryEntry]
+
+
+class StaffContactChangeRequest(BaseModel):
+    """Telecaller / Employee / Sub Admin: ask an Admin to change a contact."""
+
+    field: ContactFieldLiteral
+    # E.164 number or email, validated against ``field`` in the service.
+    value: Annotated[str, Field(min_length=3, max_length=320)]
+    current_password: CurrentPassword
+
+
+class ContactChangeAdminRead(BaseModel):
+    """A staff request waiting for one platform Admin."""
+
+    id: UUID
+    auth_user_uuid: UUID
+    requester_name: str
+    requester_role: str
+    field: ContactFieldLiteral
+    current_value: str | None
+    requested_value: str
+    # The account's value moved since the request; approving would refuse.
+    current_changed: bool
+    new_verified_at: datetime | None
+    expires_at: datetime
+    created_at: datetime
+
+
+class ContactChangeAdminListResponse(BaseModel):
+    requests: list[ContactChangeAdminRead]
+
+
+class ContactChangeAdminApproveRequest(BaseModel):
+    current_password: CurrentPassword
+
+
+class ContactChangeAdminRejectRequest(BaseModel):
+    reason: Annotated[str, Field(min_length=3, max_length=500)]
+    current_password: CurrentPassword
+
+    @field_validator("reason")
+    @classmethod
+    def reason_is_pii_free(cls, value: str) -> str:
+        # Same rule as the lost-number rejection: no numbers or addresses.
+        return normalize_pii_free(value)

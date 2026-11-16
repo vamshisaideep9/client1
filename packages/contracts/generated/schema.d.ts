@@ -345,6 +345,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/contact-change-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Requests */
+        get: operations["list_requests_api_v1_admin_contact_change_requests_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/contact-change-requests/{request_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve
+         * @description One platform Admin (never the requester) applies the change.
+         */
+        post: operations["approve_api_v1_admin_contact_change_requests__request_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/contact-change-requests/{request_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject */
+        post: operations["reject_api_v1_admin_contact_change_requests__request_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/document-verification/documents": {
         parameters: {
             query?: never;
@@ -1970,6 +2024,63 @@ export interface paths {
         put?: never;
         /** New Value */
         post: operations["new_value_api_v1_auth_contact_change_new_value_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/contact-change/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Change
+         * @description Staff: password and the new value, then a code to it.
+         */
+        post: operations["request_change_api_v1_auth_contact_change_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/contact-change/requests/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Resend */
+        post: operations["request_resend_api_v1_auth_contact_change_requests_resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/contact-change/requests/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Verify
+         * @description The new value is proven; the request waits for one platform Admin.
+         */
+        post: operations["request_verify_api_v1_auth_contact_change_requests_verify_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8130,6 +8241,66 @@ export interface components {
          * @enum {string}
          */
         ConstructionStatus: "ready" | "under_construction";
+        /** ContactChangeAdminApproveRequest */
+        ContactChangeAdminApproveRequest: {
+            /** Current Password */
+            current_password: string;
+        };
+        /** ContactChangeAdminListResponse */
+        ContactChangeAdminListResponse: {
+            /** Requests */
+            requests: components["schemas"]["ContactChangeAdminRead"][];
+        };
+        /**
+         * ContactChangeAdminRead
+         * @description A staff request waiting for one platform Admin.
+         */
+        ContactChangeAdminRead: {
+            /**
+             * Auth User Uuid
+             * Format: uuid
+             */
+            auth_user_uuid: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Current Changed */
+            current_changed: boolean;
+            /** Current Value */
+            current_value: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "mobile" | "email";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** New Verified At */
+            new_verified_at: string | null;
+            /** Requested Value */
+            requested_value: string;
+            /** Requester Name */
+            requester_name: string;
+            /** Requester Role */
+            requester_role: string;
+        };
+        /** ContactChangeAdminRejectRequest */
+        ContactChangeAdminRejectRequest: {
+            /** Current Password */
+            current_password: string;
+            /** Reason */
+            reason: string;
+        };
         /**
          * ContactChangeChallengeResponse
          * @description One step of a change: where the code went and what comes next.
@@ -11823,6 +11994,21 @@ export interface components {
             role: "telecaller" | "employee" | "agent" | "sub_admin";
             trend: components["schemas"]["AnalyticsTrend"];
         };
+        /**
+         * StaffContactChangeRequest
+         * @description Telecaller / Employee / Sub Admin: ask an Admin to change a contact.
+         */
+        StaffContactChangeRequest: {
+            /** Current Password */
+            current_password: string;
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "mobile" | "email";
+            /** Value */
+            value: string;
+        };
         /** StaffCreateRequest */
         StaffCreateRequest: {
             /** Business Line */
@@ -14120,6 +14306,96 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommissionPayoutResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_requests_api_v1_admin_contact_change_requests_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeAdminListResponse"];
+                };
+            };
+        };
+    };
+    approve_api_v1_admin_contact_change_requests__request_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactChangeAdminApproveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_api_v1_admin_contact_change_requests__request_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactChangeAdminRejectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
                 };
             };
             /** @description Validation Error */
@@ -17466,6 +17742,105 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ContactChangeNewValueRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeChallengeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_change_api_v1_auth_contact_change_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffContactChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeChallengeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_resend_api_v1_auth_contact_change_requests_resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactChangeIdRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeChallengeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_verify_api_v1_auth_contact_change_requests_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactChangeOtpRequest"];
             };
         };
         responses: {

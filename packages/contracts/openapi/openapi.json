@@ -8814,6 +8814,146 @@
         "title": "ConstructionStatus",
         "type": "string"
       },
+      "ContactChangeAdminApproveRequest": {
+        "properties": {
+          "current_password": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password"
+        ],
+        "title": "ContactChangeAdminApproveRequest",
+        "type": "object"
+      },
+      "ContactChangeAdminListResponse": {
+        "properties": {
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/ContactChangeAdminRead"
+            },
+            "title": "Requests",
+            "type": "array"
+          }
+        },
+        "required": [
+          "requests"
+        ],
+        "title": "ContactChangeAdminListResponse",
+        "type": "object"
+      },
+      "ContactChangeAdminRead": {
+        "description": "A staff request waiting for one platform Admin.",
+        "properties": {
+          "auth_user_uuid": {
+            "format": "uuid",
+            "title": "Auth User Uuid",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_changed": {
+            "title": "Current Changed",
+            "type": "boolean"
+          },
+          "current_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Value"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "field": {
+            "enum": [
+              "mobile",
+              "email"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "new_verified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Verified At"
+          },
+          "requested_value": {
+            "title": "Requested Value",
+            "type": "string"
+          },
+          "requester_name": {
+            "title": "Requester Name",
+            "type": "string"
+          },
+          "requester_role": {
+            "title": "Requester Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "auth_user_uuid",
+          "requester_name",
+          "requester_role",
+          "field",
+          "current_value",
+          "requested_value",
+          "current_changed",
+          "new_verified_at",
+          "expires_at",
+          "created_at"
+        ],
+        "title": "ContactChangeAdminRead",
+        "type": "object"
+      },
+      "ContactChangeAdminRejectRequest": {
+        "properties": {
+          "current_password": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "current_password"
+        ],
+        "title": "ContactChangeAdminRejectRequest",
+        "type": "object"
+      },
       "ContactChangeChallengeResponse": {
         "description": "One step of a change: where the code went and what comes next.",
         "properties": {
@@ -19692,6 +19832,38 @@
         "title": "StaffAnalyticsResponse",
         "type": "object"
       },
+      "StaffContactChangeRequest": {
+        "description": "Telecaller / Employee / Sub Admin: ask an Admin to change a contact.",
+        "properties": {
+          "current_password": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "field": {
+            "enum": [
+              "mobile",
+              "email"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "value",
+          "current_password"
+        ],
+        "title": "StaffContactChangeRequest",
+        "type": "object"
+      },
       "StaffCreateRequest": {
         "properties": {
           "business_line": {
@@ -25639,6 +25811,149 @@
         "summary": "Create Commission Payout",
         "tags": [
           "commissions"
+        ]
+      }
+    },
+    "/api/v1/admin/contact-change-requests": {
+      "get": {
+        "operationId": "list_requests_api_v1_admin_contact_change_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChangeAdminListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Requests",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/contact-change-requests/{request_id}/approve": {
+      "post": {
+        "description": "One platform Admin (never the requester) applies the change.",
+        "operationId": "approve_api_v1_admin_contact_change_requests__request_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactChangeAdminApproveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Approve",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/contact-change-requests/{request_id}/reject": {
+      "post": {
+        "operationId": "reject_api_v1_admin_contact_change_requests__request_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactChangeAdminRejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Reject",
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -34248,6 +34563,146 @@
           }
         ],
         "summary": "New Value",
+        "tags": [
+          "contact-change"
+        ]
+      }
+    },
+    "/api/v1/auth/contact-change/requests": {
+      "post": {
+        "description": "Staff: password and the new value, then a code to it.",
+        "operationId": "request_change_api_v1_auth_contact_change_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffContactChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChangeChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Request Change",
+        "tags": [
+          "contact-change"
+        ]
+      }
+    },
+    "/api/v1/auth/contact-change/requests/resend": {
+      "post": {
+        "operationId": "request_resend_api_v1_auth_contact_change_requests_resend_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactChangeIdRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChangeChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Request Resend",
+        "tags": [
+          "contact-change"
+        ]
+      }
+    },
+    "/api/v1/auth/contact-change/requests/verify": {
+      "post": {
+        "description": "The new value is proven; the request waits for one platform Admin.",
+        "operationId": "request_verify_api_v1_auth_contact_change_requests_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactChangeOtpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChangeChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Request Verify",
         "tags": [
           "contact-change"
         ]
