@@ -61,7 +61,8 @@ default, not permission to skip the pre-implementation announcement.
 ## Prioritized active backlog
 
 **In review — admin client-roster CSV export** (2026-11-16; upstream PR
-_pending publish_; origin mirror DEFERRED pending fork sync), branch
+[#364](https://github.com/brollysolutions/client1/pull/364); origin mirror
+DEFERRED pending fork sync), branch
 `feat/admin-client-export` from `upstream/main` `8493823c`. New
 platform-admin-only endpoint `GET /api/v1/admin/reports/clients/export`
 streaming a both-lines CSV of every CLIENT account

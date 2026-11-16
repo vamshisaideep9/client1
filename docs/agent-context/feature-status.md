@@ -3,7 +3,8 @@
 Status: **Derived living implementation ledger**
 
 **In review — admin client-roster CSV export** (2026-11-16; upstream PR
-_pending publish_; origin mirror DEFERRED pending fork sync — origin/main is 134
+[#364](https://github.com/brollysolutions/client1/pull/364); origin mirror
+DEFERRED pending fork sync — origin/main is 134
 commits behind upstream/main and was not synced, so only the canonical
 `brollysolutions/client1` PR is opened for now), branch
 `feat/admin-client-export` from `upstream/main` `8493823c`. Adds
