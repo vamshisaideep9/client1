@@ -2,6 +2,37 @@
 
 Status: **Derived living implementation ledger**
 
+**In review — Property listings advanced filters and demo Sub Admin
+listings** (2026-11-16), branch `feat/listing-advanced-filters` from
+`upstream/main` `b04c78c`. Web plus a development-only seed change; no API,
+schema, RLS or contract change, so the completion percentage is unchanged.
+- `/dashboard/my-submissions` (Sub Admin, real-estate Agent, Admin) filters
+  its own rows in the browser: search, status, category, submitted dates,
+  sale/rent and sort, plus a "More filters (n)" disclosure for property type,
+  city, BHK, price and area ranges, furnishing, construction, RERA review,
+  360° images and documents. State lives in the URL (shareable, survives a
+  reload; invalid values fall back to "all"). Status cards are toggle buttons
+  that set the status filter; a no-match state offers Clear filters and the
+  panel shows "Showing X of Y".
+- Sub Admin home: "Awaiting approval" jumps to and focuses the Waiting on
+  Admin panel (`MetricCard` in-page `#id` links, `DashboardPanel` `id`/`tabIndex`).
+- `seed_demo`: the demo Sub Admin (+919000001003) now has 11 listings
+  (pending 5, approved 2, rejected 2, withdrawn 2) covering sale and rent, all
+  5 categories and 9 subtypes, Hyderabad/Warangal/Visakhapatnam and every RERA
+  review state. Approved rows originate the demo villa and plot (no other
+  submission did; there is no uniqueness constraint, so the seed keeps one
+  origin per Property). The original four demo submissions are unchanged.
+- Evidence: `submission-filters.test.ts` (15) in the web unit suite, 904 tests
+  pass; lint and typecheck pass; `e2e/my-submissions-filters.spec.ts` (3) and
+  the new Sub Admin home-card test in `dashboard-repairs.spec.ts` pass against
+  `pnpm dev` (390 px no horizontal scroll). API: ruff check/format pass;
+  `test_seed_helpers.py` + demo-media + `test_seed_bulk.py` 45 passed in a
+  `python:3.13` container on a fresh migrated database (one Alembic head,
+  `b2d4f6a8c0e1`), including a rolled-back DB test that reruns the seed and
+  adds nothing; two real `seed_demo --skip-media` runs on that database gave
+  the 11-row spread and 3 distinct approved origins. Dev droplet data needs a
+  `seed_demo` rerun after merge.
+
 **In review — per-person test data coverage** (2026-11-16), branch
 `chore/bulk-seed-staff-coverage` from `upstream/main` `05e7381`.
 Development-only seeder change; no product, schema or contract change.

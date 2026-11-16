@@ -60,6 +60,18 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In review — Property listings advanced filters and demo Sub Admin
+listings** (2026-11-16; branch `feat/listing-advanced-filters` from
+`upstream/main` `b04c78c`; user request on dev testing, no requirement or
+completion-percentage change). The shared author workspace
+`/dashboard/my-submissions` (Sub Admin, real-estate Agent, Admin) gets
+URL-synced client-side filters, clickable status cards and a no-match state;
+the Sub Admin home "Awaiting approval" card jumps to the Waiting on Admin
+panel; `seed_demo` gives the demo Sub Admin 11 varied listings (pending 5,
+approved 2, rejected 2, withdrawn 2). No API, contract, RLS or migration
+change. Next: user merges, then reruns `seed_demo` on the dev droplet.
+Recommended: Opus 5.5 / high.
+
 **In review — per-person test data coverage** (2026-11-16; branch
 `chore/bulk-seed-staff-coverage` from `upstream/main` `05e7381`; user request,
 development-only, no requirement change). Testers found the bulk data thin per
