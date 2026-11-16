@@ -2,7 +2,9 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — Banner lifecycle fixes (web slice)** (2026-11-16), branch
+**In review — Banner lifecycle fixes (web slice)** (2026-11-16; PR
+[#366](https://github.com/brollysolutions/client1/pull/366), mirror
+vamshisaideep9/client1#67), branch
 `fix/banner-lifecycle-web` stacked on `fix/banner-lifecycle-api`. Web only;
 no dependency or contract change beyond the API slice.
 - Workspace: Delete (with a confirm) for draft, pending, rejected and

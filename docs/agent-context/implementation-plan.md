@@ -68,7 +68,9 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — Banner lifecycle fixes (web slice)** (2026-11-16; branch
+**In review — Banner lifecycle fixes (web slice)** (2026-11-16; PR
+[#366](https://github.com/brollysolutions/client1/pull/366), mirror
+vamshisaideep9/client1#67; branch
 `fix/banner-lifecycle-web` stacked on `fix/banner-lifecycle-api`; same five
 client-reported bugs, no requirement or completion-percentage change). Sub
 Admins see Delete until a banner goes live and a "Live — ask an Admin to
