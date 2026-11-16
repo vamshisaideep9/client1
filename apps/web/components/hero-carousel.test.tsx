@@ -40,6 +40,29 @@ describe("HeroCarousel", () => {
     expect(markup).not.toContain('rel="preload"');
   });
 
+  it("opens an external CTA in a new tab and keeps internal ones on next/link", () => {
+    const markup = renderToStaticMarkup(
+      <HeroCarousel
+        variant="hero"
+        label="Featured"
+        banners={[
+          {
+            id: "external",
+            title: "Partner home loans",
+            cta: { label: "Visit the partner", href: "https://partner.example/home", external: true },
+          },
+          { id: "internal", title: "Our loans", cta: { label: "Explore", href: "/loans" } },
+        ]}
+      />,
+    );
+    expect(markup).toMatch(
+      /<a[^>]*href="https:\/\/partner\.example\/home"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/,
+    );
+    expect(markup).toContain('<span class="sr-only"> (opens in a new tab)</span>');
+    expect(markup).toMatch(/<a[^>]*href="\/loans"/);
+    expect(markup.match(/target="_blank"/g)).toHaveLength(1);
+  });
+
   it("renders the homepage hero full-bleed and full-screen, with overlaid dots", () => {
     // The homepage hero is the only caller of variant="hero". It used to be a
     // centered peek-coverflow card; it is now edge-to-edge and fills the
@@ -58,6 +81,35 @@ describe("HeroCarousel", () => {
     expect(markup).toContain("basis-full");
     expect(markup).not.toContain("blur-[4px]");
     expect(markup).not.toContain("aspect-[9/5]");
+  });
+
+  it("shows a slide counter only when there is more than one banner", () => {
+    const many = renderToStaticMarkup(
+      <HeroCarousel
+        banners={[
+          { id: "a", title: "First" },
+          { id: "b", title: "Second" },
+          { id: "c", title: "Third" },
+          { id: "d", title: "Fourth" },
+        ]}
+      />,
+    );
+    expect(many).toMatch(/data-slide-counter[^>]*>1\/4<\/span>/);
+
+    const section = renderToStaticMarkup(
+      <HeroCarousel
+        variant="section"
+        label="Property campaigns"
+        banners={[
+          { id: "a", title: "First" },
+          { id: "b", title: "Second" },
+        ]}
+      />,
+    );
+    expect(section).toMatch(/data-slide-counter[^>]*>1\/2<\/span>/);
+
+    const single = renderToStaticMarkup(<HeroCarousel banners={[{ id: "a", title: "Only" }]} />);
+    expect(single).not.toContain("data-slide-counter");
   });
 
   it("renders nothing for an empty campaign list", () => {

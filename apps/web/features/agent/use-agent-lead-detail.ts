@@ -2,7 +2,13 @@
 
 import * as React from "react";
 
-import { getAgentLead, updateAgentLead, type AgentLead, type AgentLeadUpdate } from "@/lib/agent-api";
+import {
+  getAgentLead,
+  resubmitAgentLead,
+  updateAgentLead,
+  type AgentLead,
+  type AgentLeadUpdate,
+} from "@/lib/agent-api";
 import type { ApiResponse } from "@/lib/api/client";
 
 type Status = "loading" | "ready" | "error";
@@ -47,5 +53,11 @@ export function useAgentLeadDetail(leadId: string) {
     return res;
   }
 
-  return { lead, status, error, errorStatus, retry, update };
+  async function resubmit(): Promise<ApiResponse<AgentLead>> {
+    const res = await resubmitAgentLead(leadId);
+    if (res.ok) setLead(res.data);
+    return res;
+  }
+
+  return { lead, status, error, errorStatus, retry, update, resubmit };
 }

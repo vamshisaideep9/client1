@@ -44,19 +44,100 @@ from typing import Any, Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import ColumnElement, func, select
+from sqlalchemy import ColumnElement, and_, exists, func, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.lead import Lead, LeadStatus
+from app.models.audit_log import AuditAction
+from app.models.lead import Lead, LeadOrigin, LeadStatus
+from app.models.lead_activity import LeadActivity
 from app.models.loan import LoanApplication, LoanStatus
-from app.models.profile import AgentProfile
+from app.models.profile import AgentProfile, ClientProfile
+from app.models.property import Property
 from app.models.property_deal import PropertyDeal, PropertyDealStatus
-from app.models.user import User
+from app.models.referral import Referral
+from app.models.user import User, UserStatus
+from app.services import audit_log
 
 IST = ZoneInfo("Asia/Kolkata")
 
 ReportBucketValue = Literal["week", "month"]
 BusinessLineValue = Literal["loans", "real_estate"]
+LeadSourceValue = Literal["direct", "agent", "client"]
+
+
+@dataclass(frozen=True)
+class ReportFilters:
+    """Optional narrowing beyond date range, business line and agents.
+
+    Lead-level filters (telecaller, source, lead status, latest call outcome
+    and interest) apply to the leads report directly and to the loans/deals
+    reports through their lead. Loan- and deal-level filters apply only to
+    their own report. Every value is a whitelisted enum, UUID or a bounded
+    plain string compared as a bound parameter, never interpolated.
+    """
+
+    telecaller_profile_uuids: tuple[UUID, ...] = ()
+    lead_source: LeadSourceValue | None = None
+    lead_status: str | None = None
+    call_status: str | None = None
+    interest: str | None = None
+    loan_status: str | None = None
+    loan_type_id: UUID | None = None
+    bank_id: UUID | None = None
+    deal_status: str | None = None
+    property_city: str | None = None
+    property_category: str | None = None
+
+    @property
+    def needs_lead(self) -> bool:
+        return bool(
+            self.telecaller_profile_uuids
+            or self.lead_source
+            or self.lead_status
+            or self.call_status
+            or self.interest
+        )
+
+
+NO_FILTERS = ReportFilters()
+
+
+def _client_referred() -> ColumnElement:
+    """The lead signed up through a client's referral code (see lead_list_signals)."""
+    return exists().where(
+        or_(Referral.referred_lead_uuid == Lead.id, Referral.referred_mobile == Lead.mobile)
+    )
+
+
+def _latest_call(column: ColumnElement) -> Any:
+    return (
+        select(column)
+        .where(LeadActivity.lead_uuid == Lead.id)
+        .order_by(LeadActivity.created_at.desc(), LeadActivity.id.desc())
+        .limit(1)
+        .scalar_subquery()
+    )
+
+
+def _lead_level_filters(filters: ReportFilters) -> list[ColumnElement]:
+    """Predicates over ``Lead`` columns; the caller must have Lead in FROM."""
+    out: list[ColumnElement] = []
+    if filters.telecaller_profile_uuids:
+        out.append(Lead.assigned_telecaller_profile_uuid.in_(filters.telecaller_profile_uuids))
+    if filters.lead_source == "agent":
+        out.append(Lead.origin == LeadOrigin.AGENT)
+    elif filters.lead_source == "client":
+        out.append(and_(Lead.origin == LeadOrigin.DIRECT, _client_referred()))
+    elif filters.lead_source == "direct":
+        out.append(and_(Lead.origin == LeadOrigin.DIRECT, not_(_client_referred())))
+    if filters.lead_status:
+        out.append(Lead.status == LeadStatus(filters.lead_status))
+    if filters.call_status:
+        out.append(_latest_call(LeadActivity.disposition) == filters.call_status)
+    if filters.interest:
+        out.append(_latest_call(LeadActivity.interest_level) == filters.interest)
+    return out
+
 
 # 50,000 rows is generous for anything FR-16 asks for and cheap to hold in a
 # worker's memory; nothing in the spec caps export size, but an all-time
@@ -109,12 +190,14 @@ def _leads_filters(
     end: datetime,
     business_line: BusinessLineValue | None,
     agent_profile_uuids: list[UUID] | None,
+    report_filters: ReportFilters = NO_FILTERS,
 ) -> list[ColumnElement]:
     filters: list[ColumnElement] = [Lead.created_at >= start, Lead.created_at < end]
     if business_line is not None:
         filters.append(Lead.business_line == business_line)
     if agent_profile_uuids:
         filters.append(Lead.origin_agent_profile_uuid.in_(agent_profile_uuids))
+    filters.extend(_lead_level_filters(report_filters))
     return filters
 
 
@@ -130,10 +213,15 @@ async def get_leads_report(
     sort_dir: Literal["asc", "desc"] = "desc",
     limit: int = 50,
     offset: int = 0,
+    report_filters: ReportFilters = NO_FILTERS,
 ) -> tuple[list[dict[str, Any]], int, dict[str, int]]:
     start, end = _utc_bounds(date_from, date_to)
     filters = _leads_filters(
-        start=start, end=end, business_line=business_line, agent_profile_uuids=agent_profile_uuids
+        start=start,
+        end=end,
+        business_line=business_line,
+        agent_profile_uuids=agent_profile_uuids,
+        report_filters=report_filters,
     )
 
     bucket_col = _bucket_col(Lead.created_at, bucket).label("bucket_start")
@@ -205,16 +293,40 @@ async def _get_journey_report(
     sort_dir: Literal["asc", "desc"],
     limit: int,
     offset: int,
+    report_filters: ReportFilters = NO_FILTERS,
 ) -> tuple[list[dict[str, Any]], int, dict[str, int]]:
     start, end = _utc_bounds(date_from, date_to)
     filters: list[ColumnElement] = [time_col >= start, time_col < end]
     if business_line is not None:
         filters.append(model.business_line == business_line)
 
-    base_from = model
-    if agent_profile_uuids:
+    base_from: Any = model.__table__
+    if agent_profile_uuids or report_filters.needs_lead:
+        # One lead per application/deal, so this join never fans out.
         base_from = model.__table__.join(Lead.__table__, Lead.id == model.lead_uuid)
-        filters.append(Lead.origin_agent_profile_uuid.in_(agent_profile_uuids))
+        if agent_profile_uuids:
+            filters.append(Lead.origin_agent_profile_uuid.in_(agent_profile_uuids))
+        filters.extend(_lead_level_filters(report_filters))
+
+    if model is LoanApplication:
+        if report_filters.loan_status:
+            filters.append(LoanApplication.status == LoanStatus(report_filters.loan_status))
+        if report_filters.loan_type_id:
+            filters.append(LoanApplication.loan_type_id == report_filters.loan_type_id)
+        if report_filters.bank_id:
+            filters.append(LoanApplication.bank_id == report_filters.bank_id)
+    else:
+        if report_filters.deal_status:
+            filters.append(PropertyDeal.status == PropertyDealStatus(report_filters.deal_status))
+        if report_filters.property_city or report_filters.property_category:
+            # Each deal has exactly one property: no fan-out.
+            base_from = base_from.join(Property.__table__, Property.id == PropertyDeal.property_id)
+            if report_filters.property_city:
+                filters.append(
+                    func.lower(Property.city) == report_filters.property_city.strip().lower()
+                )
+            if report_filters.property_category:
+                filters.append(Property.category == report_filters.property_category)
 
     bucket_col = _bucket_col(time_col, bucket).label("bucket_start")
     line_col = model.business_line.label("business_line")
@@ -280,6 +392,7 @@ async def get_loans_report(
     sort_dir: Literal["asc", "desc"] = "desc",
     limit: int = 50,
     offset: int = 0,
+    report_filters: ReportFilters = NO_FILTERS,
 ) -> tuple[list[dict[str, Any]], int, dict[str, int]]:
     return await _get_journey_report(
         db,
@@ -295,6 +408,7 @@ async def get_loans_report(
         sort_dir=sort_dir,
         limit=limit,
         offset=offset,
+        report_filters=report_filters,
     )
 
 
@@ -310,6 +424,7 @@ async def get_deals_report(
     sort_dir: Literal["asc", "desc"] = "desc",
     limit: int = 50,
     offset: int = 0,
+    report_filters: ReportFilters = NO_FILTERS,
 ) -> tuple[list[dict[str, Any]], int, dict[str, int]]:
     return await _get_journey_report(
         db,
@@ -325,6 +440,7 @@ async def get_deals_report(
         sort_dir=sort_dir,
         limit=limit,
         offset=offset,
+        report_filters=report_filters,
     )
 
 
@@ -346,7 +462,7 @@ def _agent_activity_subquery(
     join_leads: bool,
 ):
     filters: list[ColumnElement] = [agent_col.is_not(None), time_col >= start, time_col < end]
-    base_from: Any = model
+    base_from: Any = model.__table__
     if join_leads:
         base_from = model.__table__.join(Lead.__table__, Lead.id == model.lead_uuid)
 
@@ -550,6 +666,7 @@ class ExportParams:
     bucket: ReportBucketValue
     business_line: str | None
     agent_profile_uuids: list[UUID] | None
+    report_filters: ReportFilters = NO_FILTERS
 
 
 async def export_report_rows(
@@ -572,6 +689,7 @@ async def export_report_rows(
             sort_dir="asc",
             limit=fetch_limit,
             offset=0,
+            report_filters=params.report_filters,
         )
         header = _JOURNEY_HEADER
     elif kind == "loans":
@@ -586,6 +704,7 @@ async def export_report_rows(
             sort_dir="asc",
             limit=fetch_limit,
             offset=0,
+            report_filters=params.report_filters,
         )
         header = _JOURNEY_HEADER
     elif kind == "deals":
@@ -600,6 +719,7 @@ async def export_report_rows(
             sort_dir="asc",
             limit=fetch_limit,
             offset=0,
+            report_filters=params.report_filters,
         )
         header = _JOURNEY_HEADER
     else:
@@ -620,3 +740,134 @@ async def export_report_rows(
     if truncated:
         rows = rows[:EXPORT_ROW_CAP]
     return rows, header, truncated
+
+
+async def list_telecaller_options(
+    db: AsyncSession, business_line: BusinessLineValue | None = None
+) -> list[dict[str, Any]]:
+    """Telecaller staff profiles for the report filter, ordered by staff code."""
+    from app.models.profile import StaffProfile, StaffRole
+
+    stmt = (
+        select(
+            StaffProfile.id.label("staff_profile_uuid"),
+            StaffProfile.staff_code,
+            StaffProfile.business_line,
+            User.first_name,
+            User.last_name,
+        )
+        .join(User, User.id == StaffProfile.auth_user_uuid)
+        .where(StaffProfile.role == StaffRole.TELECALLER)
+        .order_by(StaffProfile.staff_code)
+        .limit(500)
+    )
+    if business_line is not None:
+        stmt = stmt.where(StaffProfile.business_line.in_((business_line, "both")))
+    rows = (await db.execute(stmt)).all()
+    return [
+        {
+            "staff_profile_uuid": row.staff_profile_uuid,
+            "staff_code": row.staff_code,
+            "business_line": row.business_line,
+            "name": f"{row.first_name} {row.last_name}".strip(),
+        }
+        for row in rows
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Client-roster export (admin-only, bulk client PII)
+# ---------------------------------------------------------------------------
+#
+# Distinct from the aggregate leads/loans/deals/agents exports above: those
+# stream *counts* per time bucket and write no audit row (reads of derived
+# numbers). This one streams row-level client contact data -- every client's
+# name and mobile across both business lines -- so it is a bulk-PII export and
+# records an audit entry (security-review decision, feature-status.md §3 #2).
+#
+# Columns are deliberately limited to id / name / phone / created_at /
+# updated_at. password_hash is NEVER selected or emitted: it is a one-way
+# credential hash whose export is forbidden by SECURITY.md, and there is no
+# cleartext password column to export even if one were asked for.
+#
+# "CLIENT user" == an auth_users row that owns at least one client_profiles
+# row. A user is returned at most once even if they hold a client profile in
+# both lines (IN-subquery, not a join, so no fan-out). Soft-deleted (tombstoned)
+# accounts are excluded: their PII is on its way to a retention purge and must
+# not be re-surfaced in a bulk download -- the same posture get_current_user and
+# audit_log._resolve_actors already take toward SOFT_DELETED.
+#
+# Runs on the request-scoped `db` session, so the caller's RLS context applies:
+# only a platform Admin (role='admin' AND platform_scope='true') bypasses the
+# auth_users_rls / client_profiles_rls line predicates and sees both lines; the
+# router's require_platform_admin is the access gate in front of that wall.
+
+_CLIENTS_HEADER = ["id", "name", "phone", "created_at", "updated_at"]
+
+
+def _fmt_dt(value: datetime | None) -> str:
+    """IST (business timezone) ISO-8601, e.g. 2026-11-16T14:30:00+05:30 -- date
+    and time, unambiguous and round-trippable, matching this module's IST-first
+    convention for every other time column."""
+    if value is None:
+        return ""
+    return value.astimezone(IST).isoformat()
+
+
+async def export_client_rows(
+    db: AsyncSession,
+    *,
+    actor_uuid: UUID,
+    actor_role: str | None,
+) -> tuple[list[dict[str, Any]], list[str], bool]:
+    """Fetch every client account (capped at EXPORT_ROW_CAP + 1 to detect
+    truncation) and record the bulk-PII download in the audit log on the same
+    session. Does not commit -- the router owns the commit, matching this
+    codebase's service/router boundary. Returns (rows, header, truncated)."""
+    fetch_limit = EXPORT_ROW_CAP + 1
+
+    client_user_ids = select(ClientProfile.auth_user_uuid)
+    result = (
+        await db.execute(
+            select(
+                User.id,
+                User.first_name,
+                User.last_name,
+                User.mobile,
+                User.created_at,
+                User.updated_at,
+            )
+            .where(User.id.in_(client_user_ids))
+            .where(User.status != UserStatus.SOFT_DELETED)
+            .order_by(User.created_at.asc(), User.id.asc())
+            .limit(fetch_limit)
+        )
+    ).all()
+
+    truncated = len(result) > EXPORT_ROW_CAP
+    if truncated:
+        result = result[:EXPORT_ROW_CAP]
+
+    rows: list[dict[str, Any]] = [
+        {
+            "id": str(r.id),
+            "name": f"{r.first_name} {r.last_name}".strip(),
+            "phone": r.mobile,
+            "created_at": _fmt_dt(r.created_at),
+            "updated_at": _fmt_dt(r.updated_at),
+        }
+        for r in result
+    ]
+
+    await audit_log.record(
+        db,
+        action=AuditAction.CLIENT_EXPORT_DOWNLOADED,
+        entity_type="client_export",
+        entity_uuid=None,
+        actor_uuid=actor_uuid,
+        actor_role=actor_role,
+        business_line=None,
+        detail={"exported_client_count": len(rows), "format": "csv", "truncated": truncated},
+    )
+
+    return rows, _CLIENTS_HEADER, truncated

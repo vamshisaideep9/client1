@@ -18,13 +18,17 @@ from app.models.field_visibility import FieldTargetRole, FieldVisibilityMode
 from app.schemas.loans import LoanApplicationProgressUpdate
 from app.schemas.property_deals import PropertyDealProgressUpdate
 from app.schemas.telecaller import (
+    ClientHistoryLead,
     LeadActivityCreate,
     LeadActivityRead,
+    LeadStatusLiteral,
     LoanTxnCreate,
     LoanTxnRead,
     PropertyDealCreate,
     TaskCreate,
     TaskRead,
+    TelecallerClientHistoryResponse,
+    TelecallerFinancialEnquiryRead,
     TelecallerFollowUpItem,
     TelecallerHomeResponse,
     TelecallerLeadDetailRead,
@@ -32,10 +36,14 @@ from app.schemas.telecaller import (
     TelecallerLeadUpdate,
     TelecallerLoanApplicationRead,
     TelecallerPropertyDealRead,
+    TelecallerPropertyEnquiryRead,
+    TelecallerSiteVisitRead,
 )
 from app.services.field_visibility import effective_modes, project_values
+from app.services.lead_signals import lead_signals
 from app.services.loan_applications import (
     BankNotAvailableForLoanType,
+    SanctionTermsRequired,
     StatusReasonRequired,
     TerminalApplication,
     TermsNotAllowedAtStage,
@@ -61,11 +69,13 @@ from app.services.property_deals import (
 from app.services.property_deals import (
     apply_progress_update as apply_deal_progress_update,
 )
+from app.services.team_manager import work_notes
 from app.services.telecaller import (
     LoanApplicationNotFound,
     LoanApplicationNotLoansLine,
     PropertyDealNotFound,
     PropertyDealNotRealEstateLine,
+    RequestNotOnLead,
     add_txn_history,
     get_application_for_telecaller,
     get_deal_for_telecaller,
@@ -73,13 +83,20 @@ from app.services.telecaller import (
     get_last_activities,
     get_lead_for_telecaller,
     list_activities_for_lead,
+    list_activities_for_leads,
     list_assigned_leads,
+    list_client_journeys,
+    list_financial_enquiries_for_lead,
     list_loan_applications_for_lead,
     list_property_deals_for_lead,
+    list_property_enquiries_for_lead,
+    list_site_visits_for_lead,
     list_tasks_for_lead,
     list_txns_for_applications,
     log_call_activity,
     raise_task,
+    request_summaries_for_leads,
+    to_activity_read,
     update_lead,
 )
 
@@ -96,6 +113,7 @@ def _to_telecaller_property_deal_read(
         property_location=deal.property.location,
         status=deal.status,
         site_visit_uuid=deal.site_visit_uuid,
+        opened_at=deal.opened_at,
         closed_at=deal.closed_at,
         **project_values(
             modes,
@@ -117,11 +135,12 @@ def _to_telecaller_loan_application_read(
     return TelecallerLoanApplicationRead(
         id=application.id,
         loan_type_id=application.loan_type_id,
-        loan_type_name=application.loan_type.name,
+        loan_type_name=application.loan_type.label,
         bank_id=application.bank_id,
         bank_name=application.bank.name if application.bank else None,
         fee_outcome=application.fee_outcome,
         status=application.status,
+        opened_at=application.opened_at,
         closed_at=application.closed_at,
         form_version=application.form_version,
         form_schema_snapshot=application.form_schema_snapshot,
@@ -171,17 +190,22 @@ def _staff_profile_uuid(current_user: CurrentUser) -> UUID:
 
 @router.get("/leads", response_model=list[TelecallerLeadRead], response_model_exclude_unset=True)
 async def list_leads(
-    status_filter: str | None = None,
+    status_filter: LeadStatusLiteral | None = None,
     current_user: CurrentUser = Depends(require_telecaller),
     db: AsyncSession = Depends(get_db),
 ) -> list[TelecallerLeadRead]:
     staff_profile_uuid = _staff_profile_uuid(current_user)
     leads = await list_assigned_leads(db, staff_profile_uuid, status_filter)
-    last_by_lead = await get_last_activities(db, [lead.id for lead in leads])
+    lead_ids = [lead.id for lead in leads]
+    last_by_lead = await get_last_activities(db, lead_ids)
+    requests_by_lead = await request_summaries_for_leads(db, lead_ids)
+    signals_by_lead = await lead_signals(db, leads)
     modes = await effective_modes(db, FieldTargetRole.TELECALLER)
     out: list[TelecallerLeadRead] = []
     for lead in leads:
         activity = last_by_lead.get(lead.id)
+        requests = requests_by_lead.get(lead.id) or []
+        signals = signals_by_lead[lead.id]
         out.append(
             TelecallerLeadRead(
                 id=lead.id,
@@ -189,13 +213,20 @@ async def list_leads(
                 business_line=lead.business_line,
                 status=lead.status,
                 last_disposition=activity.disposition if activity else None,
+                last_interest_level=activity.interest_level if activity else None,
                 next_follow_up_at=activity.follow_up_at if activity else None,
                 created_at=lead.created_at,
                 updated_at=lead.updated_at,
+                latest_request=requests[0] if requests else None,
+                loan_statuses=signals.loan_statuses,
                 **project_values(
                     modes,
                     "lead",
-                    {"name": lead.name, "requirement": lead.requirement},
+                    {
+                        "name": lead.name,
+                        "requirement": lead.requirement,
+                        "referrer": signals.referrer,
+                    },
                 ),
             )
         )
@@ -240,12 +271,37 @@ async def get_lead(
             for application in applications
         ]
 
+    financial_enquiries: list[TelecallerFinancialEnquiryRead] = []
+    if lead.business_line == "loans":
+        financial_enquiries = [
+            TelecallerFinancialEnquiryRead(
+                id=enquiry.id,
+                product_name=enquiry.product.label,
+                product_category=enquiry.product_category,
+                status=enquiry.status,
+                submitted_at=enquiry.submitted_at,
+            )
+            for enquiry in await list_financial_enquiries_for_lead(db, lead_id)
+        ]
+
     property_deals: list[TelecallerPropertyDealRead] = []
+    property_enquiries: list[TelecallerPropertyEnquiryRead] = []
+    site_visits: list[TelecallerSiteVisitRead] = []
     if lead.business_line == "real_estate":
         deals = await list_property_deals_for_lead(db, lead_id)
         property_deals = [_to_telecaller_property_deal_read(d, modes) for d in deals]
+        property_enquiries = [
+            TelecallerPropertyEnquiryRead.model_validate(enquiry, from_attributes=True)
+            for enquiry in await list_property_enquiries_for_lead(db, lead_id)
+        ]
+        site_visits = [
+            TelecallerSiteVisitRead.model_validate(visit, from_attributes=True)
+            for visit in await list_site_visits_for_lead(db, lead_id)
+        ]
 
     tasks = await list_tasks_for_lead(db, lead_id)
+    requests = (await request_summaries_for_leads(db, [lead_id]))[lead_id]
+    signals = (await lead_signals(db, [lead]))[lead.id]
 
     return TelecallerLeadDetailRead(
         id=lead.id,
@@ -253,17 +309,24 @@ async def get_lead(
         business_line=lead.business_line,
         status=lead.status,
         last_disposition=last.disposition if last else None,
+        last_interest_level=last.interest_level if last else None,
         next_follow_up_at=last.follow_up_at if last else None,
         created_at=lead.created_at,
         updated_at=lead.updated_at,
-        activities=[LeadActivityRead.model_validate(a, from_attributes=True) for a in activities],
+        latest_request=requests[0] if requests else None,
+        loan_statuses=signals.loan_statuses,
+        activities=[to_activity_read(a) for a in activities],
         loan_applications=loan_applications,
+        financial_enquiries=financial_enquiries,
+        property_enquiries=property_enquiries,
+        site_visits=site_visits,
         property_deals=property_deals,
         tasks=[TaskRead.model_validate(t, from_attributes=True) for t in tasks],
+        manager_notes=await work_notes(db, lead_id=lead.id),
         **project_values(
             modes,
             "lead",
-            {"name": lead.name, "requirement": lead.requirement},
+            {"name": lead.name, "requirement": lead.requirement, "referrer": signals.referrer},
         ),
     )
 
@@ -318,8 +381,50 @@ async def create_activity(
     lead = await get_lead_for_telecaller(db, lead_id, staff_profile_uuid)
     if lead is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found.")
-    activity = await log_call_activity(db, lead, staff_profile_uuid, payload)
-    return LeadActivityRead.model_validate(activity, from_attributes=True)
+    try:
+        activity = await log_call_activity(db, lead, staff_profile_uuid, payload)
+    except RequestNotOnLead as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "That application or enquiry is not on this lead.",
+        ) from exc
+    return to_activity_read(activity)
+
+
+@router.get(
+    "/leads/{lead_id}/client-history",
+    response_model=TelecallerClientHistoryResponse,
+)
+async def client_history(
+    lead_id: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(require_telecaller),
+    db: AsyncSession = Depends(get_db),
+) -> TelecallerClientHistoryResponse:
+    """All of this client's journeys on the line that are assigned to the
+    caller, each with its requests and the caller's own calls."""
+    response.headers["Cache-Control"] = "private, no-store"
+    staff_profile_uuid = _staff_profile_uuid(current_user)
+    lead = await get_lead_for_telecaller(db, lead_id, staff_profile_uuid)
+    if lead is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found.")
+    journeys = await list_client_journeys(db, lead, staff_profile_uuid)
+    journey_ids = [journey.id for journey in journeys]
+    requests_by_lead = await request_summaries_for_leads(db, journey_ids)
+    activities_by_lead = await list_activities_for_leads(db, journey_ids, staff_profile_uuid)
+    return TelecallerClientHistoryResponse(
+        business_line=lead.business_line,
+        leads=[
+            ClientHistoryLead(
+                lead_id=journey.id,
+                status=journey.status,
+                created_at=journey.created_at,
+                requests=requests_by_lead[journey.id],
+                activities=[to_activity_read(a) for a in activities_by_lead[journey.id]],
+            )
+            for journey in journeys
+        ],
+    )
 
 
 @router.post(
@@ -396,6 +501,11 @@ async def update_loan_application_progress(
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Deal terms can only be set once the application has been submitted to a bank.",
+        ) from exc
+    except SanctionTermsRequired as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Add the approved amount and bank before moving the loan to Approved or a later stage.",
         ) from exc
     except UnknownBank as exc:
         raise HTTPException(
@@ -529,6 +639,7 @@ async def home(
 ) -> TelecallerHomeResponse:
     staff_profile_uuid = _staff_profile_uuid(current_user)
     due, counts = await get_home_summary(db, staff_profile_uuid)
+    requests_by_lead = await request_summaries_for_leads(db, [lead.id for lead, _ in due])
     modes = await effective_modes(db, FieldTargetRole.TELECALLER)
     return TelecallerHomeResponse(
         follow_ups_due=[
@@ -536,6 +647,7 @@ async def home(
                 lead_uuid=lead.id,
                 mobile=lead.mobile,
                 follow_up_at=follow_up_at,
+                latest_request=next(iter(requests_by_lead.get(lead.id) or []), None),
                 **project_values(modes, "lead", {"name": lead.name}),
             )
             for lead, follow_up_at in due

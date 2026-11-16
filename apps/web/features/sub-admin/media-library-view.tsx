@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
 import * as React from "react";
 import { Archive, Images, Loader2, Plus, Search, Trash2 } from "lucide-react";
@@ -13,15 +12,9 @@ import { Input } from "@/components/ui/input";
 import { LoadingRegion } from "@/components/ui/loading-region";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DashboardHeader, DashboardPage } from "@/features/dashboard/dashboard-ui";
+import { FilterSelect } from "@/features/dashboard/filter-select";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import {
   ARTWORK_SURFACE_ORDER,
@@ -38,6 +31,7 @@ import {
 } from "@/lib/campaign-media-api";
 
 import { ArtworkUploadDialog } from "./artwork-upload-dialog";
+import { CampaignAssetThumb } from "./campaign-asset-thumb";
 import { BannerTemplateManager } from "./banner-template-manager";
 import { CmsWorkspaceHeader } from "./cms-workspace";
 
@@ -172,16 +166,15 @@ export function MediaLibraryView() {
               placeholder="Search title, alt text, source, or tag"
             />
           </Label>
-          <Select value={line} onValueChange={setLine}>
-            <SelectTrigger aria-label="Filter by business line">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All business lines</SelectItem>
-              <SelectItem value="loans">Loans</SelectItem>
-              <SelectItem value="real_estate">Real Estate</SelectItem>
-            </SelectContent>
-          </Select>
+          <FilterSelect
+            label="Business line"
+            value={line}
+            options={[
+              { value: "loans", label: "Loans" },
+              { value: "real_estate", label: "Real Estate" },
+            ]}
+            onValueChange={setLine}
+          />
           <Button
             type="button"
             variant={showArchived ? "outline" : "ghost"}
@@ -276,15 +269,7 @@ function SurfaceSection({
               className="group w-full overflow-hidden rounded-xl border border-border bg-background text-left transition hover:-translate-y-0.5 hover:border-[var(--nav-primary)]/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className={`relative block w-full bg-muted ${surface.aspectClass}`}>
-                <img
-                  src={asset.image_url}
-                  alt={asset.alt_text}
-                  width={surface.width}
-                  height={surface.height}
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
+                <CampaignAssetThumb asset={asset} width={surface.width} height={surface.height} />
               </span>
               <span className="block space-y-3 p-4">
                 <span className="flex items-start justify-between gap-3">
@@ -463,12 +448,12 @@ function AssetDetailDialog({
                 <div
                   className={`relative overflow-hidden rounded-xl border border-border bg-muted ${surface.aspectClass}`}
                 >
-                  <img
-                    src={asset.image_url}
-                    alt={asset.alt_text}
+                  <CampaignAssetThumb
+                    asset={asset}
                     width={surface.width}
                     height={surface.height}
-                    className="absolute inset-0 h-full w-full object-contain"
+                    fit="contain"
+                    lazy={false}
                   />
                 </div>
                 <dl className="grid gap-3 rounded-xl border border-border p-4 text-sm sm:grid-cols-2">

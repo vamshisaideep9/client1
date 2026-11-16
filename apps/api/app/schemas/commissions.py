@@ -9,13 +9,15 @@ uses for amount/recipient.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.models.payout import PayoutDestination
+from app.models.payout import PayoutDestination, PayoutProvider, PayoutStatus
+from app.models.transaction import TransactionStatus, TransactionType
 from app.schemas.payments import PayoutDestinationInput, validate_destination
 
 DealType = Literal["loan_application", "property_deal"]
@@ -77,26 +79,116 @@ class CommissionCancelRequest(BaseModel):
     reason: str = Field(min_length=1, max_length=500)
 
 
+CommissionStatusLiteral = Literal["pending", "paid", "cancelled"]
+
+
 class AgentEarningsRow(BaseModel):
+    """One commission in the Agent's history (CS-022).
+
+    ``client_name`` follows the Admin's Agent "Lead name" rule and
+    ``deal_amount`` the Agent "Loan and deal amounts" rule; a hidden value is
+    null and listed in the response's ``hidden_fields``.
+    """
+
     id: UUID
     business_line: str
     deal_type: DealType
     deal_uuid: UUID
     agreed_amount_paise: int
-    status: str
+    status: CommissionStatusLiteral
     payout_txn_uuid: UUID | None
     created_at: datetime
+    lead_uuid: UUID | None
+    lead_status: str | None
+    client_name: str | None
+    product_uuid: UUID | None
+    product_label: str | None
+    bank_uuid: UUID | None
+    bank_name: str | None
+    property_uuid: UUID | None
+    property_title: str | None
+    property_category: str | None
+    deal_status: str | None
+    deal_amount: Decimal | None
+    # When the settled ledger row was written (null until paid).
+    paid_at: datetime | None
 
 
 class AgentEarningsTotals(BaseModel):
+    """Totals over every commission the Agent has on this line (filters do not
+    change them). ``last_month_*`` is the previous calendar month in IST."""
+
     pending_amount_paise: int
     paid_amount_paise: int
     total_amount_paise: int
+    last_month_paid_amount_paise: int
+    last_month_start: date | None
+    last_month_end: date | None
 
 
 class AgentEarningsResponse(BaseModel):
     rows: list[AgentEarningsRow]
     totals: AgentEarningsTotals
+    # Agent field rules the Admin switched off ("client_name", "deal_amount").
+    hidden_fields: list[str]
+
+
+class AgentPayoutActor(BaseModel):
+    """A staff member on the payout trail: display name (null when the Admin
+    hides payout staff names) and staff role."""
+
+    name: str | None
+    role: str | None
+
+
+class AgentPayoutTrail(BaseModel):
+    status: PayoutStatus
+    method: PayoutDestination
+    provider: PayoutProvider
+    # Already masked at payout creation (never the raw UPI ID or account).
+    destination_hint: str
+    requested_at: datetime
+    approved_at: datetime | None
+    issued_at: datetime | None
+    paid_at: datetime | None
+    reversed_at: datetime | None
+    requested_by: AgentPayoutActor | None
+    approved_by: AgentPayoutActor | None
+    # "standalone": the Main Admin approved their own request (no checker).
+    approval_mode: Literal["maker_checker", "standalone"] | None
+
+
+class AgentTransactionItem(BaseModel):
+    """What a payout paid. Each payout pays exactly one commission today."""
+
+    commission_id: UUID
+    amount_paise: int
+    status: CommissionStatusLiteral
+    deal_type: DealType
+    deal_uuid: UUID
+    lead_uuid: UUID
+    client_name: str | None
+    product_label: str | None
+    bank_name: str | None
+    property_title: str | None
+    deal_status: str | None
+    deal_amount: Decimal | None
+    entered_at: datetime
+
+
+class AgentTransactionDetail(BaseModel):
+    id: UUID
+    type: TransactionType
+    status: TransactionStatus
+    amount_paise: int
+    currency: str
+    description: str
+    created_at: datetime
+    payout: AgentPayoutTrail | None
+    items: list[AgentTransactionItem]
+    # Agent field rules the Admin switched off ("client_name", "deal_amount",
+    # "staff_names").
+    hidden_fields: list[str]
 
 
 class CommissionPayoutRequest(BaseModel):
