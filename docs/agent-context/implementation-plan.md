@@ -60,8 +60,11 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — Sub Admin analytics filters and Admin analytics charts**
-(2026-11-16; stacked branches `feat/sub-admin-analytics-filters` (API +
+**In review — Sub Admin analytics filters and Admin analytics charts**
+(2026-11-16; PRs [#360](https://github.com/brollysolutions/client1/pull/360)
+(API, mirror vamshisaideep9/client1#64) and
+[#361](https://github.com/brollysolutions/client1/pull/361) (web, stacked,
+mirror vamshisaideep9/client1#65); stacked branches `feat/sub-admin-analytics-filters` (API +
 contract) and `feat/sub-admin-analytics-filters-web` (web) from
 `upstream/main` `70f98fa`; user request, no requirement or
 completion-percentage change). Sub Admin "My analytics" gains server-enforced
@@ -82,7 +85,7 @@ chart-only read (`limit=500`, `sort_by=bucket_start` asc; Agents: top 10 by
 conversion-rate line (Leads/Loans/Deals) or top-10 Agents ranked bars plus a
 leads-by-line share bar (Agents), each with a table view and loading, empty
 and error-with-retry states. No new dependency. Next: the user reviews and
-merges both stacked PRs (opened by the main session). Recommended: Opus 5.5 /
+merges #360, then #361 (retarget #361 to `main` first). Recommended: Opus 5.5 /
 high.
 
 **In review — Property listings advanced filters and demo Sub Admin

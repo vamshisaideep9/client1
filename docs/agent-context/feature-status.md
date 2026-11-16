@@ -2,7 +2,9 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — Sub Admin analytics filters (API slice)** (2026-11-16),
+**In review — Sub Admin analytics filters (API slice)** (2026-11-16; PR
+[#360](https://github.com/brollysolutions/client1/pull/360), mirror
+vamshisaideep9/client1#64),
 branch `feat/sub-admin-analytics-filters` from `upstream/main` `70f98fa`.
 API and generated contract only; no migration, RLS or table change, so the
 completion percentage is unchanged.
@@ -30,8 +32,9 @@ completion percentage is unchanged.
   `lead_list_signals` fail there for that reason only). Ruff check and format
   pass. OpenAPI and TypeScript schema regenerated. Next: the web slice.
 
-**In progress — Sub Admin analytics filters and Admin analytics charts (web
-slice)** (2026-11-16), branch `feat/sub-admin-analytics-filters-web` stacked
+**In review — Sub Admin analytics filters and Admin analytics charts (web
+slice)** (2026-11-16; PR [#361](https://github.com/brollysolutions/client1/pull/361),
+mirror vamshisaideep9/client1#65), branch `feat/sub-admin-analytics-filters-web` stacked
 on `feat/sub-admin-analytics-filters`. Web only; no dependency, API or
 contract change beyond slice A.
 - `/dashboard/insights` for a Sub Admin: Content type, Review status,
