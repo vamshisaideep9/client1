@@ -3,8 +3,9 @@
 Status: **Derived living implementation ledger**
 
 **In review — Batch B PR 2: Agent money and lead history (web)**
-(2026-11-16; CS-022), branch `feat/agent-dashboard-web` stacked on Batch B
-PR 1. Web only; consumes the B1 contracts; no requirement-percentage change.
+(2026-11-16; CS-022; PR [#370](https://github.com/brollysolutions/client1/pull/370),
+mirror vamshisaideep9/client1#71), branch `feat/agent-dashboard-web`
+stacked on Batch B PR 1. Web only; consumes the B1 contracts; no requirement-percentage change.
 - Home: Commission summary Total / Pending / Paid; metric card "Commission
   paid · <month>" shows the previous IST month's paid amount.
 - Earnings: Total / Pending / Paid / "Paid · <month>" cards; FilterBar

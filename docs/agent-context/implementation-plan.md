@@ -102,7 +102,9 @@ Two stacked PRs, both opened against `main`, stacked on Batch A PR 2:
   account changes, audited payout-maker view
   (`agent_payout_details_viewed`, purpose `cheque_view`), erased with the
   account, daily orphan sweep.
-- *PR B2 — web*, branch `feat/agent-dashboard-web` stacked on B1. Agent
+- *PR B2 — web*, branch `feat/agent-dashboard-web` stacked on B1 (PR
+  [#370](https://github.com/brollysolutions/client1/pull/370), mirror
+  vamshisaideep9/client1#71). Agent
   home: Commission summary Total / Pending / Paid and a "Commission paid ·
   Oct 2026" card (previous IST month, from the API's dates). Earnings: four
   totals, the shared `FilterBar` (search, status, deal type, entered From /
