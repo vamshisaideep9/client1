@@ -11,6 +11,7 @@ import { EMPTY_FILTERS, FilterBar } from "@/features/dashboard/filter-bar";
 import { ListPagination, useListPagination } from "@/features/dashboard/list-pagination";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { useLine } from "@/features/dashboard/line-provider";
+import { useProductCatalogue } from "@/features/dashboard/use-product-catalogue";
 import { formatMobile } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,10 @@ import {
   formatReferrer,
   leadSignalActiveCount,
   leadSignalChips,
+  leadSignalOptions,
+  lineScope,
+  rowsHiddenTransactionParts,
+  scopedLeadSignalFilters,
 } from "./lead-signal-filters";
 import {
   DEFAULT_TELECALLER_LEAD_FILTERS,
@@ -28,6 +33,7 @@ import {
   filterTelecallerLeads,
   sortTelecallerLeads,
   telecallerLeadFiltersActive,
+  telecallerSignalValues,
   type TelecallerLeadFilters,
   type TelecallerLeadSort,
   type TelecallerLeadSortKey,
@@ -98,21 +104,31 @@ export function TelecallerLeadsView() {
   }));
   const [sort, setSort] = React.useState<TelecallerLeadSort>(DEFAULT_TELECALLER_LEAD_SORT);
 
-  const filtered = React.useMemo(() => filterTelecallerLeads(items, filters), [items, filters]);
+  // Loan filters on Loans, property filters on Real Estate, transaction
+  // filters on Loans minus the parts the Admin hides; options are the active
+  // catalogue plus whatever the loaded leads carry.
+  const signalValues = React.useMemo(() => items.map(telecallerSignalValues), [items]);
+  const catalogue = useProductCatalogue(activeLine === "loans");
+  const scope = React.useMemo(
+    () => lineScope(activeLine, true, rowsHiddenTransactionParts(signalValues)),
+    [activeLine, signalValues],
+  );
+  const options = React.useMemo(() => leadSignalOptions(catalogue, signalValues), [catalogue, signalValues]);
+  // A hidden control (other line, Admin-hidden part) never keeps narrowing.
+  const effective = React.useMemo(
+    () => ({ ...filters, ...scopedLeadSignalFilters(filters, scope) }),
+    [filters, scope],
+  );
+
+  const filtered = React.useMemo(() => filterTelecallerLeads(items, effective), [items, effective]);
   const sorted = React.useMemo(() => sortTelecallerLeads(filtered, sort), [filtered, sort]);
   const { page, pageItems, setPage } = useListPagination(sorted);
 
   React.useEffect(() => {
     setPage(0);
-  }, [filters, sort, setPage]);
+  }, [effective, sort, setPage]);
 
-  const filtersActive = telecallerLeadFiltersActive(filters);
-  const showLoanStatus = activeLine === "loans";
-
-  // A loan-status filter has no meaning once the list switches to Real Estate.
-  React.useEffect(() => {
-    if (!showLoanStatus) setFilters((f) => (f.loanStatus === "all" ? f : { ...f, loanStatus: "all" }));
-  }, [showLoanStatus]);
+  const filtersActive = telecallerLeadFiltersActive(effective);
 
   function onSort(key: TelecallerLeadSortKey) {
     setSort((prev) => (prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
@@ -131,7 +147,7 @@ export function TelecallerLeadsView() {
     ...(filters.followUpDue
       ? [{ id: "followUpDue", label: "Follow-up: due now", onRemove: () => patchFilters({ followUpDue: false }) }]
       : []),
-    ...leadSignalChips(filters, patchFilters, showLoanStatus),
+    ...leadSignalChips(filters, patchFilters, scope, options),
   ];
 
   function patchFilters(patch: Partial<TelecallerLeadFilters>) {
@@ -184,8 +200,8 @@ export function TelecallerLeadsView() {
             showLine={false}
             dateFromLabel="Follow-up from date"
             dateToLabel="Follow-up to date"
-            more={leadSignalFilterGroups({ filters, showLoanStatus, onChange: patchFilters })}
-            moreActiveCount={leadSignalActiveCount(filters, showLoanStatus)}
+            more={leadSignalFilterGroups({ filters, scope, options, onChange: patchFilters })}
+            moreActiveCount={leadSignalActiveCount(filters, scope)}
             onClearMore={() => patchFilters(DEFAULT_LEAD_SIGNAL_FILTERS)}
             chips={chips}
             onClear={clearFilters}

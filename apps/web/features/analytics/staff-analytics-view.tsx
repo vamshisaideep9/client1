@@ -12,6 +12,7 @@ import {
 } from "@/features/dashboard/dashboard-ui";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { useLine } from "@/features/dashboard/line-provider";
+import { useProductCatalogue } from "@/features/dashboard/use-product-catalogue";
 import { formatPeriodLabel, resolveRangePreset, type DateRangeValue } from "@/lib/analytics-range";
 import {
   getMyAnalyticsForRange,
@@ -22,6 +23,7 @@ import {
   type StaffAnalytics,
   type StaffAnalyticsFilterValues,
 } from "@/lib/staff-analytics-api";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 import {
   MAGNITUDE_COLOR,
@@ -30,10 +32,11 @@ import {
   foldShareParts,
   formatDay,
   formatMetric,
+  sameList,
   seriesColor,
   shareLabel,
 } from "./analytics-format";
-import { StaffAnalyticsFilterBar } from "./staff-analytics-filter-bar";
+import { StaffAnalyticsFilterBar, requestFilters, withFilters } from "./staff-analytics-filter-bar";
 
 // Recharts loads only on this page, after the shell has painted.
 const TrendChart = dynamic(() => import("./trend-chart"), {
@@ -303,17 +306,36 @@ export function StaffAnalyticsView() {
   const [filters, setFilters] = React.useState<StaffAnalyticsFilterValues>({});
   const [state, setState] = React.useState<State>({ status: "loading" });
   const [reloadKey, setReloadKey] = React.useState(0);
+  const role = session?.role;
+  const catalogue = useProductCatalogue(activeLine === "loans" && role !== "sub_admin");
+  const [hiddenFilters, setHiddenFilters] = React.useState<readonly string[]>([]);
+  const context = React.useMemo(
+    () => ({ loanTypes: catalogue.loanTypes, banks: catalogue.banks, hiddenFilters }),
+    [catalogue, hiddenFilters],
+  );
 
-  // Loan status only exists on the Loans line; drop it when the line changes.
+  // Filters of the other line (or one the Admin now hides) are dropped when
+  // the line changes, and never sent: the API refuses them.
   React.useEffect(() => {
-    if (activeLine !== "loans") setFilters((current) => (current.loan_status ? { ...current, loan_status: undefined } : current));
-  }, [activeLine]);
+    setFilters((current) => withFilters(role, activeLine, current, {}, context));
+  }, [role, activeLine, context]);
+  // Typed amounts settle before a fetch; the line is applied at once, so a
+  // filter of the previous line is never sent after a switch.
+  const settled = useDebouncedValue(filters);
+  const sent = React.useMemo(
+    () => requestFilters(role, activeLine, settled, context),
+    [role, activeLine, settled, context],
+  );
 
   React.useEffect(() => {
     let active = true;
     setState((current) => (current.status === "ready" ? current : { status: "loading" }));
-    void getMyAnalyticsForRange(range, filters).then((res) => {
+    void getMyAnalyticsForRange(range, sent).then((res) => {
       if (!active) return;
+      if (res.ok) {
+        const hidden = res.data.hidden_filters ?? [];
+        setHiddenFilters((current) => (sameList(current, hidden) ? current : hidden));
+      }
       setState(
         res.ok
           ? { status: "ready", data: res.data }
@@ -324,7 +346,7 @@ export function StaffAnalyticsView() {
       active = false;
     };
     // activeLine: the line travels as the X-Business-Line header.
-  }, [range, filters, activeLine, reloadKey]);
+  }, [range, sent, activeLine, reloadKey]);
 
   const data = state.status === "ready" ? state.data : null;
 
@@ -335,11 +357,12 @@ export function StaffAnalyticsView() {
         description={data ? ROLE_COPY[data.role] : "How your work is going."}
       />
       <StaffAnalyticsFilterBar
-        role={session?.role}
+        role={role}
         range={range}
         onRangeChange={setRange}
         filters={filters}
         onFiltersChange={setFilters}
+        context={context}
       />
 
       {state.status === "error" ? (

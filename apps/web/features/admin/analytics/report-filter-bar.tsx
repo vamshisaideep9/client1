@@ -25,8 +25,15 @@ import {
   selectFilterChip,
   textFilterChip,
 } from "@/features/dashboard/filter-options";
+import { AmountRangeFields } from "@/features/dashboard/amount-range-fields";
 import { FilterSelect } from "@/features/dashboard/filter-select";
 import type { MoreFilterGroup } from "@/features/dashboard/more-filters";
+import {
+  DEAL_STATUS_LABEL,
+  PROPERTY_CATEGORY_LABEL,
+  PROPERTY_SUBTYPE_LABEL,
+  amountRangeLabel,
+} from "@/features/dashboard/product-filter-options";
 import {
   INTEREST_LABEL,
   LOAN_STATUS_LABEL,
@@ -34,7 +41,13 @@ import {
 } from "@/features/telecaller/lead-signal-filters";
 import { DISPOSITION_LABEL, STATUS_LABEL } from "@/features/telecaller/telecaller-lead-status";
 import { listAdminBanks, listAdminLoanTypes } from "@/lib/loan-config-api";
-import { activeDetailCount, resolveDatePreset, type ReportDetailFilters } from "@/lib/reports";
+import {
+  activeDetailCount,
+  detailForLine,
+  resolveDatePreset,
+  type ReportDetailFilters,
+} from "@/lib/reports";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import {
   getReportTelecallers,
   type ReportBucket,
@@ -47,26 +60,6 @@ const BUCKET_OPTIONS: { value: ReportBucket; label: string }[] = [
   { value: "week", label: "Weekly" },
   { value: "month", label: "Monthly" },
 ];
-
-const DEAL_STATUS_LABEL: Record<string, string> = {
-  new: "New",
-  contacted: "Contacted",
-  site_visit_done: "Site visit done",
-  negotiation: "Negotiation",
-  booked: "Booked",
-  agreement_signed: "Agreement signed",
-  closed: "Closed",
-  rejected: "Rejected",
-  on_hold: "On hold",
-};
-
-const PROPERTY_CATEGORY_LABEL: Record<string, string> = {
-  houses: "Houses",
-  apartments: "Apartments",
-  villas: "Villas",
-  plots: "Plots",
-  commercial: "Commercial",
-};
 
 export type ReportFilterValue = {
   dateFrom: string;
@@ -92,7 +85,7 @@ function baselineFilters(): ReportFilterValue {
 type Option = { value: string; label: string };
 
 type DetailSpec = {
-  key: Exclude<keyof ReportDetailFilters, "propertyCity">;
+  key: Exclude<keyof ReportDetailFilters, "propertyCity" | "amountMin" | "amountMax">;
   label: string;
   options: Option[] | Record<string, string>;
   /** "More filters" section, or null for the report's status filter in the first row. */
@@ -135,6 +128,39 @@ function DetailSelect({
       value={value ?? "all"}
       options={toOptions(options)}
       onValueChange={(next) => onChange(next === "all" ? undefined : next)}
+    />
+  );
+}
+
+/** The report's amount range: typed locally, applied after a pause. */
+function ReportAmountRange({
+  legend,
+  min,
+  max,
+  onChange,
+}: {
+  legend: string;
+  min: string | undefined;
+  max: string | undefined;
+  onChange: (next: { amountMin: string | undefined; amountMax: string | undefined }) => void;
+}) {
+  const [draft, setDraft] = React.useState({ min: min ?? "", max: max ?? "" });
+  React.useEffect(() => setDraft({ min: min ?? "", max: max ?? "" }), [min, max]);
+  const settled = useDebouncedValue(draft);
+  React.useEffect(() => {
+    const amountMin = settled.min || undefined;
+    const amountMax = settled.max || undefined;
+    if (amountMin !== (min || undefined) || amountMax !== (max || undefined)) onChange({ amountMin, amountMax });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled]);
+  return (
+    <AmountRangeFields
+      legend={`${legend} (₹)`}
+      name={legend.toLocaleLowerCase()}
+      min={draft.min}
+      max={draft.max}
+      invertedNote="The minimum is above the maximum, so the amount is not applied."
+      onChange={setDraft}
     />
   );
 }
@@ -190,21 +216,29 @@ export function ReportFilterBar({
     },
     [journey, value.businessLine],
   );
+  // Loan filters: the loans report, and the leads report unless it shows Real
+  // Estate only. Property filters: the deals report, and the leads report
+  // unless it shows Loans only (CS-023).
+  const loanFilters = kind === "loans" || (kind === "leads" && value.businessLine !== "real_estate");
+  const propertyFilters = kind === "deals" || (kind === "leads" && value.businessLine !== "loans");
   const loanTypes = useOptions(
     async () => {
-      if (kind !== "loans") return [];
+      if (!loanFilters) return [];
       const res = await listAdminLoanTypes();
-      return res.ok ? res.data.map((t) => ({ value: t.id, label: t.label })) : null;
+      // Loan applications exist only for lending products.
+      return res.ok
+        ? res.data.filter((t) => t.category === "loan").map((t) => ({ value: t.id, label: t.label }))
+        : null;
     },
-    [kind],
+    [loanFilters],
   );
   const banks = useOptions(
     async () => {
-      if (kind !== "loans") return [];
+      if (!loanFilters) return [];
       const res = await listAdminBanks();
       return res.ok ? res.data.map((b) => ({ value: b.id, label: b.name })) : null;
     },
-    [kind],
+    [loanFilters],
   );
 
   const baseline = baselineFilters();
@@ -220,9 +254,12 @@ export function ReportFilterBar({
 
   function updateSharedFilters(next: FilterBarValue) {
     const businessLine = next.line === "all" ? undefined : (next.line as ReportBusinessLine);
-    // A telecaller picked on one line is meaningless after switching lines.
+    // A telecaller picked on one line is meaningless after switching lines,
+    // and so is a loan filter on Real Estate or a property filter on Loans.
     const detail =
-      businessLine !== value.businessLine ? { ...value.detail, telecallerProfileUuid: undefined } : value.detail;
+      businessLine !== value.businessLine
+        ? detailForLine({ ...value.detail, telecallerProfileUuid: undefined }, kind === "leads" ? businessLine : undefined)
+        : value.detail;
     onChange({ ...value, businessLine, detail });
   }
 
@@ -263,16 +300,36 @@ export function ReportFilterBar({
           { key: "interest" as const, label: "Lead interest", options: INTEREST_LABEL, group: "Lead" },
         ]
       : []),
-    ...(kind === "loans"
+    ...(loanFilters
       ? [
-          { key: "loanTypeId" as const, label: "Loan type", options: loanTypes, group: "Product" },
+          { key: "loanTypeId" as const, label: "Product", options: loanTypes, group: "Product" },
           { key: "bankId" as const, label: "Bank", options: banks, group: "Product" },
         ]
       : []),
-    ...(kind === "deals"
-      ? [{ key: "propertyCategory" as const, label: "Property category", options: PROPERTY_CATEGORY_LABEL, group: "Property" }]
+    ...(kind === "leads" && loanFilters
+      ? [{ key: "loanStatus" as const, label: "Loan status", options: LOAN_STATUS_LABEL, group: "Product" }]
+      : []),
+    ...(propertyFilters
+      ? [
+          { key: "propertyCategory" as const, label: "Property category", options: PROPERTY_CATEGORY_LABEL, group: "Property" },
+          { key: "propertySubtype" as const, label: "Property type", options: PROPERTY_SUBTYPE_LABEL, group: "Property" },
+        ]
+      : []),
+    ...(kind === "leads" && propertyFilters
+      ? [{ key: "dealStatus" as const, label: "Deal status", options: DEAL_STATUS_LABEL, group: "Property" }]
       : []),
   ];
+  // Amount: requested loan amount (loans), quoted price (deals), either (leads).
+  const amountLegend =
+    kind === "loans"
+      ? "Loan amount"
+      : kind === "deals"
+        ? "Quoted price"
+        : loanFilters && propertyFilters
+          ? "Loan amount or quoted price"
+          : loanFilters
+            ? "Loan amount"
+            : "Quoted price";
   const control = (spec: DetailSpec) => (
     <DetailSelect
       key={spec.key}
@@ -295,6 +352,21 @@ export function ReportFilterBar({
     if (property) property.content = [property.content, city];
     else more.push({ title: "Property", content: city });
   }
+  if (journey) {
+    more.push({
+      title: "Money",
+      content: (
+        <ReportAmountRange
+          key="amount"
+          legend={amountLegend}
+          min={value.detail.amountMin}
+          max={value.detail.amountMax}
+          onChange={(next) => onChange({ ...value, detail: { ...value.detail, ...next } })}
+        />
+      ),
+    });
+  }
+  const amountText = journey ? amountRangeLabel(value.detail.amountMin ?? "", value.detail.amountMax ?? "") : null;
   const chips = compactChips([
     ...hidden.map((spec) =>
       selectFilterChip(spec.key, spec.label, value.detail[spec.key], toOptions(spec.options), () =>
@@ -305,6 +377,13 @@ export function ReportFilterBar({
       ? textFilterChip("propertyCity", "Property city", value.detail.propertyCity, () =>
           setDetail("propertyCity", undefined),
         )
+      : null,
+    amountText
+      ? {
+          id: "amount",
+          label: `${amountLegend}: ${amountText}`,
+          onRemove: () => onChange({ ...value, detail: { ...value.detail, amountMin: undefined, amountMax: undefined } }),
+        }
       : null,
   ]);
 
@@ -324,7 +403,13 @@ export function ReportFilterBar({
         onChange({
           ...value,
           detail: Object.fromEntries(
-            Object.entries(value.detail).filter(([key]) => !hidden.some((spec) => spec.key === key) && key !== "propertyCity"),
+            Object.entries(value.detail).filter(
+              ([key]) =>
+                !hidden.some((spec) => spec.key === key) &&
+                key !== "propertyCity" &&
+                key !== "amountMin" &&
+                key !== "amountMax",
+            ),
           ) as ReportDetailFilters,
         })
       }

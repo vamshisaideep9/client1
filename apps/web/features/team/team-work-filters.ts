@@ -8,6 +8,7 @@ import {
   leadSignalFiltersActive,
   matchesLeadSignals,
   type LeadSignalFilters,
+  type LeadSignalValues,
 } from "@/features/telecaller/lead-signal-filters";
 import type { TeamLeadRow, TeamTaskRow } from "@/lib/staff-teams-api";
 
@@ -58,12 +59,15 @@ function matchesSearch(query: string, ...values: (string | null | undefined)[]):
   });
 }
 
-function signalValues(row: TeamLeadRow | TeamTaskRow) {
+/** The lead facts the shared lead-signal filters read. */
+export function teamSignalValues(row: TeamLeadRow | TeamTaskRow): LeadSignalValues {
   return {
     loanStatuses: row.signals?.loan_statuses,
     lastDisposition: row.signals?.last_disposition,
     lastInterestLevel: row.signals?.last_interest_level,
     referrer: row.signals?.referrer,
+    facets: row.signals?.facets,
+    transactions: row.signals?.transactions,
   };
 }
 
@@ -87,7 +91,7 @@ export function filterTeamLeads(
       (filters.status === "all" || row.status === filters.status) &&
       matchesSearch(filters.search, row.name, row.mobile) &&
       (!filters.overdueOnly || isOverdueLead(row, now)) &&
-      matchesLeadSignals(signalValues(row), filters),
+      matchesLeadSignals(teamSignalValues(row), filters),
   );
 }
 
@@ -103,6 +107,6 @@ export function filterTeamTasks(
       (filters.taskType === "all" || row.task_type === filters.taskType) &&
       matchesSearch(filters.search, row.lead_name, row.lead_mobile) &&
       (!filters.overdueOnly || isOverdueTask(row, now)) &&
-      matchesLeadSignals(signalValues(row), filters),
+      matchesLeadSignals(teamSignalValues(row), filters),
   );
 }

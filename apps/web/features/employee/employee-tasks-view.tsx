@@ -12,6 +12,7 @@ import { optionsFromLabels } from "@/features/dashboard/filter-options";
 import { ListPagination, useListPagination } from "@/features/dashboard/list-pagination";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { useLine } from "@/features/dashboard/line-provider";
+import { useProductCatalogue } from "@/features/dashboard/use-product-catalogue";
 import { leadSignalFilterGroups } from "@/features/telecaller/lead-signal-filter-fields";
 import {
   DEFAULT_LEAD_SIGNAL_FILTERS,
@@ -19,12 +20,15 @@ import {
   leadSignalActiveCount,
   leadSignalChips,
   leadSignalFiltersActive,
+  leadSignalOptions,
+  lineScope,
+  scopedLeadSignalFilters,
   type LeadSignalFilters,
 } from "@/features/telecaller/lead-signal-filters";
 import { DISPOSITION_LABEL } from "@/features/telecaller/telecaller-lead-status";
 import { cn } from "@/lib/utils";
 
-import { filterTasksByLeadSignals } from "./employee-task-filters";
+import { employeeSignalValues, filterTasksByLeadSignals } from "./employee-task-filters";
 import { useEmployeeTasks } from "./use-employee-tasks";
 
 const STATUS_STYLE: Record<string, string> = {
@@ -72,20 +76,24 @@ export function EmployeeTasksView() {
     statusFilter === "all" ? undefined : statusFilter,
     typeFilter === "all" ? undefined : typeFilter,
   );
-  const filtered = React.useMemo(() => filterTasksByLeadSignals(items, signalFilters), [items, signalFilters]);
+  // Loan filters on Loans, property filters on Real Estate; Employees have no
+  // transaction data. Options: the active catalogue plus the loaded tasks' leads.
+  const scope = React.useMemo(() => lineScope(activeLine), [activeLine]);
+  const catalogue = useProductCatalogue(activeLine === "loans");
+  const options = React.useMemo(
+    () => leadSignalOptions(catalogue, items.map(employeeSignalValues)),
+    [catalogue, items],
+  );
+  // A control of the other line never keeps narrowing the list.
+  const effective = React.useMemo(() => scopedLeadSignalFilters(signalFilters, scope), [signalFilters, scope]);
+  const filtered = React.useMemo(() => filterTasksByLeadSignals(items, effective), [items, effective]);
   const { page, pageItems, setPage } = useListPagination(filtered);
-  const signalFiltersOn = leadSignalFiltersActive(signalFilters);
-  const showLoanStatus = activeLine === "loans";
+  const signalFiltersOn = leadSignalFiltersActive(effective);
   const patchSignals = (patch: Partial<LeadSignalFilters>) => setSignalFilters((f) => ({ ...f, ...patch }));
 
   React.useEffect(() => {
     setPage(0);
-  }, [statusFilter, typeFilter, signalFilters, setPage]);
-
-  // A loan-status filter has no meaning once the list switches to Real Estate.
-  React.useEffect(() => {
-    if (!showLoanStatus) setSignalFilters((f) => (f.loanStatus === "all" ? f : { ...f, loanStatus: "all" }));
-  }, [showLoanStatus]);
+  }, [statusFilter, typeFilter, effective, setPage]);
 
   return (
     <DashboardPage>
@@ -107,10 +115,10 @@ export function EmployeeTasksView() {
         statusOptions={STATUS_OPTIONS}
         kindOptions={TYPE_OPTIONS}
         kindLabel="Task type"
-        more={leadSignalFilterGroups({ filters: signalFilters, showLoanStatus, onChange: patchSignals })}
-        moreActiveCount={leadSignalActiveCount(signalFilters, showLoanStatus)}
+        more={leadSignalFilterGroups({ filters: signalFilters, scope, options, onChange: patchSignals })}
+        moreActiveCount={leadSignalActiveCount(signalFilters, scope)}
         onClearMore={() => setSignalFilters(DEFAULT_LEAD_SIGNAL_FILTERS)}
-        chips={leadSignalChips(signalFilters, patchSignals, showLoanStatus)}
+        chips={leadSignalChips(signalFilters, patchSignals, scope, options)}
         onClear={() => {
           setStatusFilter("all");
           setTypeFilter("all");

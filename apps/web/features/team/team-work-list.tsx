@@ -33,12 +33,19 @@ import { ListEmptyState, ListLoadingState } from "@/features/dashboard/list-stat
 import { EMPTY_FILTERS, FilterBar } from "@/features/dashboard/filter-bar";
 import { optionsFromLabels } from "@/features/dashboard/filter-options";
 import { FilterSelect } from "@/features/dashboard/filter-select";
+import { useProductCatalogue } from "@/features/dashboard/use-product-catalogue";
 import { leadSignalFilterGroups } from "@/features/telecaller/lead-signal-filter-fields";
 import {
   DEFAULT_LEAD_SIGNAL_FILTERS,
   formatReferrer,
   leadSignalActiveCount,
   leadSignalChips,
+  leadSignalOptions,
+  lineScope,
+  rowsHiddenTransactionParts,
+  scopedLeadSignalFilters,
+  type LeadSignalOptions,
+  type LeadSignalScope,
 } from "@/features/telecaller/lead-signal-filters";
 import { CallLogList } from "@/features/telecaller/telecaller-call-log";
 import {
@@ -75,6 +82,7 @@ import {
   filterTeamTasks,
   isOverdueLead,
   isOverdueTask,
+  teamSignalValues,
   teamWorkFiltersActive,
   type TeamWorkFilters,
 } from "./team-work-filters";
@@ -707,6 +715,8 @@ function TeamWorkFilterBar({
   scope,
   onScope,
   showAssignee,
+  signalScope,
+  signalOptions,
 }: {
   team: StaffTeam;
   kind: Kind;
@@ -715,13 +725,14 @@ function TeamWorkFilterBar({
   scope: "open" | "all";
   onScope: (scope: "open" | "all") => void;
   showAssignee: boolean;
+  signalScope: LeadSignalScope;
+  signalOptions: LeadSignalOptions;
 }) {
   const statusOptions = (
     kind === "leads"
       ? LEAD_STATUS_FILTERS.filter((value) => scope === "all" || OPEN_LEAD.has(value))
       : Object.keys(TASK_STATUS_LABEL).filter((value) => scope === "all" || OPEN_TASK.has(value))
   ).map((value) => ({ value, label: (kind === "leads" ? STATUS_LABEL : TASK_STATUS_LABEL)[value] ?? value }));
-  const showLoanStatus = team.business_line === "loans";
   const memberOptions = team.members.map((member) => ({
     value: member.staff_profile_uuid,
     label: personName(member),
@@ -775,12 +786,12 @@ function TeamWorkFilterBar({
             />
           ) : null
         }
-        more={leadSignalFilterGroups({ filters, onChange, showLoanStatus })}
-        moreActiveCount={leadSignalActiveCount(filters, showLoanStatus)}
+        more={leadSignalFilterGroups({ filters, onChange, scope: signalScope, options: signalOptions })}
+        moreActiveCount={leadSignalActiveCount(filters, signalScope)}
         onClearMore={() => onChange(DEFAULT_LEAD_SIGNAL_FILTERS)}
-        chips={leadSignalChips(filters, onChange, showLoanStatus)}
+        chips={leadSignalChips(filters, onChange, signalScope, signalOptions)}
         onClear={() => onChange(DEFAULT_TEAM_WORK_FILTERS)}
-        hasExternalFilters={teamWorkFiltersActive(filters)}
+        hasExternalFilters={teamWorkFiltersActive({ ...filters, ...scopedLeadSignalFilters(filters, signalScope) })}
       />
     </div>
   );
@@ -807,15 +818,36 @@ export function TeamWorkList({ team, memberId }: { team: StaffTeam; memberId?: s
 
   const data = state.status === "ready" ? state.data : null;
   const kind: Kind = team.member_role === "telecaller" ? "leads" : "tasks";
+  // Loan filters on a Loans team, property filters on a Real Estate team, and
+  // a Telecaller team's transactions (minus the parts the Admin hides from
+  // Telecallers). Options: the active catalogue plus the loaded rows.
+  const signalRows = React.useMemo(
+    () => (data ? [...data.leads, ...data.tasks].map(teamSignalValues) : []),
+    [data],
+  );
+  const catalogue = useProductCatalogue(team.business_line === "loans");
+  const signalScope = React.useMemo(
+    () =>
+      lineScope(team.business_line, team.member_role === "telecaller", rowsHiddenTransactionParts(signalRows)),
+    [team.business_line, team.member_role, signalRows],
+  );
+  const signalOptions = React.useMemo(() => leadSignalOptions(catalogue, signalRows), [catalogue, signalRows]);
+  // A hidden control never keeps narrowing, and a status the Open view does
+  // not offer is not applied there.
+  const effective = React.useMemo(() => {
+    const openStatuses = kind === "leads" ? OPEN_LEAD : OPEN_TASK;
+    const status = scope === "open" && !openStatuses.has(filters.status) ? "all" : filters.status;
+    return { ...filters, ...scopedLeadSignalFilters(filters, signalScope), status };
+  }, [filters, signalScope, scope, kind]);
   // Open work first (New > Assigned > Working > Converted > Closed > Released), then the soonest follow-up.
   const leads = data
     ? sortLeadsByDefaultOrder(
-        filterTeamLeads(data.leads, filters, now),
+        filterTeamLeads(data.leads, effective, now),
         (row) => row.status,
         (row) => row.last_call?.follow_up_at,
       )
     : [];
-  const tasks = data ? filterTeamTasks(data.tasks, filters, now) : [];
+  const tasks = data ? filterTeamTasks(data.tasks, effective, now) : [];
   const total = data ? (kind === "leads" ? data.leads.length : data.tasks.length) : 0;
   const shown = kind === "leads" ? leads.length : tasks.length;
   const showAssignee = !memberId;
@@ -847,8 +879,17 @@ export function TeamWorkList({ team, memberId }: { team: StaffTeam; memberId?: s
         filters={filters}
         onChange={(patch) => setFilters((current) => ({ ...current, ...patch }))}
         scope={scope}
-        onScope={setScope}
+        onScope={(next) => {
+          setScope(next);
+          // A closed or released status is not offered under Open.
+          const openStatuses = kind === "leads" ? OPEN_LEAD : OPEN_TASK;
+          if (next === "open" && filters.status !== "all" && !openStatuses.has(filters.status)) {
+            setFilters((current) => ({ ...current, status: "all" }));
+          }
+        }}
         showAssignee={showAssignee}
+        signalScope={signalScope}
+        signalOptions={signalOptions}
       />
       {state.status === "error" ? (
         <FetchError status={state.code} message={state.error} onRetry={retry} />

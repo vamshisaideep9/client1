@@ -32,14 +32,28 @@ type FilterKey =
   | "lead_source"
   | "lead_status"
   | "task_type"
+  | "loan_type_id"
+  | "bank_id"
+  | "deal_status"
+  | "property_category"
+  | "property_subtype"
+  | "commission_status"
+  | "amount_min"
+  | "amount_max"
   | "content_type"
   | "content_status"
   | "placement"
   | "banner_type"
   | "discount_type";
 
-/** Optional role filters; the API rejects a filter that doesn't apply to the caller's role. */
-export type StaffAnalyticsFilterValues = { [K in FilterKey]?: NonNullable<AnalyticsQuery[K]> };
+/**
+ * Optional role filters; the API rejects a filter that doesn't apply to the
+ * caller's role or line, or one the Admin's field rules hide (CS-023). Amounts
+ * are rupees as typed.
+ */
+export type StaffAnalyticsFilterValues = {
+  [K in FilterKey]?: K extends "amount_min" | "amount_max" ? string : NonNullable<AnalyticsQuery[K]>;
+};
 
 export function buildMyAnalyticsQuery(
   range: { dateFrom: string; dateTo: string },
@@ -47,7 +61,7 @@ export function buildMyAnalyticsQuery(
 ): string {
   const params = new URLSearchParams({ date_from: range.dateFrom, date_to: range.dateTo });
   for (const [key, value] of Object.entries(filters)) {
-    if (value) params.set(key, value);
+    if (value) params.set(key, String(value));
   }
   return params.toString();
 }

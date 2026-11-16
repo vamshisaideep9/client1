@@ -71,7 +71,7 @@ test("leads open in status order with closed work last, and filters read their f
   await more.click();
   const dialog = page.getByRole("dialog", { name: "More filters" });
   await expect(dialog.getByRole("group", { name: "Lead" })).toBeVisible();
-  await expect(dialog.getByRole("group", { name: "Loan" })).toBeVisible();
+  await expect(dialog.getByRole("group", { name: "Product" })).toBeVisible();
   await expect(dialog.getByRole("combobox", { name: "Filter by lead source" })).toHaveText("Lead source");
   await dialog.getByRole("combobox", { name: "Filter by lead source" }).click();
   await expect(page.getByRole("option")).toHaveText(["All", "Direct lead", "Referred by agent", "Referred by client"]);

@@ -25,6 +25,7 @@ import { FilterSelect } from "@/features/dashboard/filter-select";
 import { ListPagination } from "@/features/dashboard/list-pagination";
 import { StatusBadge } from "@/features/dashboard/status-badge";
 import { useFilteredPage } from "@/features/dashboard/use-filtered-page";
+import { useProductCatalogue } from "@/features/dashboard/use-product-catalogue";
 import type { AgentEarningsRow } from "@/lib/agent-api";
 import { formatPaise } from "@/lib/format";
 
@@ -67,7 +68,8 @@ export function AgentEarningsView() {
 
   const rows = React.useMemo(() => earnings?.rows ?? [], [earnings]);
   const filtered = React.useMemo(() => filterEarningsRows(rows, filters), [rows, filters]);
-  const options = React.useMemo(() => earningsFilterOptions(rows), [rows]);
+  const catalogue = useProductCatalogue(!rows.some((row) => row.business_line === "real_estate"));
+  const options = React.useMemo(() => earningsFilterOptions(rows, catalogue), [rows, catalogue]);
   const { page, setPage, pageRows, total } = useFilteredPage(filtered, filters);
   const set = (patch: Partial<AgentEarningsFilterState>) => setFilters((current) => ({ ...current, ...patch }));
 

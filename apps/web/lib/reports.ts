@@ -79,6 +79,10 @@ export type ReportDetailFilters = {
   dealStatus?: string;
   propertyCity?: string;
   propertyCategory?: string;
+  propertySubtype?: string;
+  /** Rupees as typed: requested loan amount or quoted property price (CS-023). */
+  amountMin?: string;
+  amountMax?: string;
 };
 
 const DETAIL_PARAM: Record<keyof ReportDetailFilters, string> = {
@@ -93,7 +97,39 @@ const DETAIL_PARAM: Record<keyof ReportDetailFilters, string> = {
   dealStatus: "deal_status",
   propertyCity: "property_city",
   propertyCategory: "property_category",
+  propertySubtype: "property_subtype",
+  amountMin: "amount_min",
+  amountMax: "amount_max",
 };
+
+/** Detail keys that only exist on one line (the leads report offers both). */
+export const LOAN_DETAIL_KEYS: readonly (keyof ReportDetailFilters)[] = ["loanStatus", "loanTypeId", "bankId"];
+export const PROPERTY_DETAIL_KEYS: readonly (keyof ReportDetailFilters)[] = [
+  "dealStatus",
+  "propertyCity",
+  "propertyCategory",
+  "propertySubtype",
+];
+
+/** The detail filters that still apply after switching to `businessLine`. */
+export function detailForLine(
+  detail: ReportDetailFilters,
+  businessLine: string | undefined,
+): ReportDetailFilters {
+  const dropped =
+    businessLine === "loans" ? PROPERTY_DETAIL_KEYS : businessLine === "real_estate" ? LOAN_DETAIL_KEYS : [];
+  return Object.fromEntries(
+    Object.entries(detail).filter(([key]) => !dropped.includes(key as keyof ReportDetailFilters)),
+  ) as ReportDetailFilters;
+}
+
+/** Rupees as typed ("1,50,000") to plain rupees ("150000"), or null. */
+function plainRupees(value: string | undefined): string | null {
+  const trimmed = (value ?? "").trim().replace(/,/g, "");
+  if (!trimmed) return null;
+  const rupees = Number(trimmed);
+  return Number.isFinite(rupees) && rupees >= 0 ? String(rupees) : null;
+}
 
 export function activeDetailCount(detail: ReportDetailFilters | undefined): number {
   return Object.values(detail ?? {}).filter((value) => typeof value === "string" && value.trim() !== "").length;
@@ -120,8 +156,16 @@ export function buildReportParams(filters: ReportParamsInput): URLSearchParams {
   if (filters.businessLine) params.set("business_line", filters.businessLine);
   for (const id of filters.agentProfileUuids ?? []) params.append("agent_profile_uuid", id);
   for (const [key, value] of Object.entries(filters.detail ?? {}) as [keyof ReportDetailFilters, string | undefined][]) {
+    if (key === "amountMin" || key === "amountMax") continue;
     const trimmed = value?.trim();
     if (trimmed) params.set(DETAIL_PARAM[key], trimmed);
+  }
+  // Amounts go as plain rupees; an inverted range is left out (the bar says so).
+  const min = plainRupees(filters.detail?.amountMin);
+  const max = plainRupees(filters.detail?.amountMax);
+  if (!(min !== null && max !== null && Number(min) > Number(max))) {
+    if (min !== null) params.set(DETAIL_PARAM.amountMin, min);
+    if (max !== null) params.set(DETAIL_PARAM.amountMax, max);
   }
   if (filters.sortBy) params.set("sort_by", filters.sortBy);
   if (filters.sortDir) params.set("sort_dir", filters.sortDir);

@@ -2,6 +2,40 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch C PR 2: filters by product, property, status,
+transactions and earnings (web)** (2026-11-17; CS-023), branch
+`feat/batch-c-filters-web` stacked on Batch C PR 1. Web only; consumes the
+C1 contracts; no requirement-percentage change.
+- Shared: `product-filter-options.ts` (labels, `mergeOptions`, bank-name
+  normalising, rupee parsing), `use-product-catalogue.ts` (`/loans/loan-types`
+  lending products + `/loans/banks`, one fetch per page),
+  `amount-range-fields.tsx` (Min / Max with an inverted-range note).
+- Lead lists (Telecaller, Employee, team work): Product or Property group by
+  line; Telecaller and Telecaller-team Money group (Transactions has / none,
+  Transaction date From / To, Transaction bank, Transaction amount); one
+  application, deal or transaction must match every filter of its group;
+  Admin-hidden transaction parts and other-line filters never filter, count
+  or chip.
+- Analytics: My analytics and team analytics add Product / Property groups,
+  Telecaller amount (hidden when the API lists it in `hidden_filters`),
+  Agent commission status and commission amount; requests carry only offered
+  filters, amounts as plain rupees after a short pause, an inverted range not
+  applied. Admin reports: Product and Property on the leads report, amount on
+  leads / loans / deals, property type on deals; changing line drops the
+  other line's filters.
+- Lists: Admin loan applications (Product, Bank, requested amount), Admin
+  property deals (quoted price); Agent earnings options from the same sources.
+- Logic fixes: team work kept a closed or released status filter applied
+  after switching to "Open"; My analytics could request a filter of the
+  previous line after a line switch; the Admin leads report kept a hidden
+  other-line filter.
+- Evidence: `pnpm lint`, `pnpm typecheck` pass; `pnpm test` 1055 passed
+  (142 files, incl. new `product-filter-options.test.ts` and the extended
+  lead-signal, analytics-range and earnings tests); Playwright against
+  `pnpm dev` (port 3121, mocked API): new `batch-c-filters.spec.ts` (5) and
+  the filter-system, lead-signal, staff-analytics, admin-analytics, agent
+  money, sub-admin-teams and telecaller workspace specs, 38 passed.
+
 **In progress — Batch C PR 1: filters by product, property, status,
 transactions and earnings (API)** (2026-11-17; CS-023; PR
 [#371](https://github.com/brollysolutions/client1/pull/371), mirror
