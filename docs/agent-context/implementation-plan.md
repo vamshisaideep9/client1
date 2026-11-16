@@ -70,9 +70,10 @@ an admin-checked Server Action and the CMS queues refresh every 30 s and on
 tab focus without touching unsaved edits; one `lib/banner-cta.ts` rule
 renders same-site and https CTAs (new tab, announced) and defaults a YouTube
 banner with no destination to the video; dashboard offers become a
-single-column list of horizontal banners from md up. Next: the user merges
-the API slice, then this one. Recommended: Opus 5.5 / high (web, with a
-security-sensitive Server Action).
+single-column list of horizontal banners from md up. Verified with lint,
+typecheck, 989 unit tests, a container build and a new Playwright spec (6
+passed). Next: the user merges the API slice, then this one. Recommended:
+Opus 5.5 / high (web, with a security-sensitive Server Action).
 
 **In review — Banner lifecycle fixes (API slice)** (2026-11-16; PR
 [#363](https://github.com/brollysolutions/client1/pull/363), mirror

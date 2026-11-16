@@ -32,7 +32,19 @@ no dependency or contract change beyond the API slice.
   rendered to signed-in users; `PersonalizedPlacements` shows offers only.
   Scheduler-activated (future-dated) banners still wait for the job tick
   plus the 60-second ISR window, and open public pages are not pushed.
-- Evidence: see the PR.
+- Evidence: `pnpm lint` and `pnpm typecheck` pass; `pnpm test` 989 passed
+  (136 files) including `lib/banner-cta.test.ts`, the Server Action role
+  tests, `queue-refresh.test.ts` and the offer-card layout tests;
+  `pnpm build` passes in a `node:22-alpine` container. Playwright against
+  `pnpm dev` with the catalogue fixture: new `banner-cta-and-offers.spec.ts`
+  6 passed (https CTA new tab with `window.opener` null, YouTube fallback,
+  create-then-submit only on request, offer card stacked at 390 px and
+  horizontal at 768/1280 px); the ui-refinement offer test passes;
+  `sponsor-highlight.spec.ts` 5 passed with 4 pre-existing failures (it
+  expects no button in the ad, but upstream already renders the dismiss
+  button). `personalization.spec.ts` was not run (needs the compose API
+  container). Design review (Chromium screenshots) found the Next button
+  submitting the form on the last step; fixed with distinct button keys.
 
 **In review — Banner lifecycle fixes (API slice)** (2026-11-16; PR
 [#363](https://github.com/brollysolutions/client1/pull/363), mirror

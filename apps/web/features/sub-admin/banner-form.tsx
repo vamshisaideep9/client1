@@ -826,7 +826,9 @@ export function BannerForm({
               <p id="deep-link-help" className="-mt-2 text-xs text-text-secondary">
                 {selectedProperty
                   ? "Property enquiries always use the server-generated contact destination."
-                  : `${DESTINATION_HINT} With a YouTube video and no destination, the button opens the video (label defaults to "Watch on YouTube").`}
+                  : isPublic
+                    ? `${DESTINATION_HINT} With a YouTube video and no destination, the button opens the video (label defaults to "Watch on YouTube").`
+                    : DESTINATION_HINT}
               </p>
               <FieldError id="deep-link-error">{fieldErrors.deepLink}</FieldError>
             </div>
