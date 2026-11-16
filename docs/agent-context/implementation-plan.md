@@ -72,7 +72,9 @@ renders same-site and https CTAs (new tab, announced) and defaults a YouTube
 banner with no destination to the video; dashboard offers become a
 single-column list of horizontal banners from md up. Verified with lint,
 typecheck, 989 unit tests, a container build and a new Playwright spec (6
-passed). Next: the user merges the API slice, then this one. Recommended:
+passed). Also adds the Admin audit-log label for #364's
+`client_export_downloaded`, without which `upstream/main`'s web typecheck
+fails. Next: the user merges the API slice, then this one. Recommended:
 Opus 5.5 / high (web, with a security-sensitive Server Action).
 
 **In review — Banner lifecycle fixes (API slice)** (2026-11-16; PR

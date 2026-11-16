@@ -385,6 +385,8 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   team_task_updated: { label: "Manager changed a task", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
   team_note_added: { label: "Manager added a note", icon: ScrollText, tone: "bg-muted text-text-secondary" },
   team_task_viewed: { label: "Manager viewed a task", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
+  // Bulk client-PII download (#364); same warning tone as other sensitive reads.
+  client_export_downloaded: { label: "Client list exported", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
   vehicle_arrangement_updated: {
     label: "Vehicle arrangement updated",
     icon: CarFront,

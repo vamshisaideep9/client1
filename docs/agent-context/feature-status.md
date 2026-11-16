@@ -45,6 +45,10 @@ no dependency or contract change beyond the API slice.
   button). `personalization.spec.ts` was not run (needs the compose API
   container). Design review (Chromium screenshots) found the Next button
   submitting the form on the last step; fixed with distinct button keys.
+- After merging the API slice (which now includes `upstream/main` #364), the
+  web typecheck failed because #364 added the `client_export_downloaded`
+  audit action to the contract without the Admin audit log's label; this
+  branch adds "Client list exported" so the exhaustive map compiles again.
 
 **In review — Banner lifecycle fixes (API slice)** (2026-11-16; PR
 [#363](https://github.com/brollysolutions/client1/pull/363), mirror
