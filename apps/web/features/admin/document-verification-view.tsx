@@ -4,6 +4,7 @@ import * as React from "react";
 import { CheckCheck, ExternalLink, FileCheck2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { DocumentViewer } from "@/components/documents/document-viewer";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field-error";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -61,64 +62,16 @@ const STATUS_OPTIONS = [
 ];
 
 /**
- * Renders a document inline where the browser can, so the reviewer decides from
- * the artefact rather than from its filename. Images and PDFs cover every
- * accepted upload type; anything else falls back to a download link.
+ * Shows the document inside the review workspace so the reviewer decides from
+ * the artefact rather than its filename. The shared viewer identifies the file
+ * from its bytes and renders PDFs without running anything embedded in them.
  */
 function DocumentPreview({ document }: { document: VerifiableDocument }) {
-  const [failed, setFailed] = React.useState(false);
-  const isPdf = /\.pdf(\?|$)/i.test(document.download_url);
-
-  if (failed) {
-    return (
-      <div className="flex h-full min-h-48 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 p-6 text-center">
-        <p className="text-sm text-text-secondary">
-          This file can&rsquo;t be previewed here.{" "}
-          <a
-            href={document.download_url}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-brand-link hover:underline"
-          >
-            Open it in a new tab
-          </a>
-          .
-        </p>
-      </div>
-    );
-  }
-
-  if (isPdf) {
-    return (
-      <object
-        data={document.download_url}
-        type="application/pdf"
-        className="h-96 w-full rounded-lg border border-border bg-muted/30"
-        aria-label={`${DOC_TYPE_LABEL[document.doc_type as DocTypeValue] ?? document.doc_type} preview`}
-      >
-        <div className="flex h-full items-center justify-center p-6 text-center">
-          <a
-            href={document.download_url}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm font-medium text-brand-link hover:underline"
-          >
-            Open this PDF in a new tab
-          </a>
-        </div>
-      </object>
-    );
-  }
-
   return (
-    // Presigned storage URLs expire in minutes and are not a configured
-    // next/image remote pattern, so this stays a plain <img>.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={document.download_url}
-      alt={`${DOC_TYPE_LABEL[document.doc_type as DocTypeValue] ?? document.doc_type} preview`}
-      className="max-h-96 w-full rounded-lg border border-border bg-muted/30 object-contain"
-      onError={() => setFailed(true)}
+    <DocumentViewer
+      url={document.download_url}
+      label={`${DOC_TYPE_LABEL[document.doc_type as DocTypeValue] ?? document.doc_type} preview`}
+      className="max-h-[70vh] overflow-y-auto"
     />
   );
 }

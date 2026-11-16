@@ -60,6 +60,35 @@ describe("HeroCarousel", () => {
     expect(markup).not.toContain("aspect-[9/5]");
   });
 
+  it("shows a slide counter only when there is more than one banner", () => {
+    const many = renderToStaticMarkup(
+      <HeroCarousel
+        banners={[
+          { id: "a", title: "First" },
+          { id: "b", title: "Second" },
+          { id: "c", title: "Third" },
+          { id: "d", title: "Fourth" },
+        ]}
+      />,
+    );
+    expect(many).toMatch(/data-slide-counter[^>]*>1\/4<\/span>/);
+
+    const section = renderToStaticMarkup(
+      <HeroCarousel
+        variant="section"
+        label="Property campaigns"
+        banners={[
+          { id: "a", title: "First" },
+          { id: "b", title: "Second" },
+        ]}
+      />,
+    );
+    expect(section).toMatch(/data-slide-counter[^>]*>1\/2<\/span>/);
+
+    const single = renderToStaticMarkup(<HeroCarousel banners={[{ id: "a", title: "Only" }]} />);
+    expect(single).not.toContain("data-slide-counter");
+  });
+
   it("renders nothing for an empty campaign list", () => {
     expect(renderToStaticMarkup(<HeroCarousel banners={[]} />)).toBe("");
   });

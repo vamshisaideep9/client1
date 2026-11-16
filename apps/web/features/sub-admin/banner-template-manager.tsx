@@ -31,7 +31,7 @@ import { CmsWorkspaceHeader, CMS_WORKSPACE_DIALOG_CLASS } from "./cms-workspace"
 type Schemas = components["schemas"];
 
 const IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
-const IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const ARTWORK_GUIDANCE: Record<
   BannerTemplate["placement"],
   { dimensions: string; aspectClass: string; composition: string }

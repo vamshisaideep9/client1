@@ -12,7 +12,7 @@ export function EarnAgentTracks() {
     <section
       id="agent-tracks"
       aria-labelledby="agent-tracks-heading"
-      className="relative w-full overflow-hidden scroll-mt-16 border-t border-[var(--nav-border)] bg-[var(--nav-bg)]"
+      className="relative w-full overflow-hidden scroll-mt-[var(--site-header-h)] border-t border-[var(--nav-border)] bg-[var(--nav-bg)]"
     >
       <AgentTracksDoodles />
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">

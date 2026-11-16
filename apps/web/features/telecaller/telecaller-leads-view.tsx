@@ -11,19 +11,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardHeader, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
 import { ListPagination, useListPagination } from "@/features/dashboard/list-pagination";
 import { FetchError } from "@/features/dashboard/fetch-error";
+import { useLine } from "@/features/dashboard/line-provider";
 import { formatMobile } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
+import { LeadSignalFilterFields } from "./lead-signal-filter-fields";
+import { formatReferrer } from "./lead-signal-filters";
 import {
   DEFAULT_TELECALLER_LEAD_FILTERS,
   DEFAULT_TELECALLER_LEAD_SORT,
   filterTelecallerLeads,
   sortTelecallerLeads,
+  telecallerLeadFiltersActive,
   type TelecallerLeadFilters,
   type TelecallerLeadSort,
   type TelecallerLeadSortKey,
 } from "./telecaller-lead-filters";
 import { DISPOSITION_LABEL, STATUS_LABEL, STATUS_STYLE, formatDateTime } from "./telecaller-lead-status";
+import { REQUEST_KIND_LABEL, formatAppliedAt } from "./telecaller-requests";
 import { useTelecallerLeads } from "./use-telecaller-leads";
 
 const STATUS_FILTER_OPTIONS = ["new", "assigned", "working", "converted", "closed", "released"] as const;
@@ -76,6 +81,7 @@ function SortableHeader({
 // where a call gets logged and status/requirement updated.
 export function TelecallerLeadsView() {
   const router = useRouter();
+  const { activeLine } = useLine();
   const { items, loading, error, reload } = useTelecallerLeads();
   const [filters, setFilters] = React.useState<TelecallerLeadFilters>(DEFAULT_TELECALLER_LEAD_FILTERS);
   const [sort, setSort] = React.useState<TelecallerLeadSort>(DEFAULT_TELECALLER_LEAD_SORT);
@@ -88,8 +94,13 @@ export function TelecallerLeadsView() {
     setPage(0);
   }, [filters, sort, setPage]);
 
-  const filtersActive =
-    filters.search !== "" || filters.status !== "all" || filters.followUpFrom !== "" || filters.followUpTo !== "";
+  const filtersActive = telecallerLeadFiltersActive(filters);
+  const showLoanStatus = activeLine === "loans";
+
+  // A loan-status filter has no meaning once the list switches to Real Estate.
+  React.useEffect(() => {
+    if (!showLoanStatus) setFilters((f) => (f.loanStatus === "all" ? f : { ...f, loanStatus: "all" }));
+  }, [showLoanStatus]);
 
   function onSort(key: TelecallerLeadSortKey) {
     setSort((prev) => (prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
@@ -131,7 +142,7 @@ export function TelecallerLeadsView() {
               onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
             />
             <Select value={filters.status} onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}>
-              <SelectTrigger aria-label="Filter by status">
+              <SelectTrigger className="w-full" aria-label="Filter by status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -156,6 +167,11 @@ export function TelecallerLeadsView() {
               value={filters.followUpTo}
               onChange={(e) => setFilters((f) => ({ ...f, followUpTo: e.target.value }))}
             />
+            <LeadSignalFilterFields
+              filters={filters}
+              showLoanStatus={showLoanStatus}
+              onChange={(patch) => setFilters((f) => ({ ...f, ...patch }))}
+            />
           </div>
 
           {sorted.length === 0 ? (
@@ -165,7 +181,7 @@ export function TelecallerLeadsView() {
               </span>
               <h2 className="mt-5 text-lg font-semibold text-text-primary">No leads match your filters</h2>
               <p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">
-                Try a different search, status, or follow-up range.
+                Try a different search or loosen a filter.
               </p>
               {filtersActive ? (
                 <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
@@ -220,6 +236,24 @@ export function TelecallerLeadsView() {
                             {lead.name ?? "Unnamed lead"}
                           </p>
                           <p className="text-xs text-text-secondary">{formatMobile(lead.mobile)}</p>
+                          {lead.latest_request ? (
+                            <p className="mt-1 text-xs text-text-secondary">
+                              <span className="font-medium text-text-primary">
+                                {lead.latest_request.title}
+                              </span>
+                              {" · "}
+                              {REQUEST_KIND_LABEL[lead.latest_request.kind]}
+                              {" · "}
+                              <time dateTime={lead.latest_request.applied_at}>
+                                {formatAppliedAt(lead.latest_request.applied_at)}
+                              </time>
+                            </p>
+                          ) : null}
+                          {lead.referrer ? (
+                            <p className="mt-1 text-xs text-text-secondary">
+                              Referred by <span className="font-medium text-text-primary">{formatReferrer(lead.referrer)}</span>
+                            </p>
+                          ) : null}
                         </td>
                         <td className="px-5 py-4">
                           <span

@@ -227,6 +227,9 @@ export function PayoutCreateDialog({
             errors={errors}
             onChange={setDestination}
             disabled={busy}
+            savedDestinationTarget={
+              form.recipient ? { recipientUserUuid: form.recipient.authUserUuid } : null
+            }
           />
         </div>
 
