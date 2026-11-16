@@ -97,7 +97,9 @@ opened against `main`, stacked on Batch C PR 2:
   /agent/lead-eligibility` and `GET /referrals/eligibility` return the three
   counts, `GET /agent/lead-attempts` and `GET /referrals/attempts` list the
   caller's recorded attempts.
-- *PR D2 — web*, branch `feat/batch-d-eligibility-web` stacked on D1: Agent
+- *PR D2 — web*, branch `feat/batch-d-eligibility-web` stacked on D1 (PR
+  [#374](https://github.com/brollysolutions/client1/pull/374), mirror
+  vamshisaideep9/client1#75): Agent
   Leads and Client Referrals get an Eligibility summary (one card, three
   counts, side by side on phones), an `Eligibility` filter, a badge per row
   with the reason, and a "Not accepted" tab (masked number, result, reason,

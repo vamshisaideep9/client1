@@ -3,7 +3,9 @@
 Status: **Derived living implementation ledger**
 
 **In progress — Batch D PR 2: lead and referral eligibility (web)**
-(2026-11-17; CS-024), branch `feat/batch-d-eligibility-web` stacked on
+(2026-11-17; CS-024; PR
+[#374](https://github.com/brollysolutions/client1/pull/374), mirror
+vamshisaideep9/client1#75), branch `feat/batch-d-eligibility-web` stacked on
 Batch D PR 1. Web only; consumes the D1 contracts; no requirement-percentage
 change.
 - Shared (`features/dashboard`): `eligibility.ts` (Eligible / Not eligible /
