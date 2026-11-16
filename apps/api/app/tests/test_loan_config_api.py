@@ -258,7 +258,7 @@ async def test_provider_logo_presign_is_raster_only_and_raw_remote_keys_are_reje
     )
     assert raster.status_code == 200, raster.text
     assert raster.json()["object_key"].startswith("private/provider-logos/staging/")
-    assert raster.json()["max_bytes"] == 1024 * 1024
+    assert raster.json()["max_bytes"] == 5 * 1024 * 1024
 
     remote = await client.post(
         "/api/v1/admin/banks",

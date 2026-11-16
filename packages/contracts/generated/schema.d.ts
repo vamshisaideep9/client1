@@ -1144,6 +1144,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/reports/telecallers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Report Telecallers
+         * @description Telecallers for the Analytics "Telecaller" filter (platform Admin only).
+         */
+        get: operations["list_report_telecallers_api_v1_admin_reports_telecallers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/staff-access": {
         parameters: {
             query?: never;
@@ -1241,6 +1261,76 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/teams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Teams */
+        get: operations["get_teams_api_v1_admin_teams_get"];
+        put?: never;
+        /** Post Team */
+        post: operations["post_team_api_v1_admin_teams_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/teams/eligible": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Eligible */
+        get: operations["get_eligible_api_v1_admin_teams_eligible_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/teams/{team_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Team */
+        patch: operations["patch_team_api_v1_admin_teams__team_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/teams/{team_id}/members/{staff_profile_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Member */
+        post: operations["post_member_api_v1_admin_teams__team_id__members__staff_profile_uuid__post"];
+        /** Delete Member */
+        delete: operations["delete_member_api_v1_admin_teams__team_id__members__staff_profile_uuid__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1577,6 +1667,54 @@ export interface paths {
         head?: never;
         /** Patch Lead */
         patch: operations["patch_lead_api_v1_agent_leads__lead_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/agent/leads/{lead_id}/resubmit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resubmit Lead
+         * @description Resubmit this Agent's expired lead for a fresh 30-day window.
+         */
+        post: operations["resubmit_lead_api_v1_agent_leads__lead_id__resubmit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/payout-details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Payout Details
+         * @description The Agent's saved payout destination, masked.
+         */
+        get: operations["get_payout_details_api_v1_agent_payout_details_get"];
+        /**
+         * Put Payout Details
+         * @description Save or change the bank account and/or UPI ID commissions are paid to.
+         */
+        put: operations["put_payout_details_api_v1_agent_payout_details_put"];
+        post?: never;
+        /**
+         * Delete Payout Details
+         * @description Remove every saved payout destination.
+         */
+        delete: operations["delete_payout_details_api_v1_agent_payout_details_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/auth/change-password": {
@@ -2683,6 +2821,212 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/manager/teams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get My Teams */
+        get: operations["get_my_teams_api_v1_manager_teams_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manager/teams/{team_id}/leads/{lead_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Lead Detail */
+        get: operations["get_lead_detail_api_v1_manager_teams__team_id__leads__lead_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Lead */
+        patch: operations["patch_lead_api_v1_manager_teams__team_id__leads__lead_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/manager/teams/{team_id}/leads/{lead_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Lead Note */
+        post: operations["post_lead_note_api_v1_manager_teams__team_id__leads__lead_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manager/teams/{team_id}/leads/{lead_id}/reassign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Reassign Lead */
+        post: operations["post_reassign_lead_api_v1_manager_teams__team_id__leads__lead_id__reassign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manager/teams/{team_id}/members/{member_id}/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Member Analytics */
+        get: operations["get_member_analytics_api_v1_manager_teams__team_id__members__member_id__analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manager/teams/{team_id}/members/{member_id}/work": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Member Work */
+        get: operations["get_member_work_api_v1_manager_teams__team_id__members__member_id__work_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manager/teams/{team_id}/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Overview */
+        get: operations["get_overview_api_v1_manager_teams__team_id__overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manager/teams/{team_id}/tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Task Detail */
+        get: operations["get_task_detail_api_v1_manager_teams__team_id__tasks__task_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Task */
+        patch: operations["patch_task_api_v1_manager_teams__team_id__tasks__task_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/manager/teams/{team_id}/tasks/{task_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Task Note */
+        post: operations["post_task_note_api_v1_manager_teams__team_id__tasks__task_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manager/teams/{team_id}/tasks/{task_id}/reassign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Reassign Task */
+        post: operations["post_reassign_task_api_v1_manager_teams__team_id__tasks__task_id__reassign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manager/teams/{team_id}/work": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Team Work */
+        get: operations["get_team_work_api_v1_manager_teams__team_id__work_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Analytics */
+        get: operations["my_analytics_api_v1_me_analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mobile-change/authenticated/initiate": {
         parameters: {
             query?: never;
@@ -3071,6 +3415,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payouts/agents/{agent_profile_uuid}/saved-destination": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Saved Destination
+         * @description Same as the recipient prefill, keyed by Agent profile (commission payouts).
+         */
+        get: operations["get_agent_saved_destination_api_v1_payouts_agents__agent_profile_uuid__saved_destination_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/payouts/link-divergences": {
         parameters: {
             query?: never;
@@ -3108,6 +3472,29 @@ export interface paths {
          * @description Minimal recipient picker for an authorized payout requester.
          */
         get: operations["list_payout_recipients_api_v1_payouts_recipients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/recipients/{user_uuid}/saved-destination": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Recipient Saved Destination
+         * @description Prefill a payout from the bank account / UPI ID an Agent saved.
+         *
+         *     Same access as the recipient picker. Every successful read is audited
+         *     (agent_payout_details_viewed); a maker's own details are refused.
+         */
+        get: operations["get_recipient_saved_destination_api_v1_payouts_recipients__user_uuid__saved_destination_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3235,6 +3622,29 @@ export interface paths {
         put?: never;
         /** Reject Payout */
         post: operations["reject_payout_api_v1_payouts__payout_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/{payout_id}/simulate-gateway": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Simulate Gateway
+         * @description Development-only RazorpayX test mode: an Admin picks the gateway outcome.
+         *
+         *     404 unless PAYOUT_GATEWAY_SIMULATOR is on, ENV is development and no live
+         *     Razorpay credentials exist; the outcome then runs through settle_from_webhook.
+         */
+        post: operations["simulate_gateway_api_v1_payouts__payout_id__simulate_gateway_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4050,6 +4460,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/telecaller/leads/{lead_id}/client-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Client History
+         * @description All of this client's journeys on the line that are assigned to the
+         *     caller, each with its requests and the caller's own calls.
+         */
+        get: operations["client_history_api_v1_telecaller_leads__lead_id__client_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/telecaller/leads/{lead_id}/property-deals": {
         parameters: {
             query?: never;
@@ -4533,6 +4964,46 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /**
+         * AdminLeadDetailsRead
+         * @description Admin view: also what the client applied for and when.
+         */
+        AdminLeadDetailsRead: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** Editable Fields */
+            editable_fields: ("name" | "requirement.notes")[];
+            /** Field Owners */
+            field_owners: {
+                [key: string]: "agent" | "client" | "telecaller" | "admin" | "system" | "unclaimed" | "legacy_locked";
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string | null;
+            /** Requests */
+            requests: components["schemas"]["LeadRequestSummary"][];
+            /** Requirement */
+            requirement: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "assigned" | "working" | "converted" | "closed" | "released";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** AdminLeadRead */
         AdminLeadRead: {
             /**
@@ -4623,7 +5094,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold";
+            status: "new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold";
             /** Status Reason */
             status_reason: string | null;
         };
@@ -4818,6 +5289,8 @@ export interface components {
             /** City */
             city: string;
             construction_status?: components["schemas"]["ConstructionStatus"] | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing?: components["schemas"]["Furnishing"] | null;
             /** @default sale */
             listing_intent: components["schemas"]["ListingIntent"];
@@ -5416,6 +5889,17 @@ export interface components {
             /** Temp Password */
             temp_password: string | null;
         };
+        /** AgentBankAccount */
+        AgentBankAccount: {
+            /** Account Holder Name */
+            account_holder_name: string;
+            /** Account Number */
+            account_number: string;
+            /** Bank Name */
+            bank_name?: string | null;
+            /** Ifsc */
+            ifsc: string;
+        };
         /**
          * AgentContactRead
          * @description Name + agent_code only -- never phone/email. Contact routes through
@@ -5546,7 +6030,7 @@ export interface components {
             /** Mobile */
             mobile: string;
             /** Name */
-            name?: string | null;
+            name: string;
             /** Requirement */
             requirement?: {
                 [key: string]: unknown;
@@ -5582,6 +6066,8 @@ export interface components {
             requirement?: {
                 [key: string]: unknown;
             } | null;
+            /** Resubmittable */
+            resubmittable: boolean;
             /**
              * Status
              * @enum {string}
@@ -5601,6 +6087,34 @@ export interface components {
             requirement?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /**
+         * AgentPayoutDetailsRead
+         * @description What the Agent sees about their own saved destination: masked only.
+         */
+        AgentPayoutDetailsRead: {
+            /** Available */
+            available: boolean;
+            /** Bank Hint */
+            bank_hint?: string | null;
+            /** Saved */
+            saved: boolean;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Upi Hint */
+            upi_hint?: string | null;
+        };
+        /**
+         * AgentPayoutDetailsUpdate
+         * @description Partial update. Omit a field to keep it; send ``null`` to remove it.
+         *
+         *     After the update at least one destination must remain (the service
+         *     answers 422 otherwise); remove everything with DELETE instead.
+         */
+        AgentPayoutDetailsUpdate: {
+            bank?: components["schemas"]["AgentBankAccount"] | null;
+            /** Upi Id */
+            upi_id?: string | null;
         };
         /** AgentProfileStatusRead */
         AgentProfileStatusRead: {
@@ -5713,6 +6227,64 @@ export interface components {
             /** Title Details */
             title_details: string;
         };
+        /** AnalyticsBreakdown */
+        AnalyticsBreakdown: {
+            /** Description */
+            description: string;
+            /** Items */
+            items: components["schemas"]["BreakdownItem"][];
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "share" | "ranked";
+            /** Title */
+            title: string;
+            /**
+             * Unit
+             * @default count
+             * @enum {string}
+             */
+            unit: "count" | "percent" | "hours" | "rupees";
+        };
+        /** AnalyticsFunnel */
+        AnalyticsFunnel: {
+            /** Description */
+            description: string;
+            /** Steps */
+            steps: components["schemas"]["FunnelStep"][];
+            /** Title */
+            title: string;
+        };
+        /** AnalyticsKpi */
+        AnalyticsKpi: {
+            /** Hint */
+            hint?: string | null;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "count" | "percent" | "hours" | "rupees";
+            /** Value */
+            value: number | null;
+        };
+        /** AnalyticsTrend */
+        AnalyticsTrend: {
+            /** Description */
+            description: string;
+            /** Points */
+            points: components["schemas"]["TrendPoint"][];
+            /** Series */
+            series: components["schemas"]["TrendSeries"][];
+            /** Title */
+            title: string;
+        };
         /** AudienceLocationCircle */
         AudienceLocationCircle: {
             /** Label */
@@ -5759,7 +6331,7 @@ export interface components {
          *     `services/fee_cashbacks.py` (FR-6.6 processing-fee cashback).
          * @enum {string}
          */
-        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated";
+        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed";
         /** AuditLogListResponse */
         AuditLogListResponse: {
             /** Entries */
@@ -6031,6 +6603,10 @@ export interface components {
             template_id?: string | null;
             /** Title */
             title: string;
+            /** Video Media Asset Id */
+            video_media_asset_id?: string | null;
+            /** Youtube Url */
+            youtube_url?: string | null;
         };
         /** BannerImageUploadRequest */
         BannerImageUploadRequest: {
@@ -6135,6 +6711,12 @@ export interface components {
             updated_at: string;
             /** Version */
             version: number;
+            /** Video Media Asset Id */
+            video_media_asset_id?: string | null;
+            /** Video Url */
+            video_url?: string | null;
+            /** Youtube Video Id */
+            youtube_video_id?: string | null;
         };
         /**
          * BannerStatus
@@ -6216,6 +6798,10 @@ export interface components {
             template_id?: string | null;
             /** Title */
             title?: string | null;
+            /** Video Media Asset Id */
+            video_media_asset_id?: string | null;
+            /** Youtube Url */
+            youtube_url?: string | null;
         };
         /** BookmarkCreate */
         BookmarkCreate: {
@@ -6253,6 +6839,15 @@ export interface components {
             property_ref: string;
             /** Title */
             title: string | null;
+        };
+        /** BreakdownItem */
+        BreakdownItem: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: number;
         };
         /**
          * BroadcastAudience
@@ -6296,7 +6891,7 @@ export interface components {
              * Content Type
              * @enum {string}
              */
-            content_type: "image/jpeg" | "image/png" | "image/webp";
+            content_type: "image/jpeg" | "image/png" | "image/webp" | "video/mp4";
             /** Object Key */
             object_key: string;
             /** Source Reference */
@@ -6309,7 +6904,7 @@ export interface components {
              * Usage Type
              * @enum {string}
              */
-            usage_type: "homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign";
+            usage_type: "homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign" | "banner_video";
         };
         /** CampaignMediaListResponse */
         CampaignMediaListResponse: {
@@ -6384,7 +6979,7 @@ export interface components {
              * Content Type
              * @enum {string}
              */
-            content_type: "image/jpeg" | "image/png" | "image/webp";
+            content_type: "image/jpeg" | "image/png" | "image/webp" | "video/mp4";
             /** Filename */
             filename: string;
         };
@@ -6426,6 +7021,31 @@ export interface components {
             current_password: string;
             /** New Password */
             new_password: string;
+        };
+        /**
+         * ClientHistoryLead
+         * @description One lead (journey) of the same client, with this Telecaller's calls.
+         */
+        ClientHistoryLead: {
+            /** Activities */
+            activities: components["schemas"]["LeadActivityRead"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Lead Id
+             * Format: uuid
+             */
+            lead_id: string;
+            /** Requests */
+            requests: components["schemas"]["LeadRequestSummary"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "assigned" | "working" | "converted" | "closed" | "released";
         };
         /** ClientProfileSummary */
         ClientProfileSummary: {
@@ -6877,15 +7497,24 @@ export interface components {
              * @enum {string}
              */
             lead_contact_mode: "allow" | "deny" | "share_link";
+            /** Lead Last Disposition */
+            lead_last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+            /** Lead Last Interest Level */
+            lead_last_interest_level?: ("hot" | "warm" | "cold") | null;
+            /** Lead Loan Statuses */
+            lead_loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold")[];
             /** Lead Mobile */
             lead_mobile?: string | null;
             /** Lead Name */
             lead_name?: string | null;
+            lead_referrer?: components["schemas"]["LeadReferrerRead"] | null;
             /**
              * Lead Uuid
              * Format: uuid
              */
             lead_uuid: string;
+            /** Manager Notes */
+            manager_notes?: components["schemas"]["ManagerNoteRead"][];
             /** Notes */
             notes: string | null;
             /** Outcome */
@@ -7200,6 +7829,15 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** FunnelStep */
+        FunnelStep: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: number;
+        };
         /**
          * Furnishing
          * @enum {string}
@@ -7279,6 +7917,7 @@ export interface components {
             interest_level?: ("hot" | "warm" | "cold") | null;
             /** Notes */
             notes?: string | null;
+            request?: components["schemas"]["RequestRef"] | null;
         };
         /** LeadActivityRead */
         LeadActivityRead: {
@@ -7308,6 +7947,7 @@ export interface components {
             lead_uuid: string;
             /** Notes */
             notes: string | null;
+            request?: components["schemas"]["RequestRef"] | null;
         };
         /** LeadDetailsPatch */
         LeadDetailsPatch: {
@@ -7350,6 +7990,47 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * LeadReferrerRead
+         * @description Who brought a lead in, as an identifier only (no names or contacts).
+         *
+         *     ``agent``: the introducing Agent's ``agent_code``. ``client``: the referral
+         *     code of the client whose link the lead signed up through.
+         */
+        LeadReferrerRead: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "agent" | "client";
+            /** Reference Id */
+            reference_id: string;
+        };
+        /**
+         * LeadRequestSummary
+         * @description One application/enquiry/visit/deal on a lead: what and when.
+         */
+        LeadRequestSummary: {
+            /**
+             * Applied At
+             * Format: date-time
+             */
+            applied_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "loan_application" | "financial_enquiry" | "property_enquiry" | "site_visit" | "property_deal";
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
         };
         /** LeadsReportResponse */
         LeadsReportResponse: {
@@ -7586,7 +8267,7 @@ export interface components {
          * LoanStatus
          * @enum {string}
          */
-        LoanStatus: "new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold";
+        LoanStatus: "new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold";
         /** LoanTxnCreate */
         LoanTxnCreate: {
             /** Amount */
@@ -7749,6 +8430,33 @@ export interface components {
             mobile: string;
             /** Password */
             password: string;
+        };
+        /**
+         * ManagerNoteRead
+         * @description A Sub Admin manager's note on a lead or task (CS-020), read-only here.
+         */
+        ManagerNoteRead: {
+            /** Author Name */
+            author_name: string;
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Follow Up At */
+            follow_up_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
+        /** ManagerTeamsResponse */
+        ManagerTeamsResponse: {
+            /** Teams */
+            teams: components["schemas"]["StaffTeamRead"][];
         };
         /** ManualChequeIssue */
         ManualChequeIssue: {
@@ -7991,7 +8699,7 @@ export interface components {
          * NotificationType
          * @enum {string}
          */
-        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed";
+        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "agent_lead_expiry_reminder" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed";
         /** OfferCreate */
         OfferCreate: {
             audience_rules?: components["schemas"]["AudienceRules"];
@@ -8211,6 +8919,17 @@ export interface components {
             /** Vpa */
             vpa?: string | null;
         };
+        /**
+         * PayoutGatewaySimulation
+         * @description Tester-chosen gateway outcome (development simulator only).
+         */
+        PayoutGatewaySimulation: {
+            /**
+             * Event
+             * @enum {string}
+             */
+            event: "payout.processed" | "payout.failed" | "payout.rejected" | "payout.reversed";
+        };
         /** PayoutLinkDivergenceRead */
         PayoutLinkDivergenceRead: {
             /**
@@ -8304,6 +9023,8 @@ export interface components {
             rejected_by_user_uuid: string | null;
             /** Reversal Transaction Id */
             reversal_transaction_id: string | null;
+            /** Simulate Events */
+            simulate_events?: ("payout.processed" | "payout.failed" | "payout.rejected" | "payout.reversed")[];
             status: components["schemas"]["PayoutStatus"];
             type: components["schemas"]["PayoutType"];
             /**
@@ -8486,7 +9207,7 @@ export interface components {
             /** About Project */
             about_project: string;
             /** Amenities Description */
-            amenities_description: string;
+            amenities_description?: string | null;
             /** Configurations */
             configurations: components["schemas"]["ResidentialConfiguration"][];
             /** @default not_applicable */
@@ -8512,8 +9233,15 @@ export interface components {
             sale_type?: components["schemas"]["SaleType"] | null;
             /** Total Units */
             total_units: number;
+            /** Uds Area From */
+            uds_area_from?: number | null;
+            /** Uds Area To */
+            uds_area_to?: number | null;
+            uds_area_unit?: components["schemas"]["SiteAreaUnit"] | null;
             /** Uds Sqft */
             uds_sqft?: number | null;
+            /** Unit Or Plot Area Max Sqft */
+            unit_or_plot_area_max_sqft?: number | null;
             /** Unit Or Plot Area Sqft */
             unit_or_plot_area_sqft: number;
         };
@@ -8597,7 +9325,7 @@ export interface components {
         /** PropertyMediaUploadRequest */
         PropertyMediaUploadRequest: {
             /** Content Type */
-            content_type: ("image/jpeg" | "image/png" | "image/webp") | "application/pdf";
+            content_type: ("image/jpeg" | "image/png" | "image/webp" | "image/avif") | "application/pdf";
             /**
              * Kind
              * @enum {string}
@@ -8640,6 +9368,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing: components["schemas"]["Furnishing"] | null;
             /**
              * Id
@@ -8885,6 +9615,10 @@ export interface components {
             subtitle: string | null;
             /** Title */
             title: string;
+            /** Video Url */
+            video_url?: string | null;
+            /** Youtube Video Id */
+            youtube_video_id?: string | null;
         };
         /** PublicContentBlockListResponse */
         PublicContentBlockListResponse: {
@@ -9033,6 +9767,8 @@ export interface components {
             /** City */
             city: string;
             construction_status: components["schemas"]["ConstructionStatus"] | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing: components["schemas"]["Furnishing"] | null;
             /**
              * Id
@@ -9098,6 +9834,8 @@ export interface components {
          */
         PublicPropertyRead: {
             category: components["schemas"]["PropertyCategory"];
+            /** Developer Name */
+            developer_name?: string | null;
             /**
              * Id
              * Format: uuid
@@ -9268,6 +10006,31 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /**
+         * ReferralConvertedItem
+         * @description What a referral converted on, for the referrer's own activity detail.
+         *
+         *     Deliberately limited to catalogue facts: the property listing's public
+         *     title/location/type, or the loan product label. Never a deal value, loan
+         *     amount, quoted price, status note, or anything about the referred person.
+         *     ``property_id`` is set only while the listing is still published, so the
+         *     web app can link to the public page without exposing withdrawn listings.
+         */
+        ReferralConvertedItem: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "property" | "loan";
+            /** Location */
+            location?: string | null;
+            /** Property Id */
+            property_id?: string | null;
+            /** Property Type */
+            property_type?: string | null;
+            /** Title */
+            title: string;
+        };
         /** ReferralListResponse */
         ReferralListResponse: {
             /** Referrals */
@@ -9351,6 +10114,7 @@ export interface components {
             conversion_status: string;
             /** Converted At */
             converted_at: string | null;
+            converted_item?: components["schemas"]["ReferralConvertedItem"] | null;
             /**
              * Created At
              * Format: date-time
@@ -9448,6 +10212,36 @@ export interface components {
             total_count: number;
         };
         /**
+         * ReportTelecallerOption
+         * @description One Telecaller for the Analytics "Telecaller" filter (ids and names only).
+         */
+        ReportTelecallerOption: {
+            /** Business Line */
+            business_line: string | null;
+            /** Name */
+            name: string;
+            /** Staff Code */
+            staff_code: string;
+            /**
+             * Staff Profile Uuid
+             * Format: uuid
+             */
+            staff_profile_uuid: string;
+        };
+        /** RequestRef */
+        RequestRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "loan_application" | "financial_enquiry" | "property_enquiry" | "site_visit" | "property_deal";
+        };
+        /**
          * ReraApplicability
          * @enum {string}
          */
@@ -9516,7 +10310,7 @@ export interface components {
          * ResidentialConfiguration
          * @enum {string}
          */
-        ResidentialConfiguration: "1_bhk" | "2_bhk" | "3_bhk" | "4_bhk" | "5_plus_bhk" | "studio";
+        ResidentialConfiguration: "1_bhk" | "2_bhk" | "2_5_bhk" | "3_bhk" | "3_5_bhk" | "4_bhk" | "5_plus_bhk" | "studio";
         /**
          * SaleType
          * @description New-vs-resale, meaningful only for a sale listing.
@@ -9528,6 +10322,20 @@ export interface components {
          * @enum {string}
          */
         SaleType: "new_sale" | "resale";
+        /**
+         * SavedPayoutDestinationRead
+         * @description Decrypted destination for prefilling one payout (audited read).
+         */
+        SavedPayoutDestinationRead: {
+            bank?: components["schemas"]["AgentBankAccount"] | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Upi Id */
+            upi_id?: string | null;
+        };
         /** SetPasswordRequest */
         SetPasswordRequest: {
             /** Confirm Password */
@@ -9663,6 +10471,38 @@ export interface components {
             /** Entries */
             entries: components["schemas"]["StaffAccessEntry"][];
         };
+        /** StaffAnalyticsResponse */
+        StaffAnalyticsResponse: {
+            /** Breakdowns */
+            breakdowns: components["schemas"]["AnalyticsBreakdown"][];
+            /**
+             * Bucket
+             * @default day
+             * @enum {string}
+             */
+            bucket: "day" | "week";
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            funnel?: components["schemas"]["AnalyticsFunnel"] | null;
+            /** Kpis */
+            kpis: components["schemas"]["AnalyticsKpi"][];
+            /** Range Days */
+            range_days: number;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "telecaller" | "employee" | "agent" | "sub_admin";
+            trend: components["schemas"]["AnalyticsTrend"];
+        };
         /** StaffCreateRequest */
         StaffCreateRequest: {
             /** Business Line */
@@ -9754,6 +10594,83 @@ export interface components {
             /** Role */
             role: string;
         };
+        /** StaffTeamCreate */
+        StaffTeamCreate: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /**
+             * Manager Staff Profile Uuid
+             * Format: uuid
+             */
+            manager_staff_profile_uuid: string;
+            /**
+             * Member Role
+             * @enum {string}
+             */
+            member_role: "telecaller" | "employee";
+            /** Name */
+            name: string;
+        };
+        /** StaffTeamListResponse */
+        StaffTeamListResponse: {
+            /** Can Edit */
+            can_edit: boolean;
+            /** Teams */
+            teams: components["schemas"]["StaffTeamRead"][];
+        };
+        /** StaffTeamRead */
+        StaffTeamRead: {
+            /** Archived At */
+            archived_at: string | null;
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            manager: components["schemas"]["TeamPersonRead"];
+            /**
+             * Member Role
+             * @enum {string}
+             */
+            member_role: "telecaller" | "employee";
+            /** Members */
+            members: components["schemas"]["TeamMemberRead"][];
+            /** Name */
+            name: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * StaffTeamUpdate
+         * @description Rename, hand to another manager, or archive. Archiving is final.
+         */
+        StaffTeamUpdate: {
+            /**
+             * Archive
+             * @default false
+             */
+            archive: boolean;
+            /** Manager Staff Profile Uuid */
+            manager_staff_profile_uuid?: string | null;
+            /** Name */
+            name?: string | null;
+        };
         /** SubAdminHomeResponse */
         SubAdminHomeResponse: {
             /** Content Drafts Count */
@@ -9792,6 +10709,8 @@ export interface components {
             /** City */
             city: string;
             construction_status?: components["schemas"]["ConstructionStatus"] | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing?: components["schemas"]["Furnishing"] | null;
             /** @default sale */
             listing_intent: components["schemas"]["ListingIntent"];
@@ -9839,7 +10758,7 @@ export interface components {
         /** SubmissionMediaInput */
         SubmissionMediaInput: {
             /** Content Type */
-            content_type: ("image/jpeg" | "image/png" | "image/webp") | "application/pdf";
+            content_type: ("image/jpeg" | "image/png" | "image/webp" | "image/avif") | "application/pdf";
             /**
              * Kind
              * @enum {string}
@@ -9905,6 +10824,8 @@ export interface components {
             };
             /** Details Version */
             details_version: number | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing: components["schemas"]["Furnishing"] | null;
             /**
              * Id
@@ -9998,6 +10919,8 @@ export interface components {
             /** City */
             city: string;
             construction_status?: components["schemas"]["ConstructionStatus"] | null;
+            /** Developer Name */
+            developer_name?: string | null;
             furnishing?: components["schemas"]["Furnishing"] | null;
             /** @default sale */
             listing_intent: components["schemas"]["ListingIntent"];
@@ -10300,6 +11223,179 @@ export interface components {
          * @enum {string}
          */
         TaskType: "document_collection" | "property_visit" | "background_check";
+        /** TeamAssignee */
+        TeamAssignee: {
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
+            /**
+             * Staff Profile Uuid
+             * Format: uuid
+             */
+            staff_profile_uuid: string;
+        };
+        /**
+         * TeamEligibleResponse
+         * @description Pickers: Sub Admins free to manage a team in this line, and active staff
+         *     of the member role who are not yet in a team in this line.
+         */
+        TeamEligibleResponse: {
+            /** Managers */
+            managers: components["schemas"]["TeamPersonRead"][];
+            /** Members */
+            members: components["schemas"]["TeamPersonRead"][];
+        };
+        /** TeamLastCall */
+        TeamLastCall: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Disposition */
+            disposition: string;
+            /** Follow Up At */
+            follow_up_at: string | null;
+            /** Interest Level */
+            interest_level: string | null;
+        };
+        /** TeamLeadDetailResponse */
+        TeamLeadDetailResponse: {
+            /** Activities */
+            activities: components["schemas"]["LeadActivityRead"][];
+            assigned_to: components["schemas"]["TeamMemberRead"];
+            lead: components["schemas"]["TeamLeadRow"];
+            /** Notes */
+            notes?: components["schemas"]["ManagerNoteRead"][];
+        };
+        /** TeamLeadRow */
+        TeamLeadRow: {
+            assigned_to?: components["schemas"]["TeamAssignee"] | null;
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Hidden Fields */
+            hidden_fields?: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            last_call: components["schemas"]["TeamLastCall"] | null;
+            /** Mobile */
+            mobile: string;
+            /** Name */
+            name: string | null;
+            /** Requests */
+            requests: components["schemas"]["LeadRequestSummary"][];
+            signals?: components["schemas"]["TeamLeadSignals"];
+            /** Status */
+            status: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * TeamLeadSignals
+         * @description What the Telecaller / Employee lists filter on, for the same filters.
+         */
+        TeamLeadSignals: {
+            /** Last Disposition */
+            last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+            /** Last Interest Level */
+            last_interest_level?: ("hot" | "warm" | "cold") | null;
+            /** Loan Statuses */
+            loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold")[];
+            referrer?: components["schemas"]["LeadReferrerRead"] | null;
+        };
+        /** TeamLeadStatusUpdate */
+        TeamLeadStatusUpdate: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "working" | "converted" | "closed";
+        };
+        /** TeamMemberRead */
+        TeamMemberRead: {
+            /**
+             * Added At
+             * Format: date-time
+             */
+            added_at: string;
+            /** Business Line */
+            business_line: string | null;
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
+            /** Staff Code */
+            staff_code: string;
+            /**
+             * Staff Profile Uuid
+             * Format: uuid
+             */
+            staff_profile_uuid: string;
+            /** Status */
+            status: string;
+        };
+        /** TeamMemberSummary */
+        TeamMemberSummary: {
+            /** Kpis */
+            kpis: components["schemas"]["AnalyticsKpi"][];
+            member: components["schemas"]["TeamMemberRead"];
+        };
+        /** TeamMemberWorkResponse */
+        TeamMemberWorkResponse: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "leads" | "tasks";
+            /** Leads */
+            leads: components["schemas"]["TeamLeadRow"][];
+            member: components["schemas"]["TeamMemberRead"];
+            /** Tasks */
+            tasks: components["schemas"]["TeamTaskRow"][];
+        };
+        /** TeamNoteCreate */
+        TeamNoteCreate: {
+            /** Body */
+            body: string;
+            /** Follow Up At */
+            follow_up_at?: string | null;
+        };
+        /** TeamOverviewResponse */
+        TeamOverviewResponse: {
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            /** Members */
+            members: components["schemas"]["TeamMemberSummary"][];
+            /** Range Days */
+            range_days: number;
+            report?: components["schemas"]["StaffAnalyticsResponse"] | null;
+            team: components["schemas"]["StaffTeamRead"];
+            /** Totals */
+            totals: components["schemas"]["AnalyticsKpi"][];
+        };
         /**
          * TeamPerformanceSummary
          * @description Per-business-line performance summary.
@@ -10326,6 +11422,176 @@ export interface components {
             /** Loans Total */
             loans_total: number;
         };
+        /** TeamPersonRead */
+        TeamPersonRead: {
+            /** Business Line */
+            business_line: string | null;
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
+            /** Staff Code */
+            staff_code: string;
+            /**
+             * Staff Profile Uuid
+             * Format: uuid
+             */
+            staff_profile_uuid: string;
+            /** Status */
+            status: string;
+        };
+        /** TeamReassignRequest */
+        TeamReassignRequest: {
+            /**
+             * To Staff Profile Uuid
+             * Format: uuid
+             */
+            to_staff_profile_uuid: string;
+        };
+        /** TeamReassignResponse */
+        TeamReassignResponse: {
+            /**
+             * Assigned Staff Profile Uuid
+             * Format: uuid
+             */
+            assigned_staff_profile_uuid: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
+        };
+        /** TeamTaskDetailResponse */
+        TeamTaskDetailResponse: {
+            assigned_to: components["schemas"]["TeamMemberRead"];
+            /** Notes */
+            notes?: components["schemas"]["ManagerNoteRead"][];
+            task: components["schemas"]["TeamTaskRow"];
+        };
+        /** TeamTaskRow */
+        TeamTaskRow: {
+            assigned_to?: components["schemas"]["TeamAssignee"] | null;
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Due At */
+            due_at: string | null;
+            /** Hidden Fields */
+            hidden_fields?: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lead Mobile */
+            lead_mobile?: string | null;
+            /** Lead Name */
+            lead_name: string | null;
+            /**
+             * Lead Uuid
+             * Format: uuid
+             */
+            lead_uuid: string;
+            /** Notes */
+            notes: string | null;
+            signals?: components["schemas"]["TeamLeadSignals"];
+            /** Status */
+            status: string;
+            /** Task Type */
+            task_type: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * TeamTaskUpdate
+         * @description Change the due date, or cancel with a reason; one at a time.
+         */
+        TeamTaskUpdate: {
+            /** Cancel Reason */
+            cancel_reason?: string | null;
+            /** Due At */
+            due_at?: string | null;
+        };
+        /**
+         * TeamWorkResponse
+         * @description Every member's work in one list, for the team-wide filters.
+         */
+        TeamWorkResponse: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "leads" | "tasks";
+            /** Leads */
+            leads: components["schemas"]["TeamLeadRow"][];
+            /** Tasks */
+            tasks: components["schemas"]["TeamTaskRow"][];
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+        };
+        /** TeamWorkUpdateResponse */
+        TeamWorkUpdateResponse: {
+            /** Due At */
+            due_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
+        };
+        /**
+         * TelecallerClientHistoryResponse
+         * @description Every journey of this client on this line that is assigned to the
+         *     caller, newest first. Calls are the caller's own (lead_activities_rls).
+         */
+        TelecallerClientHistoryResponse: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** Leads */
+            leads: components["schemas"]["ClientHistoryLead"][];
+        };
+        /**
+         * TelecallerFinancialEnquiryRead
+         * @description A credit-card or insurance request (outside the loan pipeline).
+         */
+        TelecallerFinancialEnquiryRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Product Category */
+            product_category: string;
+            /** Product Name */
+            product_name: string;
+            /** Status */
+            status: string;
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+        };
         /** TelecallerFollowUpItem */
         TelecallerFollowUpItem: {
             /**
@@ -10333,6 +11599,7 @@ export interface components {
              * Format: date-time
              */
             follow_up_at: string;
+            latest_request?: components["schemas"]["LeadRequestSummary"] | null;
             /**
              * Lead Uuid
              * Format: uuid
@@ -10367,17 +11634,32 @@ export interface components {
              */
             created_at: string;
             /**
+             * Financial Enquiries
+             * @default []
+             */
+            financial_enquiries: components["schemas"]["TelecallerFinancialEnquiryRead"][];
+            /**
              * Id
              * Format: uuid
              */
             id: string;
             /** Last Disposition */
             last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+            /** Last Interest Level */
+            last_interest_level?: ("hot" | "warm" | "cold") | null;
+            latest_request?: components["schemas"]["LeadRequestSummary"] | null;
             /**
              * Loan Applications
              * @default []
              */
             loan_applications: components["schemas"]["TelecallerLoanApplicationRead"][];
+            /** Loan Statuses */
+            loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold")[];
+            /**
+             * Manager Notes
+             * @default []
+             */
+            manager_notes: components["schemas"]["ManagerNoteRead"][];
             /** Mobile */
             mobile: string;
             /** Name */
@@ -10389,10 +11671,21 @@ export interface components {
              * @default []
              */
             property_deals: components["schemas"]["TelecallerPropertyDealRead"][];
+            /**
+             * Property Enquiries
+             * @default []
+             */
+            property_enquiries: components["schemas"]["TelecallerPropertyEnquiryRead"][];
+            referrer?: components["schemas"]["LeadReferrerRead"] | null;
             /** Requirement */
             requirement?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Site Visits
+             * @default []
+             */
+            site_visits: components["schemas"]["TelecallerSiteVisitRead"][];
             /**
              * Status
              * @enum {string}
@@ -10428,12 +11721,18 @@ export interface components {
             id: string;
             /** Last Disposition */
             last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+            /** Last Interest Level */
+            last_interest_level?: ("hot" | "warm" | "cold") | null;
+            latest_request?: components["schemas"]["LeadRequestSummary"] | null;
+            /** Loan Statuses */
+            loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold")[];
             /** Mobile */
             mobile: string;
             /** Name */
             name?: string | null;
             /** Next Follow Up At */
             next_follow_up_at?: string | null;
+            referrer?: components["schemas"]["LeadReferrerRead"] | null;
             /** Requirement */
             requirement?: {
                 [key: string]: unknown;
@@ -10489,13 +11788,18 @@ export interface components {
             loan_type_id: string;
             /** Loan Type Name */
             loan_type_name: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
             /** Processing Fee */
             processing_fee?: string | null;
             /**
              * Status
              * @enum {string}
              */
-            status: "new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "sanctioned" | "disbursed" | "closed" | "rejected" | "on_hold";
+            status: "new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold";
             /** Status Reason */
             status_reason?: string | null;
             /** Txns */
@@ -10512,6 +11816,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
             /** Price Quoted */
             price_quoted?: string | null;
             /** Property Location */
@@ -10527,6 +11836,61 @@ export interface components {
             status: "new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold";
             /** Status Reason */
             status_reason?: string | null;
+        };
+        /** TelecallerPropertyEnquiryRead */
+        TelecallerPropertyEnquiryRead: {
+            /** City */
+            city: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Locality */
+            locality: string;
+            /** Message */
+            message: string | null;
+            /** Property Ref */
+            property_ref: string;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+        };
+        /** TelecallerSiteVisitRead */
+        TelecallerSiteVisitRead: {
+            /** City */
+            city: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Locality */
+            locality: string;
+            /**
+             * Preferred Date
+             * Format: date
+             */
+            preferred_date: string;
+            /** Preferred Time Slot */
+            preferred_time_slot: string;
+            /** Property Ref */
+            property_ref: string;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
         };
         /** TransactionListResponse */
         TransactionListResponse: {
@@ -10564,6 +11928,25 @@ export interface components {
          * @enum {string}
          */
         TransactionType: "cashback" | "referral_bonus" | "commission";
+        /** TrendPoint */
+        TrendPoint: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Values */
+            values: {
+                [key: string]: number;
+            };
+        };
+        /** TrendSeries */
+        TrendSeries: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+        };
         /** UnreadCountResponse */
         UnreadCountResponse: {
             /** Count */
@@ -11854,7 +13237,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LeadDetailsRead"];
+                    "application/json": components["schemas"]["AdminLeadDetailsRead"];
                 };
             };
             /** @description Validation Error */
@@ -12772,6 +14155,15 @@ export interface operations {
                 sort_dir?: "asc" | "desc";
                 limit?: number;
                 offset?: number;
+                deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
+                property_city?: string | null;
+                property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -12807,6 +14199,15 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
+                deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
+                property_city?: string | null;
+                property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -12842,6 +14243,15 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
+                deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
+                property_city?: string | null;
+                property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -12881,6 +14291,13 @@ export interface operations {
                 sort_dir?: "asc" | "desc";
                 limit?: number;
                 offset?: number;
+                lead_status?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -12916,6 +14333,13 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
+                lead_status?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -12951,6 +14375,13 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
+                lead_status?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -12990,6 +14421,15 @@ export interface operations {
                 sort_dir?: "asc" | "desc";
                 limit?: number;
                 offset?: number;
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                loan_type_id?: string | null;
+                bank_id?: string | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -13025,6 +14465,15 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                loan_type_id?: string | null;
+                bank_id?: string | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -13060,6 +14509,15 @@ export interface operations {
                 bucket?: "week" | "month";
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                loan_type_id?: string | null;
+                bank_id?: string | null;
+                telecaller_profile_uuid?: string[] | null;
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Latest call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Latest call interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
             };
             header?: never;
             path?: never;
@@ -13074,6 +14532,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_report_telecallers_api_v1_admin_reports_telecallers_get: {
+        parameters: {
+            query?: {
+                business_line?: ("loans" | "real_estate") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportTelecallerOption"][];
                 };
             };
             /** @description Validation Error */
@@ -13259,6 +14748,201 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskFeedbackMediaRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_teams_api_v1_admin_teams_get: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffTeamListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_team_api_v1_admin_teams_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffTeamCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffTeamRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_eligible_api_v1_admin_teams_eligible_get: {
+        parameters: {
+            query: {
+                business_line: "loans" | "real_estate";
+                member_role: "telecaller" | "employee";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamEligibleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_team_api_v1_admin_teams__team_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffTeamUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffTeamRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_member_api_v1_admin_teams__team_id__members__staff_profile_uuid__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                staff_profile_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffTeamRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_member_api_v1_admin_teams__team_id__members__staff_profile_uuid__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                staff_profile_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffTeamRead"];
                 };
             };
             /** @description Validation Error */
@@ -13909,6 +15593,108 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    resubmit_lead_api_v1_agent_leads__lead_id__resubmit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentLeadRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_payout_details_api_v1_agent_payout_details_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentPayoutDetailsRead"];
+                };
+            };
+        };
+    };
+    put_payout_details_api_v1_agent_payout_details_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentPayoutDetailsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentPayoutDetailsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_payout_details_api_v1_agent_payout_details_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -14968,7 +16754,7 @@ export interface operations {
         parameters: {
             query?: {
                 active_only?: boolean;
-                usage_type?: ("homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign") | null;
+                usage_type?: ("homepage_banner" | "section_banner" | "sponsor" | "dashboard_banner" | "dashboard_offer" | "campaign" | "banner_video") | null;
                 business_line?: ("loans" | "real_estate" | "both") | null;
             };
             header?: never;
@@ -16464,6 +18250,522 @@ export interface operations {
             };
         };
     };
+    get_my_teams_api_v1_manager_teams_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagerTeamsResponse"];
+                };
+            };
+        };
+    };
+    get_lead_detail_api_v1_manager_teams__team_id__leads__lead_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamLeadDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_lead_api_v1_manager_teams__team_id__leads__lead_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamLeadStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamWorkUpdateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_lead_note_api_v1_manager_teams__team_id__leads__lead_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamNoteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagerNoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_reassign_lead_api_v1_manager_teams__team_id__leads__lead_id__reassign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamReassignRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamReassignResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_member_analytics_api_v1_manager_teams__team_id__members__member_id__analytics_get: {
+        parameters: {
+            query?: {
+                /** @description Legacy period in days (7, 30 or 90). */
+                days?: number;
+                /** @description First IST day of the period, inclusive. */
+                date_from?: string | null;
+                /** @description Last IST day of the period, inclusive. */
+                date_to?: string | null;
+                /** @description Telecaller teams: call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Telecaller teams: interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Telecaller teams: leads with a loan application in this status. */
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Telecaller teams: leads from this referral source. */
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Employee teams: task type. */
+                task_type?: ("document_collection" | "property_visit" | "background_check") | null;
+                /** @description Only these members (repeatable); all when omitted. */
+                member?: string[] | null;
+            };
+            header?: never;
+            path: {
+                team_id: string;
+                member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffAnalyticsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_member_work_api_v1_manager_teams__team_id__members__member_id__work_get: {
+        parameters: {
+            query?: {
+                scope?: string;
+            };
+            header?: never;
+            path: {
+                team_id: string;
+                member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamMemberWorkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_overview_api_v1_manager_teams__team_id__overview_get: {
+        parameters: {
+            query?: {
+                /** @description Legacy period in days (7, 30 or 90). */
+                days?: number;
+                /** @description First IST day of the period, inclusive. */
+                date_from?: string | null;
+                /** @description Last IST day of the period, inclusive. */
+                date_to?: string | null;
+                /** @description Telecaller teams: call outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Telecaller teams: interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Telecaller teams: leads with a loan application in this status. */
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Telecaller teams: leads from this referral source. */
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Employee teams: task type. */
+                task_type?: ("document_collection" | "property_visit" | "background_check") | null;
+                /** @description Only these members (repeatable); all when omitted. */
+                member?: string[] | null;
+            };
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamOverviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_task_detail_api_v1_manager_teams__team_id__tasks__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamTaskDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_task_api_v1_manager_teams__team_id__tasks__task_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamTaskUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamWorkUpdateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_task_note_api_v1_manager_teams__team_id__tasks__task_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamNoteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagerNoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_reassign_task_api_v1_manager_teams__team_id__tasks__task_id__reassign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamReassignRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamReassignResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_team_work_api_v1_manager_teams__team_id__work_get: {
+        parameters: {
+            query?: {
+                scope?: string;
+            };
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamWorkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_analytics_api_v1_me_analytics_get: {
+        parameters: {
+            query?: {
+                /** @description Legacy period in days (7, 30 or 90). */
+                days?: number;
+                /** @description First IST day of the period, inclusive. */
+                date_from?: string | null;
+                /** @description Last IST day of the period, inclusive. */
+                date_to?: string | null;
+                /** @description Telecaller: calls with outcome. */
+                call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
+                /** @description Telecaller: calls with this interest level. */
+                interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Telecaller: leads with a loan application in this status. */
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Telecaller: leads from this referral source. */
+                lead_source?: ("direct" | "agent" | "client") | null;
+                /** @description Agent: leads in this status. */
+                lead_status?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
+                /** @description Employee: tasks of this type. */
+                task_type?: ("document_collection" | "property_visit" | "background_check") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffAnalyticsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     initiate_authenticated_api_v1_mobile_change_authenticated_initiate_post: {
         parameters: {
             query?: never;
@@ -17265,6 +19567,37 @@ export interface operations {
             };
         };
     };
+    get_agent_saved_destination_api_v1_payouts_agents__agent_profile_uuid__saved_destination_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_profile_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedPayoutDestinationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_payout_link_divergences_api_v1_payouts_link_divergences_get: {
         parameters: {
             query?: never;
@@ -17304,6 +19637,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PayoutRecipientListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_recipient_saved_destination_api_v1_payouts_recipients__user_uuid__saved_destination_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedPayoutDestinationRead"];
                 };
             };
             /** @description Validation Error */
@@ -17516,6 +19880,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PayoutReject"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    simulate_gateway_api_v1_payouts__payout_id__simulate_gateway_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payout_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayoutGatewaySimulation"];
             };
         };
         responses: {
@@ -19038,7 +21437,7 @@ export interface operations {
     list_leads_api_v1_telecaller_leads_get: {
         parameters: {
             query?: {
-                status_filter?: string | null;
+                status_filter?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
             };
             header?: never;
             path?: never;
@@ -19154,6 +21553,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LeadActivityRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    client_history_api_v1_telecaller_leads__lead_id__client_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelecallerClientHistoryResponse"];
                 };
             };
             /** @description Validation Error */

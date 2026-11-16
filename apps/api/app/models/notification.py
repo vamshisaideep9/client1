@@ -30,6 +30,7 @@ class NotificationType(enum.StrEnum):
     LEAD_ASSIGNED = "lead_assigned"
     LEAD_RELEASED = "lead_released"
     AGENT_LEAD_EXPIRED = "agent_lead_expired"
+    AGENT_LEAD_EXPIRY_REMINDER = "agent_lead_expiry_reminder"
     TASK_ASSIGNED = "task_assigned"
     LOAN_STATUS_UPDATED = "loan_status_updated"
     PROPERTY_DEAL_STATUS_UPDATED = "property_deal_status_updated"
