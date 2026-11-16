@@ -67,8 +67,11 @@ export function filtersForRole(
   filters: StaffAnalyticsFilterValues = {},
 ): FilterSpec[] {
   if (role === "sub_admin") {
-    const banners = filters.content_type !== "offers";
-    const offers = filters.content_type !== "banners";
+    // A banner-only filter (placement, banner type) rules out offers and the
+    // offer-only one (discount type) rules out banners, as in the API, so a
+    // combination that could never match is never offered.
+    const banners = filters.content_type !== "offers" && !filters.discount_type;
+    const offers = filters.content_type !== "banners" && !filters.placement && !filters.banner_type;
     return [
       { key: "content_type", label: "Content type", all: "Banners and offers", options: CONTENT_TYPE_LABEL },
       { key: "content_status", label: "Review status", all: "Any review status", options: CONTENT_STATUS_LABEL },
@@ -115,7 +118,10 @@ export function withFilter(
   value: string | undefined,
 ): StaffAnalyticsFilterValues {
   const next = { ...filters, [key]: value } as StaffAnalyticsFilterValues;
-  const offered = new Set(filtersForRole(role, line, next).map((spec) => spec.key));
+  // The content type and the filter just picked decide what stays, so the
+  // newest choice wins over an older one it rules out.
+  const deciding = { content_type: next.content_type, [key]: value } as StaffAnalyticsFilterValues;
+  const offered = new Set(filtersForRole(role, line, deciding).map((spec) => spec.key));
   return Object.fromEntries(
     Object.entries(next).filter(([name, current]) => current && offered.has(name as FilterKey)),
   ) as StaffAnalyticsFilterValues;

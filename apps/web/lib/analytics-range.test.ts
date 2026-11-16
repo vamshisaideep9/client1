@@ -107,6 +107,18 @@ describe("analytics request parameters", () => {
       filtersForRole("sub_admin", "loans", { content_type }).map((spec) => spec.key);
     expect(keys("offers")).toEqual(["content_type", "content_status", "discount_type"]);
     expect(keys("banners")).toEqual(["content_type", "content_status", "placement", "banner_type"]);
+    // A banner-only filter hides the offer-only one, and the reverse.
+    expect(filtersForRole("sub_admin", "loans", { placement: "homepage" }).map((spec) => spec.key)).toEqual([
+      "content_type",
+      "content_status",
+      "placement",
+      "banner_type",
+    ]);
+    expect(filtersForRole("sub_admin", "loans", { discount_type: "flat" }).map((spec) => spec.key)).toEqual([
+      "content_type",
+      "content_status",
+      "discount_type",
+    ]);
     // Other roles ignore the current filters.
     expect(filtersForRole("employee", "loans", { content_type: "offers" }).map((spec) => spec.key)).toEqual([
       "task_type",
@@ -125,6 +137,13 @@ describe("analytics request parameters", () => {
       content_status: "live",
       placement: "homepage",
       banner_type: "action",
+    });
+    // Picking a banner-only filter drops the offer-only one, and the reverse.
+    expect(withFilter("sub_admin", "loans", { discount_type: "flat" }, "placement", "homepage")).toEqual({
+      placement: "homepage",
+    });
+    expect(withFilter("sub_admin", "loans", { banner_type: "action" }, "discount_type", "flat")).toEqual({
+      discount_type: "flat",
     });
     // Back to both kinds keeps what is left, and "all" removes the key.
     expect(withFilter("sub_admin", "loans", { content_type: "offers", discount_type: "flat" }, "content_type", undefined)).toEqual({

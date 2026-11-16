@@ -225,6 +225,8 @@ test("sub admin analytics filters content by status, placement and type", async 
       return `${last?.get("content_status")}|${last?.get("placement")}`;
     })
     .toBe("live|homepage");
+  // A placement means banners only, so the offer-only filter goes away.
+  await expect(page.getByRole("combobox", { name: "Discount type" })).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("sub-admin-analytics-filters.png") });
 
   // Offers have no placement or banner type: picking Offers hides and clears them.

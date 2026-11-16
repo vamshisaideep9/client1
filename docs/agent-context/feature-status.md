@@ -37,8 +37,10 @@ contract change beyond slice A.
 - `/dashboard/insights` for a Sub Admin: Content type, Review status,
   Placement, Banner type and Discount type selects (`filtersForRole` takes
   the current filters; `withFilter` drops filters the new combination no
-  longer offers, so picking Offers clears Placement and Banner type). The
-  Team analytics bar is unchanged in behaviour.
+  longer offers, so picking Offers clears Placement and Banner type). A
+  banner-only filter also hides Discount type and the reverse, matching the
+  API, so no combination that always returns zeroes is offered; the newest
+  choice wins. The Team analytics bar is unchanged in behaviour.
 - `/dashboard/analytics`: `ReportCharts` between the tiles and the exports.
   `useReportChart` reads the same filters independently of table sort and
   page (`limit=500`, `offset=0`, `sort_by=bucket_start`, `sort_dir=asc`;
@@ -59,6 +61,10 @@ contract change beyond slice A.
   `limit=500&sort_by=bucket_start`; Agents chart request; 360 px no
   horizontal scroll). `pnpm build` passes in a `node:22-alpine` container
   (113/113 pages; the host build hits the known Windows symlink `EPERM`).
+- Follow-up (same day): banner-only and offer-only filters exclude each other
+  in the UI. Re-verified: lint, typecheck, Vitest 915 passed and the two
+  Playwright specs 8 passed on the final candidate; the container build above
+  ran on the commit before this UI-only follow-up.
 
 **In review — Property listings advanced filters and demo Sub Admin
 listings** (2026-11-16; PR [#359](https://github.com/brollysolutions/client1/pull/359),
