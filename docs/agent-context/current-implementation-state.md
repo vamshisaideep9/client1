@@ -648,6 +648,39 @@ Evidence:
 - [`apps/api/alembic/versions/b2d4f6a8c0e1_team_manager_edits_and_filters.py`](../../apps/api/alembic/versions/b2d4f6a8c0e1_team_manager_edits_and_filters.py)
 - [`apps/api/app/tests/test_team_manager_edits_api.py`](../../apps/api/app/tests/test_team_manager_edits_api.py)
 
+### CS-021 — One filter system, Settings by role, and staff self-service limits
+
+**Decision (2026-11-16, user-approved stakeholder feedback, batch A):**
+
+- *Filters.* Every dashboard filter uses one control: unfiltered it reads the
+  field name and its first option is "All"; secondary filters sit behind
+  "More filters (n)" with removable chips; paired dates read From / To. Lead
+  source options are Direct lead / Referred by agent / Referred by client.
+  Lead lists open New > Assigned > Working > Converted > Closed > Released,
+  then next follow-up; closed and rejected loan applications sink.
+- *Settings by role.* Client and Agent keep an editable profile and Delete
+  account; Admin keeps an editable profile and Delete account. Telecaller,
+  Employee and Sub Admin (including team managers) see their profile
+  read-only, with no Save, no personalization card and no Danger zone; name
+  and contact changes go through an Admin (the request flow is a later
+  batch). `PATCH /auth/me` and `DELETE /auth/me` return 403 for those roles.
+- *Personalization (amends CS-008).* The consent preference and the coarse
+  location endpoints are Client-only. Agents lose the consent switch, so
+  banners targeted by Agent activity signals no longer match any Agent;
+  role-only Agent banners still do. An additive migration erases every
+  stored preference that does not belong to a Client. Placements keep serving
+  Client, Agent, Employee and Telecaller.
+- *Account deletion (amends SRS 5.1 self-deletion for staff).* Self-service
+  deletion stays for Client, Agent and Admin (Main Admin protection
+  unchanged). Telecaller, Employee and Sub Admin accounts are removed through
+  the existing Admin account-removal action.
+- *Analytics.* My analytics opens on the previous calendar month and labels
+  its KPI tiles with the period; the Agent "Commission by status" breakdown
+  leaves out cancelled commissions (they stay in commission history).
+
+CS-005's profile rules are unchanged for Clients. Evidence is listed in
+`feature-status.md` under Batch A.
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in

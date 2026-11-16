@@ -5,7 +5,10 @@ import { filterTasksByLeadSignals } from "@/features/employee/employee-task-filt
 
 import {
   DEFAULT_LEAD_SIGNAL_FILTERS,
+  REFERRER_SOURCE_LABEL,
   formatReferrer,
+  leadSignalActiveCount,
+  leadSignalChips,
   leadSignalFiltersActive,
   matchesLeadSignals,
   type LeadSignalFilters,
@@ -81,7 +84,7 @@ describe("matchesLeadSignals", () => {
 describe("formatReferrer", () => {
   it("labels the referrer kind with its ID", () => {
     expect(formatReferrer(agentLead.referrer)).toBe("Agent · AG-1234ABCD");
-    expect(formatReferrer(clientLead.referrer)).toBe("Client referral · 7K2M9QXA");
+    expect(formatReferrer(clientLead.referrer)).toBe("Client · 7K2M9QXA");
     expect(formatReferrer(null)).toBeNull();
     expect(formatReferrer(undefined)).toBeNull();
   });
@@ -115,5 +118,33 @@ describe("filterTasksByLeadSignals", () => {
     expect(filterTasksByLeadSignals(tasks, only({ source: "client" })).map((t) => t.id)).toEqual(["1"]);
     expect(filterTasksByLeadSignals(tasks, only({ loanStatus: "sanctioned", interest: "warm" })).map((t) => t.id)).toEqual(["2"]);
     expect(filterTasksByLeadSignals(tasks, only({ callStatus: "not_called" })).map((t) => t.id)).toEqual(["3"]);
+  });
+});
+
+describe("lead signal naming, counts and chips", () => {
+  it("offers the three lead sources by their agreed names", () => {
+    expect(Object.values(REFERRER_SOURCE_LABEL)).toEqual(["Direct lead", "Referred by agent", "Referred by client"]);
+  });
+
+  it("counts active filters, ignoring loan status where it does not apply", () => {
+    const filters = only({ loanStatus: "sanctioned", interest: "hot", referredBy: "  " });
+    expect(leadSignalActiveCount(filters)).toBe(2);
+    expect(leadSignalActiveCount(filters, false)).toBe(1);
+    expect(leadSignalActiveCount(DEFAULT_LEAD_SIGNAL_FILTERS)).toBe(0);
+  });
+
+  it("chips name the field and clear only their own filter", () => {
+    const patches: Partial<LeadSignalFilters>[] = [];
+    const chips = leadSignalChips(
+      only({ callStatus: "not_called", source: "direct", referredBy: "AG-1" }),
+      (patch) => patches.push(patch),
+    );
+    expect(chips.map((chip) => chip.label)).toEqual([
+      "Call status: Not called yet",
+      "Lead source: Direct lead",
+      "Referred by ID: AG-1",
+    ]);
+    chips[1].onRemove();
+    expect(patches).toEqual([{ source: "all" }]);
   });
 });

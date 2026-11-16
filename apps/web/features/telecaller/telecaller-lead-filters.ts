@@ -11,7 +11,9 @@ import {
   matchesLeadSignals,
   type LeadSignalFilters,
 } from "./lead-signal-filters";
-import { DISPOSITION_LABEL, STATUS_LABEL } from "./telecaller-lead-status";
+import { compareLeadsByDefaultOrder, leadStatusRank } from "@/features/dashboard/list-order";
+
+import { DISPOSITION_LABEL } from "./telecaller-lead-status";
 
 export type TelecallerLeadFilters = LeadSignalFilters & {
   search: string;
@@ -64,14 +66,16 @@ export function filterTelecallerLeads(
   });
 }
 
-export type TelecallerLeadSortKey = "name" | "status" | "last_disposition" | "next_follow_up_at";
+/** "default" is the landing order; the others are the sortable columns. */
+export type TelecallerLeadSortKey = "default" | "name" | "status" | "last_disposition" | "next_follow_up_at";
 export type TelecallerLeadSort = { key: TelecallerLeadSortKey; dir: "asc" | "desc" };
 
-// Default landing sort: whichever lead is due soonest floats to the top, and
-// leads never called sink to the bottom — the most actionable order for a
-// telecaller starting their day.
+// Default landing order: open work first (New > Assigned > Working >
+// Converted > Closed > Released), then whichever lead is due soonest, with
+// leads that have no follow-up last, so closed leads never fill page 1.
+// Choosing a column sort replaces it.
 export const DEFAULT_TELECALLER_LEAD_SORT: TelecallerLeadSort = {
-  key: "next_follow_up_at",
+  key: "default",
   dir: "asc",
 };
 
@@ -102,8 +106,16 @@ export function sortTelecallerLeads(
     switch (sort.key) {
       case "name":
         return dirMul * compareStrings(a.name ?? "", b.name ?? "");
+      case "default":
+        return compareLeadsByDefaultOrder(
+          { status: a.status, followUpAt: a.next_follow_up_at },
+          { status: b.status, followUpAt: b.next_follow_up_at },
+        );
       case "status":
-        return dirMul * compareStrings(STATUS_LABEL[a.status] ?? a.status, STATUS_LABEL[b.status] ?? b.status);
+        return (
+          dirMul * (leadStatusRank(a.status) - leadStatusRank(b.status)) ||
+          compareFollowUp(a.next_follow_up_at, b.next_follow_up_at, 1)
+        );
       case "last_disposition":
         return (
           dirMul *

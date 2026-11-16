@@ -113,17 +113,18 @@ test("a sub admin narrows listings by status, sale or rent and price, and the UR
 
   await choose(page, "Filter by status", "Pending review");
   await expect(rows(page)).toHaveCount(3);
-  await choose(page, "Sale or rent", "For rent / lease");
-  await expect(rows(page)).toHaveCount(2);
 
   const more = page.getByRole("button", { name: /More filters/ });
   await expect(more).toHaveAttribute("aria-expanded", "false");
   await more.click();
   await expect(more).toHaveAttribute("aria-expanded", "true");
+  await choose(page, "Filter by sale or rent", "For rent / lease");
+  await expect(rows(page)).toHaveCount(2);
   await page.getByRole("textbox", { name: "Maximum price (₹)" }).fill("50000");
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText("Hanamkonda House for Rent");
-  await expect(more).toContainText("1");
+  await page.keyboard.press("Escape");
+  await expect(more).toContainText("(2)");
   await expect(page).toHaveURL(/status=pending/);
   await expect(page).toHaveURL(/intent=rent/);
   await expect(page).toHaveURL(/price_max=50000/);
@@ -131,9 +132,14 @@ test("a sub admin narrows listings by status, sale or rent and price, and the UR
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(rows(page)).toHaveCount(1);
   await expect(page.getByText("Showing 1 of 6 listings.", { exact: false })).toBeVisible();
-  await expect(page.getByRole("button", { name: /More filters/ })).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("textbox", { name: "Maximum price (₹)" })).toHaveValue("50000");
+  // Hidden filters stay visible as removable chips.
+  const chips = page.getByRole("list", { name: "Active filters" });
+  await expect(chips).toContainText("Sale or rent: For rent / lease");
+  await expect(chips).toContainText("Price (₹): up to 50000");
   await expect(page.getByRole("combobox", { name: "Filter by status" })).toContainText("Pending review");
+  await page.getByRole("button", { name: "Remove filter Price (₹): up to 50000" }).click();
+  await expect(rows(page)).toHaveCount(2);
+  await expect(page).not.toHaveURL(/price_max/);
 });
 
 test("status cards apply their filter and Clear filters resets everything", async ({ page, baseURL }) => {

@@ -1,19 +1,25 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  formatIsoDay,
   formatRangeLabel,
   isoToLocalDate,
   localDateToIso,
   matchingPreset,
   MAX_RANGE_DAYS,
   rangeError,
+  rangeMonthTags,
   rangeSpanDays,
   resolveRangePreset,
   shiftIsoDate,
 } from "@/lib/analytics-range";
 import { buildReportParams } from "@/lib/reports";
 import { buildMyAnalyticsQuery } from "@/lib/staff-analytics-api";
-import { filtersForRole, withFilter } from "@/features/analytics/staff-analytics-filter-bar";
+import {
+  filtersForRole,
+  moreFilterSpecGroups,
+  withFilter,
+} from "@/features/analytics/staff-analytics-filter-bar";
 
 // 2026-11-15 20:00 UTC is 2026-11-16 01:30 IST: the IST date must win.
 const LATE_EVENING_UTC = new Date("2026-11-15T20:00:00Z");
@@ -152,5 +158,37 @@ describe("analytics request parameters", () => {
     expect(
       withFilter("telecaller", "loans", { call_status: "busy", interest: "hot" }, "interest", undefined),
     ).toEqual({ call_status: "busy" });
+  });
+
+  it("keeps the role's status filter in the first row and groups the rest behind More filters", () => {
+    expect(
+      moreFilterSpecGroups(filtersForRole("telecaller", "loans")).map((group) => [
+        group.title,
+        group.specs.map((spec) => spec.label),
+      ]),
+    ).toEqual([
+      ["Lead", ["Call status", "Lead interest", "Lead source"]],
+      ["Loan", ["Loan status"]],
+    ]);
+    expect(filtersForRole("agent", "loans").every((spec) => spec.group === null)).toBe(true);
+    expect(filtersForRole("sub_admin", "loans").find((spec) => spec.key === "content_status")?.group).toBeNull();
+  });
+});
+
+describe("date range picker labels", () => {
+  it("formats one chosen day, or nothing yet", () => {
+    expect(formatIsoDay("2026-10-01")).toBe("1 Oct 2026");
+    expect(formatIsoDay("")).toBe("");
+  });
+
+  it("tags the months holding the From and To days", () => {
+    const from = new Date(2026, 9, 20);
+    const to = new Date(2026, 10, 5);
+    expect(rangeMonthTags(new Date(2026, 9, 1), from, to)).toEqual(["From"]);
+    expect(rangeMonthTags(new Date(2026, 10, 1), from, to)).toEqual(["To"]);
+    expect(rangeMonthTags(new Date(2026, 8, 1), from, to)).toEqual([]);
+    expect(rangeMonthTags(new Date(2026, 9, 1), from, new Date(2026, 9, 25))).toEqual(["From", "To"]);
+    // Half-picked: the start also stands in for the end, as when it is applied.
+    expect(rangeMonthTags(new Date(2026, 9, 1), from, undefined)).toEqual(["From", "To"]);
   });
 });

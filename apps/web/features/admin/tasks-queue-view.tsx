@@ -216,7 +216,7 @@ export function TasksQueueView() {
         searchPlaceholder="Lead, Telecaller, or Employee"
         statusOptions={STATUS_OPTIONS}
         kindOptions={TYPE_OPTIONS}
-        kindLabel="Task types"
+        kindLabel="Task type"
         lineOptions={LINE_OPTIONS}
         dateFromLabel="Due from"
         dateToLabel="Due to"

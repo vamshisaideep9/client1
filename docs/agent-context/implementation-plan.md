@@ -68,6 +68,36 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In progress — Batch A: one filter system, Settings by role, small fixes
+(CS-021)** (2026-11-16; user-approved stakeholder feedback, batch A of A–G;
+no requirement or completion-percentage change). Two stacked PRs, both
+opened against `main`:
+
+- *PR 1 — one filter system (web only)*, branch
+  `feat/unified-dashboard-filters` from `upstream/main` `5e8aaf7b`. New
+  `features/dashboard/filter-select.tsx` (`FilterSelect`: the unfiltered
+  trigger reads the field name, first option "All", accessible name "Filter
+  by <field>"; `DateRangeFields` with visible From / To), `more-filters.tsx`
+  ("More filters (n)": popover from 40rem, bottom sheet on phones, grouped
+  Lead / Loan / Product / Property / Content / Money; removable chips and
+  "Clear all"), `filter-options.ts` (naming, chip and count rules) and
+  `list-order.ts` (New > Assigned > Working > Converted > Closed > Released,
+  then next follow-up; closed/rejected loans sink). `FilterBar` and every
+  hand-rolled filter (Telecaller leads, Employee tasks and pickups, team work
+  and team analytics, My analytics, Admin report filters, pending review,
+  operational records and users, staff access, media library, my listings,
+  notifications) use them. Lead source options read Direct lead / Referred by
+  agent / Referred by client everywhere; the analytics calendar shows
+  From / To and tags the months "(From)" / "(To)". Default lead order
+  applies to Telecaller, Agent, team and Admin assigned leads; Admin and
+  Client loan lists sink closed/rejected. Evidence and the PR link follow on
+  the PR.
+- *PR 2 — Settings by role, API guards, small fixes*, branch
+  `feat/filters-settings-by-role` stacked on PR 1 (not yet opened).
+
+Next: ship PR 1, then PR 2. Recommended: Opus 5.5 / high (web; PR 2 adds a
+role guard and a data-clearing migration).
+
 **In review — Banner lifecycle fixes (web slice)** (2026-11-16; PR
 [#366](https://github.com/brollysolutions/client1/pull/366), mirror
 vamshisaideep9/client1#67; branch

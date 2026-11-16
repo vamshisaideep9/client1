@@ -1,20 +1,14 @@
 "use client";
 
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { DateRangePicker } from "@/features/analytics/date-range-picker";
-import { filtersForRole } from "@/features/analytics/staff-analytics-filter-bar";
+import { filtersForRole, roleFilterControls } from "@/features/analytics/staff-analytics-filter-bar";
+import { EMPTY_FILTERS, FilterBar } from "@/features/dashboard/filter-bar";
 import type { DateRangeValue } from "@/lib/analytics-range";
 import { personName, type StaffTeam, type TeamAnalyticsFilters } from "@/lib/staff-teams-api";
 
@@ -27,16 +21,22 @@ function MemberPicker({
   selected: string[];
   onChange: (members: string[]) => void;
 }) {
+  // Unfiltered, the trigger names the field like every other filter.
   const label =
     selected.length === 0
-      ? "All members"
+      ? "Members"
       : selected.length === 1
         ? personName(team.members.find((m) => m.staff_profile_uuid === selected[0]) ?? team.members[0])
         : `${selected.length} members`;
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className="w-full justify-between" aria-label="Members">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full justify-between font-normal"
+          aria-label={selected.length === 0 ? "Members" : `Members: ${label}`}
+        >
           <span className="truncate">{label}</span>
           <ChevronDown aria-hidden="true" />
         </Button>
@@ -93,54 +93,41 @@ export function TeamAnalyticsFilterBar({
   withMembers: boolean;
 }) {
   const specs = filtersForRole(team.member_role, team.business_line);
+  const controls = roleFilterControls(specs, filters, (key, value) =>
+    onFiltersChange({ ...filters, [key]: value }),
+  );
   const active = Object.entries(filters).some(([, value]) =>
     Array.isArray(value) ? value.length > 0 : Boolean(value),
   );
   return (
-    <div
-      className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4"
-      role="group"
-      aria-label="Analytics filters"
-    >
-      <DateRangePicker value={range} onChange={onRangeChange} className="sm:w-full" />
-      {withMembers ? (
-        <MemberPicker
-          team={team}
-          selected={filters.members ?? []}
-          onChange={(members) => onFiltersChange({ ...filters, members })}
-        />
-      ) : null}
-      {specs.map((spec) => (
-        <Select
-          key={spec.key}
-          value={filters[spec.key] ?? "all"}
-          onValueChange={(value) =>
-            onFiltersChange({ ...filters, [spec.key]: value === "all" ? undefined : value })
-          }
-        >
-          <SelectTrigger className="w-full" aria-label={spec.label}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{spec.all}</SelectItem>
-            {Object.entries(spec.options).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ))}
-      {active ? (
-        <Button
-          type="button"
-          variant="ghost"
-          className="justify-self-start"
-          onClick={() => onFiltersChange({})}
-        >
-          <X aria-hidden="true" /> Clear filters
-        </Button>
-      ) : null}
+    <div role="group" aria-label="Analytics filters">
+      <FilterBar
+        value={EMPTY_FILTERS}
+        onChange={() => undefined}
+        searchLabel="Search analytics"
+        showSearch={false}
+        showStatus={false}
+        showLine={false}
+        showDates={false}
+        extra={
+          <>
+            <DateRangePicker value={range} onChange={onRangeChange} className="sm:w-full" />
+            {withMembers ? (
+              <MemberPicker
+                team={team}
+                selected={filters.members ?? []}
+                onChange={(members) => onFiltersChange({ ...filters, members })}
+              />
+            ) : null}
+            {controls.inline}
+          </>
+        }
+        more={controls.more}
+        moreActiveCount={controls.activeCount}
+        chips={controls.chips}
+        hasExternalFilters={active}
+        onClear={() => onFiltersChange({})}
+      />
     </div>
   );
 }

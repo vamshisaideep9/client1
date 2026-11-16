@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRightLeft, FileText, Pencil, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRightLeft, FileText, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -28,9 +28,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DASHBOARD_ICONS } from "@/features/dashboard/dashboard-icons";
 import { FetchError } from "@/features/dashboard/fetch-error";
+import { sortLeadsByDefaultOrder } from "@/features/dashboard/list-order";
 import { ListEmptyState, ListLoadingState } from "@/features/dashboard/list-states";
-import { LeadSignalFilterFields } from "@/features/telecaller/lead-signal-filter-fields";
-import { formatReferrer } from "@/features/telecaller/lead-signal-filters";
+import { EMPTY_FILTERS, FilterBar } from "@/features/dashboard/filter-bar";
+import { optionsFromLabels } from "@/features/dashboard/filter-options";
+import { FilterSelect } from "@/features/dashboard/filter-select";
+import { leadSignalFilterGroups } from "@/features/telecaller/lead-signal-filter-fields";
+import {
+  DEFAULT_LEAD_SIGNAL_FILTERS,
+  formatReferrer,
+  leadSignalActiveCount,
+  leadSignalChips,
+} from "@/features/telecaller/lead-signal-filters";
 import { CallLogList } from "@/features/telecaller/telecaller-call-log";
 import {
   DISPOSITION_LABEL,
@@ -57,7 +66,6 @@ import {
   type TeamTaskRow,
   type TeamWork,
 } from "@/lib/staff-teams-api";
-import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 import { ManagerNotesList } from "./manager-notes-panel";
@@ -683,7 +691,15 @@ function TaskRows({
 
 // --- Filter bar -------------------------------------------------------------------
 
-function FilterBar({
+const TASK_TYPE_OPTIONS = optionsFromLabels(TASK_TYPE_LABEL);
+
+/**
+ * The shared dashboard filter bar for team work: Open/All and Overdue toggles
+ * above; search, status, task type and team member in the first row; the lead
+ * signals (call status, lead interest, lead source, referred by, loan status)
+ * behind "More filters (n)", shown as chips while active.
+ */
+function TeamWorkFilterBar({
   team,
   kind,
   filters,
@@ -700,133 +716,72 @@ function FilterBar({
   onScope: (scope: "open" | "all") => void;
   showAssignee: boolean;
 }) {
-  const statuses =
+  const statusOptions = (
     kind === "leads"
       ? LEAD_STATUS_FILTERS.filter((value) => scope === "all" || OPEN_LEAD.has(value))
-      : Object.keys(TASK_STATUS_LABEL).filter((value) => scope === "all" || OPEN_TASK.has(value));
-  const active = filters !== DEFAULT_TEAM_WORK_FILTERS && teamWorkFiltersActive(filters);
-  // Phones: the eight selects fold behind one button so the list stays in view.
-  const wide = useMediaQuery("(min-width: 64rem)");
-  const [expanded, setExpanded] = React.useState(false);
-  const activeCount = (
-    [
-      filters.assignee !== "all",
-      filters.status !== "all",
-      filters.taskType !== "all",
-      filters.loanStatus !== "all",
-      filters.callStatus !== "all",
-      filters.interest !== "all",
-      filters.source !== "all",
-      filters.referredBy.trim() !== "",
-    ] as boolean[]
-  ).filter(Boolean).length;
+      : Object.keys(TASK_STATUS_LABEL).filter((value) => scope === "all" || OPEN_TASK.has(value))
+  ).map((value) => ({ value, label: (kind === "leads" ? STATUS_LABEL : TASK_STATUS_LABEL)[value] ?? value }));
+  const showLoanStatus = team.business_line === "loans";
+  const memberOptions = team.members.map((member) => ({
+    value: member.staff_profile_uuid,
+    label: personName(member),
+  }));
   return (
-    <div className="space-y-3" role="group" aria-label="Work filters">
-      <div className="flex flex-wrap items-center gap-2">
-        <ToggleGroup
-          type="single"
-          value={scope}
-          onValueChange={(value) => value && onScope(value as "open" | "all")}
-          aria-label="Which work"
-        >
-          <ToggleGroupItem value="open" className="px-3">
-            Open
-          </ToggleGroupItem>
-          <ToggleGroupItem value="all" className="px-3">
-            All
-          </ToggleGroupItem>
-        </ToggleGroup>
-        <ToggleGroup
-          type="single"
-          value={filters.overdueOnly ? "overdue" : ""}
-          onValueChange={(value) => onChange({ overdueOnly: value === "overdue" })}
-          aria-label="Overdue"
-        >
-          <ToggleGroupItem value="overdue" className="px-3">
-            {kind === "leads" ? "Follow-up overdue" : "Overdue"}
-          </ToggleGroupItem>
-        </ToggleGroup>
-        {active ? (
-          <Button type="button" variant="ghost" size="sm" onClick={() => onChange(DEFAULT_TEAM_WORK_FILTERS)}>
-            <X /> Clear filters
-          </Button>
-        ) : null}
-      </div>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Input
-          type="search"
-          value={filters.search}
-          onChange={(event) => onChange({ search: event.target.value })}
-          placeholder="Search client name or mobile"
-          aria-label="Search client name or mobile"
-          className="sm:max-w-sm"
-        />
-        {wide ? null : (
-          <Button
-            type="button"
-            variant="outline"
-            aria-expanded={expanded}
-            aria-controls="team-work-filter-fields"
-            onClick={() => setExpanded((value) => !value)}
-          >
-            <SlidersHorizontal /> Filters{activeCount > 0 ? ` (${activeCount})` : ""}
-          </Button>
-        )}
-      </div>
-      <div
-        id="team-work-filter-fields"
-        hidden={!wide && !expanded}
-        className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4"
-      >
-        {showAssignee ? (
-          <Select value={filters.assignee} onValueChange={(value) => onChange({ assignee: value })}>
-            <SelectTrigger className="w-full" aria-label="Filter by team member">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All members</SelectItem>
-              {team.members.map((member) => (
-                <SelectItem key={member.staff_profile_uuid} value={member.staff_profile_uuid}>
-                  {personName(member)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : null}
-        <Select value={filters.status} onValueChange={(value) => onChange({ status: value })}>
-          <SelectTrigger className="w-full" aria-label="Filter by status">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            {statuses.map((value) => (
-              <SelectItem key={value} value={value}>
-                {(kind === "leads" ? STATUS_LABEL : TASK_STATUS_LABEL)[value] ?? value}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {kind === "tasks" ? (
-          <Select value={filters.taskType} onValueChange={(value) => onChange({ taskType: value })}>
-            <SelectTrigger className="w-full" aria-label="Filter by task type">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All task types</SelectItem>
-              {Object.entries(TASK_TYPE_LABEL).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : null}
-        <LeadSignalFilterFields
-          filters={filters}
-          onChange={onChange}
-          showLoanStatus={team.business_line === "loans"}
-        />
-      </div>
+    <div role="group" aria-label="Work filters">
+      <FilterBar
+        value={{ ...EMPTY_FILTERS, search: filters.search, status: filters.status, kind: filters.taskType }}
+        onChange={(next) => onChange({ search: next.search, status: next.status, taskType: next.kind })}
+        searchLabel="Search client name or mobile"
+        searchPlaceholder="Search client name or mobile"
+        statusOptions={statusOptions}
+        kindOptions={kind === "tasks" ? TASK_TYPE_OPTIONS : undefined}
+        kindLabel="Task type"
+        showLine={false}
+        showDates={false}
+        actions={
+          <>
+            <ToggleGroup
+              type="single"
+              value={scope}
+              onValueChange={(value) => value && onScope(value as "open" | "all")}
+              aria-label="Which work"
+            >
+              <ToggleGroupItem value="open" className="px-3">
+                Open
+              </ToggleGroupItem>
+              <ToggleGroupItem value="all" className="px-3">
+                All
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <ToggleGroup
+              type="single"
+              value={filters.overdueOnly ? "overdue" : ""}
+              onValueChange={(value) => onChange({ overdueOnly: value === "overdue" })}
+              aria-label="Overdue"
+            >
+              <ToggleGroupItem value="overdue" className="px-3">
+                {kind === "leads" ? "Follow-up overdue" : "Overdue"}
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </>
+        }
+        extra={
+          showAssignee ? (
+            <FilterSelect
+              label="Team member"
+              value={filters.assignee}
+              options={memberOptions}
+              onValueChange={(assignee) => onChange({ assignee })}
+            />
+          ) : null
+        }
+        more={leadSignalFilterGroups({ filters, onChange, showLoanStatus })}
+        moreActiveCount={leadSignalActiveCount(filters, showLoanStatus)}
+        onClearMore={() => onChange(DEFAULT_LEAD_SIGNAL_FILTERS)}
+        chips={leadSignalChips(filters, onChange, showLoanStatus)}
+        onClear={() => onChange(DEFAULT_TEAM_WORK_FILTERS)}
+        hasExternalFilters={teamWorkFiltersActive(filters)}
+      />
     </div>
   );
 }
@@ -852,7 +807,14 @@ export function TeamWorkList({ team, memberId }: { team: StaffTeam; memberId?: s
 
   const data = state.status === "ready" ? state.data : null;
   const kind: Kind = team.member_role === "telecaller" ? "leads" : "tasks";
-  const leads = data ? filterTeamLeads(data.leads, filters, now) : [];
+  // Open work first (New > Assigned > Working > Converted > Closed > Released), then the soonest follow-up.
+  const leads = data
+    ? sortLeadsByDefaultOrder(
+        filterTeamLeads(data.leads, filters, now),
+        (row) => row.status,
+        (row) => row.last_call?.follow_up_at,
+      )
+    : [];
   const tasks = data ? filterTeamTasks(data.tasks, filters, now) : [];
   const total = data ? (kind === "leads" ? data.leads.length : data.tasks.length) : 0;
   const shown = kind === "leads" ? leads.length : tasks.length;
@@ -879,7 +841,7 @@ export function TeamWorkList({ team, memberId }: { team: StaffTeam; memberId?: s
 
   return (
     <div className="space-y-4">
-      <FilterBar
+      <TeamWorkFilterBar
         team={team}
         kind={kind}
         filters={filters}

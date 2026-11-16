@@ -12,15 +12,9 @@ import { Input } from "@/components/ui/input";
 import { LoadingRegion } from "@/components/ui/loading-region";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DashboardHeader, DashboardPage } from "@/features/dashboard/dashboard-ui";
+import { FilterSelect } from "@/features/dashboard/filter-select";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import {
   ARTWORK_SURFACE_ORDER,
@@ -172,16 +166,15 @@ export function MediaLibraryView() {
               placeholder="Search title, alt text, source, or tag"
             />
           </Label>
-          <Select value={line} onValueChange={setLine}>
-            <SelectTrigger aria-label="Filter by business line">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All business lines</SelectItem>
-              <SelectItem value="loans">Loans</SelectItem>
-              <SelectItem value="real_estate">Real Estate</SelectItem>
-            </SelectContent>
-          </Select>
+          <FilterSelect
+            label="Business line"
+            value={line}
+            options={[
+              { value: "loans", label: "Loans" },
+              { value: "real_estate", label: "Real Estate" },
+            ]}
+            onValueChange={setLine}
+          />
           <Button
             type="button"
             variant={showArchived ? "outline" : "ghost"}

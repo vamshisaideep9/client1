@@ -4,23 +4,20 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, ClipboardList, X } from "lucide-react";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardHeader, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
+import { EMPTY_FILTERS, FilterBar } from "@/features/dashboard/filter-bar";
+import { optionsFromLabels } from "@/features/dashboard/filter-options";
 import { ListPagination, useListPagination } from "@/features/dashboard/list-pagination";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { useLine } from "@/features/dashboard/line-provider";
-import { LeadSignalFilterFields } from "@/features/telecaller/lead-signal-filter-fields";
+import { leadSignalFilterGroups } from "@/features/telecaller/lead-signal-filter-fields";
 import {
   DEFAULT_LEAD_SIGNAL_FILTERS,
   formatReferrer,
+  leadSignalActiveCount,
+  leadSignalChips,
   leadSignalFiltersActive,
   type LeadSignalFilters,
 } from "@/features/telecaller/lead-signal-filters";
@@ -52,6 +49,9 @@ const TYPE_LABEL: Record<string, string> = {
   background_check: "Background check",
 };
 
+const STATUS_OPTIONS = optionsFromLabels(STATUS_LABEL);
+const TYPE_OPTIONS = optionsFromLabels(TYPE_LABEL);
+
 function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "-";
   const d = new Date(iso);
@@ -76,6 +76,7 @@ export function EmployeeTasksView() {
   const { page, pageItems, setPage } = useListPagination(filtered);
   const signalFiltersOn = leadSignalFiltersActive(signalFilters);
   const showLoanStatus = activeLine === "loans";
+  const patchSignals = (patch: Partial<LeadSignalFilters>) => setSignalFilters((f) => ({ ...f, ...patch }));
 
   React.useEffect(() => {
     setPage(0);
@@ -93,40 +94,29 @@ export function EmployeeTasksView() {
         description="Field and background-check tasks assigned to you."
       />
 
-      <div className="grid gap-2 rounded-xl border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full" aria-label="Filter by status">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            {Object.entries(STATUS_LABEL).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full" aria-label="Filter by task type">
-            <SelectValue placeholder="Task type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All task types</SelectItem>
-            {Object.entries(TYPE_LABEL).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <LeadSignalFilterFields
-          filters={signalFilters}
-          showLoanStatus={showLoanStatus}
-          onChange={(patch) => setSignalFilters((f) => ({ ...f, ...patch }))}
-        />
-      </div>
+      <FilterBar
+        value={{ ...EMPTY_FILTERS, status: statusFilter, kind: typeFilter }}
+        onChange={(next) => {
+          setStatusFilter(next.status);
+          setTypeFilter(next.kind);
+        }}
+        searchLabel="Search tasks"
+        showSearch={false}
+        showLine={false}
+        showDates={false}
+        statusOptions={STATUS_OPTIONS}
+        kindOptions={TYPE_OPTIONS}
+        kindLabel="Task type"
+        more={leadSignalFilterGroups({ filters: signalFilters, showLoanStatus, onChange: patchSignals })}
+        moreActiveCount={leadSignalActiveCount(signalFilters, showLoanStatus)}
+        onClearMore={() => setSignalFilters(DEFAULT_LEAD_SIGNAL_FILTERS)}
+        chips={leadSignalChips(signalFilters, patchSignals, showLoanStatus)}
+        onClear={() => {
+          setStatusFilter("all");
+          setTypeFilter("all");
+          setSignalFilters(DEFAULT_LEAD_SIGNAL_FILTERS);
+        }}
+      />
 
       {loading ? (
         <Skeleton className="h-40 rounded-xl" />

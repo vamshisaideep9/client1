@@ -1,10 +1,18 @@
 "use client";
 
-import { X } from "lucide-react";
+import type * as React from "react";
 
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EMPTY_FILTERS, FilterBar } from "@/features/dashboard/filter-bar";
+import {
+  compactChips,
+  optionsFromLabels,
+  selectFilterChip,
+  type ActiveFilterChip,
+} from "@/features/dashboard/filter-options";
+import { FilterSelect } from "@/features/dashboard/filter-select";
 import { useLine } from "@/features/dashboard/line-provider";
+import type { MoreFilterGroup } from "@/features/dashboard/more-filters";
 import {
   INTEREST_LABEL,
   LOAN_STATUS_LABEL,
@@ -54,7 +62,16 @@ const DISCOUNT_TYPE_LABEL: Record<string, string> = {
 };
 
 type FilterKey = keyof StaffAnalyticsFilterValues;
-type FilterSpec = { key: FilterKey; label: string; all: string; options: Record<string, string> };
+/**
+ * One role filter. `group` is the "More filters" section it belongs to, or
+ * null for a filter that stays in the first row (the role's status filter).
+ */
+export type FilterSpec = {
+  key: FilterKey;
+  label: string;
+  options: Record<string, string>;
+  group: string | null;
+};
 
 /**
  * Which filters each role's analytics understand (mirrors the API). The
@@ -73,36 +90,76 @@ export function filtersForRole(
     const banners = filters.content_type !== "offers" && !filters.discount_type;
     const offers = filters.content_type !== "banners" && !filters.placement && !filters.banner_type;
     return [
-      { key: "content_type", label: "Content type", all: "Banners and offers", options: CONTENT_TYPE_LABEL },
-      { key: "content_status", label: "Review status", all: "Any review status", options: CONTENT_STATUS_LABEL },
+      { key: "content_type", label: "Content type", options: CONTENT_TYPE_LABEL, group: "Content" },
+      { key: "content_status", label: "Review status", options: CONTENT_STATUS_LABEL, group: null },
       ...(banners
         ? [
-            { key: "placement" as const, label: "Placement", all: "Any placement", options: PLACEMENT_LABEL },
-            { key: "banner_type" as const, label: "Banner type", all: "Any banner type", options: BANNER_TYPE_LABEL },
+            { key: "placement" as const, label: "Placement", options: PLACEMENT_LABEL, group: "Content" },
+            { key: "banner_type" as const, label: "Banner type", options: BANNER_TYPE_LABEL, group: "Content" },
           ]
         : []),
       ...(offers
-        ? [{ key: "discount_type" as const, label: "Discount type", all: "Any discount", options: DISCOUNT_TYPE_LABEL }]
+        ? [{ key: "discount_type" as const, label: "Discount type", options: DISCOUNT_TYPE_LABEL, group: "Money" }]
         : []),
     ];
   }
   if (role === "telecaller") {
     return [
-      { key: "call_status", label: "Call status", all: "All call outcomes", options: DISPOSITION_LABEL },
-      { key: "interest", label: "Interest", all: "Any interest", options: INTEREST_LABEL },
+      { key: "call_status", label: "Call status", options: DISPOSITION_LABEL, group: "Lead" },
+      { key: "interest", label: "Lead interest", options: INTEREST_LABEL, group: "Lead" },
       ...(line === "loans"
-        ? [{ key: "loan_status" as const, label: "Loan status", all: "All loan statuses", options: LOAN_STATUS_LABEL }]
+        ? [{ key: "loan_status" as const, label: "Loan status", options: LOAN_STATUS_LABEL, group: "Loan" }]
         : []),
-      { key: "lead_source", label: "Lead source", all: "Any source", options: REFERRER_SOURCE_LABEL },
+      { key: "lead_source", label: "Lead source", options: REFERRER_SOURCE_LABEL, group: "Lead" },
     ];
   }
   if (role === "employee") {
-    return [{ key: "task_type", label: "Task type", all: "All task types", options: TASK_TYPE_LABEL }];
+    return [{ key: "task_type", label: "Task type", options: TASK_TYPE_LABEL, group: null }];
   }
   if (role === "agent") {
-    return [{ key: "lead_status", label: "Lead status", all: "All lead statuses", options: STATUS_LABEL }];
+    return [{ key: "lead_status", label: "Lead status", options: STATUS_LABEL, group: null }];
   }
   return [];
+}
+
+/** Groups the specs that belong behind "More filters", keeping their order. */
+export function moreFilterSpecGroups(specs: readonly FilterSpec[]): { title: string; specs: FilterSpec[] }[] {
+  const groups: { title: string; specs: FilterSpec[] }[] = [];
+  for (const spec of specs) {
+    if (!spec.group) continue;
+    const existing = groups.find((group) => group.title === spec.group);
+    if (existing) existing.specs.push(spec);
+    else groups.push({ title: spec.group, specs: [spec] });
+  }
+  return groups;
+}
+
+/** More-filter groups, active count and chips for a set of role filter specs. */
+export function roleFilterControls(
+  specs: readonly FilterSpec[],
+  values: Partial<Record<FilterKey, string | undefined>>,
+  setFilter: (key: FilterKey, value: string | undefined) => void,
+): { inline: React.ReactNode; more: MoreFilterGroup[]; activeCount: number; chips: ActiveFilterChip[] } {
+  const control = (spec: FilterSpec) => (
+    <FilterSelect
+      key={spec.key}
+      label={spec.label}
+      value={values[spec.key] ?? "all"}
+      options={optionsFromLabels(spec.options)}
+      onValueChange={(value) => setFilter(spec.key, value === "all" ? undefined : value)}
+    />
+  );
+  const hidden = specs.filter((spec) => spec.group);
+  return {
+    inline: specs.filter((spec) => !spec.group).map(control),
+    more: moreFilterSpecGroups(specs).map((group) => ({ title: group.title, content: group.specs.map(control) })),
+    activeCount: hidden.filter((spec) => Boolean(values[spec.key])).length,
+    chips: compactChips(
+      hidden.map((spec) =>
+        selectFilterChip(spec.key, spec.label, values[spec.key], spec.options, () => setFilter(spec.key, undefined)),
+      ),
+    ),
+  };
 }
 
 /**
@@ -145,56 +202,47 @@ export function StaffAnalyticsFilterBar({
 }) {
   const { activeLine, setActiveLine, lines, canSwitch } = useLine();
   const specs = filtersForRole(role, activeLine, filters);
+  const controls = roleFilterControls(specs, filters, (key, value) =>
+    onFiltersChange(withFilter(role, activeLine, filters, key, value)),
+  );
   const active = Object.values(filters).some(Boolean);
 
   return (
-    <div
-      role="group"
-      aria-label="Analytics filters"
-      className="grid gap-2 rounded-xl border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-4"
-    >
-      <DateRangePicker value={range} onChange={onRangeChange} className="sm:w-full" />
-      {canSwitch && lines.length > 1 ? (
-        <Select value={activeLine} onValueChange={(value) => setActiveLine(value as typeof activeLine)}>
-          <SelectTrigger className="w-full" aria-label="Business line">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {lines.map((line) => (
-              <SelectItem key={line} value={line}>
-                {LINE_LABEL[line] ?? line}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : null}
-      {specs.map((spec) => (
-        <Select
-          key={spec.key}
-          value={filters[spec.key] ?? "all"}
-          onValueChange={(value) =>
-            onFiltersChange(withFilter(role, activeLine, filters, spec.key, value === "all" ? undefined : value))
-          }
-        >
-          <SelectTrigger className="w-full" aria-label={spec.label}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{spec.all}</SelectItem>
-            {Object.entries(spec.options).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ))}
-      {active ? (
-        <Button type="button" variant="ghost" className="justify-self-start" onClick={() => onFiltersChange({})}>
-          <X className="h-4 w-4" aria-hidden="true" />
-          Clear filters
-        </Button>
-      ) : null}
+    <div role="group" aria-label="Analytics filters">
+      <FilterBar
+        value={EMPTY_FILTERS}
+        onChange={() => undefined}
+        searchLabel="Search analytics"
+        showSearch={false}
+        showStatus={false}
+        showLine={false}
+        showDates={false}
+        extra={
+          <>
+            <DateRangePicker value={range} onChange={onRangeChange} className="sm:w-full" />
+            {canSwitch && lines.length > 1 ? (
+              <Select value={activeLine} onValueChange={(value) => setActiveLine(value as typeof activeLine)}>
+                <SelectTrigger className="w-full" aria-label="Business line">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {lines.map((line) => (
+                    <SelectItem key={line} value={line}>
+                      {LINE_LABEL[line] ?? line}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+            {controls.inline}
+          </>
+        }
+        more={controls.more}
+        moreActiveCount={controls.activeCount}
+        chips={controls.chips}
+        hasExternalFilters={active}
+        onClear={() => onFiltersChange({})}
+      />
     </div>
   );
 }
