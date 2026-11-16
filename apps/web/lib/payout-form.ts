@@ -168,3 +168,37 @@ export function newIdempotencyKey(): string {
   if (c && "randomUUID" in c) return c.randomUUID().replace(/-/g, "");
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
 }
+
+export type SavedPayoutDestination = Schemas["SavedPayoutDestinationRead"];
+
+/**
+ * Destination fields to fill from an Agent's saved details. Keeps the rail the
+ * maker already chose when the Agent saved that rail; otherwise prefers UPI,
+ * then bank. Returns null when nothing usable was saved.
+ */
+export function savedDestinationToForm(
+  current: PayoutDestinationFormState,
+  saved: SavedPayoutDestination,
+): PayoutDestinationFormState | null {
+  const bank = saved.bank ?? null;
+  const upi = saved.upi_id ?? null;
+  const fillBank = (): PayoutDestinationFormState => ({
+    destinationType: "bank_account",
+    vpa: "",
+    ifsc: bank!.ifsc,
+    accountNumber: bank!.account_number,
+    accountName: bank!.account_holder_name,
+  });
+  const fillUpi = (): PayoutDestinationFormState => ({
+    destinationType: "vpa",
+    vpa: upi!,
+    ifsc: "",
+    accountNumber: "",
+    accountName: "",
+  });
+  if (current.destinationType === "bank_account" && bank) return fillBank();
+  if (current.destinationType === "vpa" && upi) return fillUpi();
+  if (upi) return fillUpi();
+  if (bank) return fillBank();
+  return null;
+}

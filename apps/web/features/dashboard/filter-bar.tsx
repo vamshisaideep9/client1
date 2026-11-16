@@ -85,6 +85,7 @@ export function FilterBar({
   note,
   actions,
   extra,
+  advanced,
   onClear,
   hasExternalFilters = false,
   className,
@@ -110,6 +111,8 @@ export function FilterBar({
   actions?: ReactNode;
   /** Surface-specific controls, rendered in the same grid as the built-ins. */
   extra?: ReactNode;
+  /** Secondary controls rendered below the grid, e.g. a "More filters" disclosure. */
+  advanced?: ReactNode;
   /** Override the default all-empty reset when a surface has a meaningful baseline. */
   onClear?: () => void;
   /** Include filters rendered through `extra` in Clear-button visibility. */
@@ -205,6 +208,8 @@ export function FilterBar({
         ) : null}
 
       </div>
+
+      {advanced}
 
       {note || (active && showClear) ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">

@@ -52,11 +52,14 @@ from app.core.config import settings
 from app.core.masking import mask_mobile
 from app.core.security import generate_referral_code
 from app.models.lead import Lead
+from app.models.loan import LoanApplication, LoanType
 from app.models.notification import NotificationType
 from app.models.profile import AgentProfile, ClientProfile, ProfileStatus, StaffProfile
+from app.models.property import Property
+from app.models.property_deal import PropertyDeal
 from app.models.referral import Referral, ReferralCode, ReferralStatus
 from app.models.referral_bonus_config import ReferralBonusConfig
-from app.schemas.referrals import MyReferralResponse, ReferralStats
+from app.schemas.referrals import MyReferralResponse, ReferralConvertedItem, ReferralStats
 from app.services.notifications import emit_notification
 
 logger = logging.getLogger(__name__)
@@ -509,6 +512,69 @@ async def list_referrals(db: AsyncSession) -> list[Referral]:
     # Trust RLS, same convention as _compute_stats / api/v1/transactions.py.
     result = await db.execute(select(Referral).order_by(Referral.created_at.desc()))
     return list(result.scalars().all())
+
+
+async def converted_items(rows: list[Referral]) -> dict[UUID, ReferralConvertedItem]:
+    """Resolve what each converted referral was for, keyed by referral id.
+
+    ``rows`` must be referrals the caller has ALREADY read through the
+    RLS-scoped session (list_referrals), so authorization is decided there.
+    The referrer has no RLS visibility into the referred person's deal or loan
+    application, so this narrow lookup uses the bypass session, constrained to
+    exactly the ``converted_ref_uuid`` values on those rows, and projects only
+    catalogue facts: the listing's title/location/type, or the loan product
+    label. No amount, price, status note or person data is read or returned.
+    """
+    deal_refs = {
+        r.converted_ref_uuid: r.id
+        for r in rows
+        if r.converted_ref_type == "property_deal" and r.converted_ref_uuid is not None
+    }
+    loan_refs = {
+        r.converted_ref_uuid: r.id
+        for r in rows
+        if r.converted_ref_type == "loan_application" and r.converted_ref_uuid is not None
+    }
+    items: dict[UUID, ReferralConvertedItem] = {}
+    if not deal_refs and not loan_refs:
+        return items
+    try:
+        async with db_session.AsyncSessionLocal() as session:
+            if deal_refs:
+                deal_rows = await session.execute(
+                    select(
+                        PropertyDeal.id,
+                        Property.id,
+                        Property.title,
+                        Property.location,
+                        Property.type,
+                        Property.active,
+                    )
+                    .join(Property, Property.id == PropertyDeal.property_id)
+                    .where(PropertyDeal.id.in_(list(deal_refs)))
+                )
+                for deal_id, property_id, title, location, property_type, active in deal_rows:
+                    items[deal_refs[deal_id]] = ReferralConvertedItem(
+                        kind="property",
+                        title=title,
+                        location=location,
+                        property_type=property_type,
+                        property_id=property_id if active else None,
+                    )
+            if loan_refs:
+                loan_rows = await session.execute(
+                    select(LoanApplication.id, LoanType.label)
+                    .join(LoanType, LoanType.id == LoanApplication.loan_type_id)
+                    .where(LoanApplication.id.in_(list(loan_refs)))
+                )
+                for application_id, label in loan_rows:
+                    items[loan_refs[application_id]] = ReferralConvertedItem(
+                        kind="loan", title=label
+                    )
+    except Exception:
+        # Detail is a convenience; the list itself must still render.
+        logger.warning("referrals.converted_items_failed", exc_info=True)
+    return items
 
 
 # ---------------------------------------------------------------------------
