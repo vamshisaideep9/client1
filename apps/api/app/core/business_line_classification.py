@@ -64,6 +64,10 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     "lead_assignment_cursors": ClassificationMode.OPERATIONAL,
     "employee_assignment_cursors": ClassificationMode.OPERATIONAL,
     "leads": ClassificationMode.OPERATIONAL,
+    # Rejected lead introductions / referral sign-ups (CS-024): the Agent's
+    # line on Agent attempts, NULL on referral attempts (the line is unknown
+    # at sign-up, as on a pending referral).
+    "lead_intake_attempts": ClassificationMode.OPTIONAL_AUDIT,
     "loan_applications": ClassificationMode.FIXED_LOANS,
     "loan_documents": ClassificationMode.FIXED_LOANS,
     "loan_txn_history": ClassificationMode.FIXED_LOANS,

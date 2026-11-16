@@ -35,6 +35,7 @@ from app.core.masking import mask_mobile
 from app.db.session import AsyncSessionLocal
 from app.models.audit_log import AuditAction
 from app.models.lead import Lead, LeadAssignmentCursor, LeadOrigin, LeadStatus
+from app.models.lead_intake_attempt import IntakeActorType
 from app.models.notification import NotificationType
 from app.models.profile import (
     AgentProfile,
@@ -45,7 +46,9 @@ from app.models.profile import (
 )
 from app.models.user import User
 from app.services.audit_log import record as record_audit
+from app.services.eligibility import EligibilityReason
 from app.services.lead_details import initial_ownership, owner, transfer_unclaimed_to_client
+from app.services.lead_intake_attempts import record_attempt as record_intake_attempt
 from app.services.notifications import emit_notification
 
 logger = logging.getLogger(__name__)
@@ -62,7 +65,16 @@ class LeadAssignmentNotice:
 
 
 class AgentLeadConflict(Exception):
-    """The mobile is registered, cross-line, expired, assigned, or owned elsewhere."""
+    """The mobile is registered, cross-line, expired, assigned, or owned elsewhere.
+
+    ``reason`` is the eligibility reason recorded for the Agent's "Not
+    accepted" list (CS-024). Every reason maps to the same 409 response, so
+    recording it reveals nothing the Agent is not already told.
+    """
+
+    def __init__(self, reason: EligibilityReason | None = None) -> None:
+        super().__init__(reason)
+        self.reason = reason
 
 
 class LeadNotFound(Exception):
@@ -411,6 +423,18 @@ async def capture_lead(
         return False
 
 
+async def _record_agent_attempt(
+    mobile: str, business_line: str, agent_profile_uuid: UUID, reason: EligibilityReason
+) -> None:
+    await record_intake_attempt(
+        actor_type=IntakeActorType.AGENT,
+        actor_uuid=agent_profile_uuid,
+        mobile=mobile,
+        business_line=business_line,
+        reason=reason,
+    )
+
+
 async def capture_agent_lead(
     *,
     mobile: str,
@@ -429,19 +453,28 @@ async def capture_agent_lead(
             await lock_lead_mobile(session, mobile)
             await _lock_assignment_line(session, business_line)
             if await session.scalar(select(User.id).where(User.mobile == mobile).limit(1)):
-                raise AgentLeadConflict
-            if await session.scalar(
-                select(Lead.id)
-                .where(
-                    Lead.mobile == mobile,
-                    or_(
-                        Lead.agent_expired_at.is_not(None),
-                        and_(Lead.expires_at.is_not(None), Lead.expires_at <= func.now()),
-                    ),
+                raise AgentLeadConflict(EligibilityReason.ALREADY_LINKED)
+            expired_owners = set(
+                (
+                    await session.scalars(
+                        select(Lead.origin_agent_profile_uuid).where(
+                            Lead.mobile == mobile,
+                            or_(
+                                Lead.agent_expired_at.is_not(None),
+                                and_(Lead.expires_at.is_not(None), Lead.expires_at <= func.now()),
+                            ),
+                        )
+                    )
+                ).all()
+            )
+            if expired_owners:
+                # Only a number this Agent introduced themselves reads as
+                # "your window ended"; anyone else's history stays a duplicate.
+                raise AgentLeadConflict(
+                    EligibilityReason.OWN_LEAD_WINDOW_ENDED
+                    if expired_owners == {agent_profile_uuid}
+                    else EligibilityReason.ALREADY_LINKED
                 )
-                .limit(1)
-            ):
-                raise AgentLeadConflict
 
             existing = list(
                 (
@@ -461,7 +494,7 @@ async def capture_agent_lead(
                 )
                 for row in existing
             ):
-                raise AgentLeadConflict
+                raise AgentLeadConflict(EligibilityReason.ALREADY_LINKED)
 
             lead = next(
                 (row for row in existing if row.business_line == business_line),
@@ -532,7 +565,7 @@ async def capture_agent_lead(
                     lead.assigned_telecaller_profile_uuid is not None
                     or lead.status not in _ASSIGNABLE_STATUSES
                 ):
-                    raise AgentLeadConflict
+                    raise AgentLeadConflict(EligibilityReason.ALREADY_LINKED)
                 lead.business_line = business_line
                 lead.origin = LeadOrigin.AGENT
                 lead.origin_agent_profile_uuid = agent_profile_uuid
@@ -570,10 +603,17 @@ async def capture_agent_lead(
 
             notice = await auto_assign_locked_lead(session, lead)
             await session.commit()
-    except AgentLeadConflict:
+    except AgentLeadConflict as exc:
+        # The capture session has already rolled back; the attempt is
+        # committed on its own session so it outlives the rejection.
+        if exc.reason is not None:
+            await _record_agent_attempt(mobile, business_line, agent_profile_uuid, exc.reason)
         raise
     except IntegrityError as exc:
-        raise AgentLeadConflict from exc
+        await _record_agent_attempt(
+            mobile, business_line, agent_profile_uuid, EligibilityReason.ALREADY_LINKED
+        )
+        raise AgentLeadConflict(EligibilityReason.ALREADY_LINKED) from exc
 
     if notice is not None:
         await notify_lead_assignments([notice])

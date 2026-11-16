@@ -10,6 +10,8 @@ from uuid import UUID
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from app.models.lead_activity import CallDisposition, InterestLevel
+from app.schemas.eligibility import EligibilityReasonLiteral, RowEligibilityLiteral
+from app.schemas.telecaller import LeadFacets
 
 LeadStatusLiteral = Literal[
     "new", "assigned", "working", "converted", "closed", "released", "expired"
@@ -107,6 +109,15 @@ class AgentLeadRead(BaseModel):
     expired_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    # CS-024: an accepted lead is eligible until its attribution window
+    # expires. Reason codes and labels come from services/eligibility.py.
+    eligibility: RowEligibilityLiteral
+    eligibility_reason: EligibilityReasonLiteral | None = None
+    eligibility_reason_label: str | None = None
+    # List only: product and property facts of the lead's applications and
+    # deals for the list filters (ids, labels and enums; no amounts), read
+    # through the confined lead_list_signals reader's Agent branch.
+    facets: LeadFacets | None = None
 
 
 # ---------------------------------------------------------------------------

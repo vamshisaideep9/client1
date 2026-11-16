@@ -1668,6 +1668,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agent/lead-attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Lead Attempts
+         * @description Introductions that were not accepted, newest first (recorded from CS-024 on).
+         */
+        get: operations["list_lead_attempts_api_v1_agent_lead_attempts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/lead-eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lead Eligibility
+         * @description Eligible / Not eligible / Duplicate counts for the Agent's leads (CS-024).
+         */
+        get: operations["lead_eligibility_api_v1_agent_lead_eligibility_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/agent/leads": {
         parameters: {
             query?: never;
@@ -4410,6 +4450,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/referrals/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Referral Attempts
+         * @description Sign-ups with the caller's code that were not accepted, newest first.
+         *
+         *     Recorded from the CS-024 release onward. RLS returns only the caller's
+         *     own rows; the query also names the caller as the referrer.
+         */
+        get: operations["list_referral_attempts_api_v1_referrals_attempts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/referrals/eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Referral Eligibility Summary
+         * @description Eligible / Not eligible / Duplicate counts for the caller's referrals (CS-024).
+         */
+        get: operations["referral_eligibility_summary_api_v1_referrals_eligibility_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/referrals/me": {
         parameters: {
             query?: never;
@@ -6490,10 +6573,20 @@ export interface components {
             created_at: string;
             /** Editable */
             editable: boolean;
+            /**
+             * Eligibility
+             * @enum {string}
+             */
+            eligibility: "eligible" | "not_eligible";
+            /** Eligibility Reason */
+            eligibility_reason?: ("already_linked" | "own_lead_window_ended" | "already_referred" | "self_referral" | "attribution_expired" | "referrer_not_client" | "below_min_conversion" | "cap_reached" | "voided") | null;
+            /** Eligibility Reason Label */
+            eligibility_reason_label?: string | null;
             /** Expired At */
             expired_at: string | null;
             /** Expires At */
             expires_at: string | null;
+            facets?: components["schemas"]["LeadFacets"] | null;
             /**
              * Id
              * Format: uuid
@@ -7947,6 +8040,25 @@ export interface components {
             verified: boolean;
         };
         /**
+         * EligibilitySummary
+         * @description Counts for the three eligibility outcomes.
+         *
+         *     ``eligible`` counts accepted rows. ``not_eligible`` counts accepted rows a
+         *     rule excludes plus attempts turned away by a rule. ``duplicate`` counts
+         *     attempts turned away as duplicates. ``not_accepted`` is every recorded
+         *     attempt (the "Not accepted" list), recorded from release onward.
+         */
+        EligibilitySummary: {
+            /** Duplicate */
+            duplicate: number;
+            /** Eligible */
+            eligible: number;
+            /** Not Accepted */
+            not_accepted: number;
+            /** Not Eligible */
+            not_eligible: number;
+        };
+        /**
          * EligibleDeal
          * @description One row in the Admin entry queue: a disbursed loan or a closed_won
          *     property deal with an origin agent and no live commission yet.
@@ -8452,6 +8564,42 @@ export interface components {
             property_use: components["schemas"]["PropertyUse"];
             /** Total Land Area */
             total_land_area: number;
+        };
+        /** IntakeAttemptListResponse */
+        IntakeAttemptListResponse: {
+            /** Attempts */
+            attempts: components["schemas"]["IntakeAttemptRead"][];
+            /** Total */
+            total: number;
+        };
+        /** IntakeAttemptRead */
+        IntakeAttemptRead: {
+            /** Business Line */
+            business_line: ("loans" | "real_estate") | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Mobile Masked */
+            mobile_masked: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "duplicate" | "not_eligible";
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "already_linked" | "own_lead_window_ended" | "already_referred" | "self_referral" | "attribution_expired" | "referrer_not_client" | "below_min_conversion" | "cap_reached" | "voided";
+            /** Reason Label */
+            reason_label: string;
         };
         /**
          * InterestLevel
@@ -10796,6 +10944,15 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Eligibility
+             * @enum {string}
+             */
+            eligibility: "eligible" | "not_eligible";
+            /** Eligibility Reason */
+            eligibility_reason?: ("already_linked" | "own_lead_window_ended" | "already_referred" | "self_referral" | "attribution_expired" | "referrer_not_client" | "below_min_conversion" | "cap_reached" | "voided") | null;
+            /** Eligibility Reason Label */
+            eligibility_reason_label?: string | null;
             /**
              * Id
              * Format: uuid
@@ -16265,6 +16422,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentHomeResponse"];
+                };
+            };
+        };
+    };
+    list_lead_attempts_api_v1_agent_lead_attempts_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeAttemptListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lead_eligibility_api_v1_agent_lead_eligibility_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EligibilitySummary"];
                 };
             };
         };
@@ -22197,6 +22406,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_referral_attempts_api_v1_referrals_attempts_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeAttemptListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    referral_eligibility_summary_api_v1_referrals_eligibility_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EligibilitySummary"];
                 };
             };
         };

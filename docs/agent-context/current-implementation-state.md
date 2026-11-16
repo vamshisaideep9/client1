@@ -756,6 +756,50 @@ lines):**
 
 Evidence is listed in `feature-status.md` under Batch C.
 
+### CS-024 — Lead and referral eligibility
+
+**Decision (2026-11-17, user-approved stakeholder feedback, batch D; both
+lines):**
+
+- *One panel each.* Clients refer by code and never introduce leads; Agents
+  introduce leads and cannot refer (FR-9.1). The Client Referrals page shows
+  referral eligibility and the Agent Leads page shows lead eligibility, each
+  as Eligible / Not eligible / Duplicate with a reason.
+- *Accepted rows.* An Agent lead is Eligible until its 30-day attribution
+  window expires; an expired lead is Not eligible ("Your 30-day window
+  ended") and becomes Eligible again if the Agent resubmits it. A referral is
+  Not eligible when it was voided or refused a bonus: self-referral, the
+  referrer no longer an active client, below the minimum conversions, or the
+  bonus limit reached. The last two are stored as "converted" without a
+  bonus but still read as Not eligible. Pending, converted (including no
+  active bonus rule), accrued and paid referrals are Eligible.
+- *Rejected attempts, from release onward (no backfill).* An Agent
+  introduction turned away because the number is registered, on another
+  Agent's or line's enquiry, or already being worked is a Duplicate
+  ("Already registered or linked to an existing enquiry"); re-introducing the
+  Agent's own expired lead is Not eligible ("Your earlier lead for this number
+  expired"; resubmission stays the way back). A sign-up with a Client's code
+  for someone another Client already referred is a Duplicate for that Client;
+  a self-referral is Not eligible. An unknown code has no owner and stays only
+  in the registration event. The Agent's 409 response is unchanged, and no
+  reason says whose the existing record is.
+- *Privacy.* An attempt keeps the last four digits and a keyed fingerprint of
+  the number (HMAC under the server secret, purpose-bound), never the number.
+  A repeat of the same attempt within 24 hours is stored once. Only the owner
+  can read it (no Admin view was asked for, so none is granted); nothing but
+  the capture and referral
+  services can write it; it is erased with the owner's account, whether the
+  owner deletes it or an Admin removes it. The other person's own account
+  deletion does not erase the owner's masked row.
+- *Counts.* Eligible counts accepted eligible rows; Not eligible counts
+  accepted rows a rule excludes plus attempts turned away by a rule; Duplicate
+  counts duplicate attempts. "Not accepted" lists every recorded attempt.
+- *Agent lead filters.* The Agent Leads list also filters by status and, from
+  Batch C's facts, by product, bank and loan status (loans) or property
+  category, type and deal status (real estate).
+
+Evidence is listed in `feature-status.md` under Batch D.
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in

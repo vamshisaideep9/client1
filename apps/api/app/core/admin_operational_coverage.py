@@ -473,6 +473,18 @@ ADMIN_OPERATIONAL_COVERAGE: dict[str, AdminCoverageEntry] = {
         audit_expectation="Assignment, release, expiry, and reasoned detail corrections append safe events.",
         rationale="Named commands preserve immutable ownership, lifecycle cutoffs, and provenance.",
     ),
+    "lead_intake_attempts": _entry(
+        domain="Rejected Agent lead introductions and referral sign-ups (CS-024)",
+        sensitivity=(DataSensitivity.CONTACT_PII,),
+        view_mode=AdminViewMode.PROHIBITED,
+        view_coverage=CoverageState.PROTECTED,
+        update_mode=AdminUpdateMode.SERVICE_MANAGED,
+        update_coverage=CoverageState.PROTECTED,
+        audit_coverage=CoverageState.PROTECTED,
+        rls_expectation="Owner-only SELECT (an Agent row also needs the request's Agent profile); no api_user write grant; owner or platform Admin erases through the confined erase_lead_intake_attempts definer during account deletion.",
+        audit_expectation="Rows are themselves the record of a rejected attempt; they hold only the last four digits and a keyed fingerprint, never the number.",
+        rationale="The owner's Not accepted list is the only consumer; Admin oversight of attempts was not requested, so no Admin read policy or projection exists.",
+    ),
     "financial_service_enquiries": _entry(
         domain="Credit-card and insurance enquiries",
         sensitivity=(DataSensitivity.FINANCIAL, DataSensitivity.IDENTITY_PII),

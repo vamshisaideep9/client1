@@ -20,6 +20,7 @@ from app.db.session import get_db
 from app.models.agent_payout_details import AgentPayoutDetails
 from app.models.field_visibility import FieldTargetRole, FieldVisibilityMode
 from app.models.lead import Lead
+from app.models.lead_intake_attempt import IntakeActorType
 from app.schemas.agent import (
     AgentHomeResponse,
     AgentLeadCreate,
@@ -41,7 +42,8 @@ from app.schemas.commissions import (
     CommissionStatusLiteral,
     DealType,
 )
-from app.services import agent_dashboard
+from app.schemas.eligibility import EligibilitySummary, IntakeAttemptListResponse
+from app.services import agent_dashboard, lead_intake_attempts
 from app.services import agent_payout_cheque as payout_cheque
 from app.services import agent_payout_details as payout_details
 from app.services.agent import (
@@ -55,11 +57,14 @@ from app.services.agent import (
     get_home_summary,
     get_lead_for_agent,
     introduce_lead,
+    lead_eligibility_summary,
     list_my_leads,
     resubmit_lead_for_agent,
     update_lead_for_agent,
 )
+from app.services.eligibility import agent_lead_eligibility, reason_label
 from app.services.field_visibility import effective_modes, project_values
+from app.services.lead_signals import EMPTY_SIGNALS, LeadSignals, facets, lead_signals
 from app.services.leads import is_agent_lead_resubmittable
 
 router = APIRouter()
@@ -73,10 +78,18 @@ def _agent_profile_uuid(current_user: CurrentUser) -> UUID:
 
 
 def _to_agent_lead_read(
-    lead: Lead, modes: dict[tuple[str, str], FieldVisibilityMode]
+    lead: Lead,
+    modes: dict[tuple[str, str], FieldVisibilityMode],
+    signals: LeadSignals | None = None,
 ) -> AgentLeadRead:
     within_window = lead.expires_at is None or lead.expires_at > datetime.now(UTC)
+    eligibility, reason = agent_lead_eligibility(lead.agent_expired_at)
+    extra = {"facets": facets(signals)} if signals is not None else {}
     return AgentLeadRead(
+        eligibility=eligibility,
+        eligibility_reason=reason,
+        eligibility_reason_label=reason_label(reason),
+        **extra,
         id=lead.id,
         mobile=lead.mobile,
         business_line=lead.business_line,
@@ -178,7 +191,37 @@ async def list_leads(
             status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown status_filter value."
         ) from exc
     modes = await effective_modes(db, FieldTargetRole.AGENT)
-    return [_to_agent_lead_read(lead, modes) for lead in leads]
+    # Product and property facts for the list filters, through the confined
+    # reader's Agent branch (own introduced leads on the Agent's line only).
+    signals = await lead_signals(db, leads)
+    return [_to_agent_lead_read(lead, modes, signals.get(lead.id, EMPTY_SIGNALS)) for lead in leads]
+
+
+@router.get("/lead-eligibility", response_model=EligibilitySummary)
+async def lead_eligibility(
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+) -> EligibilitySummary:
+    """Eligible / Not eligible / Duplicate counts for the Agent's leads (CS-024)."""
+    return await lead_eligibility_summary(db, _agent_profile_uuid(current_user))
+
+
+@router.get("/lead-attempts", response_model=IntakeAttemptListResponse)
+async def list_lead_attempts(
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+) -> IntakeAttemptListResponse:
+    """Introductions that were not accepted, newest first (recorded from CS-024 on)."""
+    attempts, total = await lead_intake_attempts.list_attempts(
+        db,
+        IntakeActorType.AGENT,
+        _agent_profile_uuid(current_user),
+        limit=limit,
+        offset=offset,
+    )
+    return IntakeAttemptListResponse(attempts=attempts, total=total)
 
 
 @router.get("/leads/{lead_id}", response_model=AgentLeadRead, response_model_exclude_unset=True)

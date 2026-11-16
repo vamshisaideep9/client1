@@ -4744,6 +4744,47 @@
             "title": "Editable",
             "type": "boolean"
           },
+          "eligibility": {
+            "enum": [
+              "eligible",
+              "not_eligible"
+            ],
+            "title": "Eligibility",
+            "type": "string"
+          },
+          "eligibility_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "already_linked",
+                  "own_lead_window_ended",
+                  "already_referred",
+                  "self_referral",
+                  "attribution_expired",
+                  "referrer_not_client",
+                  "below_min_conversion",
+                  "cap_reached",
+                  "voided"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligibility Reason"
+          },
+          "eligibility_reason_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligibility Reason Label"
+          },
           "expired_at": {
             "anyOf": [
               {
@@ -4767,6 +4808,16 @@
               }
             ],
             "title": "Expires At"
+          },
+          "facets": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadFacets"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "id": {
             "format": "uuid",
@@ -4838,7 +4889,8 @@
           "expires_at",
           "expired_at",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "eligibility"
         ],
         "title": "AgentLeadRead",
         "type": "object"
@@ -9170,6 +9222,35 @@
         "title": "DocumentVerifyRequest",
         "type": "object"
       },
+      "EligibilitySummary": {
+        "description": "Counts for the three eligibility outcomes.\n\n``eligible`` counts accepted rows. ``not_eligible`` counts accepted rows a\nrule excludes plus attempts turned away by a rule. ``duplicate`` counts\nattempts turned away as duplicates. ``not_accepted`` is every recorded\nattempt (the \"Not accepted\" list), recorded from release onward.",
+        "properties": {
+          "duplicate": {
+            "title": "Duplicate",
+            "type": "integer"
+          },
+          "eligible": {
+            "title": "Eligible",
+            "type": "integer"
+          },
+          "not_accepted": {
+            "title": "Not Accepted",
+            "type": "integer"
+          },
+          "not_eligible": {
+            "title": "Not Eligible",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "eligible",
+          "not_eligible",
+          "duplicate",
+          "not_accepted"
+        ],
+        "title": "EligibilitySummary",
+        "type": "object"
+      },
       "EligibleDeal": {
         "description": "One row in the Admin entry queue: a disbursed loan or a closed_won\nproperty deal with an origin agent and no live commission yet.",
         "properties": {
@@ -10593,6 +10674,98 @@
           "about_property"
         ],
         "title": "IndividualPropertyDetails",
+        "type": "object"
+      },
+      "IntakeAttemptListResponse": {
+        "properties": {
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/IntakeAttemptRead"
+            },
+            "title": "Attempts",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "attempts",
+          "total"
+        ],
+        "title": "IntakeAttemptListResponse",
+        "type": "object"
+      },
+      "IntakeAttemptRead": {
+        "properties": {
+          "business_line": {
+            "anyOf": [
+              {
+                "enum": [
+                  "loans",
+                  "real_estate"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Line"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mobile_masked": {
+            "title": "Mobile Masked",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "duplicate",
+              "not_eligible"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "already_linked",
+              "own_lead_window_ended",
+              "already_referred",
+              "self_referral",
+              "attribution_expired",
+              "referrer_not_client",
+              "below_min_conversion",
+              "cap_reached",
+              "voided"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "reason_label": {
+            "title": "Reason Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "outcome",
+          "reason",
+          "reason_label",
+          "mobile_masked",
+          "business_line",
+          "created_at"
+        ],
+        "title": "IntakeAttemptRead",
         "type": "object"
       },
       "InterestLevel": {
@@ -18025,6 +18198,47 @@
             "title": "Created At",
             "type": "string"
           },
+          "eligibility": {
+            "enum": [
+              "eligible",
+              "not_eligible"
+            ],
+            "title": "Eligibility",
+            "type": "string"
+          },
+          "eligibility_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "already_linked",
+                  "own_lead_window_ended",
+                  "already_referred",
+                  "self_referral",
+                  "attribution_expired",
+                  "referrer_not_client",
+                  "below_min_conversion",
+                  "cap_reached",
+                  "voided"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligibility Reason"
+          },
+          "eligibility_reason_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligibility Reason Label"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -18042,7 +18256,8 @@
           "conversion_status",
           "bonus_amount_paise",
           "converted_at",
-          "created_at"
+          "created_at",
+          "eligibility"
         ],
         "title": "ReferralRead",
         "type": "object"
@@ -32660,6 +32875,95 @@
         ]
       }
     },
+    "/api/v1/agent/lead-attempts": {
+      "get": {
+        "description": "Introductions that were not accepted, newest first (recorded from CS-024 on).",
+        "operationId": "list_lead_attempts_api_v1_agent_lead_attempts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeAttemptListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Lead Attempts",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/v1/agent/lead-eligibility": {
+      "get": {
+        "description": "Eligible / Not eligible / Duplicate counts for the Agent's leads (CS-024).",
+        "operationId": "lead_eligibility_api_v1_agent_lead_eligibility_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EligibilitySummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Lead Eligibility",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
     "/api/v1/agent/leads": {
       "get": {
         "operationId": "list_leads_api_v1_agent_leads_get",
@@ -43057,6 +43361,95 @@
           }
         ],
         "summary": "List Referrals Admin",
+        "tags": [
+          "referrals"
+        ]
+      }
+    },
+    "/api/v1/referrals/attempts": {
+      "get": {
+        "description": "Sign-ups with the caller's code that were not accepted, newest first.\n\nRecorded from the CS-024 release onward. RLS returns only the caller's\nown rows; the query also names the caller as the referrer.",
+        "operationId": "list_referral_attempts_api_v1_referrals_attempts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeAttemptListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Referral Attempts",
+        "tags": [
+          "referrals"
+        ]
+      }
+    },
+    "/api/v1/referrals/eligibility": {
+      "get": {
+        "description": "Eligible / Not eligible / Duplicate counts for the caller's referrals (CS-024).",
+        "operationId": "referral_eligibility_summary_api_v1_referrals_eligibility_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EligibilitySummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Referral Eligibility Summary",
         "tags": [
           "referrals"
         ]
