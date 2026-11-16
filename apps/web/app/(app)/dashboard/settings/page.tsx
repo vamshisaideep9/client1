@@ -22,9 +22,12 @@ import { FetchError } from "@/features/dashboard/fetch-error";
 import { useMe } from "@/features/dashboard/me-provider";
 import { PushSubscriptionCard } from "@/features/push-notifications/push-subscription-card";
 import { JourneyDetailsCard } from "@/features/settings/journey-details-card";
+import { PayoutDetailsCard } from "@/features/settings/payout-details-card";
 import { PersonalizationSettingsCard } from "@/features/settings/personalization-settings-card";
+import { settingsForRole } from "@/features/settings/settings-by-role";
 import { AppearanceSettingsCard } from "@/features/settings/appearance-settings-card";
 import { updateProfile, type Me } from "@/lib/auth";
+import { formatMobile } from "@/lib/phone";
 import {
   apiIssuesToFieldErrors,
   emailError,
@@ -39,6 +42,8 @@ export default function SettingsPage() {
   const emailVerified = me?.emailVerified ?? session?.emailVerified ?? false;
   const showEmailBanner = Boolean(me?.email) && !emailVerified && !emailJustVerified;
   const includePersonalDetails = session?.role === "client";
+  // Unknown until the session loads, so nothing role-specific flashes first.
+  const sections = session ? settingsForRole(session.role) : null;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 px-4 sm:px-6 lg:px-10">
@@ -59,7 +64,15 @@ export default function SettingsPage() {
         <Skeleton className="h-72 rounded-xl" />
       ) : status === "error" ? (
         <FetchError status={errorStatus} message={error} onRetry={retry} />
-      ) : me ? (
+      ) : me && sections && !sections.profileEditable ? (
+        <ReadOnlyProfile
+          firstName={me.firstName}
+          lastName={me.lastName}
+          email={me.email}
+          mobile={me.mobile}
+          emailVerified={emailVerified}
+        />
+      ) : me && sections ? (
         <ProfileForm
           key={`${me.firstName}|${me.lastName}|${me.email}|${me.gender}|${me.incomeAmountMinor}|${me.occupation}|${me.location}`}
           firstName={me.firstName}
@@ -84,23 +97,85 @@ export default function SettingsPage() {
 
       {session?.role === "client" ? <JourneyDetailsCard /> : null}
 
+      {session?.role === "agent" ? <PayoutDetailsCard /> : null}
+
       <AppearanceSettingsCard />
       <PushSubscriptionCard />
 
-      {session?.role === "client" || session?.role === "agent" ? (
-        <PersonalizationSettingsCard />
-      ) : null}
+      {sections?.personalization ? <PersonalizationSettingsCard /> : null}
 
-      <div className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-6">
-        <div>
-          <h2 className="text-sm font-semibold text-text-primary">Danger zone</h2>
-          <p className="text-sm text-text-secondary">
-            Permanently delete your account and personal details.
-          </p>
+      {sections?.deleteAccount ? (
+        <div className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-6">
+          <div>
+            <h2 className="text-sm font-semibold text-text-primary">Danger zone</h2>
+            <p className="text-sm text-text-secondary">
+              Permanently delete your account and personal details.
+            </p>
+          </div>
+          <DeleteAccountDialog />
         </div>
-        <DeleteAccountDialog />
-      </div>
+      ) : null}
     </div>
+  );
+}
+
+/**
+ * Telecaller, Employee and Sub Admin accounts are managed by an Admin
+ * (CS-021): their details are shown, not edited, and the API refuses changes.
+ */
+function ReadOnlyProfile({
+  firstName,
+  lastName,
+  email,
+  mobile,
+  emailVerified,
+}: {
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  mobile: string;
+  emailVerified: boolean;
+}) {
+  const rows: { label: string; value: React.ReactNode }[] = [
+    { label: "First name", value: firstName },
+    { label: "Last name", value: lastName },
+    {
+      label: "Email",
+      value: email ? (
+        <span className="inline-flex flex-wrap items-center gap-2">
+          {email}
+          {emailVerified ? (
+            <Badge variant="secondary" className="gap-1 bg-success/10 text-success">
+              <BadgeCheck className="h-3 w-3" aria-hidden="true" />
+              Verified
+            </Badge>
+          ) : null}
+        </span>
+      ) : (
+        <span className="text-text-secondary">Not added</span>
+      ),
+    },
+    { label: "Mobile", value: formatMobile(mobile) },
+  ];
+  return (
+    <section aria-labelledby="profile-details-heading" className="space-y-4 rounded-xl border border-border bg-card p-6">
+      <div>
+        <h2 id="profile-details-heading" className="text-base font-semibold text-text-primary">
+          Your details
+        </h2>
+        <p className="text-sm text-text-secondary">
+          Your Admin manages these details. To change your name, email or mobile number, ask an Admin.
+        </p>
+      </div>
+      <dl className="grid gap-4 sm:grid-cols-2">
+        {rows.map((row) => (
+          <div key={row.label} className="min-w-0 space-y-1">
+            <dt className="text-xs font-medium text-text-secondary">{row.label}</dt>
+            <dd className="break-words text-sm text-text-primary">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
 

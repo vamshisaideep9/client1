@@ -304,9 +304,9 @@ export function BanksView() {
         searchLabel="Search provider library"
         searchPlaceholder="Provider, legal name, or type"
         statusOptions={PROVIDER_STATUS_OPTIONS}
-        statusLabel="states"
+        statusLabel="Status"
         kindOptions={PROVIDER_TYPE_OPTIONS}
-        kindLabel="Provider types"
+        kindLabel="Provider type"
         showLine={false}
         showDates={false}
         note="Raster uploads only. Every logo keeps its official or licensed provenance."

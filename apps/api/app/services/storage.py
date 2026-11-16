@@ -91,15 +91,23 @@ def presign_upload_post(
     form fields alongside the file; the file part must be appended LAST — S3/
     MinIO ignore any field that comes after it.
     """
+    fields: dict[str, str] = {"Content-Type": content_type, "success_action_status": "201"}
+    conditions: list = [
+        {"Content-Type": content_type},
+        {"success_action_status": "201"},
+        ["content-length-range", 1, max_bytes],
+    ]
+    # Signed into the policy like every other field, so a browser can neither
+    # drop the ACL from a public upload nor add one to a private upload.
+    acl = _public_acl(object_key)
+    if acl:
+        fields["acl"] = acl["ACL"]
+        conditions.append({"acl": acl["ACL"]})
     resp = _client(_public_endpoint()).generate_presigned_post(
         Bucket=settings.SPACES_BUCKET,
         Key=object_key,
-        Fields={"Content-Type": content_type, "success_action_status": "201"},
-        Conditions=[
-            {"Content-Type": content_type},
-            {"success_action_status": "201"},
-            ["content-length-range", 1, max_bytes],
-        ],
+        Fields=fields,
+        Conditions=conditions,
         ExpiresIn=expires_in,
     )
     return resp["url"], resp["fields"]
@@ -128,6 +136,16 @@ def head_object(object_key: str) -> int | None:
 
 
 _PUBLIC_PREFIX = "public/"
+
+
+def _public_acl(object_key: str) -> dict[str, str]:
+    """`public-read` canned ACL for a `public/` key on providers without bucket
+    policies (SPACES_PUBLIC_OBJECT_ACL), else nothing. The `public/` check is
+    the boundary: a look-alike such as `publicity/...` or any private key
+    never receives an ACL, so it stays readable only through a signed URL."""
+    if settings.SPACES_PUBLIC_OBJECT_ACL and object_key.startswith(_PUBLIC_PREFIX):
+        return {"ACL": "public-read"}
+    return {}
 
 
 def public_asset_url(object_key: str) -> str | None:
@@ -188,6 +206,8 @@ def copy_object(source_key: str, destination_key: str, content_type: str) -> Non
         CopySource={"Bucket": settings.SPACES_BUCKET, "Key": source_key},
         ContentType=content_type,
         MetadataDirective="REPLACE",
+        # A copy never inherits the source's ACL; set it from the destination.
+        **_public_acl(destination_key),
     )
 
 
@@ -259,6 +279,7 @@ def put_object_bytes(object_key: str, content: bytes, content_type: str) -> None
         Key=object_key,
         Body=content,
         ContentType=content_type,
+        **_public_acl(object_key),
     )
 
 
@@ -283,13 +304,17 @@ _WEBP_MARKER = b"WEBP"
 
 def sniff_content_type(head: bytes) -> str | None:
     """Best-guess content type from a file's opening bytes, or None if it
-    matches none of the four types this codebase accepts anywhere."""
+    matches none of the types this codebase accepts anywhere."""
     for signature, content_type in _MAGIC_BYTES:
         if head.startswith(signature):
             return content_type
     if head[:4] == _WEBP_RIFF_PREFIX and head[8:12] == _WEBP_MARKER:
         return "image/webp"
     # ISO Base Media File Format: a 32-bit box length followed by `ftyp`.
+    # AVIF images share the container; their major brand is `avif` (still) or
+    # `avis` (sequence). Checked before MP4 so an image is never read as video.
+    if len(head) >= 12 and head[4:8] == b"ftyp" and head[8:12] in {b"avif", b"avis"}:
+        return "image/avif"
     # Accept only well-known MP4 brands; QuickTime/MOV and arbitrary ISO-BMFF
     # payloads are not part of the closed upload vocabulary.
     if len(head) >= 12 and head[4:8] == b"ftyp":
@@ -320,10 +345,17 @@ def content_type_is_recognized(object_key: str) -> bool:
     the actual security concern (arbitrary/executable content uploaded
     under a claimed KYC-document key); it just can't catch "uploaded a real
     PNG when a PDF was declared" without a schema change."""
+    return sniffed_content_type(object_key) is not None
+
+
+def sniffed_content_type(object_key: str) -> str | None:
+    """The accepted content type an object's leading bytes sniff to, or None
+    when the object is missing or matches none of them. Transport failures
+    re-raise, same as read_head_bytes."""
     head = read_head_bytes(object_key, 32)
     if head is None:
-        return False
-    return sniff_content_type(head) is not None
+        return None
+    return sniff_content_type(head)
 
 
 def delete_object(object_key: str) -> None:

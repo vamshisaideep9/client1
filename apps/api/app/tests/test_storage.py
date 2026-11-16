@@ -124,6 +124,69 @@ def test_presign_upload_post_uses_public_endpoint_when_set() -> None:
         settings.SPACES_PUBLIC_ENDPOINT_URL = original
 
 
+def _policy_conditions(fields: dict[str, str]) -> list:
+    return json.loads(base64.b64decode(fields["policy"]))["conditions"]
+
+
+@pytest.mark.parametrize(
+    ("key", "enabled", "expected"),
+    [
+        ("public/banners/abc/hero.jpg", True, {"ACL": "public-read"}),
+        ("public/banners/abc/hero.jpg", False, {}),
+        # Private keys and a bare-prefix look-alike never become public.
+        ("agent-applications/abc/def-photo", True, {}),
+        ("private/loan-applications/x/doc.pdf", True, {}),
+        ("publicity/hero.jpg", True, {}),
+        ("public", True, {}),
+    ],
+)
+def test_public_acl_applies_only_to_public_prefix_when_enabled(
+    monkeypatch: pytest.MonkeyPatch, key: str, enabled: bool, expected: dict
+) -> None:
+    monkeypatch.setattr(settings, "SPACES_PUBLIC_OBJECT_ACL", enabled)
+    assert storage._public_acl(key) == expected
+
+
+def test_presign_upload_post_signs_public_read_acl_for_public_keys(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "SPACES_PUBLIC_OBJECT_ACL", True)
+    _url, fields = storage.presign_upload_post(
+        "public/banners/abc/hero.jpg", "image/jpeg", max_bytes=1024
+    )
+    assert fields["acl"] == "public-read"
+    # Signed into the policy: the browser cannot drop or change it.
+    assert {"acl": "public-read"} in _policy_conditions(fields)
+
+
+def test_presign_upload_post_never_signs_acl_for_private_keys(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "SPACES_PUBLIC_OBJECT_ACL", True)
+    _url, fields = storage.presign_upload_post(
+        "agent-applications/abc/def-photo", "image/jpeg", max_bytes=1024
+    )
+    assert "acl" not in fields
+    assert not any(isinstance(c, dict) and "acl" in c for c in _policy_conditions(fields))
+
+
+def test_copy_and_put_set_public_read_only_on_public_destinations(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "SPACES_PUBLIC_OBJECT_ACL", True)
+    client = MagicMock()
+    monkeypatch.setattr(storage, "_client", lambda _endpoint: client)
+
+    storage.copy_object("private/source.jpg", "public/properties/a.jpg", "image/jpeg")
+    storage.put_object_bytes("public/campaign-media/b.webp", b"x", "image/webp")
+    storage.put_object_bytes("private/loan-applications/c.pdf", b"x", "application/pdf")
+
+    assert client.copy_object.call_args.kwargs["ACL"] == "public-read"
+    public_put, private_put = client.put_object.call_args_list
+    assert public_put.kwargs["ACL"] == "public-read"
+    assert "ACL" not in private_put.kwargs
+
+
 class _FakeS3Client:
     def __init__(self, error_code: str | None, size: int = 1024) -> None:
         self._error_code = error_code

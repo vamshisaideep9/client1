@@ -46,7 +46,7 @@ export function FaqSection({
     <section
       id={id}
       aria-labelledby={headingId}
-      className="relative w-full overflow-hidden scroll-mt-16 border-t border-[var(--nav-border)] bg-[var(--nav-bg)]"
+      className="relative w-full overflow-hidden scroll-mt-[var(--site-header-h)] border-t border-[var(--nav-border)] bg-[var(--nav-bg)]"
     >
       {doodles ? <FaqDoodles /> : null}
       <div
