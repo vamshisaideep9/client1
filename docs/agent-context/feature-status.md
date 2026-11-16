@@ -3,8 +3,10 @@
 Status: **Derived living implementation ledger**
 
 **In review — Batch B PR 1: Agent commission history, payout trail, lead
-history and cancelled cheque (API)** (2026-11-16; CS-022), branch
-`feat/agent-dashboard-api` stacked on Batch A PR 2. API, one migration and
+history and cancelled cheque (API)** (2026-11-16; CS-022; PR
+[#369](https://github.com/brollysolutions/client1/pull/369), mirror
+vamshisaideep9/client1#70), branch `feat/agent-dashboard-api` from Batch A
+PR 2 with `upstream/main` (Batch A merged) merged in. API, one migration and
 regenerated contracts; no requirement-percentage change.
 - Reads: `agent_commission_ledger()`, `agent_lead_history(uuid)` and
   `agent_transaction_detail(uuid)` are SECURITY DEFINER functions (migration
@@ -41,7 +43,7 @@ regenerated contracts; no requirement-percentage change.
   database; OpenAPI export identical to the committed contract; web
   `pnpm typecheck` passes on the regenerated types.
 
-**In review — Batch A PR 2: Settings by role, self-service guards, small
+**Merged — Batch A PR 2: Settings by role, self-service guards, small
 fixes** (2026-11-16; CS-021; PR [#368](https://github.com/brollysolutions/client1/pull/368),
 mirror vamshisaideep9/client1#69), branch `feat/filters-settings-by-role` stacked
 on PR 1. API, one additive data migration, web; no requirement-percentage
@@ -74,7 +76,7 @@ change and no contract shape change.
   filter system with follow-ups, staff analytics, team, lead signals,
   listings, admin analytics).
 
-**In review — Batch A PR 1: one filter system across every dashboard**
+**Merged — Batch A PR 1: one filter system across every dashboard**
 (2026-11-16; CS-021), branch `feat/unified-dashboard-filters` from
 `upstream/main` `5e8aaf7b`. Web only; no contract, dependency or
 requirement-percentage change.

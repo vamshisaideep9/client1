@@ -74,7 +74,10 @@ Agents stay line-scoped; no requirement or completion-percentage change).
 Two stacked PRs, both opened against `main`, stacked on Batch A PR 2:
 
 - *PR B1 — API, migration, contracts*, branch `feat/agent-dashboard-api`
-  from `feat/filters-settings-by-role` `1baaa30f`. Migration `e8b0d2f4a6c9`
+  from `feat/filters-settings-by-role` `1baaa30f`, with `upstream/main`
+  `b8adb6ae` (Batch A merged) merged in; PR
+  [#369](https://github.com/brollysolutions/client1/pull/369), mirror
+  vamshisaideep9/client1#70. Migration `e8b0d2f4a6c9`
   (revises `d6f8a0b2c4e7`, single head) adds three confined SECURITY DEFINER
   reads — `agent_commission_ledger()`, `agent_lead_history(uuid)`,
   `agent_transaction_detail(uuid)` — each re-checking role `agent`, account,
@@ -107,8 +110,8 @@ Two stacked PRs, both opened against `main`, stacked on Batch A PR 2:
 Next: ship B1, then B2. Recommended: Opus 5.5 / high (B1 is RLS-adjacent
 money and upload work; reviewed with `security-review`).
 
-**In progress — Batch A: one filter system, Settings by role, small fixes
-(CS-021)** (2026-11-16; user-approved stakeholder feedback, batch A of A–G;
+**Merged — Batch A: one filter system, Settings by role, small fixes
+(CS-021)** (PRs #367 and #368 merged into `upstream/main` `b8adb6ae`) (2026-11-16; user-approved stakeholder feedback, batch A of A–G;
 no requirement or completion-percentage change). Two stacked PRs, both
 opened against `main`:
 
@@ -157,8 +160,7 @@ opened against `main`:
   period ("Oct 2026"); the Agent "Commission by status" breakdown leaves out
   cancelled commissions. No contract shape change (only 403s).
 
-Next: ship PR 1, then PR 2. Recommended: Opus 5.5 / high (web; PR 2 adds a
-role guard and a data-clearing migration).
+Both PRs are merged; the mirror PRs on vamshisaideep9/client1 follow.
 
 **In review — Banner lifecycle fixes (web slice)** (2026-11-16; PR
 [#366](https://github.com/brollysolutions/client1/pull/366), mirror
