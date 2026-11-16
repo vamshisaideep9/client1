@@ -1,4 +1,5 @@
 import {
+  AlarmClock,
   CalendarCheck,
   CalendarX,
   CarFront,
@@ -28,6 +29,7 @@ export const NOTIFICATION_TYPE_ICON: Record<NotificationType, LucideIcon> = {
   lead_assigned: PhoneCall,
   lead_released: Undo2,
   agent_lead_expired: Undo2,
+  agent_lead_expiry_reminder: AlarmClock,
   task_assigned: ClipboardList,
   loan_status_updated: Landmark,
   property_deal_status_updated: Home,
@@ -54,6 +56,7 @@ export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
   lead_assigned: "Lead assigned",
   lead_released: "Lead released",
   agent_lead_expired: "Lead expired",
+  agent_lead_expiry_reminder: "Lead expiring soon",
   task_assigned: "Task assigned",
   loan_status_updated: "Loan status updated",
   property_deal_status_updated: "Property deal updated",

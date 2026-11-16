@@ -339,7 +339,12 @@ async def build_audience_context(
     else:
         raise PlacementLineNotFound
 
-    preference = await get_preference(db, current_user.id)
+    # CS-021: only Clients can consent, so only a Client's stored preference
+    # counts; any other role is matched on role-only rules, even if an old
+    # row survived.
+    preference = (
+        await get_preference(db, current_user.id) if current_user.role == "client" else None
+    )
     personalization_enabled = bool(preference and preference.personalization_enabled)
     stages: frozenset[str] = frozenset()
     signals: frozenset[str] = frozenset()

@@ -25,6 +25,7 @@ import {
   type FilterBarValue,
 } from "@/features/dashboard/filter-bar";
 import { ListEmptyState, ListLoadingState, ListPagination } from "@/features/dashboard/list-states";
+import { loanFinishedRank } from "@/features/dashboard/list-order";
 import { StatusBadge, type StatusTone } from "@/features/dashboard/status-badge";
 import { useFilteredPage } from "@/features/dashboard/use-filtered-page";
 import {
@@ -46,7 +47,10 @@ const STATUS_LABEL: Record<string, string> = {
   contacted: "Contacted",
   docs_collected: "Docs collected",
   submitted_to_bank: "Submitted to bank",
-  sanctioned: "Sanctioned",
+  under_review: "Under review",
+  sanctioned: "Approved",
+  agreement_collected: "Agreement collected",
+  agreement_submitted_to_bank: "Agreement submitted to bank",
   disbursed: "Disbursed",
   closed: "Closed",
   rejected: "Rejected",
@@ -61,7 +65,10 @@ const STATUS_TONE: Record<string, StatusTone> = {
   contacted: "info",
   docs_collected: "info",
   submitted_to_bank: "info",
+  under_review: "info",
   sanctioned: "success",
+  agreement_collected: "success",
+  agreement_submitted_to_bank: "success",
   disbursed: "success",
   closed: "neutral",
   rejected: "danger",
@@ -83,7 +90,7 @@ export function AdminLoansView() {
   const { items, loading, error, setStatusFilter, reload, updateApp } = useAdminLoans();
 
   const [filters, setFilters] = React.useState<FilterBarValue>(EMPTY_FILTERS);
-  const [sort, setSort] = React.useState<SortState>({ key: "opened_at", dir: "desc" });
+  const [sort, setSort] = React.useState<SortState>({ key: "default", dir: "asc" });
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
   // Status is the one filter the API applies server-side, so it is mirrored
@@ -113,6 +120,13 @@ export function AdminLoansView() {
           return (Number(a.amount_requested ?? 0) - Number(b.amount_requested ?? 0)) * direction;
         case "status":
           return a.status.localeCompare(b.status) * direction;
+        case "default":
+          // Landing order: active applications first, closed and rejected
+          // below them, newest first within each. A column sort replaces it.
+          return (
+            loanFinishedRank(a.status) - loanFinishedRank(b.status) ||
+            new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime()
+          );
         default:
           return (
             (new Date(a.opened_at).getTime() - new Date(b.opened_at).getTime()) * direction

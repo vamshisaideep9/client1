@@ -8,8 +8,9 @@ import type { components } from "@contracts/generated/schema";
 
 import { isAllowedAssetUrl } from "@/lib/allowed-asset-url";
 import { serverFetchJson } from "@/lib/api/server";
+import { resolveBannerCta } from "@/lib/banner-cta";
 import type { HeroBanner } from "@/lib/banners";
-import { isSafeLocalHref } from "@/lib/safe-local-href";
+import { PUBLIC_BANNERS_TAG } from "@/lib/public-banners-cache";
 
 type Schemas = components["schemas"];
 
@@ -28,6 +29,12 @@ type Schemas = components["schemas"];
 export { isAllowedAssetUrl } from "@/lib/allowed-asset-url";
 
 export function mapPublicBanner(raw: Schemas["PublicBannerRead"]): HeroBanner {
+  // Re-checked like image_url: an id that is not exactly 11 safe characters is
+  // dropped, both as the embed and as the default CTA destination.
+  const youtubeId =
+    raw.youtube_video_id && /^[A-Za-z0-9_-]{11}$/.test(raw.youtube_video_id)
+      ? raw.youtube_video_id
+      : undefined;
   return {
     id: raw.id,
     title: raw.title,
@@ -38,19 +45,20 @@ export function mapPublicBanner(raw: Schemas["PublicBannerRead"]): HeroBanner {
     // above and services/storage.py::public_asset_url).
     image: raw.image_url && isAllowedAssetUrl(raw.image_url) ? raw.image_url : undefined,
     reraVerified: raw.rera_verified || undefined,
-    // A CTA needs both a label and a same-origin destination. deep_link is
-    // free-text CMS copy that reaches next/link unescaped; an absolute or
-    // protocol-relative off-site URL is an open-redirect-shaped surface on a
-    // financial site, so anything that isn't a genuine same-origin path is
-    // dropped rather than trusted. This is the deep_link analogue of
-    // lib/public-properties.ts's image?.startsWith("/") guard (that one has
-    // the same protocol-relative gap -- out of scope for this PR, tracked
-    // separately). Without both fields the title/subtitle still render, just
-    // without a button.
-    cta:
-      raw.cta_label && raw.deep_link && isSafeLocalHref(raw.deep_link)
-        ? { label: raw.cta_label, href: raw.deep_link }
-        : undefined,
+    youtubeId,
+    // A video URL off the asset allowlist is dropped.
+    videoUrl: raw.video_url && isAllowedAssetUrl(raw.video_url) ? raw.video_url : undefined,
+    // deep_link is CMS copy that becomes an href. lib/banner-cta.ts accepts a
+    // same-origin path (next/link) or a strict https link (new-tab anchor)
+    // and drops anything else -- protocol-relative, backslash, http:,
+    // javascript: or credential-bearing -- rather than trusting it. With no
+    // destination, an attached YouTube video becomes the destination. Without
+    // a button the title/subtitle still render.
+    cta: resolveBannerCta({
+      deepLink: raw.deep_link,
+      ctaLabel: raw.cta_label,
+      youtubeVideoId: youtubeId,
+    }) ?? undefined,
   };
 }
 
@@ -73,7 +81,10 @@ export async function getHeroBanners(
 ): Promise<HeroBanner[]> {
   const res = await serverFetchJson<Schemas["PublicBannerListResponse"]>(
     `/api/v1/public/banners?placement=${encodeURIComponent(placement)}`,
-    { revalidate: 60 },
+    // Tagged so an Admin approval or removal clears it at once (see
+    // app/actions/revalidate-public-banners.ts); 60 s remains the fallback
+    // for scheduler-driven changes.
+    { revalidate: 60, tags: [PUBLIC_BANNERS_TAG] },
   );
   if (!res.ok) return [];
   return res.data.banners.map(mapPublicBanner);

@@ -10,7 +10,7 @@ const STEPS = [
 
 export function ReferAndEarn() {
   return (
-    <section id="refer-and-earn" aria-labelledby="refer-and-earn-heading" className="scroll-mt-20 border-t border-border bg-background">
+    <section id="refer-and-earn" aria-labelledby="refer-and-earn-heading" className="scroll-mt-[calc(var(--site-header-h)+1rem)] border-t border-border bg-background">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:px-8">
         <div className="max-w-xl">
           <p className="mb-4 text-sm font-medium text-brand-link">For eligible clients</p>

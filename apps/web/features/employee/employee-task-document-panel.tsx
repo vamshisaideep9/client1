@@ -5,6 +5,7 @@ import { FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
+import { ViewDocumentButton } from "@/components/documents/document-viewer";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -131,6 +132,11 @@ export function EmployeeTaskDocumentPanel({
                     </span>
                   </a>
                   <div className="flex shrink-0 items-center gap-2">
+                    <ViewDocumentButton
+                      url={doc.download_url}
+                      title={DOC_TYPE_LABEL[doc.doc_type as DocType] ?? doc.doc_type}
+                      variant="ghost"
+                    />
                     {doc.verified ? (
                       <Badge className="bg-success/10 text-success">Verified</Badge>
                     ) : null}
