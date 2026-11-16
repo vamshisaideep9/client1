@@ -76,7 +76,8 @@ stacked on Batch D PR 2:
 
 - *PR E1 — API: mandatory email behind a server gate, schema*, branch
   `feat/batch-e-email-required-api` from `feat/batch-d-eligibility-web`
-  `38a66ed2`. Migration `d4f6a8c0e2b4` (revises `c7e9a1b3d5f8`, single head)
+  `38a66ed2`; PR [#375](https://github.com/brollysolutions/client1/pull/375),
+  mirror vamshisaideep9/client1#76. Migration `d4f6a8c0e2b4` (revises `c7e9a1b3d5f8`, single head)
   adds `contact_change_requests` (one state machine for self-service changes,
   added emails and staff requests; one active row per account; raw new value
   only while active, enforced by CHECK) and `contact_change_history`

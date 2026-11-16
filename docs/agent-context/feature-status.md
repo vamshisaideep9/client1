@@ -3,7 +3,9 @@
 Status: **Derived living implementation ledger**
 
 **In progress — Batch E PR 1: mandatory email behind a server gate (API)**
-(2026-11-17; CS-025), branch `feat/batch-e-email-required-api` stacked on
+(2026-11-17; CS-025; PR
+[#375](https://github.com/brollysolutions/client1/pull/375), mirror
+vamshisaideep9/client1#76), branch `feat/batch-e-email-required-api` stacked on
 Batch D PR 2. API, one migration and regenerated contracts (plus the web
 label maps the new notification and audit values require); no
 requirement-percentage change.
