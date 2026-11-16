@@ -47,6 +47,19 @@ export async function listAgentLeads(statusFilter?: string): Promise<ApiResponse
   return apiRequest<AgentLead[]>(`/api/v1/agent/leads${query}`);
 }
 
+export type EligibilitySummary = Schemas["EligibilitySummary"];
+export type IntakeAttemptList = Schemas["IntakeAttemptListResponse"];
+
+/** Eligible / Not eligible / Duplicate counts for the Agent's leads (CS-024). */
+export async function getAgentLeadEligibility(): Promise<ApiResponse<EligibilitySummary>> {
+  return apiRequest<EligibilitySummary>("/api/v1/agent/lead-eligibility");
+}
+
+/** Introductions that were not accepted, newest first (up to the API's 500). */
+export async function listAgentLeadAttempts(): Promise<ApiResponse<IntakeAttemptList>> {
+  return apiRequest<IntakeAttemptList>("/api/v1/agent/lead-attempts?limit=500");
+}
+
 export async function getAgentLead(leadId: string): Promise<ApiResponse<AgentLead>> {
   return apiRequest<AgentLead>(`/api/v1/agent/leads/${leadId}`);
 }
