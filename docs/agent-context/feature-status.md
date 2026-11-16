@@ -2,6 +2,23 @@
 
 Status: **Derived living implementation ledger**
 
+**In review — per-person test data coverage** (2026-11-16), branch
+`chore/bulk-seed-staff-coverage` from `upstream/main` `05e7381`.
+Development-only seeder change; no product, schema or contract change.
+- 1,806 coverage clients (1,200 Loans, 606 Real Estate) with leads, call logs,
+  client referrals, loans, site visits, deals, 1,008 tasks, 564 pickups in all,
+  210 commissions and 60 extra Agent listings.
+- Evidence: `test_seed_bulk.py` + demo-media 27 passed, including per-person
+  minimum tests for every Telecaller, Employee and Agent filter value and the
+  DB phase test with the coverage phase. A full seed on a fresh database
+  (rows, then media against an S3 emulator) gave 2,057 accounts, 2,096 leads,
+  1,615 loan applications, 1,098 tasks; a rerun inserted no rows. Logging in as
+  each active Telecaller, Employee and Agent and counting from the real list
+  endpoints found at least 5 for every filter value (minimum 5-9). Ruff passes.
+  Full API suite: still running when this PR was opened (user chose to ship
+  first; a first run hung without output and was restarted in verbose mode);
+  the result is posted on the PR. Not yet verified.
+
 **In review — documents viewable inside the dashboard** (2026-11-15), branch
 `feat/in-dashboard-document-viewer` stacked on the listing-origins seeder fix.
 Web-only plus one pinned dependency; no API, schema, CSP or contract change.

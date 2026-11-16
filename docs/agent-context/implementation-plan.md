@@ -60,6 +60,18 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In review — per-person test data coverage** (2026-11-16; branch
+`chore/bulk-seed-staff-coverage` from `upstream/main` `05e7381`; user request,
+development-only, no requirement change). Testers found the bulk data thin per
+person. `bulk_catalog` adds 1,806 single-line coverage clients so every active
+Telecaller, Employee and Agent sees at least five rows for every value of every
+filter on their own screens (lead status, call outcome, interest, referral
+source, loan status, task status/type, vehicle pickup, Agent lead incl.
+Expired, commission, listing). Rotations are shifted per round so values spread
+evenly per Employee too. `seed_bulk` writes them through the existing builders;
+`account()` lookups are cached. Next: user merges, then reseed the droplet.
+Recommended: Opus 5.5 / high.
+
 **In review — documents viewable inside the dashboard** (2026-11-15; branch
 `feat/in-dashboard-document-viewer`, stacked on `chore/bulk-seed-listing-origins`;
 user request and decisions 2026-11-15, no requirement-percentage change).

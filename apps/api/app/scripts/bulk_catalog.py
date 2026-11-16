@@ -246,15 +246,18 @@ def client_accounts() -> tuple[BulkAccount, ...]:
     return tuple(accounts)
 
 
+@cache
 def all_accounts() -> tuple[BulkAccount, ...]:
-    return (*staff_accounts(), *client_accounts())
+    return (*staff_accounts(), *client_accounts(), *coverage_accounts())
+
+
+@cache
+def _accounts_by_key() -> dict[str, BulkAccount]:
+    return {candidate.key: candidate for candidate in all_accounts()}
 
 
 def account(key: str) -> BulkAccount:
-    for candidate in all_accounts():
-        if candidate.key == key:
-            return candidate
-    raise KeyError(key)
+    return _accounts_by_key()[key]
 
 
 def accounts_by_role(role: str, line: str | None = None) -> tuple[BulkAccount, ...]:
@@ -860,6 +863,313 @@ def listing_origin_author(index: int) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Per-staff coverage: every list filter shows at least COVERAGE_MIN rows
+# ---------------------------------------------------------------------------
+#
+# The journeys above give realistic totals, but spread thin per person. These
+# extra clients guarantee that each active Telecaller, Employee and Agent sees
+# at least COVERAGE_MIN records for every value of every filter on their own
+# screens (lead status, call outcome, interest, referral source, loan status,
+# task status/type, vehicle pickup status, commission and listing status).
+
+COVERAGE_MIN = 5
+COVERAGE_MOBILE_BASE = 20_000  # coverage clients: +91 92000 2xxxx-4xxxx
+LEADS_PER_LOANS_TELECALLER = 120
+LEADS_PER_RE_TELECALLER = 48
+TELECALLER_STATUSES = ("new", "assigned", "working", "converted", "closed", "released")
+DISPOSITIONS = (
+    "connected",
+    "no_answer",
+    "busy",
+    "switched_off",
+    "wrong_number",
+    "callback_requested",
+    "not_interested",
+)
+INTERESTS = ("hot", "warm", "cold")
+EMPLOYEE_TASK_STATUSES = ("assigned", "in_progress", "completed", "cancelled", "blocked")
+TASK_TYPES_BY_LINE = {
+    "loans": ("document_collection", "background_check"),
+    "real_estate": ("property_visit", "document_collection", "background_check"),
+}
+ARRANGEMENT_CYCLE = ("assigned", "completed", "cancelled", "requested", "arranged")
+COMMISSION_CYCLE = ("pending", "paid", "cancelled")
+# What each Agent sees: 5 of every lead status, plus 15 converted clients so
+# every commission status has 5 rows (commissions need a converted client).
+AGENT_LEAD_PLAN = (
+    ("new",) * 5
+    + ("assigned",) * 5
+    + ("working",) * 5
+    + ("converted",) * 15
+    + ("closed",) * 5
+    + ("released",) * 5
+    + ("expired",) * 5
+)
+AGENT_EXTRA_PENDING_LISTINGS = 5
+AGENT_EXTRA_REJECTED_LISTINGS = 5
+RE_DEAL_CYCLE = (
+    PropertyDealStatus.NEW,
+    PropertyDealStatus.CONTACTED,
+    PropertyDealStatus.SITE_VISIT_DONE,
+    PropertyDealStatus.NEGOTIATION,
+    PropertyDealStatus.ON_HOLD,
+)
+RE_BOOKED_CYCLE = (
+    PropertyDealStatus.BOOKED,
+    PropertyDealStatus.AGREEMENT_SIGNED,
+    PropertyDealStatus.CLOSED,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class CoverageTask:
+    status: str
+    task_type: str
+    employee_key: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class CoverageArrangement:
+    status: str
+    employee_key: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class CoverageLead:
+    """One coverage client (single line) and everything planned around them.
+
+    Attribute names mirror ``ClientJourney`` where the seeder shares builders.
+    """
+
+    account_key: str
+    line: str
+    ordinal: int
+    lead_status: LeadStatus
+    telecaller_key: str | None
+    agent_key: str | None
+    agent_expired: bool
+    disposition: str | None
+    interest: str | None
+    client_referral: bool
+    current_loan_status: LoanStatus | None = None
+    closed_loan: bool = False
+    rejected_loan: bool = False
+    loan_product_index: int = 0
+    site_visit: bool = False
+    deal_status: PropertyDealStatus | None = None
+    commission_status: str | None = None
+    task: CoverageTask | None = None
+    arrangement: CoverageArrangement | None = None
+
+    @property
+    def key(self) -> str:
+        return f"{self.account_key}:{self.line}"
+
+
+def _coverage_account(number: int, line: str) -> BulkAccount:
+    first, last = person_name(1000 + number)
+    return BulkAccount(
+        key=f"cov-{number:04d}",
+        role="client",
+        first_name=first,
+        last_name=last,
+        mobile=bulk_mobile(COVERAGE_MOBILE_BASE + number),
+        business_line=None,
+        client_lines=(line,),
+        code=f"CV{number:04d}",
+    )
+
+
+@cache
+def _coverage_plan() -> tuple[tuple[BulkAccount, ...], tuple[CoverageLead, ...]]:
+    accounts: list[BulkAccount] = []
+    leads: list[CoverageLead] = []
+    number = 0
+    for line in ("loans", "real_estate"):
+        telecallers = [a.key for a in _active_line_staff("telecaller", line)]
+        employees = [a.key for a in _active_line_staff("employee", line)]
+        agents = [a.key for a in _active_line_staff("agent", line)]
+        task_types = TASK_TYPES_BY_LINE[line]
+        counters = {
+            "task": 0, "arrangement": 0, "booked": 0, "deal": 0, "agent_lead": 0,
+            "disp_w": 0, "disp_o": 0, "int_w": 0, "int_o": 0, "app_w": 0, "app_o": 0,
+            "src_w": 0, "src_o": 0,
+        }  # fmt: skip
+
+        def cycle(name: str, values: tuple, counters=counters, employees=employees):
+            # Independent rotations for task-bearing ("_w") and other leads keep
+            # every value evenly spread per Telecaller. Task-bearing leads go to
+            # Employees round-robin, so their rotation shifts by one each round:
+            # otherwise an Employee count sharing a factor with the value count
+            # would hand every Employee the same few values.
+            n = counters[name]
+            counters[name] += 1
+            shift = n // len(employees) if name.endswith("_w") else 0
+            return values[(n + shift) % len(values)]
+
+        def signals(worked: bool) -> tuple[str | None, str | None]:
+            tag = "w" if worked else "o"
+            disposition = cycle(f"disp_{tag}", (None, *DISPOSITIONS))
+            interest = cycle(f"int_{tag}", INTERESTS) if disposition else None
+            return disposition, interest
+
+        def active_app(worked: bool) -> LoanStatus:
+            return cycle("app_w" if worked else "app_o", ACTIVE_LOAN_STATUSES)
+
+        def next_task(
+            counters=counters, employees=employees, task_types=task_types
+        ) -> CoverageTask:
+            n = counters["task"]
+            counters["task"] += 1
+            rounds = n // len(employees)
+            return CoverageTask(
+                status=EMPLOYEE_TASK_STATUSES[rounds % len(EMPLOYEE_TASK_STATUSES)],
+                task_type=task_types[(rounds // len(EMPLOYEE_TASK_STATUSES)) % len(task_types)],
+                employee_key=employees[n % len(employees)],
+            )
+
+        def next_arrangement(counters=counters, employees=employees) -> CoverageArrangement:
+            n = counters["arrangement"]
+            counters["arrangement"] += 1
+            status = ARRANGEMENT_CYCLE[(n // len(employees)) % len(ARRANGEMENT_CYCLE)]
+            staffed = status in {"assigned", "completed", "cancelled"}
+            return CoverageArrangement(status, employees[n % len(employees)] if staffed else None)
+
+        # 1. Telecaller coverage: every telecaller gets every lead status, call
+        #    outcome (and "not called"), interest, referral source and loan status.
+        per_telecaller = LEADS_PER_LOANS_TELECALLER if line == "loans" else LEADS_PER_RE_TELECALLER
+        for telecaller_key in telecallers:
+            for i in range(per_telecaller):
+                number += 1
+                account = _coverage_account(number, line)
+                accounts.append(account)
+                status = LeadStatus(TELECALLER_STATUSES[i % len(TELECALLER_STATUSES)])
+                worked = status in {LeadStatus.ASSIGNED, LeadStatus.WORKING, LeadStatus.CONVERTED}
+                disposition, interest = signals(worked)
+                current = None
+                deal = None
+                if line == "loans" and status not in {LeadStatus.NEW, LeadStatus.CLOSED}:
+                    current = active_app(worked)
+                if line == "real_estate" and status in {LeadStatus.WORKING, LeadStatus.CONVERTED}:
+                    deal = RE_DEAL_CYCLE[counters["deal"] % len(RE_DEAL_CYCLE)]
+                    counters["deal"] += 1
+                elif line == "real_estate" and status == LeadStatus.CLOSED:
+                    deal = (PropertyDealStatus.CLOSED, PropertyDealStatus.REJECTED)[i % 2]
+                visit = line == "real_estate" and status != LeadStatus.NEW
+                leads.append(
+                    CoverageLead(
+                        account_key=account.key,
+                        line=line,
+                        ordinal=number,
+                        lead_status=status,
+                        telecaller_key=telecaller_key,
+                        agent_key=None,
+                        agent_expired=False,
+                        disposition=disposition,
+                        interest=interest,
+                        client_referral=cycle("src_w" if worked else "src_o", (False, True)),
+                        current_loan_status=current,
+                        closed_loan=line == "loans" and (status == LeadStatus.CLOSED or i % 3 == 0),
+                        rejected_loan=line == "loans" and i % 4 == 1,
+                        loan_product_index=number,
+                        site_visit=visit,
+                        deal_status=deal,
+                        task=next_task() if worked else None,
+                        arrangement=next_arrangement() if visit else None,
+                    )
+                )
+
+        # 2. Agent coverage: every agent sees every lead status (incl. expired)
+        #    and every commission status on converted clients.
+        for agent_key in agents:
+            commissions = 0
+            for status_name in AGENT_LEAD_PLAN:
+                number += 1
+                n = counters["agent_lead"]
+                counters["agent_lead"] += 1
+                account = _coverage_account(number, line)
+                accounts.append(account)
+                expired = status_name == "expired"
+                status = LeadStatus.WORKING if expired else LeadStatus(status_name)
+                telecaller_key = (
+                    None if status == LeadStatus.NEW else telecallers[n % len(telecallers)]
+                )
+                worked = status in {LeadStatus.ASSIGNED, LeadStatus.WORKING, LeadStatus.CONVERTED}
+                if status == LeadStatus.NEW:
+                    disposition, interest = None, None
+                else:
+                    disposition, interest = signals(worked)
+                converted = status == LeadStatus.CONVERTED
+                current = None
+                deal = None
+                commission = None
+                if converted:
+                    commission = COMMISSION_CYCLE[commissions % len(COMMISSION_CYCLE)]
+                    commissions += 1
+                    if line == "loans":
+                        current = LoanStatus.DISBURSED
+                    else:
+                        deal = RE_BOOKED_CYCLE[counters["booked"] % len(RE_BOOKED_CYCLE)]
+                        counters["booked"] += 1
+                elif line == "loans" and status in {LeadStatus.ASSIGNED, LeadStatus.WORKING}:
+                    current = active_app(True)
+                visit = line == "real_estate" and status != LeadStatus.NEW
+                leads.append(
+                    CoverageLead(
+                        account_key=account.key,
+                        line=line,
+                        ordinal=number,
+                        lead_status=status,
+                        telecaller_key=telecaller_key,
+                        agent_key=agent_key,
+                        agent_expired=expired,
+                        disposition=disposition,
+                        interest=interest,
+                        client_referral=False,
+                        current_loan_status=current,
+                        closed_loan=line == "loans" and status == LeadStatus.CLOSED,
+                        loan_product_index=number,
+                        site_visit=visit,
+                        deal_status=deal,
+                        commission_status=commission,
+                        task=next_task() if worked else None,
+                        arrangement=next_arrangement() if visit else None,
+                    )
+                )
+    return tuple(accounts), tuple(leads)
+
+
+def coverage_accounts() -> tuple[BulkAccount, ...]:
+    return _coverage_plan()[0]
+
+
+def coverage_leads() -> tuple[CoverageLead, ...]:
+    return _coverage_plan()[1]
+
+
+@cache
+def agent_listing_plans() -> tuple[SubmissionPlan, ...]:
+    """Extra pending and rejected listings so every active RE agent has 5 of each."""
+    plans: list[SubmissionPlan] = []
+    offset = LISTING_COUNT + SUBMISSION_COUNT
+    for agent in _active_line_staff("agent", "real_estate"):
+        for number in range(AGENT_EXTRA_PENDING_LISTINGS + AGENT_EXTRA_REJECTED_LISTINGS):
+            status = "pending" if number < AGENT_EXTRA_PENDING_LISTINGS else "rejected"
+            plans.append(
+                SubmissionPlan(
+                    key=f"agent-listing-{agent.key}-{number + 1:02d}",
+                    index=offset + len(plans),
+                    submitter_key=agent.key,
+                    status=status,
+                    rera_status=("not_reviewed", "mismatch")[number % 2]
+                    if status == "pending"
+                    else "not_reviewed",
+                )
+            )
+    return tuple(plans)
+
+
+# ---------------------------------------------------------------------------
 # Supporting rows
 # ---------------------------------------------------------------------------
 
@@ -919,5 +1229,11 @@ def credentials_table() -> str:
         f"| client-001 ... client-{CLIENT_COUNT:03d} | Clients | "
         f"`{client_accounts()[0].mobile}` ... `{client_accounts()[-1].mobile}` | "
         "001-085 Loans, 086-170 Real Estate, 171-195 both lines |"
+    )
+    coverage = coverage_accounts()
+    lines.append(
+        f"| {coverage[0].key} ... {coverage[-1].key} | Coverage clients (one line each) | "
+        f"`{coverage[0].mobile}` ... `{coverage[-1].mobile}` | "
+        f"5+ of every filter value per Telecaller, Employee and Agent |"
     )
     return "\n".join(lines)
