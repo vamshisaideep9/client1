@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   EMPTY_PAYOUT_DETAILS_DRAFT,
   buildPayoutDetailsPayload,
+  validateChequeFile,
   validatePayoutDetailsDraft,
 } from "./agent-payout-details";
 
@@ -59,5 +60,22 @@ describe("buildPayoutDetailsPayload", () => {
         bank_name: null,
       },
     });
+  });
+});
+
+describe("validateChequeFile", () => {
+  it("accepts JPEG, PNG and PDF up to 5 MB", () => {
+    expect(validateChequeFile({ type: "image/jpeg", size: 1024 })).toBeNull();
+    expect(validateChequeFile({ type: "application/pdf", size: 5 * 1024 * 1024 })).toBeNull();
+  });
+
+  it("refuses other types, empty and oversize files", () => {
+    expect(validateChequeFile({ type: "image/webp", size: 1024 })).toBe(
+      "Choose a JPEG, PNG or PDF file.",
+    );
+    expect(validateChequeFile({ type: "image/png", size: 0 })).toBe("This file is empty.");
+    expect(validateChequeFile({ type: "image/png", size: 5 * 1024 * 1024 + 1 })).toBe(
+      "Choose a file of 5 MB or less.",
+    );
   });
 });

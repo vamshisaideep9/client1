@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, WalletCards } from "lucide-react";
+import { FileCheck2, Loader2, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import {
   savedDestinationToForm,
   type PayoutDestinationFormState,
 } from "@/lib/payout-form";
-import { getSavedPayoutDestination } from "@/lib/payouts-api";
+import { getCancelledCheque, getSavedPayoutDestination } from "@/lib/payouts-api";
 
 export type SavedDestinationTarget =
   | { recipientUserUuid: string }
@@ -41,6 +41,36 @@ export function PayoutDestinationFields({
 }) {
   const destinationErrorId = `${idPrefix}-destination-error`;
   const [prefilling, setPrefilling] = React.useState(false);
+  const [openingCheque, setOpeningCheque] = React.useState(false);
+
+  async function viewCancelledCheque() {
+    if (!savedDestinationTarget) return;
+    // Open the tab inside the click so pop-up blockers allow it, then point it
+    // at the short-lived link once the (audited) read returns.
+    const tab = window.open("", "_blank");
+    if (tab) tab.opener = null;
+    setOpeningCheque(true);
+    const res = await getCancelledCheque(savedDestinationTarget);
+    setOpeningCheque(false);
+    if (!res.ok) {
+      tab?.close();
+      if (res.status === 404) {
+        toast.info("No cancelled cheque", {
+          description: "This recipient hasn't uploaded a cancelled cheque.",
+        });
+      } else {
+        toast.error("Couldn't open the cancelled cheque", { description: res.error });
+      }
+      return;
+    }
+    if (tab) {
+      tab.location.href = res.data.url;
+    } else {
+      toast.info("Allow pop-ups to view the cancelled cheque", {
+        description: "Your browser blocked the new tab.",
+      });
+    }
+  }
 
   async function applySavedDetails() {
     if (!savedDestinationTarget) return;
@@ -70,21 +100,39 @@ export function PayoutDestinationFields({
   return (
     <>
       {savedDestinationTarget ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-full sm:w-auto"
-          disabled={disabled || prefilling}
-          onClick={() => void applySavedDetails()}
-        >
-          {prefilling ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <WalletCards className="h-4 w-4" aria-hidden="true" />
-          )}
-          Use saved payout details
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+            disabled={disabled || prefilling}
+            onClick={() => void applySavedDetails()}
+          >
+            {prefilling ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <WalletCards className="h-4 w-4" aria-hidden="true" />
+            )}
+            Use saved payout details
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+            disabled={disabled || openingCheque}
+            onClick={() => void viewCancelledCheque()}
+          >
+            {openingCheque ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <FileCheck2 className="h-4 w-4" aria-hidden="true" />
+            )}
+            View cancelled cheque
+            <span className="sr-only"> (opens in a new tab)</span>
+          </Button>
+        </div>
       ) : null}
       <div className="space-y-1.5">
         <Label id={`${idPrefix}-destination-label`}>

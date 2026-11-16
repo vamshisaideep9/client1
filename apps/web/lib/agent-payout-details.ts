@@ -19,7 +19,22 @@ export const EMPTY_PAYOUT_DETAILS_DRAFT: PayoutDetailsDraft = {
   bankName: "",
 };
 
-const UPI_PATTERN = /^[A-Za-z0-9._-]{2,256}@[A-Za-z][A-Za-z0-9]{1,63}$/;
+/** Cancelled cheque (CS-022): the API accepts these types up to 5 MB. */
+export const CHEQUE_CONTENT_TYPES = ["image/jpeg", "image/png", "application/pdf"] as const;
+export const CHEQUE_ACCEPT = CHEQUE_CONTENT_TYPES.join(",");
+export const CHEQUE_MAX_BYTES = 5 * 1024 * 1024;
+
+/** A message for a file the API would refuse, or null when it may be uploaded. */
+export function validateChequeFile(file: Pick<File, "type" | "size">): string | null {
+  if (!(CHEQUE_CONTENT_TYPES as readonly string[]).includes(file.type)) {
+    return "Choose a JPEG, PNG or PDF file.";
+  }
+  if (file.size <= 0) return "This file is empty.";
+  if (file.size > CHEQUE_MAX_BYTES) return "Choose a file of 5 MB or less.";
+  return null;
+}
+
+const UPI_PATTERN =/^[A-Za-z0-9._-]{2,256}@[A-Za-z][A-Za-z0-9]{1,63}$/;
 const IFSC_PATTERN = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const ACCOUNT_PATTERN = /^\d{6,18}$/;
 

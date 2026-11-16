@@ -24,6 +24,8 @@ import {
 } from "@/lib/agent-payout-details";
 import { apiIssuesToFieldErrors, focusFirstInvalidField } from "@/lib/form-validation";
 
+import { CancelledChequeRow } from "./cancelled-cheque-row";
+
 type Errors = Partial<Record<keyof PayoutDetailsDraft | "form", string>>;
 
 // Agent Account settings: where commissions are paid. Saved values are never
@@ -105,9 +107,15 @@ export function PayoutDetailsCard() {
     const onlyOne = !(details?.upi_hint && details?.bank_hint);
     const ok = await confirm({
       title: which === "upi" ? "Remove your UPI ID?" : "Remove your bank account?",
-      description: onlyOne
-        ? "You won't have any payout details saved. Admins will ask you where to send payments."
-        : "Your other saved payout method stays as it is.",
+      description: `${
+        onlyOne
+          ? "You won't have any payout details saved. Admins will ask you where to send payments."
+          : "Your other saved payout method stays as it is."
+      }${
+        (which === "bank" || onlyOne) && details?.cheque_uploaded_at
+          ? " Your cancelled cheque is removed too."
+          : ""
+      }`,
       confirmLabel: "Remove",
       destructive: true,
     });
@@ -173,6 +181,18 @@ export function PayoutDetailsCard() {
             </ul>
           ) : null}
 
+          {details?.saved ? (
+            <CancelledChequeRow
+              details={details}
+              disabled={saving}
+              onChanged={(next) =>
+                setDetails((current) =>
+                  next ?? (current ? { ...current, cheque_uploaded_at: null, cheque_content_type: null } : current),
+                )
+              }
+            />
+          ) : null}
+
           {editing ? (
             <form ref={formRef} noValidate onSubmit={(e) => void onSubmit(e)} className="mt-5 space-y-5">
               {details?.saved ? (
@@ -198,6 +218,11 @@ export function PayoutDetailsCard() {
 
               <fieldset className="space-y-4 border-t border-border pt-5">
                 <legend className="text-sm font-semibold text-text-primary">Bank account</legend>
+                {details?.cheque_uploaded_at ? (
+                  <p className="text-xs text-text-secondary">
+                    Saving a new bank account removes your cancelled cheque; upload one for the new account.
+                  </p>
+                ) : null}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="payout-holder">
