@@ -14,7 +14,8 @@ from datetime import UTC, datetime
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import delete, text
+from sqlalchemy import delete, select, text, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.banner_catalog import CATEGORIES_BY_PLACEMENT
 from app.core.security import create_access_token
@@ -94,6 +95,46 @@ async def _delete_properties(*property_ids: str) -> None:
             delete(Property).where(Property.id.in_([uuid.UUID(item) for item in property_ids]))
         )
         await db.commit()
+
+
+async def _delete_banners(*banner_ids: str) -> None:
+    """Superuser cleanup: approval now publishes due banners, and a leaked LIVE
+    row would crowd test_public_banners.py's cap/presence assertions."""
+    import app.db.session as _session_mod
+    from app.models.banner import Banner
+
+    ids = [uuid.UUID(item) for item in banner_ids]
+    async with _session_mod.AsyncSessionLocal() as db:
+        # Replacements first: replaces_banner_id is immutable, so the FK's
+        # ON DELETE SET NULL cannot run while a replacement still points here.
+        await db.execute(delete(Banner).where(Banner.replaces_banner_id.in_(ids)))
+        await db.execute(delete(Banner).where(Banner.id.in_(ids)))
+        await db.commit()
+
+
+async def _audit_actions(banner_id: str) -> list[str]:
+    import app.db.session as _session_mod
+    from app.models.audit_log import AuditLog
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        rows = await db.scalars(
+            select(AuditLog.action)
+            .where(AuditLog.entity_type == "banner", AuditLog.entity_uuid == uuid.UUID(banner_id))
+            .order_by(AuditLog.created_at.asc(), AuditLog.id.asc())
+        )
+        return [action.value for action in rows.all()]
+
+
+async def _banner_status(banner_id: str) -> str | None:
+    import app.db.session as _session_mod
+    from app.models.banner import Banner
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        row = await db.scalar(select(Banner).where(Banner.id == uuid.UUID(banner_id)))
+        return row.status.value if row is not None else None
+
+
+_FUTURE_START = "2099-01-01T00:00:00Z"
 
 
 @pytest.mark.asyncio
@@ -236,22 +277,34 @@ async def test_admin_approve(client: AsyncClient) -> None:
         f"/api/v1/banners/{banner_id}/submit",
         headers={"Authorization": f"Bearer {_sub_admin_token(uid)}"},
     )
-    res = await client.post(
-        f"/api/v1/banners/{banner_id}/approve",
-        headers={"Authorization": f"Bearer {_admin_token(uid)}"},
-    )
-    assert res.status_code == 200, res.text
-    body = res.json()
-    assert body["status"] == "approved"
-    assert body["approved_by_uuid"] == uid
-    notifications = await client.get(
-        "/api/v1/notifications",
-        headers={"Authorization": f"Bearer {_sub_admin_token(uid)}"},
-    )
-    assert any(
-        item["type"] == "campaign_approved" and item["href"] == "/dashboard/campaigns?type=banners"
-        for item in notifications.json()["notifications"]
-    )
+    try:
+        res = await client.post(
+            f"/api/v1/banners/{banner_id}/approve",
+            headers={"Authorization": f"Bearer {_admin_token(uid)}"},
+        )
+        assert res.status_code == 200, res.text
+        body = res.json()
+        # No start date and no category slot: due now, so approval publishes it.
+        assert body["status"] == "live"
+        assert body["approved_by_uuid"] == uid
+        notifications = await client.get(
+            "/api/v1/notifications",
+            headers={"Authorization": f"Bearer {_sub_admin_token(uid)}"},
+        )
+        assert any(
+            item["type"] == "campaign_approved"
+            and item["href"] == "/dashboard/campaigns?type=banners"
+            for item in notifications.json()["notifications"]
+        )
+        # Approval and activation share one transaction (same created_at).
+        assert sorted(await _audit_actions(banner_id)) == [
+            "banner_activated",
+            "banner_approved",
+            "banner_created",
+            "banner_submitted",
+        ]
+    finally:
+        await _delete_banners(banner_id)
 
 
 @pytest.mark.asyncio
@@ -720,27 +773,36 @@ async def test_reviewed_campaign_replacement_archive_and_draft_delete(client: As
             **_PAYLOAD,
             "placement": "financial_services",
             "template_id": template["id"],
+            # Future start: approval leaves it approved (not live), so the
+            # Sub Admin may still archive it below.
+            "starts_at": _FUTURE_START,
         },
         headers=sub_headers,
     )
     banner_id = created.json()["id"]
-    submitted = await client.post(f"/api/v1/banners/{banner_id}/submit", headers=sub_headers)
-    assert submitted.status_code == 200
-    approved = await client.post(f"/api/v1/banners/{banner_id}/approve", headers=admin_headers)
-    assert approved.status_code == 200
+    try:
+        submitted = await client.post(f"/api/v1/banners/{banner_id}/submit", headers=sub_headers)
+        assert submitted.status_code == 200
+        approved = await client.post(f"/api/v1/banners/{banner_id}/approve", headers=admin_headers)
+        assert approved.status_code == 200
+        assert approved.json()["status"] == "approved"
 
-    replacement = await client.post(f"/api/v1/banners/{banner_id}/replacement", headers=sub_headers)
-    assert replacement.status_code == 201, replacement.text
-    replacement_id = replacement.json()["id"]
-    assert replacement.json()["status"] == "draft"
-    assert replacement.json()["replaces_banner_id"] == banner_id
-    assert replacement.json()["template_id"] == template["id"]
+        replacement = await client.post(
+            f"/api/v1/banners/{banner_id}/replacement", headers=sub_headers
+        )
+        assert replacement.status_code == 201, replacement.text
+        replacement_id = replacement.json()["id"]
+        assert replacement.json()["status"] == "draft"
+        assert replacement.json()["replaces_banner_id"] == banner_id
+        assert replacement.json()["template_id"] == template["id"]
 
-    archived = await client.post(f"/api/v1/banners/{banner_id}/archive", headers=sub_headers)
-    assert archived.status_code == 200
-    assert archived.json()["status"] == "archived"
-    deleted = await client.delete(f"/api/v1/banners/{replacement_id}", headers=sub_headers)
-    assert deleted.status_code == 204
+        archived = await client.post(f"/api/v1/banners/{banner_id}/archive", headers=sub_headers)
+        assert archived.status_code == 200
+        assert archived.json()["status"] == "archived"
+        deleted = await client.delete(f"/api/v1/banners/{replacement_id}", headers=sub_headers)
+        assert deleted.status_code == 204
+    finally:
+        await _delete_banners(banner_id)
 
 
 @pytest.mark.asyncio
@@ -956,3 +1018,416 @@ async def test_create_rejects_a_non_conforming_image_key(client: AsyncClient) ->
             headers={"Authorization": f"Bearer {_sub_admin_token(uid)}"},
         )
         assert res.status_code == 422, f"expected 422 for {bad_key!r}, got {res.status_code}"
+
+
+# --- 2026-11-16: delete until live, Admin-only take-down, instant go-live, CTA links ---
+
+
+async def _banner_in_status(
+    client: AsyncClient,
+    uid: str,
+    target: str,
+    *,
+    payload: dict | None = None,
+) -> str:
+    """Drive a banner through the real API to draft, pending, rejected,
+    approved (future start, so it stays approved) or live (no start, no slot)."""
+    sub_headers = {"Authorization": f"Bearer {_sub_admin_token(uid)}"}
+    admin_headers = {"Authorization": f"Bearer {_admin_token(uid)}"}
+    body = dict(payload or _PAYLOAD)
+    if target == "approved":
+        body["starts_at"] = _FUTURE_START
+    created = await client.post("/api/v1/banners", json=body, headers=sub_headers)
+    assert created.status_code == 201, created.text
+    banner_id = created.json()["id"]
+    if target == "draft":
+        return banner_id
+    submitted = await client.post(f"/api/v1/banners/{banner_id}/submit", headers=sub_headers)
+    assert submitted.status_code == 200, submitted.text
+    if target == "pending_approval":
+        return banner_id
+    if target == "rejected":
+        rejected = await client.post(
+            f"/api/v1/banners/{banner_id}/reject",
+            json={"note": "Please tighten the copy."},
+            headers=admin_headers,
+        )
+        assert rejected.status_code == 200, rejected.text
+        return banner_id
+    approved = await client.post(f"/api/v1/banners/{banner_id}/approve", headers=admin_headers)
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["status"] == target, approved.json()["status"]
+    return banner_id
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", ["draft", "pending_approval", "rejected", "approved"])
+async def test_sub_admin_deletes_a_banner_until_it_goes_live(
+    client: AsyncClient, status: str
+) -> None:
+    import app.db.session as _session_mod
+    from app.models.audit_log import AuditAction, AuditLog
+
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    headers = {"Authorization": f"Bearer {_sub_admin_token(uid)}"}
+    banner_id = await _banner_in_status(client, uid, status)
+    try:
+        deleted = await client.delete(f"/api/v1/banners/{banner_id}", headers=headers)
+        assert deleted.status_code == 204, deleted.text
+        assert await _banner_status(banner_id) is None
+        again = await client.delete(f"/api/v1/banners/{banner_id}", headers=headers)
+        assert again.status_code == 404
+        # The audit trail survives the hard delete and records where it was.
+        async with _session_mod.AsyncSessionLocal() as db:
+            entry = await db.scalar(
+                select(AuditLog).where(
+                    AuditLog.entity_uuid == uuid.UUID(banner_id),
+                    AuditLog.action == AuditAction.BANNER_DELETED,
+                )
+            )
+        assert entry is not None
+        assert entry.actor_role == "sub_admin"
+        assert entry.detail == {"placement": "homepage", "from_status": status}
+    finally:
+        await _delete_banners(banner_id)
+
+
+@pytest.mark.asyncio
+async def test_live_banner_cannot_be_deleted_or_archived_by_sub_admin(client: AsyncClient) -> None:
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    sub_headers = {"Authorization": f"Bearer {_sub_admin_token(uid)}"}
+    admin_headers = {"Authorization": f"Bearer {_admin_token(uid)}"}
+    banner_id = await _banner_in_status(client, uid, "live")
+    try:
+        deleted = await client.delete(f"/api/v1/banners/{banner_id}", headers=sub_headers)
+        assert deleted.status_code == 409
+        assert deleted.json()["detail"] == "Live banners can only be taken down by an Admin."
+        archived = await client.post(f"/api/v1/banners/{banner_id}/archive", headers=sub_headers)
+        assert archived.status_code == 409
+        assert archived.json()["detail"] == "Live banners can only be taken down by an Admin."
+        assert await _banner_status(banner_id) == "live"
+
+        # The Admin soft Remove is the take-down path, and it keeps the row.
+        removed = await client.post(
+            f"/api/v1/banners/{banner_id}/remove",
+            json={"note": "Campaign ended early."},
+            headers=admin_headers,
+        )
+        assert removed.status_code == 200, removed.text
+        assert await _banner_status(banner_id) == "archived"
+        # Removed rows are gone from the Sub Admin view: 404, not 409.
+        after = await client.delete(f"/api/v1/banners/{banner_id}", headers=sub_headers)
+        assert after.status_code == 404
+    finally:
+        await _delete_banners(banner_id)
+
+
+@pytest.mark.asyncio
+async def test_admin_cannot_hard_delete_a_banner(client: AsyncClient) -> None:
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    banner_id = await _banner_in_status(client, uid, "pending_approval")
+    try:
+        res = await client.delete(
+            f"/api/v1/banners/{banner_id}",
+            headers={"Authorization": f"Bearer {_admin_token(uid)}"},
+        )
+        assert res.status_code == 403
+        assert await _banner_status(banner_id) == "pending_approval"
+    finally:
+        await _delete_banners(banner_id)
+
+
+@pytest.mark.asyncio
+async def test_archived_banner_cannot_be_deleted(client: AsyncClient) -> None:
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    headers = {"Authorization": f"Bearer {_sub_admin_token(uid)}"}
+    banner_id = await _banner_in_status(client, uid, "approved")
+    try:
+        archived = await client.post(f"/api/v1/banners/{banner_id}/archive", headers=headers)
+        assert archived.status_code == 200, archived.text
+        deleted = await client.delete(f"/api/v1/banners/{banner_id}", headers=headers)
+        assert deleted.status_code == 409
+        assert await _banner_status(banner_id) == "archived"
+    finally:
+        await _delete_banners(banner_id)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", ["pending_approval", "rejected"])
+async def test_sub_admin_can_still_archive_before_live(client: AsyncClient, status: str) -> None:
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    headers = {"Authorization": f"Bearer {_sub_admin_token(uid)}"}
+    banner_id = await _banner_in_status(client, uid, status)
+    try:
+        archived = await client.post(f"/api/v1/banners/{banner_id}/archive", headers=headers)
+        assert archived.status_code == 200, archived.text
+        assert archived.json()["status"] == "archived"
+    finally:
+        await _delete_banners(banner_id)
+
+
+@pytest.mark.asyncio
+async def test_banner_with_a_pending_replacement_is_deleted_after_it(client: AsyncClient) -> None:
+    """replaces_banner_id is immutable campaign identity, so the FK SET NULL
+    cannot run: deleting the source first must be a clear 409, never a 500."""
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    headers = {"Authorization": f"Bearer {_sub_admin_token(uid)}"}
+    source_id = await _banner_in_status(client, uid, "approved")
+    try:
+        replacement = await client.post(f"/api/v1/banners/{source_id}/replacement", headers=headers)
+        assert replacement.status_code == 201, replacement.text
+        replacement_id = replacement.json()["id"]
+
+        blocked = await client.delete(f"/api/v1/banners/{source_id}", headers=headers)
+        assert blocked.status_code == 409
+        assert "replace" in blocked.json()["detail"]
+        assert await _banner_status(source_id) == "approved"
+
+        assert (
+            await client.delete(f"/api/v1/banners/{replacement_id}", headers=headers)
+        ).status_code == 204
+        assert (
+            await client.delete(f"/api/v1/banners/{source_id}", headers=headers)
+        ).status_code == 204
+    finally:
+        await _delete_banners(source_id)
+
+
+@pytest.mark.asyncio
+async def test_approval_publishes_when_due_and_waits_for_a_future_start(
+    client: AsyncClient,
+) -> None:
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    live_id = await _banner_in_status(client, uid, "live")
+    future_id = await _banner_in_status(client, uid, "approved")
+    try:
+        assert await _banner_status(live_id) == "live"
+        assert await _banner_status(future_id) == "approved"
+        assert "banner_activated" not in await _audit_actions(future_id)
+    finally:
+        await _delete_banners(live_id, future_id)
+
+
+@pytest.mark.asyncio
+async def test_approval_respects_the_live_slot_and_replacements(client: AsyncClient) -> None:
+    """A category slot holds one live campaign. Approving a second campaign
+    for an occupied slot leaves it approved; approving the occupant
+    replacement swaps them (the old one is archived), like the job does."""
+    import app.db.session as _session_mod
+    from app.models.banner import Banner, BannerPlacement, BannerStatus
+
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    sub_headers = {"Authorization": f"Bearer {_sub_admin_token(uid)}"}
+    admin_headers = {"Authorization": f"Bearer {_admin_token(uid)}"}
+    templates = (await client.get("/api/v1/banners/templates", headers=sub_headers)).json()[
+        "templates"
+    ]
+    template = next(
+        item
+        for item in templates
+        if item["placement"] == "financial_services" and item["category_key"] == "education-loan"
+    )
+    slot = (
+        Banner.placement == BannerPlacement.FINANCIAL_SERVICES,
+        Banner.category_key == template["category_key"],
+        Banner.status == BannerStatus.LIVE,
+        Banner.removed_at.is_(None),
+    )
+    # Park any leftover occupant from earlier runs so the slot starts empty.
+    async with _session_mod.AsyncSessionLocal() as db:
+        parked = list((await db.scalars(select(Banner.id).where(*slot))).all())
+        if parked:
+            await db.execute(
+                update(Banner).where(Banner.id.in_(parked)).values(status=BannerStatus.ARCHIVED)
+            )
+            await db.commit()
+    payload = {**_PAYLOAD, "placement": "financial_services", "template_id": template["id"]}
+    banner_ids: list[str] = []
+    try:
+        occupant_id = await _banner_in_status(client, uid, "live", payload=payload)
+        banner_ids.append(occupant_id)
+
+        competitor_id = await _banner_in_status(client, uid, "pending_approval", payload=payload)
+        banner_ids.append(competitor_id)
+        competitor = await client.post(
+            f"/api/v1/banners/{competitor_id}/approve", headers=admin_headers
+        )
+        assert competitor.status_code == 200, competitor.text
+        assert competitor.json()["status"] == "approved"
+
+        replacement = await client.post(
+            f"/api/v1/banners/{occupant_id}/replacement", headers=sub_headers
+        )
+        assert replacement.status_code == 201, replacement.text
+        replacement_id = replacement.json()["id"]
+        banner_ids.append(replacement_id)
+        assert (
+            await client.post(f"/api/v1/banners/{replacement_id}/submit", headers=sub_headers)
+        ).status_code == 200
+        swapped = await client.post(
+            f"/api/v1/banners/{replacement_id}/approve", headers=admin_headers
+        )
+        assert swapped.status_code == 200, swapped.text
+        assert swapped.json()["status"] == "live"
+        assert await _banner_status(occupant_id) == "archived"
+        assert await _banner_status(competitor_id) == "approved"
+    finally:
+        await _delete_banners(*banner_ids)
+        if parked:
+            async with _session_mod.AsyncSessionLocal() as db:
+                await db.execute(
+                    update(Banner).where(Banner.id.in_(parked)).values(status=BannerStatus.LIVE)
+                )
+                await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_approval_stays_approved_when_activation_loses_a_slot_race(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Another approval or the job can fill an empty slot between the slot
+    check and the write. The live-slot unique index then rejects the write;
+    approval must still succeed and leave the banner approved for the job."""
+    import app.db.session as _session_mod
+    import app.services.banners as banners_service
+    from app.models.banner import Banner, BannerPlacement, BannerStatus, BannerType
+
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    sub_headers = {"Authorization": f"Bearer {_sub_admin_token(uid)}"}
+    templates = (await client.get("/api/v1/banners/templates", headers=sub_headers)).json()[
+        "templates"
+    ]
+    template = next(
+        item
+        for item in templates
+        if item["placement"] == "financial_services" and item["category_key"] == "education-loan"
+    )
+    slot = (
+        Banner.placement == BannerPlacement.FINANCIAL_SERVICES,
+        Banner.category_key == template["category_key"],
+        Banner.status == BannerStatus.LIVE,
+        Banner.removed_at.is_(None),
+    )
+    async with _session_mod.AsyncSessionLocal() as db:
+        parked = list((await db.scalars(select(Banner.id).where(*slot))).all())
+        if parked:
+            await db.execute(
+                update(Banner).where(Banner.id.in_(parked)).values(status=BannerStatus.ARCHIVED)
+            )
+        occupant = Banner(
+            business_line="loans",
+            banner_type=BannerType.DEFAULT,
+            placement=BannerPlacement.FINANCIAL_SERVICES,
+            category_key=template["category_key"],
+            title=f"Slot occupant {uuid.uuid4()}",
+            status=BannerStatus.LIVE,
+            created_by_uuid=uuid.UUID(uid),
+        )
+        db.add(occupant)
+        await db.commit()
+        occupant_id = str(occupant.id)
+
+    async def _write_without_slot_check(
+        session: AsyncSession, banner_id: uuid.UUID, now: datetime | None = None
+    ) -> bool:
+        banner = await session.get(Banner, banner_id)
+        assert banner is not None
+        banner.status = BannerStatus.LIVE
+        return True
+
+    payload = {**_PAYLOAD, "placement": "financial_services", "template_id": template["id"]}
+    banner_ids = [occupant_id]
+    try:
+        pending_id = await _banner_in_status(client, uid, "pending_approval", payload=payload)
+        banner_ids.append(pending_id)
+        monkeypatch.setattr(banners_service, "activate_banner_if_due", _write_without_slot_check)
+        approved = await client.post(
+            f"/api/v1/banners/{pending_id}/approve",
+            headers={"Authorization": f"Bearer {_admin_token(uid)}"},
+        )
+        assert approved.status_code == 200, approved.text
+        assert approved.json()["status"] == "approved"
+        assert await _banner_status(pending_id) == "approved"
+        assert await _banner_status(occupant_id) == "live"
+        assert "banner_approved" in await _audit_actions(pending_id)
+    finally:
+        await _delete_banners(*banner_ids)
+        if parked:
+            async with _session_mod.AsyncSessionLocal() as db:
+                await db.execute(
+                    update(Banner).where(Banner.id.in_(parked)).values(status=BannerStatus.LIVE)
+                )
+                await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "deep_link",
+    ["/loans", "/real-estate?city=hyderabad#top", "https://youtu.be/dQw4w9WgXcQ"],
+)
+async def test_cta_accepts_a_site_path_or_https_link(client: AsyncClient, deep_link: str) -> None:
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    headers = {"Authorization": f"Bearer {_sub_admin_token(uid)}"}
+    created = await client.post(
+        "/api/v1/banners", json={**_PAYLOAD, "deep_link": deep_link}, headers=headers
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["deep_link"] == deep_link
+    banner_id = created.json()["id"]
+    try:
+        cleared = await client.patch(
+            f"/api/v1/banners/{banner_id}", json={"deep_link": "  "}, headers=headers
+        )
+        assert cleared.status_code == 200, cleared.text
+        assert cleared.json()["deep_link"] is None
+    finally:
+        await _delete_banners(banner_id)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "deep_link",
+    [
+        "http://example.com/offer",
+        "javascript:alert(1)",
+        "JavaScript:alert(1)",
+        "data:text/html,<script>alert(1)</script>",
+        "https://u:p@example.com",
+        "https://user@example.com",
+        "//evil.example.com",
+        "/\\evil.example.com",
+        "https:/example.com",
+        "https://example.com:99999/",
+        "https://exa mple.com",
+        " https://example.com",
+        "loans",
+    ],
+)
+async def test_cta_rejects_unsafe_links(client: AsyncClient, deep_link: str) -> None:
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    headers = {"Authorization": f"Bearer {_sub_admin_token(uid)}"}
+    created = await client.post(
+        "/api/v1/banners", json={**_PAYLOAD, "deep_link": deep_link}, headers=headers
+    )
+    assert created.status_code == 422, f"{deep_link!r} -> {created.status_code}"
+
+    draft = await client.post("/api/v1/banners", json=_PAYLOAD, headers=headers)
+    banner_id = draft.json()["id"]
+    try:
+        patched = await client.patch(
+            f"/api/v1/banners/{banner_id}", json={"deep_link": deep_link}, headers=headers
+        )
+        assert patched.status_code == 422, f"{deep_link!r} -> {patched.status_code}"
+    finally:
+        await _delete_banners(banner_id)

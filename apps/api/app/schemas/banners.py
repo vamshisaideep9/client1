@@ -12,6 +12,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.core.urls import is_safe_link_destination
 from app.core.youtube import extract_youtube_id
 from app.models.banner import BannerPlacement, BannerStatus, BannerType
 from app.schemas.personalization import AudienceRules, audience_rules_valid_for_banner
@@ -43,6 +44,21 @@ def youtube_id_or_none(youtube_url: str | None) -> str | None:
     return extract_youtube_id(youtube_url)
 
 
+def _validate_deep_link(value: str | None) -> str | None:
+    """CTA destination: a same-site path or an external https link.
+
+    The value becomes an anchor href on public pages and dashboards, so
+    ``http:``, ``javascript:``, ``data:``, protocol-relative and
+    credential-bearing links are rejected here, not only in the browser.
+    Blank means "no button".
+    """
+    if value is None or not value.strip():
+        return None
+    if not is_safe_link_destination(value):
+        raise ValueError("Use a page path like /loans or a full https:// link.")
+    return value
+
+
 class BannerCreate(BaseModel):
     business_line: str = Field(pattern="^(loans|real_estate|both)$")
     placement: BannerPlacement = BannerPlacement.HOMEPAGE
@@ -64,6 +80,8 @@ class BannerCreate(BaseModel):
     priority: int = Field(default=0, ge=0)
     starts_at: datetime | None = None
     ends_at: datetime | None = None
+
+    _deep_link_is_safe = field_validator("deep_link")(_validate_deep_link)
 
     @model_validator(mode="after")
     def audience_matches_banner_type(self) -> BannerCreate:
@@ -124,6 +142,8 @@ class BannerUpdate(BaseModel):
     # (null clears it). Omitted fields leave the current video unchanged.
     youtube_url: str | None = Field(default=None, max_length=300)
     video_media_asset_id: UUID | None = None
+
+    _deep_link_is_safe = field_validator("deep_link")(_validate_deep_link)
 
     @model_validator(mode="after")
     def _valid_video_link(self) -> BannerUpdate:
@@ -262,9 +282,11 @@ class PublicBannerRead(BaseModel):
       allowlist decision (see services/public_catalog.py's banner_type filter).
 
     deep_link IS included -- it is the CTA href, author-supplied, and the hero
-    cannot function without it. The frontend (lib/public-banners.ts) applies
-    a same-origin guard before building a CTA from it; this schema stores
-    exactly what the author typed.
+    cannot function without it. Writes accept only a same-site path or a
+    strict https link (BannerCreate/BannerUpdate), and the frontend
+    (lib/banner-cta.ts) re-checks it before building a CTA, opening external
+    links in a new tab. Rows written before that validation are still
+    re-checked there.
 
     image_url IS included -- the direct, unsigned URL for a `public/`-prefixed
     image_key (None if the banner has no image, or -- should never happen

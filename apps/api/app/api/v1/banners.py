@@ -49,13 +49,17 @@ from app.services.audit_log import record as record_audit
 from app.services.banners import (
     IMAGE_MAX_BYTES,
     BannerAlreadyReviewed,
+    BannerChanged,
+    BannerHasReplacement,
     BannerInvalidAudience,
     BannerInvalidConfiguration,
+    BannerIsLive,
     BannerNotOwned,
     UnsupportedImageType,
     approve_banner,
     archive_banner,
     create_template_version,
+    delete_banner_before_live,
     presign_banner_image_upload,
     reject_banner,
     remove_banner,
@@ -519,32 +523,39 @@ async def submit(
     return _read(banner)
 
 
+_LIVE_NEEDS_ADMIN = "Live banners can only be taken down by an Admin."
+
+
 @router.delete("/{banner_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_banner_draft(
+async def delete_banner_draft(  # name kept: it is the published operationId
     banner_id: UUID,
     current_user: CurrentUser = Depends(require_sub_admin),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    banner = await db.scalar(select(Banner).where(Banner.id == banner_id).with_for_update())
-    if banner is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Banner not found.")
-    if banner.status != BannerStatus.DRAFT:
+    """Sub Admin hard-deletes a banner until it goes live (draft, pending
+    approval, rejected or approved). Live banners come down only through the
+    Admin's soft Remove; archived and removed rows are kept."""
+    try:
+        deleted = await delete_banner_before_live(db, banner_id, current_user.id, current_user.role)
+    except BannerIsLive as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_LIVE_NEEDS_ADMIN) from exc
+    except BannerAlreadyReviewed as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Only a never-submitted draft can be deleted.",
-        )
-    await record_audit(
-        db,
-        action=AuditAction.BANNER_DELETED,
-        entity_type="banner",
-        entity_uuid=banner.id,
-        actor_uuid=current_user.id,
-        actor_role=current_user.role,
-        business_line=banner.business_line,
-        detail={"placement": banner.placement.value},
-    )
-    await db.delete(banner)
-    await db.commit()
+            detail="Archived banners are kept for the record and cannot be deleted.",
+        ) from exc
+    except BannerHasReplacement as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Another campaign is set to replace this banner. Delete that one first.",
+        ) from exc
+    except BannerChanged as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This banner changed after you opened it. Refresh and try again.",
+        ) from exc
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Banner not found.")
 
 
 @router.post("/{banner_id}/archive", response_model=BannerRead)
@@ -554,6 +565,8 @@ async def archive(
 ) -> BannerRead:
     try:
         banner = await archive_banner(banner_id, current_user.id, current_user.role)
+    except BannerIsLive as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_LIVE_NEEDS_ADMIN) from exc
     except BannerAlreadyReviewed as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

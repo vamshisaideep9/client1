@@ -68,6 +68,25 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In review — Banner lifecycle fixes (API slice)** (2026-11-16; PR
+[#363](https://github.com/brollysolutions/client1/pull/363), mirror
+vamshisaideep9/client1#66; branch
+`fix/banner-lifecycle-api` from `upstream/main` `8493823`; five
+client-reported Sub Admin/Admin CMS bugs, no requirement or
+completion-percentage change). A Sub Admin may delete a banner while it is
+draft, pending approval, rejected or approved; once live only the Admin's soft
+Remove takes it down, and Sub Admins can no longer archive a live banner.
+Approval publishes a banner at once when it is due and its slot is free (the
+`cms_activation` rules, run for one banner). The CTA accepts a site path or a
+strict https link, validated server-side through the shared `core/urls.py`
+helper. One additive migration (`c5e7a9b1d3f4`) widens the `banners_delete`
+RLS policy. The web slice (`fix/banner-lifecycle-web`) follows: create-and-
+submit, live refresh, external CTAs and the horizontal dashboard offer card.
+After #364 merged, `upstream/main` was merged in and `c5e7a9b1d3f4` now
+revises #364's `a7c9e1b3d5f6` (single head). Next: the user reviews and
+merges #363, then the web slice. Recommended: Opus 5.5 / extra-high (RLS,
+role guards, URL handling).
+
 **In review — admin client-roster CSV export** (2026-11-16; upstream PR
 [#364](https://github.com/brollysolutions/client1/pull/364); origin mirror
 DEFERRED pending fork sync), branch

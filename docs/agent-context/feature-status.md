@@ -2,6 +2,48 @@
 
 Status: **Derived living implementation ledger**
 
+**In review — Banner lifecycle fixes (API slice)** (2026-11-16; PR
+[#363](https://github.com/brollysolutions/client1/pull/363), mirror
+vamshisaideep9/client1#66), branch
+`fix/banner-lifecycle-api` from `upstream/main` `8493823`. API, one additive
+RLS migration and the regenerated contract; the completion percentage is
+unchanged.
+- Delete: `DELETE /api/v1/banners/{id}` (Sub Admin only) removes a draft,
+  pending, rejected or approved banner in one conditional
+  `DELETE ... RETURNING` under RLS. 404 for missing or soft-removed rows; 409
+  for live ("Live banners can only be taken down by an Admin."), archived, a
+  banner another campaign is set to replace, or a lost race with activation.
+  `BANNER_DELETED` audit keeps `from_status`. Migration `c5e7a9b1d3f4`
+  recreates `banners_delete` as `sub_admin AND removed_at IS NULL AND status
+  IN (draft, pending_approval, rejected, approved)`; downgrade restores the
+  draft-only policy. Admins keep the soft Remove; Admin `DELETE` stays 403.
+- Archive: a Sub Admin can archive pending, approved or rejected banners;
+  live gets the same 409 pointing to Admin Remove.
+- Approve: after `APPROVED`, `activate_banner_if_due` (the job's own rules for
+  one id: due start, publishable property, category / sponsor slot,
+  replacement swap) runs in the same transaction inside a savepoint, so a
+  due banner whose slot is free is `live` in the response; otherwise it stays
+  approved for the job. Approval audit and notification are unchanged.
+- CTA: `deep_link` must be a same-site path or an https URL with a host, no
+  userinfo, a valid port and no whitespace/control characters (422
+  otherwise; blank clears it). The offers https rule moved to
+  `app/core/urls.py` and both offers modules import it unchanged.
+- Evidence (`python:3.13` container, fresh database at the single head
+  `c5e7a9b1d3f4`; upgrade/downgrade/upgrade checked): ruff check and format
+  pass; `test_core_urls`, `test_banners_api`, `test_banners_rls`,
+  `system/test_cms_activation`, `test_public_banners`, `test_offers_api`,
+  route-authorization coverage and `test_platform_scope_rls` give 190 passed
+  and 1 failed, the pre-existing `test_public_banners.py::
+  test_response_omits_internal_fields` (stale exact key set without the
+  public video fields; fails identically on `upstream/main` `8493823`).
+  Full API suite on `09b3093a`: 2447 passed, 6 failed (the 3 known upstream
+  failures, one pgbouncer-routing failure that fails identically on
+  upstream, and two shared-Redis collisions that pass when re-run alone).
+- Merged `upstream/main` `e09659a` (#364) into the branch; its migration
+  `a7c9e1b3d5f6` also revised `b2d4f6a8c0e1`, so the unmerged
+  `c5e7a9b1d3f4` now revises `a7c9e1b3d5f6` (one head; the full chain
+  upgrades, downgrades and re-upgrades on a fresh database).
+
 **In review — API image build fix (Alpine pin bump)** (2026-11-16; upstream PR
 pending), branch `fix/api-dockerfile-alpine-pins` from `upstream/main`
 `e09659a1`. Bumps the `apps/api/Dockerfile` `apk --upgrade` pins `libcrypto3`
