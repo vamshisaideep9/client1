@@ -210,7 +210,7 @@ function TeamPerformance({ teams }: { teams: TeamPerformanceSummary[] }) {
 
 function defaultFilters(): ReportFilterValue {
   const { dateFrom, dateTo } = resolveDatePreset("this_month", new Date());
-  return { dateFrom, dateTo, bucket: "week", businessLine: undefined, agentProfileUuids: [] };
+  return { dateFrom, dateTo, bucket: "week", businessLine: undefined, agentProfileUuids: [], detail: {} };
 }
 
 function ReportPanel({ kind }: { kind: ReportKind }) {
@@ -242,6 +242,7 @@ function ReportPanel({ kind }: { kind: ReportKind }) {
       bucket: filters.bucket,
       businessLine: filters.businessLine,
       agentProfileUuids: filters.agentProfileUuids,
+      detail: kind === "agents" ? undefined : filters.detail,
     };
     const res =
       format === "csv"

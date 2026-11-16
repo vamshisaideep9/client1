@@ -16,6 +16,10 @@ export type HeroBanner = {
   image?: string;
   reraVerified?: boolean;
   cta?: { label: string; href: string };
+  /** 11-character YouTube id; rendered as a privacy-enhanced click-to-play embed. */
+  youtubeId?: string;
+  /** Direct URL of a processed, public MP4 loop on the asset host. */
+  videoUrl?: string;
 };
 
 // Editorial fallback, not sample data. Rendered only when the CMS returns
@@ -27,8 +31,8 @@ export type HeroBanner = {
 export const FALLBACK_HERO_BANNERS: HeroBanner[] = [
   {
     id: "loans",
-    title: "Loans, cards, and insurance that fit you",
-    subtitle: "All kinds of loans, credit cards, and insurance, matched to what you need.",
+    title: "Loans and credit cards that fit you",
+    subtitle: "Home, personal, business and more, matched with banks and NBFCs. Free for customers.",
     cta: { label: "Explore loans", href: "/loans" },
   },
   {

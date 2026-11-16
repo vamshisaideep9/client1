@@ -7,15 +7,18 @@ import { FaqSection } from "@/components/faq-section";
 import { FloatingDoodles } from "@/components/floating-doodles";
 import { HeroCarousel } from "@/components/hero-carousel";
 import { HomeCalculators } from "@/components/home-calculators";
+import { HomeIntro } from "@/components/home-intro";
 import { HowItWorks } from "@/components/how-it-works";
 import { LineSplit } from "@/components/line-split";
 import { PartnerCta } from "@/components/partner-cta";
 import { WhyChooseUs } from "@/components/why-choose-us";
+import { HomeSuggestedProperties } from "@/features/real-estate/home-suggested-properties";
 import { FALLBACK_HERO_BANNERS } from "@/lib/banners";
 import { faqPageJsonLd, HOME_FAQ_ITEMS } from "@/lib/faq";
 import { getHeroBanners } from "@/lib/public-banners";
 import { getPublicContentBlockBySlug } from "@/lib/public-content-blocks";
-import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { jsonLdScript, organizationJsonLd } from "@/lib/organization-jsonld";
+import { getPublicListings } from "@/lib/public-properties";
 
 // The hero is the one CMS surface with an explicit starts_at/ends_at contract
 // (docs/specs/public-banner-serving.md), so visitor-visible publish latency is
@@ -29,9 +32,9 @@ export const revalidate = 60;
 // Landing-scoped SEO metadata. Overrides the generic root-layout default
 // (which stays as the internal fallback for authenticated dashboard routes).
 export const metadata: Metadata = {
-  title: "Financial Services, Calculators & Real Estate",
+  title: "Dhanadhara: Loans & Verified Property in Hyderabad",
   description:
-    "Explore curated financial services, use free EMI, eligibility, affordability and stamp-duty calculators, and discover verified real estate in one place.",
+    "Compare home, personal and business loans from banks and NBFCs, free of charge, plus verified property in Hyderabad. Serving Hyderabad and Telangana.",
   keywords: [
     "personal loan",
     "business loan",
@@ -39,7 +42,6 @@ export const metadata: Metadata = {
     "vehicle loan",
     "education loan",
     "credit cards",
-    "insurance",
     "real estate",
     "compare loans",
     "financial calculators",
@@ -48,17 +50,16 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Financial Services, Calculators & Real Estate",
+    title: "Dhanadhara: Loans & Verified Property in Hyderabad",
     description:
-      "Curated financial services, practical calculators, and verified real estate, all in one place.",
+      "Compare home, personal and business loans from banks and NBFCs, free of charge, plus verified property in Hyderabad. Serving Hyderabad and Telangana.",
     type: "website",
   },
 };
 
 const homeFaqJsonLd = {
   "@context": "https://schema.org",
-  "@graph": [faqPageJsonLd(HOME_FAQ_ITEMS)],
-  publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+  "@graph": [organizationJsonLd(), faqPageJsonLd(HOME_FAQ_ITEMS)],
 };
 
 export default async function Home() {
@@ -66,10 +67,14 @@ export default async function Home() {
   // never throws (see lib/public-banners.ts), and we deliberately don't
   // distinguish the two here either -- FALLBACK_HERO_BANNERS is what renders
   // in either case, so the homepage is never blank.
-  const [liveBanners, adBanners, closingBlock] = await Promise.all([
+  const [liveBanners, adBanners, closingBlock, publicListings] = await Promise.all([
     getHeroBanners(),
     getHeroBanners("homepage_ad"),
     getPublicContentBlockBySlug("homepage-closing"),
+    // Same ISR-cached catalog read as /real-estate. Suggestions are computed in
+    // the browser from locally cached bookmark ids, so this HTML stays the same
+    // for every visitor.
+    getPublicListings(),
   ]);
   const banners = liveBanners.length > 0 ? liveBanners : FALLBACK_HERO_BANNERS;
 
@@ -77,21 +82,17 @@ export default async function Home() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeFaqJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(homeFaqJsonLd) }}
       />
-      {/* Single crawlable H1 for the page. The hero and section headings are all
-          H2s, so this gives the document a proper outline without changing the
-          visual design (hero copy stays the visual focal point). */}
-      <h1 className="sr-only">
-        Compare personal, business, property, vehicle and education loans, credit
-        cards, insurance, and verified real estate in one place
-      </h1>
       {/* Sponsored strip above the hero. One sponsor at a time (the server
           serves at most one for this placement), and unlike the hero it has NO
           fallback: with no live campaign it renders nothing at all, so the
           hero stays flush against the sticky header. */}
       {adBanners.length > 0 ? <AdStrip banner={adBanners[0]} /> : null}
       <HeroCarousel banners={banners} />
+      {/* The page's single visible H1; carousel and section headings are H2s. */}
+      <HomeIntro />
+      <HomeSuggestedProperties listings={publicListings} />
       {/* Floating natural-color finance doodles overlay the real-estate band and the
           WhyChooseUs bento (lg+, pointer-events-none), hugging the outer gutters. */}
       <div className="relative">

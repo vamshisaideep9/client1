@@ -28,6 +28,11 @@ import {
 import {
   CAMPAIGN_IMAGE_ACCEPT,
   CAMPAIGN_IMAGE_MAX_BYTES,
+  CAMPAIGN_VIDEO_ACCEPT,
+  CAMPAIGN_VIDEO_MAX_BYTES,
+  CAMPAIGN_VIDEO_MAX_SECONDS,
+  exceedsBannerVideoLength,
+  readVideoDuration,
   uploadCampaignArtwork,
   type CampaignMediaAsset,
 } from "@/lib/campaign-media-api";
@@ -67,6 +72,7 @@ export function ArtworkUploadDialog({
   const [source, setSource] = React.useState("");
   const [line, setLine] = React.useState<BusinessLine>(defaultBusinessLine);
   const [usage, setUsage] = React.useState<ArtworkUsageType>(fixedUsageType ?? defaultUsageType);
+  const isVideo = usage === "banner_video";
   const [busy, setBusy] = React.useState(false);
   const { confirm, confirmDialog } = useConfirm();
 
@@ -116,6 +122,13 @@ export function ArtworkUploadDialog({
       return;
     }
     setBusy(true);
+    if (isVideo && exceedsBannerVideoLength(await readVideoDuration(file))) {
+      setBusy(false);
+      toast.error("This video is too long", {
+        description: `Banner videos can be up to ${CAMPAIGN_VIDEO_MAX_SECONDS} seconds. Trim it or link a YouTube video instead.`,
+      });
+      return;
+    }
     const result = await uploadCampaignArtwork({
       file,
       title: title.trim(),
@@ -155,9 +168,9 @@ export function ArtworkUploadDialog({
               icon={ImageIcon}
               value={file}
               onChange={setFile}
-              accept={CAMPAIGN_IMAGE_ACCEPT}
-              maxBytes={CAMPAIGN_IMAGE_MAX_BYTES}
-              hint="JPG, PNG or WEBP · max 4 MB"
+              accept={isVideo ? CAMPAIGN_VIDEO_ACCEPT : CAMPAIGN_IMAGE_ACCEPT}
+              maxBytes={isVideo ? CAMPAIGN_VIDEO_MAX_BYTES : CAMPAIGN_IMAGE_MAX_BYTES}
+              hint={isVideo ? `MP4 · max 20 MB · up to ${CAMPAIGN_VIDEO_MAX_SECONDS} seconds` : "JPG, PNG or WEBP · max 5 MB"}
               disabled={busy}
             />
             <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs leading-5 text-text-secondary">

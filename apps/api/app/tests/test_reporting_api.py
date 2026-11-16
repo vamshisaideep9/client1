@@ -349,3 +349,63 @@ async def test_export_forbidden_for_non_admin(client: AsyncClient) -> None:
     headers = {"Authorization": f"Bearer {_client_token(uid)}"}
     res = await client.get(f"/api/v1/admin/reports/leads/export{_QS}", headers=headers)
     assert res.status_code == 403
+
+
+def _unique_day() -> date:
+    """A far-future day no other run has used, so totals stay exact on a reused DB."""
+    import secrets
+
+    return date(2100 + secrets.randbelow(800), 1 + secrets.randbelow(12), 1 + secrets.randbelow(28))
+
+
+@pytest.mark.asyncio
+async def test_report_filters_are_validated_and_reach_exports(client: AsyncClient) -> None:
+    headers = await _admin_headers(client)
+    d = _unique_day()
+    await _seed_lead(
+        business_line="loans", created_at=datetime(d.year, d.month, d.day, 8, 0, tzinfo=UTC)
+    )
+    base = f"date_from={d}&date_to={d}&business_line=loans"
+    reports = "/api/v1/admin/reports"
+
+    bad = await client.get(f"{reports}/leads?{base}&call_status=maybe", headers=headers)
+    long_city = await client.get(
+        f"{reports}/deals?{base}&property_city={'x' * 121}", headers=headers
+    )
+    all_leads = await client.get(f"{reports}/leads?{base}", headers=headers)
+    agent_leads = await client.get(f"{reports}/leads?{base}&lead_source=agent", headers=headers)
+    export = await client.get(f"{reports}/leads/export?{base}&lead_source=agent", headers=headers)
+
+    assert bad.status_code == 422
+    assert long_city.status_code == 422
+    assert all_leads.json()["summary"]["total_count"] == 1
+    assert agent_leads.json()["summary"]["total_count"] == 0
+    assert export.status_code == 200, export.text
+    body_lines = [line for line in export.content.decode("utf-8-sig").splitlines() if line]
+    assert body_lines == ["bucket_start,business_line,total,converted"]
+
+
+@pytest.mark.asyncio
+async def test_telecaller_options_are_admin_only_and_line_scoped(client: AsyncClient) -> None:
+    from app.tests.test_telecaller_api import _seed_telecaller
+
+    headers = await _admin_headers(client)
+    _, loans_staff = await _seed_telecaller("loans")
+    _, estate_staff = await _seed_telecaller("real_estate")
+
+    loans = await client.get(
+        "/api/v1/admin/reports/telecallers?business_line=loans", headers=headers
+    )
+    assert loans.status_code == 200, loans.text
+    ids = {row["staff_profile_uuid"] for row in loans.json()}
+    assert loans_staff in ids
+    assert estate_staff not in ids
+    assert set(loans.json()[0]) == {"staff_profile_uuid", "staff_code", "name", "business_line"}
+
+    _, mobile = await full_registration(client)
+    client_uid = await _auth_user_uuid(mobile)
+    denied = await client.get(
+        "/api/v1/admin/reports/telecallers",
+        headers={"Authorization": f"Bearer {_client_token(client_uid)}"},
+    )
+    assert denied.status_code == 403
