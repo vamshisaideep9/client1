@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatIsoDay,
+  formatPeriodLabel,
   formatRangeLabel,
   isoToLocalDate,
   localDateToIso,
@@ -172,6 +173,20 @@ describe("analytics request parameters", () => {
     ]);
     expect(filtersForRole("agent", "loans").every((spec) => spec.group === null)).toBe(true);
     expect(filtersForRole("sub_admin", "loans").find((spec) => spec.key === "content_status")?.group).toBeNull();
+  });
+});
+
+describe("KPI period label", () => {
+  it("names a whole calendar month, such as the Last month default", () => {
+    expect(formatPeriodLabel(resolveRangePreset("last_month", MID_NOV))).toBe("Oct 2026");
+    expect(formatPeriodLabel({ dateFrom: "2024-02-01", dateTo: "2024-02-29" })).toBe("Feb 2024");
+  });
+
+  it("falls back to the range for anything else", () => {
+    expect(formatPeriodLabel({ dateFrom: "2026-10-01", dateTo: "2026-10-15" })).toBe(
+      formatRangeLabel({ dateFrom: "2026-10-01", dateTo: "2026-10-15" }),
+    );
+    expect(formatPeriodLabel({ dateFrom: "", dateTo: "" })).toBe("");
   });
 });
 

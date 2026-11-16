@@ -12,7 +12,7 @@ import {
 } from "@/features/dashboard/dashboard-ui";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { useLine } from "@/features/dashboard/line-provider";
-import { resolveRangePreset, type DateRangeValue } from "@/lib/analytics-range";
+import { formatPeriodLabel, resolveRangePreset, type DateRangeValue } from "@/lib/analytics-range";
 import {
   getMyAnalyticsForRange,
   type AnalyticsBreakdown,
@@ -53,10 +53,12 @@ type State =
   | { status: "ready"; data: StaffAnalytics }
   | { status: "error"; error: string; code: number | null };
 
-export function KpiTile({ kpi }: { kpi: AnalyticsKpi }) {
+export function KpiTile({ kpi, period }: { kpi: AnalyticsKpi; period?: string }) {
   return (
     <div className="min-w-0 rounded-xl border border-border bg-card p-4 shadow-sm">
       <p className="text-xs font-medium text-text-secondary">{kpi.label}</p>
+      {/* A tile with a hint covers some other scope (all-time, right now). */}
+      {period && !kpi.hint ? <p className="text-[11px] text-text-secondary">{period}</p> : null}
       <p className="mt-1 font-heading text-2xl font-semibold tabular-nums text-brand-heading">
         {formatMetric(kpi.value, kpi.unit)}
       </p>
@@ -270,6 +272,7 @@ export function AnalyticsLoading() {
 
 /** KPIs, the daily trend, breakdowns and funnel for one person's analytics. */
 export function AnalyticsReport({ data }: { data: StaffAnalytics }) {
+  const period = formatPeriodLabel({ dateFrom: data.date_from, dateTo: data.date_to });
   return (
     <div className="space-y-5">
       <section
@@ -277,7 +280,7 @@ export function AnalyticsReport({ data }: { data: StaffAnalytics }) {
         className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5"
       >
         {data.kpis.map((kpi) => (
-          <KpiTile key={kpi.key} kpi={kpi} />
+          <KpiTile key={kpi.key} kpi={kpi} period={period} />
         ))}
       </section>
 
@@ -296,7 +299,7 @@ export function AnalyticsReport({ data }: { data: StaffAnalytics }) {
 export function StaffAnalyticsView() {
   const { session } = useAuth();
   const { activeLine } = useLine();
-  const [range, setRange] = React.useState<DateRangeValue>(() => resolveRangePreset("last_30_days", new Date()));
+  const [range, setRange] = React.useState<DateRangeValue>(() => resolveRangePreset("last_month", new Date()));
   const [filters, setFilters] = React.useState<StaffAnalyticsFilterValues>({});
   const [state, setState] = React.useState<State>({ status: "loading" });
   const [reloadKey, setReloadKey] = React.useState(0);

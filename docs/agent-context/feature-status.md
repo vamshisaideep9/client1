@@ -2,6 +2,32 @@
 
 Status: **Derived living implementation ledger**
 
+**In review — Batch A PR 2: Settings by role, self-service guards, small
+fixes** (2026-11-16; CS-021), branch `feat/filters-settings-by-role` stacked
+on PR 1. API, one additive data migration, web; no requirement-percentage
+change and no contract shape change.
+- Settings: `settingsForRole` — Client: editable, personalization, delete;
+  Agent and Admin: editable, delete, no personalization card; Telecaller,
+  Employee, Sub Admin (managers): read-only "Your details" with "ask an
+  Admin", no Save, no personalization, no Danger zone.
+- API: `PATCH /auth/me` and `DELETE /auth/me` → 403 for telecaller,
+  employee and sub_admin role claims (delete refuses before the password
+  check; Main Admin protection unchanged). Personalization preference and
+  location endpoints → 403 for every role but client; placements unchanged
+  for client/agent/employee/telecaller and read a stored preference only for
+  a Client, so Agent-activity banners no longer match (role-only Agent
+  banners still do). Migration `d6f8a0b2c4e7` deletes preferences of
+  accounts with an active agent or staff profile (owner statement, no RLS,
+  grant or function change; downgrade no-op).
+- Follow-ups: home table (Lead, Request, Due) five rows tall with an inner
+  scroll and "View all follow-ups"; the "Follow-ups due" card and the link
+  open `/dashboard/leads?followUp=due` (open leads due now or overdue, the
+  same rule as the API home panel), shown as a removable chip.
+- Analytics: My analytics, team and member analytics open on the previous
+  calendar month; KPI tiles without a scope hint show the period. Agent
+  "Commission by status" excludes cancelled.
+- Evidence: recorded on the PR.
+
 **In review — Batch A PR 1: one filter system across every dashboard**
 (2026-11-16; CS-021), branch `feat/unified-dashboard-filters` from
 `upstream/main` `5e8aaf7b`. Web only; no contract, dependency or
@@ -27,8 +53,13 @@ requirement-percentage change.
   sorts by rank), Agent, team work and Admin assigned leads open on New >
   Assigned > Working > Converted > Closed > Released, then next follow-up.
   Admin and Client loan lists put closed/rejected applications last.
-- Evidence: recorded on the PR (lint, typecheck, unit tests, container
-  build, Playwright specs).
+- PR [#367](https://github.com/brollysolutions/client1/pull/367), mirror
+  vamshisaideep9/client1#68. Evidence: `pnpm lint`/`typecheck` pass;
+  `pnpm test` 1010 passed (138 files); `pnpm build` passes in
+  `node:22-alpine`; Playwright against `pnpm dev`: the five updated filter
+  specs 20 passed and the new `filter-system.spec.ts` 5 passed (1440/390 px,
+  light/dark). Known: the Telecaller leads table (not the bar) still
+  overflows at 390 px.
 
 **In review — Banner lifecycle fixes (web slice)** (2026-11-16; PR
 [#366](https://github.com/brollysolutions/client1/pull/366), mirror

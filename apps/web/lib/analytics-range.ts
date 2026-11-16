@@ -125,6 +125,19 @@ export function formatRangeLabel(range: DateRangeValue): string {
   return `${(sameYear ? SHORT : LONG).format(from)} – ${LONG.format(to)}`;
 }
 
+const MONTH = new Intl.DateTimeFormat("en-IN", { month: "short", year: "numeric", timeZone: "UTC" });
+
+/**
+ * The period a KPI covers: "Oct 2026" for one whole calendar month (the
+ * "Last month" default), otherwise the compact range label.
+ */
+export function formatPeriodLabel(range: DateRangeValue): string {
+  if (!range.dateFrom || !range.dateTo) return "";
+  const { y, m0, d } = parts(range.dateFrom);
+  if (d === 1 && range.dateTo === iso(y, m0 + 1, 0)) return MONTH.format(asUtcDate(range.dateFrom));
+  return formatRangeLabel(range);
+}
+
 /** "15 Nov 2026" for one ISO day, or "" when none is chosen yet. */
 export function formatIsoDay(isoDate: string): string {
   return isoDate ? LONG.format(asUtcDate(isoDate)) : "";

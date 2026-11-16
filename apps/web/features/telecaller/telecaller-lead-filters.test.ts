@@ -6,7 +6,9 @@ import {
   DEFAULT_TELECALLER_LEAD_FILTERS,
   DEFAULT_TELECALLER_LEAD_SORT,
   filterTelecallerLeads,
+  isFollowUpDue,
   sortTelecallerLeads,
+  telecallerLeadFiltersActive,
 } from "./telecaller-lead-filters";
 
 function lead(overrides: Partial<TelecallerLead>): TelecallerLead {
@@ -124,6 +126,21 @@ describe("sortTelecallerLeads", () => {
       "closed-soon",
       "released",
     ]);
+  });
+
+  it("keeps only open leads whose follow-up is due now or overdue for ?followUp=due", () => {
+    const now = new Date("2026-11-16T10:00:00Z");
+    const leads: TelecallerLead[] = [
+      lead({ id: "overdue", status: "working", next_follow_up_at: "2026-11-15T09:00:00Z" }),
+      lead({ id: "now", status: "assigned", next_follow_up_at: "2026-11-16T10:00:00Z" }),
+      lead({ id: "later", status: "working", next_follow_up_at: "2026-11-17T09:00:00Z" }),
+      lead({ id: "none", status: "working", next_follow_up_at: null }),
+      lead({ id: "closed", status: "closed", next_follow_up_at: "2026-11-10T09:00:00Z" }),
+    ];
+    const filters = { ...DEFAULT_TELECALLER_LEAD_FILTERS, followUpDue: true };
+    expect(filterTelecallerLeads(leads, filters, now).map((l) => l.id)).toEqual(["overdue", "now"]);
+    expect(telecallerLeadFiltersActive(filters)).toBe(true);
+    expect(isFollowUpDue(leads[2], now)).toBe(false);
   });
 
   it("sorts the Status column by the same rank, not alphabetically", () => {

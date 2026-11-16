@@ -106,7 +106,7 @@ export function TelecallerHome() {
           label="Follow-ups due"
           value={home.follow_ups_due.length}
           icon={DASHBOARD_ICONS.leads}
-          href="/dashboard/leads"
+          href="/dashboard/leads?followUp=due"
           attention={home.follow_ups_due.length > 0}
         />
         <MetricCard
@@ -138,34 +138,53 @@ export function TelecallerHome() {
           {home.follow_ups_due.length === 0 ? (
             <p className="text-sm text-text-secondary">Nothing due right now.</p>
           ) : (
-            <ul className="space-y-2">
-              {home.follow_ups_due.map((item) => (
-                <li key={item.lead_uuid}>
-                  <Link
-                    href={`/dashboard/leads/${item.lead_uuid}`}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm transition-colors hover:border-brand-cta"
-                  >
-                    <span className="flex min-w-0 items-start gap-2">
-                      <DASHBOARD_ICONS.leads className="mt-0.5 h-4 w-4 shrink-0 text-brand-link" aria-hidden="true" />
-                      <span className="min-w-0">
-                        <span className="block font-medium text-text-primary">
-                          {item.name ?? item.mobile}
-                        </span>
-                        {item.latest_request ? (
-                          <span className="block text-xs text-text-secondary">
-                            {item.latest_request.title} · applied{" "}
-                            {formatAppliedAt(item.latest_request.applied_at)}
-                          </span>
-                        ) : null}
-                      </span>
-                    </span>
-                    <span className="text-xs text-text-secondary">
-                      {formatDateTime(item.follow_up_at)}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-3">
+              {/* Five rows tall; the rest scroll inside the panel. Focusable so
+                  keyboard users can scroll it too. */}
+              <div
+                className="max-h-[17.5rem] overflow-y-auto rounded-xl border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                tabIndex={0}
+                role="region"
+                aria-label={`Follow-ups due, ${home.follow_ups_due.length} leads`}
+              >
+                <table className="w-full text-left text-sm">
+                  <thead className="sticky top-0 z-10 bg-card text-xs uppercase tracking-wide text-text-secondary shadow-[inset_0_-1px_0_var(--border)]">
+                    <tr>
+                      <th scope="col" className="px-3 py-2 font-medium">Lead</th>
+                      <th scope="col" className="px-3 py-2 font-medium">Request</th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium">Due</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {home.follow_ups_due.map((item) => (
+                      <tr key={item.lead_uuid} className="h-12 border-b border-border last:border-0">
+                        <td className="max-w-0 px-3 py-2">
+                          <Link
+                            href={`/dashboard/leads/${item.lead_uuid}`}
+                            className="block truncate font-medium text-brand-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {item.name ?? item.mobile}
+                          </Link>
+                        </td>
+                        <td className="max-w-0 px-3 py-2 text-text-secondary">
+                          {item.latest_request ? (
+                            <span className="block truncate" title={`${item.latest_request.title} · applied ${formatAppliedAt(item.latest_request.applied_at)}`}>
+                              {item.latest_request.title}
+                            </span>
+                          ) : (
+                            <span aria-label="No request">-</span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-right text-text-secondary">
+                          <time dateTime={item.follow_up_at}>{formatDateTime(item.follow_up_at)}</time>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <DashboardTextLink href="/dashboard/leads?followUp=due">View all follow-ups</DashboardTextLink>
+            </div>
           )}
         </DashboardPanel>
 
