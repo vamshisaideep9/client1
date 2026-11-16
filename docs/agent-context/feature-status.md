@@ -3,7 +3,9 @@
 Status: **Derived living implementation ledger**
 
 **In progress — Batch E PR 2: self-service phone/email change and contact
-history (API)** (2026-11-17; CS-025), branch `feat/batch-e-contact-change-api`
+history (API)** (2026-11-17; CS-025; PR
+[#376](https://github.com/brollysolutions/client1/pull/376), mirror
+vamshisaideep9/client1#77), branch `feat/batch-e-contact-change-api`
 stacked on Batch E PR 1. API and regenerated contracts; no migration (E1's
 schema); no requirement-percentage change.
 - Journey (Client, Agent, Admin; Telecaller / Employee / Sub Admin 403):

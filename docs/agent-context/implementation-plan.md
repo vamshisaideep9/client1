@@ -90,7 +90,9 @@ stacked on Batch D PR 2:
   (password first); `PATCH /auth/me` no longer edits or clears email;
   `/auth/me`, login and refresh carry `email_required`.
 - *PR E2 — API: self-service phone/email change and history*, branch
-  `feat/batch-e-contact-change-api` stacked on E1. Client, Agent and Admin:
+  `feat/batch-e-contact-change-api` stacked on E1 (PR
+  [#376](https://github.com/brollysolutions/client1/pull/376), mirror
+  vamshisaideep9/client1#77). Client, Agent and Admin:
   `/auth/contact-change/start` (password) → `verify-current` (code to the
   current value) → `new-value` (resubmittable; a number registered elsewhere
   refused up front, nothing else revealed before the code) → `verify-new` →
