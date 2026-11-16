@@ -44,26 +44,34 @@ function errorDetail(error: unknown): string {
   return String(error);
 }
 
+/** Absolute backend URL for a server-side call (Server Components and Actions). */
+export function serverApiUrl(path: string): string {
+  return `${SERVER_BASE_URL}${path}`;
+}
+
 export async function serverFetchJson<TResponse>(
   path: string,
   {
     revalidate,
+    tags,
     expectedStatuses = [],
   }: {
     revalidate: number;
+    /** Data-cache tags, so a Server Action can clear this read on demand. */
+    tags?: readonly string[];
     expectedStatuses?: readonly number[];
   },
 ): Promise<ApiResponse<TResponse>> {
   let res: Response;
   try {
-    res = await fetch(`${SERVER_BASE_URL}${path}`, {
+    res = await fetch(serverApiUrl(path), {
       method: "GET",
       headers: { Accept: "application/json" },
       signal:
         typeof AbortSignal !== "undefined" && "timeout" in AbortSignal
           ? AbortSignal.timeout(REQUEST_TIMEOUT_MS)
           : undefined,
-      next: { revalidate },
+      next: tags?.length ? { revalidate, tags: [...tags] } : { revalidate },
     });
   } catch (error) {
     // Next uses thrown signals to opt a route into dynamic rendering. Swallowing

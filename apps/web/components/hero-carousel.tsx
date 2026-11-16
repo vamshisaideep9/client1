@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import { ChevronDown, ShieldCheck } from "lucide-react";
+import { ChevronDown, ExternalLink, ShieldCheck } from "lucide-react";
 
+import { BannerCtaLink } from "@/components/banner-cta-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ResponsiveArtwork } from "@/components/responsive-artwork";
@@ -281,12 +281,16 @@ export function HeroCarousel({
                           disabled={!interactive}
                           className="mt-5 h-auto min-h-11 max-w-full whitespace-normal bg-[var(--nav-primary)] px-4 py-2 text-center text-sm text-white shadow-sm hover:bg-[var(--nav-primary-hover)] focus-visible:ring-ring sm:min-h-10"
                         >
-                          {interactive ? <Link
-                            href={banner.cta.href}
+                          {interactive ? <BannerCtaLink
+                            cta={{ href: banner.cta.href, external: Boolean(banner.cta.external) }}
                             tabIndex={isSelected ? undefined : -1}
                           >
                             {banner.cta.label}
-                          </Link> : banner.cta.label}
+                            {banner.cta.external ? <ExternalLink className="size-4 shrink-0" aria-hidden /> : null}
+                          </BannerCtaLink> : <>
+                            {banner.cta.label}
+                            {banner.cta.external ? <ExternalLink className="size-4 shrink-0" aria-hidden /> : null}
+                          </>}
                         </Button>
                       )}
                     </div>

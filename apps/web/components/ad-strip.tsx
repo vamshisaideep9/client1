@@ -5,9 +5,9 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { ArrowUpRight, X } from "lucide-react";
 
+import { BannerCtaLink } from "@/components/banner-cta-link";
 import { BannerVideo } from "@/components/banner-video";
 import { Button } from "@/components/ui/button";
 import { CLOSE_BUTTON_CLASS } from "@/components/ui/close-button";
@@ -137,10 +137,10 @@ export function AdStrip({
               size="sm"
               className="mt-4 h-auto min-h-11 max-w-full whitespace-normal bg-[#761f3f] px-5 py-2.5 text-sm text-white hover:bg-[#5c1831] focus-visible:ring-[#761f3f]"
             >
-              <Link href={banner.cta.href}>
+              <BannerCtaLink cta={{ href: banner.cta.href, external: Boolean(banner.cta.external) }}>
                 <span className="min-w-0 [overflow-wrap:anywhere]">{banner.cta.label}</span>
                 <ArrowUpRight className="size-4 shrink-0" aria-hidden />
-              </Link>
+              </BannerCtaLink>
             </Button>
           ) : null}
         </div>

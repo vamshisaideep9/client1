@@ -62,6 +62,27 @@ describe("AdStrip", () => {
     expect(markup).not.toContain('aria-roledescription="carousel"');
   });
 
+  it("opens an external sponsor CTA in a new tab and announces it", () => {
+    const markup = renderToStaticMarkup(
+      <AdStrip
+        banner={{
+          ...SPONSOR,
+          cta: { label: "Compare plans", href: "https://partner.example/plans", external: true },
+        }}
+      />,
+    );
+    expect(markup).toContain('href="https://partner.example/plans"');
+    expect(markup).toContain('target="_blank"');
+    expect(markup).toContain('rel="noopener noreferrer"');
+    expect(markup).toContain('<span class="sr-only"> (opens in a new tab)</span>');
+  });
+
+  it("keeps an internal sponsor CTA in the same tab", () => {
+    const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} />);
+    expect(markup).not.toContain('target="_blank"');
+    expect(markup).not.toContain("opens in a new tab");
+  });
+
   it("renders without a CTA or subtitle when the campaign omits them", () => {
     const bare: HeroBanner = { id: "sponsor-2", title: "A sponsor with no call to action" };
     const markup = renderToStaticMarkup(<AdStrip banner={bare} />);

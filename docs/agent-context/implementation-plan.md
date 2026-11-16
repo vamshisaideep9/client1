@@ -68,6 +68,25 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In review — Banner lifecycle fixes (web slice)** (2026-11-16; PR
+[#366](https://github.com/brollysolutions/client1/pull/366), mirror
+vamshisaideep9/client1#67; branch
+`fix/banner-lifecycle-web` stacked on `fix/banner-lifecycle-api`; same five
+client-reported bugs, no requirement or completion-percentage change). Sub
+Admins see Delete until a banner goes live and a "Live — ask an Admin to
+remove it." note after; creating a banner submits it for approval (Save
+draft stays secondary); approve/Remove clear the public banner cache through
+an admin-checked Server Action and the CMS queues refresh every 30 s and on
+tab focus without touching unsaved edits; one `lib/banner-cta.ts` rule
+renders same-site and https CTAs (new tab, announced) and defaults a YouTube
+banner with no destination to the video; dashboard offers become a
+single-column list of horizontal banners from md up. Verified with lint,
+typecheck, 989 unit tests, a container build and a new Playwright spec (6
+passed). Also adds the Admin audit-log label for #364's
+`client_export_downloaded`, without which `upstream/main`'s web typecheck
+fails. Next: the user merges the API slice, then this one. Recommended:
+Opus 5.5 / high (web, with a security-sensitive Server Action).
+
 **In review — Banner lifecycle fixes (API slice)** (2026-11-16; PR
 [#363](https://github.com/brollysolutions/client1/pull/363), mirror
 vamshisaideep9/client1#66; branch

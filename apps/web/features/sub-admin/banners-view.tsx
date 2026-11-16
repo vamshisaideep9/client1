@@ -74,8 +74,9 @@ import {
   propertyMatchesCampaign,
 } from "@/lib/banner-properties";
 import { getAdminProperties, type AdminProperty } from "@/lib/properties-api";
-import { DestinationInput } from "./destination-input";
-import { isSafeLocalHref } from "@/lib/safe-local-href";
+import { revalidatePublicBanners } from "@/app/actions/revalidate-public-banners";
+import { BANNER_DESTINATION_ERROR, isSafeBannerHref } from "@/lib/banner-cta";
+import { DESTINATION_HINT, DestinationInput } from "./destination-input";
 
 import { audienceSummary } from "./audience-rule-fields";
 import { BannerForm } from "./banner-form";
@@ -90,6 +91,7 @@ import {
   CmsWorkspaceLayout,
   CMS_WORKSPACE_DIALOG_CLASS,
 } from "./cms-workspace";
+import { refreshedSelection } from "./queue-refresh";
 import { useBannerQueue } from "./use-banner-queue";
 import { PropertyCampaignSelect } from "./property-campaign-select";
 
@@ -111,6 +113,10 @@ const STATUS_TONE: Record<Banner["status"], StatusTone> = {
 };
 const EDITABLE = new Set<Banner["status"]>(["draft", "rejected"]);
 const REPLACEABLE = new Set<Banner["status"]>(["approved", "live", "archived"]);
+// A Sub Admin may delete or archive a banner until it goes live; after that
+// only the Admin's Remove takes it down. The API and RLS enforce the same sets.
+const DELETABLE = new Set<Banner["status"]>(["draft", "pending_approval", "rejected", "approved"]);
+const ARCHIVABLE = new Set<Banner["status"]>(["pending_approval", "approved", "rejected"]);
 
 type Draft = {
   title: string;
@@ -195,6 +201,17 @@ export function BannersView({
   const bannersPage = useFilteredPage(filtered, filters);
   const canEdit = Boolean(active && !isAdmin && EDITABLE.has(active.status));
   const dirty = Boolean(canEdit && active && draft && JSON.stringify(draft) !== JSON.stringify(toDraft(active)));
+
+  // A background refresh can bring a newer copy of the open banner (approved,
+  // now live, edited by a teammate). Adopt it only when nothing local would be
+  // lost: no unsaved edits, no action in flight, no review note being written.
+  React.useEffect(() => {
+    const next = refreshedSelection(active, items, dirty || busy || reviewAction !== null);
+    if (!next || next === active) return;
+    setActive(next);
+    setDraft(toDraft(next));
+    setDraftMediaUrl(next.image_url ?? null);
+  }, [active, busy, dirty, items, reviewAction]);
 
   const columns = React.useMemo<readonly DataColumn<Banner>[]>(
     () => [
@@ -324,9 +341,9 @@ export function BannersView({
       subtitle: optionalTextError(draft.subtitle, "Subtitle", 300),
       ctaLabel: optionalTextError(draft.ctaLabel, "Button label", 40),
       deepLink:
-        draft.deepLink.trim() && !isSafeLocalHref(draft.deepLink.trim())
-          ? "Use a same-site path beginning with one slash."
-          : optionalTextError(draft.deepLink, "Internal destination", 1000),
+        draft.deepLink.trim() && !isSafeBannerHref(draft.deepLink.trim())
+          ? BANNER_DESTINATION_ERROR
+          : optionalTextError(draft.deepLink, "Button destination", 1000),
       priority: integerError(draft.priority, "Priority", {
         required: true,
         min: 0,
@@ -428,20 +445,53 @@ export function BannersView({
     void reload();
   }
 
-  async function removeDraft(banner: Banner) {
+  // Public pages cache banner reads; after an Admin approves or removes a
+  // campaign, clear that cache so the next visitor sees the change. Best
+  // effort: on failure the 60-second refresh still applies.
+  function refreshPublicBanners() {
+    const token = session?.accessToken;
+    if (token) void revalidatePublicBanners(token).catch(() => undefined);
+  }
+
+  async function approve(banner: Banner) {
+    setBusy(true);
+    const result = await approveBanner(banner.id);
+    setBusy(false);
+    if (!result.ok) return void toast.error("Could not approve banner", { description: result.error });
+    if (result.data.status === "live") {
+      toast.success("Banner approved and live", { description: "Visitors see it on their next page load." });
+    } else {
+      toast.success("Banner approved", {
+        description: "It goes live when its start time arrives and its slot is free.",
+      });
+    }
+    refreshPublicBanners();
+    setActive(null);
+    setDraft(null);
+    void reload();
+  }
+
+  async function deleteBeforeLive(banner: Banner) {
+    const isDraft = banner.status === "draft";
     const confirmed = await confirm({
-      title: "Delete this draft?",
-      description:
-        "This campaign has never been submitted for review, so deleting it leaves no record. This cannot be undone.",
-      confirmLabel: "Delete draft",
+      title: isDraft ? "Delete this draft?" : "Delete this banner?",
+      description: isDraft
+        ? "This campaign has never been submitted for review, so deleting it leaves no record. This cannot be undone."
+        : "It has not gone live, so it is removed for good. The audit log keeps a record that it existed. This cannot be undone.",
+      confirmLabel: isDraft ? "Delete draft" : "Delete banner",
       destructive: true,
     });
     if (!confirmed) return;
     setBusy(true);
     const result = await deleteBanner(banner.id);
     setBusy(false);
-    if (!result.ok) return void toast.error("Could not delete draft", { description: result.error });
-    toast.success("Draft deleted");
+    if (!result.ok) {
+      void reload();
+      return void toast.error(isDraft ? "Could not delete draft" : "Could not delete banner", {
+        description: result.error,
+      });
+    }
+    toast.success(isDraft ? "Draft deleted" : "Banner deleted");
     setActive(null);
     setDraft(null);
     void reload();
@@ -450,7 +500,7 @@ export function BannersView({
   async function archive(banner: Banner) {
     const confirmed = await confirm({
       title: "Archive this banner?",
-      description: "It stops appearing on the customer-facing surface. Reviewed history is kept.",
+      description: "It will not go live. The campaign and its review history are kept.",
       confirmLabel: "Archive banner",
     });
     if (!confirmed) return;
@@ -471,6 +521,7 @@ export function BannersView({
     setBusy(false);
     if (!result.ok) return void toast.error("Could not remove banner", { description: result.error });
     toast.success("Banner removed from serving");
+    refreshPublicBanners();
     setActive(null);
     setDraft(null);
     void reload();
@@ -607,7 +658,7 @@ export function BannersView({
                           <FieldError id="banner-edit-cta-error">{fieldErrors.ctaLabel}</FieldError>
                         </div>
                         <div>
-                          <Label htmlFor="banner-link">Internal destination</Label>
+                          <Label htmlFor="banner-link">Button destination</Label>
                           <DestinationInput
                             id="banner-link"
                             dashboard={active.placement === "dashboard"}
@@ -618,8 +669,9 @@ export function BannersView({
                             maxLength={1000}
                             onValueChange={(value) => { setDraft({ ...draft, deepLink: value }); setFieldErrors((current) => ({ ...current, deepLink: undefined })); }}
                             aria-invalid={Boolean(fieldErrors.deepLink)}
-                            aria-describedby={fieldErrors.deepLink ? "banner-edit-link-error" : undefined}
+                            aria-describedby={["banner-edit-link-help", fieldErrors.deepLink && "banner-edit-link-error"].filter(Boolean).join(" ")}
                           />
+                          <p id="banner-edit-link-help" className="mt-1 text-xs text-text-secondary">{DESTINATION_HINT}</p>
                           <FieldError id="banner-edit-link-error">{fieldErrors.deepLink}</FieldError>
                         </div>
                       </div>
@@ -714,18 +766,22 @@ export function BannersView({
                         <Button variant={reviewAction === "remove" ? "destructive" : "default"} disabled={busy} onClick={() => void (reviewAction === "remove" ? removeReviewed(active) : reject(active))}>{reviewAction === "remove" ? <Trash2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}{reviewAction === "remove" ? "Confirm removal" : "Send change request"}</Button>
                       </> : isAdmin && active.status === "pending_approval" ? <>
                         <Button variant="outline" disabled={busy} onClick={() => setReviewAction("changes")}>Request changes</Button>
-                        <Button disabled={busy} onClick={() => void advance(approveBanner, active, "Banner approved")}><CheckCircle2 className="h-4 w-4" />Approve</Button>
+                        <Button disabled={busy} onClick={() => void approve(active)}><CheckCircle2 className="h-4 w-4" />Approve</Button>
                       </> : !isAdmin && EDITABLE.has(active.status) ? (
                         <>
-                          {active.status === "draft" ? <Button variant="destructive" disabled={busy} onClick={() => void removeDraft(active)}><Trash2 className="h-4 w-4" />Delete draft</Button> : null}
+                          <Button variant="destructive" disabled={busy} onClick={() => void deleteBeforeLive(active)}><Trash2 className="h-4 w-4" />{active.status === "draft" ? "Delete draft" : "Delete"}</Button>
                           <Button variant="outline" disabled={busy || !dirty} onClick={() => void save(active)}>Save changes</Button>
                           <Button disabled={busy || dirty} onClick={() => void advance(submitBanner, active, "Submitted for approval")}><Send className="h-4 w-4" />Submit for approval</Button>
                         </>
-                      ) : !isAdmin && REPLACEABLE.has(active.status) ? (
-                        <Button disabled={busy} onClick={() => void replace(active)}><CopyPlus className="h-4 w-4" />Create replacement</Button>
+                      ) : !isAdmin ? (
+                        <>
+                          {active.status === "live" ? <p className="mr-auto self-center text-sm text-text-secondary">Live — ask an Admin to remove it.</p> : null}
+                          {DELETABLE.has(active.status) ? <Button variant="destructive" disabled={busy} onClick={() => void deleteBeforeLive(active)}><Trash2 className="h-4 w-4" />Delete</Button> : null}
+                          {REPLACEABLE.has(active.status) ? <Button disabled={busy} onClick={() => void replace(active)}><CopyPlus className="h-4 w-4" />Create replacement</Button> : null}
+                        </>
                       ) : null}
                       {isAdmin && !reviewAction ? <Button variant="destructive" disabled={busy} onClick={() => setReviewAction("remove")}><Trash2 className="h-4 w-4" />Remove</Button> : null}
-                      {!isAdmin && active.status !== "draft" && active.status !== "archived" ? (
+                      {!isAdmin && ARCHIVABLE.has(active.status) ? (
                         <Button variant="outline" disabled={busy} onClick={() => void archive(active)}><Archive className="h-4 w-4" />Archive</Button>
                       ) : null}
                     </DialogFooter>
@@ -749,6 +805,7 @@ export function BannersView({
                           propertyCampaignImage(selectedProperty, selectedTemplate) ??
                           selectedTemplate?.image_url ?? draftMediaUrl ?? active.image_url,
                         rera_verified: selectedProperty?.rera_verification_status === "verified",
+                        youtube_video_id: active.youtube_video_id ?? null,
                       }}
                     />
                   </CmsPreviewFrame>
