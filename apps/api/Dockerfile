@@ -11,8 +11,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Refresh the vulnerable libraries reported in the reviewed base manifest while
 # keeping native media parsers out of the API and scheduler image.
 RUN apk add --no-cache --upgrade \
-    "libcrypto3=3.5.8-r0" \
-    "libssl3=3.5.8-r0" \
+    "libcrypto3=3.5.9-r0" \
+    "libssl3=3.5.9-r0" \
     "sqlite-libs=3.53.4-r0"
 
 FROM ghcr.io/astral-sh/uv:0.5@sha256:7bff3c3776ec467fc1437960f2c469d8beb30f536a6465a3350c647ccd260ec2 AS uv-bin

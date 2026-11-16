@@ -28,5 +28,10 @@ export default function MySubmissionsPage() {
       <DashboardPageSkeleton />
     );
   }
-  return <MySubmissionsView />;
+  // The view reads its filters from the query string (useSearchParams).
+  return (
+    <React.Suspense fallback={<DashboardPageSkeleton />}>
+      <MySubmissionsView />
+    </React.Suspense>
+  );
 }
