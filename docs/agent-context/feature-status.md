@@ -3,7 +3,9 @@
 Status: **Derived living implementation ledger**
 
 **In progress — Batch E PR 3: staff contact-change requests and one-Admin
-approval (API)** (2026-11-17; CS-025), branch `feat/batch-e-staff-requests-api`
+approval (API)** (2026-11-17; CS-025; PR
+[#377](https://github.com/brollysolutions/client1/pull/377), mirror
+vamshisaideep9/client1#78), branch `feat/batch-e-staff-requests-api`
 stacked on Batch E PR 2. API and regenerated contracts; no migration; no
 requirement-percentage change.
 - Staff (Telecaller, Employee, Sub Admin incl. managers): `POST

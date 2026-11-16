@@ -107,7 +107,9 @@ stacked on Batch D PR 2:
   audited as `contact_history_viewed`). Number rules shared with the
   lost-number flow moved to `services/contact_identity.py`.
 - *PR E3 — API: staff contact-change requests and one-Admin approval*,
-  branch `feat/batch-e-staff-requests-api` stacked on E2. Telecaller,
+  branch `feat/batch-e-staff-requests-api` stacked on E2 (PR
+  [#377](https://github.com/brollysolutions/client1/pull/377), mirror
+  vamshisaideep9/client1#78). Telecaller,
   Employee and Sub Admin: `POST /auth/contact-change/requests` (field, new
   value, password; reachable while the email step is owed) → code to the new
   value → `requests/verify` → `pending_approval` (7 days), Admins notified;
