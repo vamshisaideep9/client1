@@ -61,7 +61,8 @@ default, not permission to skip the pre-implementation announcement.
 ## Prioritized active backlog
 
 **In review — Property listings advanced filters and demo Sub Admin
-listings** (2026-11-16; branch `feat/listing-advanced-filters` from
+listings** (2026-11-16; PR [#359](https://github.com/brollysolutions/client1/pull/359),
+mirror vamshisaideep9/client1#63; branch `feat/listing-advanced-filters` from
 `upstream/main` `b04c78c`; user request on dev testing, no requirement or
 completion-percentage change). The shared author workspace
 `/dashboard/my-submissions` (Sub Admin, real-estate Agent, Admin) gets

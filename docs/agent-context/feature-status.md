@@ -3,7 +3,8 @@
 Status: **Derived living implementation ledger**
 
 **In review — Property listings advanced filters and demo Sub Admin
-listings** (2026-11-16), branch `feat/listing-advanced-filters` from
+listings** (2026-11-16; PR [#359](https://github.com/brollysolutions/client1/pull/359),
+mirror vamshisaideep9/client1#63), branch `feat/listing-advanced-filters` from
 `upstream/main` `b04c78c`. Web plus a development-only seed change; no API,
 schema, RLS or contract change, so the completion percentage is unchanged.
 - `/dashboard/my-submissions` (Sub Admin, real-estate Agent, Admin) filters
