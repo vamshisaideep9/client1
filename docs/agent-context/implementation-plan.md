@@ -60,6 +60,29 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In review — admin client-roster CSV export** (2026-11-16; upstream PR
+[#364](https://github.com/brollysolutions/client1/pull/364); origin mirror
+DEFERRED pending fork sync), branch
+`feat/admin-client-export` from `upstream/main` `8493823c`. New
+platform-admin-only endpoint `GET /api/v1/admin/reports/clients/export`
+streaming a both-lines CSV of every CLIENT account
+(`id, name, phone, created_at, updated_at`).
+Acceptance criteria: admin downloads all client accounts across both lines with
+those exact columns and IST timestamps; non-admin / sub_admin / line-scoped
+admin → 403; unauthenticated → 401; no credential column ever present.
+Non-goals: no password/password_hash export (hard exclusion), no xlsx variant,
+no admin UI wiring, no new schema table/column. Security invariants:
+`require_platform_admin` server-side gate, RLS admin-bypass unchanged, CSV
+formula-injection neutralized per cell, bulk-PII download audited
+(`CLIENT_EXPORT_DOWNLOADED`), soft-deleted accounts excluded. Touched layers:
+API route (`api/v1/reporting.py`), service (`services/reporting.py`), audit
+model + additive enum migration `a7c9e1b3d5f6` (down_revision `b2d4f6a8c0e1`,
+upstream head), regenerated contract (`packages/contracts`), API tests.
+Verification on the upstream-based tree: ruff lint/format pass, one alembic
+head; DB-backed tests UNVERIFIED (host has no Postgres; Docker container mounts
+a different checkout) — see `feature-status.md` for the exact command and
+reason. Status: **In review** (upstream PR link in `feature-status.md`).
+
 **In review — Sub Admin analytics filters and Admin analytics charts**
 (2026-11-16; PRs [#360](https://github.com/brollysolutions/client1/pull/360)
 (API, mirror vamshisaideep9/client1#64) and
