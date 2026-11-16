@@ -60,6 +60,21 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In progress — Sub Admin analytics filters and Admin analytics charts**
+(2026-11-16; stacked branches `feat/sub-admin-analytics-filters` (API +
+contract) and `feat/sub-admin-analytics-filters-web` (web) from
+`upstream/main` `70f98fa`; user request, no requirement or
+completion-percentage change). Sub Admin "My analytics" gains server-enforced
+filters like the other roles: `content_type` (banners/offers),
+`content_status` (one review vocabulary; for offers approved includes
+scheduled, live is active, archived includes expired), banner-only
+`placement` and `banner_type`, and offer-only `discount_type`. Filters are SQL
+`where` clauses inside the existing own-content (`created_by_uuid`) and line
+scope; a filter that cannot match one kind of content leaves that kind out, so
+contradictions return zeroes; other roles sending them get 422. The Admin
+"Analytics & reports" page then gets charts on every tab. No migration, RLS,
+table or Admin report endpoint change. Recommended: Opus 5.5 / high.
+
 **In review — Property listings advanced filters and demo Sub Admin
 listings** (2026-11-16; PR [#359](https://github.com/brollysolutions/client1/pull/359),
 mirror vamshisaideep9/client1#63; branch `feat/listing-advanced-filters` from

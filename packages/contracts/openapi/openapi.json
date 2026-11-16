@@ -35441,6 +35441,125 @@
               "description": "Employee: tasks of this type.",
               "title": "Task Type"
             }
+          },
+          {
+            "description": "Sub Admin: only banners or only offers.",
+            "in": "query",
+            "name": "content_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "banners",
+                    "offers"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sub Admin: only banners or only offers.",
+              "title": "Content Type"
+            }
+          },
+          {
+            "description": "Sub Admin: content in this review status. For offers, approved includes scheduled, live means active and archived includes expired.",
+            "in": "query",
+            "name": "content_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "draft",
+                    "pending_approval",
+                    "approved",
+                    "live",
+                    "rejected",
+                    "archived"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sub Admin: content in this review status. For offers, approved includes scheduled, live means active and archived includes expired.",
+              "title": "Content Status"
+            }
+          },
+          {
+            "description": "Sub Admin: banners in this placement (leaves offers out).",
+            "in": "query",
+            "name": "placement",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "homepage",
+                    "financial_services",
+                    "properties",
+                    "dashboard",
+                    "homepage_ad"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sub Admin: banners in this placement (leaves offers out).",
+              "title": "Placement"
+            }
+          },
+          {
+            "description": "Sub Admin: banners of this type (leaves offers out).",
+            "in": "query",
+            "name": "banner_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "default",
+                    "personalized",
+                    "action"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sub Admin: banners of this type (leaves offers out).",
+              "title": "Banner Type"
+            }
+          },
+          {
+            "description": "Sub Admin: offers with this discount type (leaves banners out).",
+            "in": "query",
+            "name": "discount_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "percentage",
+                    "flat",
+                    "cashback-tie"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sub Admin: offers with this discount type (leaves banners out).",
+              "title": "Discount Type"
+            }
           }
         ],
         "responses": {

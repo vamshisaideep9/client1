@@ -63,13 +63,15 @@ _LoanStatus = Literal[
 ]
 _LeadStatus = Literal["new", "assigned", "working", "converted", "closed", "released"]
 _TaskType = Literal["document_collection", "property_visit", "background_check"]
+_ContentStatus = Literal["draft", "pending_approval", "approved", "live", "rejected", "archived"]
+_Placement = Literal["homepage", "financial_services", "properties", "dashboard", "homepage_ad"]
 
 # Which optional filters each role's analytics understand.
 _ROLE_FILTERS: dict[str, set[str]] = {
     "telecaller": {"call_status", "interest", "loan_status", "lead_source"},
     "employee": {"task_type"},
     "agent": {"lead_status"},
-    "sub_admin": set(),
+    "sub_admin": {"content_type", "content_status", "placement", "banner_type", "discount_type"},
 }
 
 
@@ -104,6 +106,25 @@ async def my_analytics(
     ),
     lead_status: _LeadStatus | None = Query(None, description="Agent: leads in this status."),
     task_type: _TaskType | None = Query(None, description="Employee: tasks of this type."),
+    content_type: Literal["banners", "offers"] | None = Query(
+        None, description="Sub Admin: only banners or only offers."
+    ),
+    content_status: _ContentStatus | None = Query(
+        None,
+        description=(
+            "Sub Admin: content in this review status. For offers, approved includes "
+            "scheduled, live means active and archived includes expired."
+        ),
+    ),
+    placement: _Placement | None = Query(
+        None, description="Sub Admin: banners in this placement (leaves offers out)."
+    ),
+    banner_type: Literal["default", "personalized", "action"] | None = Query(
+        None, description="Sub Admin: banners of this type (leaves offers out)."
+    ),
+    discount_type: Literal["percentage", "flat", "cashback-tie"] | None = Query(
+        None, description="Sub Admin: offers with this discount type (leaves banners out)."
+    ),
     current_user: CurrentUser = Depends(get_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> StaffAnalyticsResponse:
@@ -121,6 +142,11 @@ async def my_analytics(
             ("lead_source", lead_source),
             ("lead_status", lead_status),
             ("task_type", task_type),
+            ("content_type", content_type),
+            ("content_status", content_status),
+            ("placement", placement),
+            ("banner_type", banner_type),
+            ("discount_type", discount_type),
         )
         if value is not None
     }
@@ -139,6 +165,11 @@ async def my_analytics(
         lead_source=lead_source,
         lead_status=lead_status,
         task_type=task_type,
+        content_type=content_type,
+        content_status=content_status,
+        placement=placement,
+        banner_type=banner_type,
+        discount_type=discount_type,
     )
 
     if role in ("telecaller", "employee"):

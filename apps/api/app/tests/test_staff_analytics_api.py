@@ -384,3 +384,171 @@ async def test_business_line_follows_the_selected_line(client: AsyncClient) -> N
 
     assert _kpis(loans.json())["calls"] == 2
     assert _kpis(real_estate.json())["calls"] == 0
+
+
+# --- Sub Admin content filters ------------------------------------------------
+
+
+async def _seed_sub_admin_content(author: str) -> None:
+    """Four banners and six offers with mixed status, placement, type and discount."""
+    import app.db.session as _session_mod
+    from app.models.banner import Banner, BannerPlacement, BannerStatus, BannerType
+    from app.models.offer import Offer, OfferStatus
+
+    banners = [
+        (BannerStatus.LIVE, BannerPlacement.HOMEPAGE, BannerType.DEFAULT),
+        (BannerStatus.PENDING_APPROVAL, BannerPlacement.DASHBOARD, BannerType.PERSONALIZED),
+        (BannerStatus.ARCHIVED, BannerPlacement.HOMEPAGE, BannerType.ACTION),
+        (BannerStatus.APPROVED, BannerPlacement.PROPERTIES, BannerType.DEFAULT),
+    ]
+    offers = [
+        (OfferStatus.ACTIVE, "percentage"),
+        (OfferStatus.SCHEDULED, "flat"),
+        (OfferStatus.APPROVED, "percentage"),
+        (OfferStatus.EXPIRED, "cashback-tie"),
+        (OfferStatus.DRAFT, "flat"),
+        (OfferStatus.REJECTED, "percentage"),
+    ]
+    async with _session_mod.AsyncSessionLocal() as db:
+        for status, placement, banner_type in banners:
+            db.add(
+                Banner(
+                    business_line="loans",
+                    placement=placement,
+                    banner_type=banner_type,
+                    title="Analytics banner",
+                    audience_rules={},
+                    status=status,
+                    created_by_uuid=uuid.UUID(author),
+                )
+            )
+        for status, discount_type in offers:
+            db.add(
+                Offer(
+                    business_line="loans",
+                    title="Analytics offer",
+                    discount_type=discount_type,
+                    discount_value=10,
+                    status=status,
+                    created_by_uuid=uuid.UUID(author),
+                )
+            )
+        await db.commit()
+
+
+def _trend_totals(body: dict) -> dict[str, int]:
+    totals: dict[str, int] = {}
+    for point in body["trend"]["points"]:
+        for key, value in point["values"].items():
+            totals[key] = totals.get(key, 0) + value
+    return totals
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("query", "created"),
+    [
+        ("", 10),
+        ("content_type=banners", 4),
+        ("content_type=offers", 6),
+        ("content_status=draft", 1),
+        ("content_status=pending_approval", 1),
+        ("content_status=rejected", 1),
+        # Offers fold into the shared vocabulary: scheduled is approved,
+        # active is live and expired is archived.
+        ("content_status=approved", 3),
+        ("content_status=live", 2),
+        ("content_status=archived", 2),
+        ("placement=homepage", 2),
+        ("banner_type=default", 2),
+        ("discount_type=percentage", 3),
+        ("discount_type=cashback-tie", 1),
+        ("content_type=offers&content_status=approved", 2),
+        ("placement=homepage&content_status=live", 1),
+        # Contradictions return nothing rather than an error.
+        ("content_type=offers&placement=homepage", 0),
+        ("content_type=banners&discount_type=flat", 0),
+        ("placement=homepage&discount_type=flat", 0),
+    ],
+)
+async def test_sub_admin_content_filters_narrow_own_content(
+    client: AsyncClient, query: str, created: int
+) -> None:
+    auth_uuid, _ = await _seed_staff("telecaller")
+    other_auth, _ = await _seed_staff("telecaller")
+    await _seed_sub_admin_content(auth_uuid)
+    await _seed_sub_admin_content(other_auth)
+
+    res = await client.get(f"/api/v1/me/analytics?{query}", headers=_token(auth_uuid, "sub_admin"))
+
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert _kpis(body)["created"] == created
+    assert sum(_trend_totals(body).values()) == created
+
+
+@pytest.mark.asyncio
+async def test_sub_admin_filters_narrow_kpis_trend_and_breakdowns(client: AsyncClient) -> None:
+    auth_uuid, _ = await _seed_staff("telecaller")
+    await _seed_sub_admin_content(auth_uuid)
+    headers = _token(auth_uuid, "sub_admin")
+
+    offers = (await client.get("/api/v1/me/analytics?content_type=offers", headers=headers)).json()
+    assert _trend_totals(offers) == {"banners": 0, "offers": 6}
+    banner_status = next(b for b in offers["breakdowns"] if b["key"] == "banner_status")
+    assert banner_status["items"] == []
+    kpis = _kpis(offers)
+    assert (kpis["live"], kpis["pending"]) == (1, 0)
+    # Reviewed offers: approved, scheduled and active against one rejected.
+    assert kpis["approval_rate"] == 75.0
+
+    live = (await client.get("/api/v1/me/analytics?content_status=live", headers=headers)).json()
+    assert _kpis(live)["live"] == 2
+    offer_status = next(b for b in live["breakdowns"] if b["key"] == "offer_status")
+    assert offer_status["items"] == [{"key": "active", "label": "Active", "value": 1.0}]
+
+
+@pytest.mark.asyncio
+async def test_sub_admin_never_counts_another_sub_admins_content(client: AsyncClient) -> None:
+    auth_uuid, _ = await _seed_staff("telecaller")
+    other_auth, _ = await _seed_staff("telecaller")
+    await _seed_sub_admin_content(other_auth)
+
+    for query in ("", "content_type=banners", "content_status=live", "placement=homepage"):
+        res = await client.get(
+            f"/api/v1/me/analytics?{query}", headers=_token(auth_uuid, "sub_admin")
+        )
+        assert res.status_code == 200, res.text
+        assert _kpis(res.json())["created"] == 0
+        assert _kpis(res.json())["live"] == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("role", "query"),
+    [
+        ("telecaller", "content_status=live"),
+        ("telecaller", "discount_type=flat"),
+        ("employee", "placement=homepage"),
+        ("agent", "content_type=banners"),
+        ("sub_admin", "call_status=busy"),
+        ("sub_admin", "task_type=property_visit"),
+        # Values outside the shared vocabulary are rejected, not ignored.
+        ("sub_admin", "content_status=active"),
+        ("sub_admin", "content_type=properties"),
+    ],
+)
+async def test_sub_admin_filters_are_role_gated(client: AsyncClient, role: str, query: str) -> None:
+    auth_uuid, staff_uuid = await _seed_staff("employee" if role == "employee" else "telecaller")
+    claims = {
+        "telecaller": {"staff_profile_uuid": staff_uuid},
+        "employee": {"staff_profile_uuid": staff_uuid},
+        "agent": {"agent_profile_uuid": str(uuid.uuid4())},
+        "sub_admin": {},
+    }[role]
+
+    res = await client.get(
+        f"/api/v1/me/analytics?{query}", headers=_token(auth_uuid, role, **claims)
+    )
+
+    assert res.status_code == 422
