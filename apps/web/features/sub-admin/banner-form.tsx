@@ -140,6 +140,8 @@ export function BannerForm({
   const [propertyId, setPropertyId] = React.useState("");
   const [mediaAssetId, setMediaAssetId] = React.useState("");
   const [mediaPreviewUrl, setMediaPreviewUrl] = React.useState<string | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = React.useState("");
+  const [videoAssetId, setVideoAssetId] = React.useState("");
   const [templates, setTemplates] = React.useState<BannerTemplate[]>([]);
   const [properties, setProperties] = React.useState<AdminProperty[]>([]);
   const [catalogLoading, setCatalogLoading] = React.useState(true);
@@ -328,6 +330,8 @@ export function BannerForm({
       cta_label: ctaLabel.trim() || null,
       image_key: null,
       media_asset_id: mediaAssetId || null,
+      youtube_url: isPublic && youtubeUrl.trim() ? youtubeUrl.trim() : null,
+      video_media_asset_id: isPublic && !youtubeUrl.trim() && videoAssetId ? videoAssetId : null,
       deep_link: propertyId ? null : deepLink.trim() || null,
       audience_rules: bannerType === "personalized" ? audienceRules : emptyAudienceRules(),
       priority: Number(priority) || 0,
@@ -340,6 +344,8 @@ export function BannerForm({
         title: "title",
         template_id: "artwork",
         media_asset_id: "artwork",
+        youtube_url: "video",
+        video_media_asset_id: "video",
         deep_link: "deepLink",
         priority: "priority",
         starts_at: "schedule",
@@ -609,6 +615,50 @@ export function BannerForm({
               describedBy={fieldErrors.artwork ? "banner-artwork-error" : undefined}
             />
             <FieldError id="banner-artwork-error">{fieldErrors.artwork}</FieldError>
+
+            {isPublic ? (
+              <section className="space-y-4 rounded-xl border border-border p-4" aria-labelledby="banner-video-heading">
+                <div>
+                  <h3 id="banner-video-heading" className="text-sm font-semibold text-text-primary">
+                    Video (optional)
+                  </h3>
+                  <p className="mt-1 text-xs text-text-secondary">
+                    Add a YouTube link or an uploaded MP4. The artwork above becomes the video&apos;s
+                    poster. YouTube loads only when a visitor presses play.
+                  </p>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="banner-youtube-url">YouTube link</Label>
+                  <Input
+                    id="banner-youtube-url"
+                    type="url"
+                    inputMode="url"
+                    value={youtubeUrl}
+                    maxLength={300}
+                    onChange={(event) => setYoutubeUrl(event.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    aria-invalid={Boolean(fieldErrors.video)}
+                    aria-describedby={fieldErrors.video ? "banner-video-error" : undefined}
+                  />
+                </div>
+                {youtubeUrl.trim() ? (
+                  <p className="text-xs text-text-secondary">
+                    Using the YouTube link. Clear it to choose an uploaded video instead.
+                  </p>
+                ) : (
+                  <CampaignMediaPicker
+                    usageTypes={["banner_video"]}
+                    businessLine={businessLine}
+                    value={videoAssetId}
+                    onChange={(id) => setVideoAssetId(id)}
+                    label="Uploaded video"
+                    invalid={Boolean(fieldErrors.video)}
+                    describedBy={fieldErrors.video ? "banner-video-error" : undefined}
+                  />
+                )}
+                <FieldError id="banner-video-error">{fieldErrors.video}</FieldError>
+              </section>
+            ) : null}
 
             {allowsProperty ? (
               <div className="rounded-xl border border-border p-4">

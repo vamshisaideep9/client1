@@ -41,6 +41,26 @@ function renderCard(listing: REListing = LISTING) {
 }
 
 describe("dashboard PropertyCard", () => {
+  it("labels resale homes and rentals, and keeps overlay layers inside the card", () => {
+    const resale = renderCard({
+      ...LISTING,
+      structuredDetails: { sale_type: "resale" },
+    } as unknown as REListing);
+    expect(resale).toMatch(/>Resale</);
+    // isolate contains the z-indexed Bookmark/Compare overlay (scroll overlap fix).
+    expect(resale).toMatch(/class="relative isolate aspect-video/);
+
+    const fresh = renderCard({
+      ...LISTING,
+      structuredDetails: { sale_type: "new_sale" },
+    } as unknown as REListing);
+    expect(fresh).not.toMatch(/>Resale</);
+
+    const rental = renderCard({ ...LISTING, listingIntent: "rent" });
+    expect(rental).toContain("For rent / lease");
+    expect(rental).not.toMatch(/>Resale</);
+  });
+
   it("keeps a compact summary, a preview action, and full-page links", () => {
     const markup = renderCard();
 

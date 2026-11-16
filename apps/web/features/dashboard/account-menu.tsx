@@ -82,14 +82,14 @@ export function AccountMenu({
   }
 
   return (
-    <div className="mt-auto shrink-0 border-t border-white/15 pt-3">
+    <div className="mt-auto shrink-0 border-t border-dash-border pt-3">
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label="Open account menu"
           className={cn(
-            "group/acct relative flex cursor-pointer items-center rounded-lg text-left transition-[background-color,box-shadow] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-sky",
-            "hover:bg-dash-rail-hover hover:shadow-sm hover:ring-1 hover:ring-brand-sky/30",
-            "data-[state=open]:bg-dash-rail-hover data-[state=open]:ring-1 data-[state=open]:ring-brand-sky/30",
+            "group/acct relative flex cursor-pointer items-center rounded-lg text-left transition-[background-color,box-shadow] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+            "hover:bg-dash-rail-hover hover:shadow-sm hover:ring-1 hover:ring-dash-border",
+            "data-[state=open]:bg-dash-rail-hover data-[state=open]:ring-1 data-[state=open]:ring-dash-border",
             labeled ? "w-full gap-3 px-2 py-2" : "mx-auto h-12 w-12 justify-center",
           )}
         >

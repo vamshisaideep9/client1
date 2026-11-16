@@ -17,9 +17,9 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Curated Loans, Credit Cards & Insurance",
+  title: "Compare Loans & Credit Cards in Hyderabad | Dhanadhara",
   description:
-    "Explore loans, credit cards and insurance services, compare available provider options, and enquire with the Dhanadhara team.",
+    "11 loan types and credit cards in one place, free for customers. Share your needs once, compare offers from banks and NBFCs and get a callback.",
   keywords: [
     "personal loan",
     "business loan",
@@ -33,17 +33,13 @@ export const metadata: Metadata = {
     "overdraft loan",
     "project funding",
     "credit cards",
-    "life insurance",
-    "health insurance",
-    "property insurance",
-    "travel insurance",
     "apply for loan",
   ],
   alternates: { canonical: "/loans" },
   openGraph: {
-    title: "Curated Financial Services in One Place",
+    title: "Compare Loans & Credit Cards in Hyderabad | Dhanadhara",
     description:
-      "Explore our services and available provider options, then apply or enquire without an external lender redirect.",
+      "11 loan types and credit cards in one place, free for customers. Share your needs once, compare offers from banks and NBFCs and get a callback.",
     type: "website",
   },
 };
@@ -93,8 +89,8 @@ export default async function LoansPage({ searchParams }: { searchParams: LoansS
         dangerouslySetInnerHTML={{ __html: JSON.stringify(loansJsonLd) }}
       />
       <ProductPage
-        title="Loans, cards, and insurance that fit you"
-        intro="From personal and business loans to property, vehicle, and education finance, we bring the options together and help you until the money reaches your account."
+        title="Compare loans and credit cards in Hyderabad"
+        intro="11 loan types and credit cards from banks, housing finance companies and NBFCs, free for customers in Hyderabad and Telangana. Share your needs once, and an advisor calls you back and stays with you until the money reaches your account."
         heroDoodles
         beforeHero={
           banners.length > 0 ? (

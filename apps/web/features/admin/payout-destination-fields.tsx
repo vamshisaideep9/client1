@@ -1,13 +1,24 @@
 "use client";
 
+import * as React from "react";
+import { Loader2, WalletCards } from "lucide-react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
 import { FieldError, RequiredIndicator } from "@/components/ui/field-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   DESTINATION_OPTIONS,
+  savedDestinationToForm,
   type PayoutDestinationFormState,
 } from "@/lib/payout-form";
+import { getSavedPayoutDestination } from "@/lib/payouts-api";
+
+export type SavedDestinationTarget =
+  | { recipientUserUuid: string }
+  | { agentProfileUuid: string };
 
 export function PayoutDestinationFields({
   idPrefix,
@@ -15,6 +26,7 @@ export function PayoutDestinationFields({
   errors,
   onChange,
   disabled = false,
+  savedDestinationTarget = null,
 }: {
   idPrefix: string;
   form: PayoutDestinationFormState;
@@ -24,10 +36,56 @@ export function PayoutDestinationFields({
     value: PayoutDestinationFormState[Key],
   ) => void;
   disabled?: boolean;
+  /** When set, offers to fill the destination from the Agent's saved details. */
+  savedDestinationTarget?: SavedDestinationTarget | null;
 }) {
   const destinationErrorId = `${idPrefix}-destination-error`;
+  const [prefilling, setPrefilling] = React.useState(false);
+
+  async function applySavedDetails() {
+    if (!savedDestinationTarget) return;
+    setPrefilling(true);
+    const res = await getSavedPayoutDestination(savedDestinationTarget);
+    setPrefilling(false);
+    if (!res.ok) {
+      if (res.status === 404) {
+        toast.info("No saved payout details", {
+          description: "This recipient hasn't saved a UPI ID or bank account. Enter the details by hand.",
+        });
+      } else {
+        toast.error("Couldn't load saved payout details", { description: res.error });
+      }
+      return;
+    }
+    const next = savedDestinationToForm(form, res.data);
+    if (!next) return;
+    (Object.keys(next) as (keyof PayoutDestinationFormState)[]).forEach((key) =>
+      onChange(key, next[key]),
+    );
+    toast.success("Filled from the recipient's saved details", {
+      description: "Check them before you raise the payout.",
+    });
+  }
+
   return (
     <>
+      {savedDestinationTarget ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full sm:w-auto"
+          disabled={disabled || prefilling}
+          onClick={() => void applySavedDetails()}
+        >
+          {prefilling ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <WalletCards className="h-4 w-4" aria-hidden="true" />
+          )}
+          Use saved payout details
+        </Button>
+      ) : null}
       <div className="space-y-1.5">
         <Label id={`${idPrefix}-destination-label`}>
           Destination
