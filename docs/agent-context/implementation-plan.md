@@ -74,7 +74,9 @@ of A–G; both lines; no requirement or completion-percentage change). Two
 stacked PRs, both opened against `main`, stacked on Batch B PR 2:
 
 - *PR C1 — API, migration, contracts*, branch `feat/batch-c-filters-api`
-  from `feat/agent-dashboard-web` `eb8ce10a`. Migration `f1b3d5a7c9e2`
+  from `feat/agent-dashboard-web` `eb8ce10a`; PR
+  [#371](https://github.com/brollysolutions/client1/pull/371), mirror
+  vamshisaideep9/client1#72. Migration `f1b3d5a7c9e2`
   (revises `e8b0d2f4a6c9`, single head) drops and recreates the two
   confined SECURITY DEFINER readers with more columns:
   `lead_list_signals(uuid[])` (Telecaller and Employee unchanged reach; new

@@ -3,7 +3,9 @@
 Status: **Derived living implementation ledger**
 
 **In progress — Batch C PR 1: filters by product, property, status,
-transactions and earnings (API)** (2026-11-17; CS-023), branch
+transactions and earnings (API)** (2026-11-17; CS-023; PR
+[#371](https://github.com/brollysolutions/client1/pull/371), mirror
+vamshisaideep9/client1#72), branch
 `feat/batch-c-filters-api` stacked on Batch B PR 2. API, one migration and
 regenerated contracts; no requirement-percentage change.
 - Readers: migration `f1b3d5a7c9e2` (revises `e8b0d2f4a6c9`) drops and
