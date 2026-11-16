@@ -4,6 +4,8 @@ import { ArrowLeft, ArrowRight, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
+import { InPageAnchor } from "./in-page-anchor";
+
 export function DashboardPage({
   children,
   className,
@@ -59,22 +61,30 @@ export function MetricCard({
   value,
   icon: Icon,
   href,
+  onClick,
+  pressed,
   hint,
   attention = false,
 }: {
   label: string;
   value: ReactNode;
   icon: LucideIcon;
+  /** A route, or an in-page `#id` whose target takes focus. */
   href?: string;
+  /** Renders the card as a toggle button, e.g. to apply a list filter. */
+  onClick?: () => void;
+  /** With `onClick`: whether the filter this card applies is active. */
+  pressed?: boolean;
   hint?: string;
   attention?: boolean;
 }) {
+  const interactive = Boolean(href || onClick);
   const content = (
     <div
       className={cn(
         "group flex min-h-28 items-start justify-between gap-4 rounded-xl border bg-card p-4 shadow-sm transition-[border-color,box-shadow,transform] duration-150 ease-out motion-reduce:transition-none",
-        "border-border",
-        href && "hover:-translate-y-0.5 hover:border-brand-cta hover:shadow-md active:translate-y-0 motion-reduce:hover:translate-y-0",
+        pressed ? "border-brand-cta ring-1 ring-brand-cta" : "border-border",
+        interactive && "hover:-translate-y-0.5 hover:border-brand-cta hover:shadow-md active:translate-y-0 motion-reduce:hover:translate-y-0",
       )}
     >
       <div className="min-w-0">
@@ -95,8 +105,23 @@ export function MetricCard({
     </div>
   );
 
+  const focusRing = "rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} aria-pressed={pressed} className={cn("block w-full text-left", focusRing)}>
+        {content}
+      </button>
+    );
+  }
+  if (href?.startsWith("#")) {
+    return (
+      <InPageAnchor href={href as `#${string}`} className={cn("block", focusRing)}>
+        {content}
+      </InPageAnchor>
+    );
+  }
   return href ? (
-    <Link href={href} className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+    <Link href={href} className={focusRing}>
       {content}
     </Link>
   ) : (
@@ -111,6 +136,8 @@ export function DashboardPanel({
   children,
   className,
   bodyClassName,
+  id,
+  tabIndex,
 }: {
   title: string;
   description?: string;
@@ -118,12 +145,25 @@ export function DashboardPanel({
   children: ReactNode;
   className?: string;
   bodyClassName?: string;
+  /** Target for an in-page link such as a summary card. */
+  id?: string;
+  /** `-1` lets that link move focus here. */
+  tabIndex?: number;
 }) {
   return (
-    <section className={cn("min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm", className)}>
+    <section
+      id={id}
+      tabIndex={tabIndex}
+      aria-labelledby={id ? `${id}-title` : undefined}
+      className={cn(
+        "min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm",
+        id && "scroll-mt-24 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        className,
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-brand-cta-tint/30 px-4 py-4 sm:px-5">
         <div className="min-w-0 break-words">
-          <h2 className="font-heading text-lg font-semibold leading-snug text-brand-heading">{title}</h2>
+          <h2 id={id ? `${id}-title` : undefined} className="font-heading text-lg font-semibold leading-snug text-brand-heading">{title}</h2>
           {description ? <p className="mt-0.5 text-sm text-text-secondary">{description}</p> : null}
         </div>
         {action}

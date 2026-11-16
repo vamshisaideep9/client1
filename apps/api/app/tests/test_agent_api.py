@@ -229,7 +229,9 @@ async def test_introduce_lead_idempotent(client: AsyncClient) -> None:
     token = _agent_token(auth_uuid, agent_uuid)
     mobile = unique_mobile()
     headers = {"Authorization": f"Bearer {token}"}
-    first = await client.post("/api/v1/agent/leads", json={"mobile": mobile}, headers=headers)
+    first = await client.post(
+        "/api/v1/agent/leads", json={"mobile": mobile, "name": "Test Lead"}, headers=headers
+    )
     await client.post(
         "/api/v1/agent/leads", json={"mobile": mobile, "name": "Ravi"}, headers=headers
     )
@@ -373,7 +375,7 @@ async def test_introduce_lead_cross_line_conflict_is_409(client: AsyncClient) ->
     token = _agent_token(auth_uuid, agent_uuid)
     res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile},
+        json={"mobile": mobile, "name": "Test Lead"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 409
@@ -392,7 +394,7 @@ async def test_introduce_lead_same_line_different_agent_conflict_is_409(
     mobile = unique_mobile()
     first_res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile},
+        json={"mobile": mobile, "name": "Test Lead"},
         headers={"Authorization": f"Bearer {first_token}"},
     )
     assert first_res.status_code == 201, first_res.text
@@ -401,7 +403,7 @@ async def test_introduce_lead_same_line_different_agent_conflict_is_409(
     second_token = _agent_token(second_auth_uuid, second_agent_uuid)
     res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile},
+        json={"mobile": mobile, "name": "Test Lead"},
         headers={"Authorization": f"Bearer {second_token}"},
     )
     assert res.status_code == 409
@@ -436,7 +438,7 @@ async def test_introduce_lead_cannot_mutate_assigned_cross_line_lead(client: Asy
     token = _agent_token(auth_uuid, agent_uuid)
     res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile, "name": "HIJACKED", "requirement": {"injected": "yes"}},
+        json={"mobile": mobile, "name": "HIJACKED", "requirement": {"notes": "injected"}},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 409
@@ -476,7 +478,7 @@ async def test_introduce_lead_cannot_mutate_assigned_same_line_lead(client: Asyn
     token = _agent_token(auth_uuid, agent_uuid)
     res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile, "name": "CLAIMED BY AGENT", "requirement": {"note": "mine now"}},
+        json={"mobile": mobile, "name": "CLAIMED BY AGENT", "requirement": {"notes": "mine now"}},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 409
@@ -501,7 +503,7 @@ async def test_introduce_lead_cannot_steal_other_agents_unassigned_lead(
     mobile = unique_mobile()
     first_res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile, "name": "First Agent's Lead", "requirement": {"k": "first"}},
+        json={"mobile": mobile, "name": "First Agent's Lead", "requirement": {"notes": "first"}},
         headers={"Authorization": f"Bearer {first_token}"},
     )
     assert first_res.status_code == 201, first_res.text
@@ -511,7 +513,7 @@ async def test_introduce_lead_cannot_steal_other_agents_unassigned_lead(
     second_token = _agent_token(second_auth_uuid, second_agent_uuid)
     res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": mobile, "name": "STOLEN", "requirement": {"injected": "yes"}},
+        json={"mobile": mobile, "name": "STOLEN", "requirement": {"notes": "injected"}},
         headers={"Authorization": f"Bearer {second_token}"},
     )
     assert res.status_code == 409
@@ -522,7 +524,7 @@ async def test_introduce_lead_cannot_steal_other_agents_unassigned_lead(
     async with _session_mod.AsyncSessionLocal() as db:
         refreshed = await db.get(Lead, uuid.UUID(lead_id))
         assert refreshed.name == "First Agent's Lead"
-        assert refreshed.requirement == {"k": "first"}
+        assert refreshed.requirement == {"notes": "first"}
         assert str(refreshed.origin_agent_profile_uuid) == first_agent_uuid
 
 
@@ -532,7 +534,9 @@ async def test_lead_read_editable_until_telecaller_starts_work(client: AsyncClie
     token = _agent_token(auth_uuid, agent_uuid)
     headers = {"Authorization": f"Bearer {token}"}
     create_res = await client.post(
-        "/api/v1/agent/leads", json={"mobile": unique_mobile()}, headers=headers
+        "/api/v1/agent/leads",
+        json={"mobile": unique_mobile(), "name": "Test Lead"},
+        headers=headers,
     )
     lead_id = create_res.json()["id"]
     assert create_res.json()["editable"] is True
@@ -560,7 +564,9 @@ async def test_list_leads_returns_own(client: AsyncClient) -> None:
     token = _agent_token(auth_uuid, agent_uuid)
     headers = {"Authorization": f"Bearer {token}"}
     create_res = await client.post(
-        "/api/v1/agent/leads", json={"mobile": unique_mobile()}, headers=headers
+        "/api/v1/agent/leads",
+        json={"mobile": unique_mobile(), "name": "Test Lead"},
+        headers=headers,
     )
     lead_id = create_res.json()["id"]
 
@@ -579,7 +585,7 @@ async def test_get_lead_not_owned_is_404(client: AsyncClient) -> None:
 
     create_res = await client.post(
         "/api/v1/agent/leads",
-        json={"mobile": unique_mobile()},
+        json={"mobile": unique_mobile(), "name": "Test Lead"},
         headers={"Authorization": f"Bearer {token}"},
     )
     lead_id = create_res.json()["id"]
@@ -597,7 +603,9 @@ async def test_patch_lead_success_when_unassigned(client: AsyncClient) -> None:
     token = _agent_token(auth_uuid, agent_uuid)
     headers = {"Authorization": f"Bearer {token}"}
     create_res = await client.post(
-        "/api/v1/agent/leads", json={"mobile": unique_mobile()}, headers=headers
+        "/api/v1/agent/leads",
+        json={"mobile": unique_mobile(), "name": "Test Lead"},
+        headers=headers,
     )
     lead_id = create_res.json()["id"]
 
@@ -616,7 +624,9 @@ async def test_patch_lead_empty_payload_rejected(client: AsyncClient) -> None:
     token = _agent_token(auth_uuid, agent_uuid)
     headers = {"Authorization": f"Bearer {token}"}
     create_res = await client.post(
-        "/api/v1/agent/leads", json={"mobile": unique_mobile()}, headers=headers
+        "/api/v1/agent/leads",
+        json={"mobile": unique_mobile(), "name": "Test Lead"},
+        headers=headers,
     )
     lead_id = create_res.json()["id"]
 
@@ -630,7 +640,9 @@ async def test_patch_lead_remains_editable_after_assignment(client: AsyncClient)
     token = _agent_token(auth_uuid, agent_uuid)
     headers = {"Authorization": f"Bearer {token}"}
     create_res = await client.post(
-        "/api/v1/agent/leads", json={"mobile": unique_mobile()}, headers=headers
+        "/api/v1/agent/leads",
+        json={"mobile": unique_mobile(), "name": "Test Lead"},
+        headers=headers,
     )
     lead_id = create_res.json()["id"]
 
@@ -677,3 +689,82 @@ async def test_non_agent_forbidden(client: AsyncClient) -> None:
 async def test_unauthenticated_rejected(client: AsyncClient) -> None:
     res = await client.get("/api/v1/agent/leads")
     assert res.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_introduce_lead_with_property_interest_records_its_title(
+    client: AsyncClient,
+) -> None:
+    from .test_property_deal_progress_api import _seed_property
+
+    property_id = await _seed_property()
+    auth_uuid, agent_uuid = await _seed_agent("real_estate")
+    token = _agent_token(auth_uuid, agent_uuid, "real_estate")
+    res = await client.post(
+        "/api/v1/agent/leads",
+        json={
+            "mobile": unique_mobile(),
+            "name": "Test Lead",
+            "requirement": {"property_id": property_id},
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 201, res.text
+    requirement = res.json()["requirement"]
+    assert requirement["property_id"] == property_id
+    assert requirement["interest_title"].startswith("Deal Test Apartment")
+
+
+@pytest.mark.asyncio
+async def test_introduce_lead_rejects_interest_outside_agent_line(client: AsyncClient) -> None:
+    from .test_property_deal_progress_api import _seed_property
+
+    property_id = await _seed_property()
+    auth_uuid, agent_uuid = await _seed_agent("loans")
+    token = _agent_token(auth_uuid, agent_uuid)
+    res = await client.post(
+        "/api/v1/agent/leads",
+        json={
+            "mobile": unique_mobile(),
+            "name": "Test Lead",
+            "requirement": {"property_id": property_id},
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 422, res.text
+
+
+@pytest.mark.asyncio
+async def test_introduce_lead_rejects_inactive_or_unknown_property(client: AsyncClient) -> None:
+    from .test_property_deal_progress_api import _seed_property
+
+    inactive_id = await _seed_property(active=False)
+    auth_uuid, agent_uuid = await _seed_agent("real_estate")
+    token = _agent_token(auth_uuid, agent_uuid, "real_estate")
+    for property_id in (inactive_id, str(uuid.uuid4())):
+        res = await client.post(
+            "/api/v1/agent/leads",
+            json={
+                "mobile": unique_mobile(),
+                "name": "Test Lead",
+                "requirement": {"property_id": property_id},
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 422, res.text
+
+
+@pytest.mark.asyncio
+async def test_introduce_lead_rejects_client_supplied_interest_title(client: AsyncClient) -> None:
+    auth_uuid, agent_uuid = await _seed_agent("loans")
+    token = _agent_token(auth_uuid, agent_uuid)
+    res = await client.post(
+        "/api/v1/agent/leads",
+        json={
+            "mobile": unique_mobile(),
+            "name": "Test Lead",
+            "requirement": {"interest_title": "Spoofed"},
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 422, res.text
