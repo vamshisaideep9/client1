@@ -405,6 +405,7 @@ async def update_me(
         req,
         ip=_get_client_ip(request),
         user_agent=request.headers.get("user-agent"),
+        actor_role=current_user.role,
     )
 
 

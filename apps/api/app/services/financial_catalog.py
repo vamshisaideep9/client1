@@ -30,7 +30,7 @@ from app.services.media_processing import (
 )
 from app.services.provider_logos import BUILT_IN_LOGO_REVIEWED_AT, BUILT_IN_PROVIDER_LOGOS
 
-PROVIDER_LOGO_MAX_BYTES = 1024 * 1024
+PROVIDER_LOGO_MAX_BYTES = 5 * 1024 * 1024
 _LOGO_STAGING_PREFIX = "private/provider-logos/staging/"
 _LOGO_PUBLIC_PREFIX = "public/provider-logos/"
 _LOGO_EXTENSIONS = {

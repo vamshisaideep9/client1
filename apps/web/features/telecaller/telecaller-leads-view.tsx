@@ -1,32 +1,50 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, PhoneCall, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardHeader, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
+import { EMPTY_FILTERS, FilterBar } from "@/features/dashboard/filter-bar";
 import { ListPagination, useListPagination } from "@/features/dashboard/list-pagination";
 import { FetchError } from "@/features/dashboard/fetch-error";
+import { useLine } from "@/features/dashboard/line-provider";
+import { useProductCatalogue } from "@/features/dashboard/use-product-catalogue";
 import { formatMobile } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
+import { leadSignalFilterGroups } from "./lead-signal-filter-fields";
+import {
+  DEFAULT_LEAD_SIGNAL_FILTERS,
+  formatReferrer,
+  leadSignalActiveCount,
+  leadSignalChips,
+  leadSignalOptions,
+  lineScope,
+  rowsHiddenTransactionParts,
+  scopedLeadSignalFilters,
+} from "./lead-signal-filters";
 import {
   DEFAULT_TELECALLER_LEAD_FILTERS,
   DEFAULT_TELECALLER_LEAD_SORT,
+  FOLLOW_UP_DUE_PARAM,
   filterTelecallerLeads,
   sortTelecallerLeads,
+  telecallerLeadFiltersActive,
+  telecallerSignalValues,
   type TelecallerLeadFilters,
   type TelecallerLeadSort,
   type TelecallerLeadSortKey,
 } from "./telecaller-lead-filters";
 import { DISPOSITION_LABEL, STATUS_LABEL, STATUS_STYLE, formatDateTime } from "./telecaller-lead-status";
+import { REQUEST_KIND_LABEL, formatAppliedAt } from "./telecaller-requests";
 import { useTelecallerLeads } from "./use-telecaller-leads";
 
-const STATUS_FILTER_OPTIONS = ["new", "assigned", "working", "converted", "closed", "released"] as const;
+const STATUS_FILTER_OPTIONS = (["new", "assigned", "working", "converted", "closed", "released"] as const).map(
+  (value) => ({ value, label: STATUS_LABEL[value] }),
+);
 
 const COLUMNS: { key: TelecallerLeadSortKey; label: string }[] = [
   { key: "name", label: "Lead" },
@@ -76,27 +94,64 @@ function SortableHeader({
 // where a call gets logged and status/requirement updated.
 export function TelecallerLeadsView() {
   const router = useRouter();
+  const { activeLine } = useLine();
   const { items, loading, error, reload } = useTelecallerLeads();
-  const [filters, setFilters] = React.useState<TelecallerLeadFilters>(DEFAULT_TELECALLER_LEAD_FILTERS);
+  const searchParams = useSearchParams();
+  // "View all follow-ups" on the home page links here with ?followUp=due.
+  const [filters, setFilters] = React.useState<TelecallerLeadFilters>(() => ({
+    ...DEFAULT_TELECALLER_LEAD_FILTERS,
+    followUpDue: searchParams.get("followUp") === FOLLOW_UP_DUE_PARAM,
+  }));
   const [sort, setSort] = React.useState<TelecallerLeadSort>(DEFAULT_TELECALLER_LEAD_SORT);
 
-  const filtered = React.useMemo(() => filterTelecallerLeads(items, filters), [items, filters]);
+  // Loan filters on Loans, property filters on Real Estate, transaction
+  // filters on Loans minus the parts the Admin hides; options are the active
+  // catalogue plus whatever the loaded leads carry.
+  const signalValues = React.useMemo(() => items.map(telecallerSignalValues), [items]);
+  const catalogue = useProductCatalogue(activeLine === "loans");
+  const scope = React.useMemo(
+    () => lineScope(activeLine, true, rowsHiddenTransactionParts(signalValues)),
+    [activeLine, signalValues],
+  );
+  const options = React.useMemo(() => leadSignalOptions(catalogue, signalValues), [catalogue, signalValues]);
+  // A hidden control (other line, Admin-hidden part) never keeps narrowing.
+  const effective = React.useMemo(
+    () => ({ ...filters, ...scopedLeadSignalFilters(filters, scope) }),
+    [filters, scope],
+  );
+
+  const filtered = React.useMemo(() => filterTelecallerLeads(items, effective), [items, effective]);
   const sorted = React.useMemo(() => sortTelecallerLeads(filtered, sort), [filtered, sort]);
   const { page, pageItems, setPage } = useListPagination(sorted);
 
   React.useEffect(() => {
     setPage(0);
-  }, [filters, sort, setPage]);
+  }, [effective, sort, setPage]);
 
-  const filtersActive =
-    filters.search !== "" || filters.status !== "all" || filters.followUpFrom !== "" || filters.followUpTo !== "";
+  const filtersActive = telecallerLeadFiltersActive(effective);
 
   function onSort(key: TelecallerLeadSortKey) {
     setSort((prev) => (prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
   }
 
+  // Keep the URL honest once the due-only filter is dropped.
+  React.useEffect(() => {
+    if (!filters.followUpDue && searchParams.get("followUp")) router.replace("/dashboard/leads", { scroll: false });
+  }, [filters.followUpDue, searchParams, router]);
+
   function clearFilters() {
     setFilters(DEFAULT_TELECALLER_LEAD_FILTERS);
+  }
+
+  const chips = [
+    ...(filters.followUpDue
+      ? [{ id: "followUpDue", label: "Follow-up: due now", onRemove: () => patchFilters({ followUpDue: false }) }]
+      : []),
+    ...leadSignalChips(filters, patchFilters, scope, options),
+  ];
+
+  function patchFilters(patch: Partial<TelecallerLeadFilters>) {
+    setFilters((f) => ({ ...f, ...patch }));
   }
 
   return (
@@ -122,41 +177,36 @@ export function TelecallerLeadsView() {
         </div>
       ) : (
         <>
-          <div className="grid gap-2 rounded-xl border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Input
-              aria-label="Search leads"
-              placeholder="Name or mobile"
-              value={filters.search}
-              maxLength={100}
-              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-            />
-            <Select value={filters.status} onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}>
-              <SelectTrigger aria-label="Filter by status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                {STATUS_FILTER_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {STATUS_LABEL[s]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              aria-label="Follow-up from date"
-              type="date"
-              value={filters.followUpFrom}
-              onChange={(e) => setFilters((f) => ({ ...f, followUpFrom: e.target.value }))}
-            />
-            <Input
-              aria-label="Follow-up to date"
-              type="date"
-              min={filters.followUpFrom || undefined}
-              value={filters.followUpTo}
-              onChange={(e) => setFilters((f) => ({ ...f, followUpTo: e.target.value }))}
-            />
-          </div>
+          <FilterBar
+            value={{
+              ...EMPTY_FILTERS,
+              search: filters.search,
+              status: filters.status,
+              from: filters.followUpFrom,
+              to: filters.followUpTo,
+            }}
+            onChange={(next) =>
+              setFilters((f) => ({
+                ...f,
+                search: next.search,
+                status: next.status,
+                followUpFrom: next.from,
+                followUpTo: next.to,
+              }))
+            }
+            searchLabel="Search leads"
+            searchPlaceholder="Name or mobile"
+            statusOptions={STATUS_FILTER_OPTIONS}
+            showLine={false}
+            dateFromLabel="Follow-up from date"
+            dateToLabel="Follow-up to date"
+            more={leadSignalFilterGroups({ filters, scope, options, onChange: patchFilters })}
+            moreActiveCount={leadSignalActiveCount(filters, scope)}
+            onClearMore={() => patchFilters(DEFAULT_LEAD_SIGNAL_FILTERS)}
+            chips={chips}
+            onClear={clearFilters}
+            hasExternalFilters={filtersActive}
+          />
 
           {sorted.length === 0 ? (
             <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-card px-6 py-14 text-center">
@@ -165,7 +215,7 @@ export function TelecallerLeadsView() {
               </span>
               <h2 className="mt-5 text-lg font-semibold text-text-primary">No leads match your filters</h2>
               <p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">
-                Try a different search, status, or follow-up range.
+                Try a different search or loosen a filter.
               </p>
               {filtersActive ? (
                 <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
@@ -179,14 +229,6 @@ export function TelecallerLeadsView() {
               title="Assigned leads"
               description={
                 filtersActive ? `${sorted.length} of ${items.length} leads` : `${items.length} leads`
-              }
-              action={
-                filtersActive ? (
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
-                    <X className="h-4 w-4" aria-hidden="true" />
-                    Clear filters
-                  </Button>
-                ) : undefined
               }
             >
               <div className="animate-in fade-in-0 overflow-x-auto duration-200 motion-reduce:animate-none">
@@ -220,6 +262,24 @@ export function TelecallerLeadsView() {
                             {lead.name ?? "Unnamed lead"}
                           </p>
                           <p className="text-xs text-text-secondary">{formatMobile(lead.mobile)}</p>
+                          {lead.latest_request ? (
+                            <p className="mt-1 text-xs text-text-secondary">
+                              <span className="font-medium text-text-primary">
+                                {lead.latest_request.title}
+                              </span>
+                              {" · "}
+                              {REQUEST_KIND_LABEL[lead.latest_request.kind]}
+                              {" · "}
+                              <time dateTime={lead.latest_request.applied_at}>
+                                {formatAppliedAt(lead.latest_request.applied_at)}
+                              </time>
+                            </p>
+                          ) : null}
+                          {lead.referrer ? (
+                            <p className="mt-1 text-xs text-text-secondary">
+                              Referred by <span className="font-medium text-text-primary">{formatReferrer(lead.referrer)}</span>
+                            </p>
+                          ) : null}
                         </td>
                         <td className="px-5 py-4">
                           <span

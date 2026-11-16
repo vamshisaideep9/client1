@@ -106,7 +106,7 @@ export function ProductPage({
       {/* Header */}
       <section
         id="page-overview"
-        className={cn("relative w-full scroll-mt-16 overflow-hidden", businessLine === "loans" ? "bg-brand-cta-tint" : "bg-surface-sky")}
+        className={cn("relative w-full scroll-mt-[var(--site-header-h)] overflow-hidden", businessLine === "loans" ? "bg-brand-cta-tint" : "bg-surface-sky")}
       >
         {heroBackdrop ? (
           <>
@@ -168,7 +168,7 @@ export function ProductPage({
             <div
               key={band.id}
               id={band.id}
-              className={cn("scroll-mt-16", bandIndex > 0 ? "mt-20" : "mt-14")}
+              className={cn("scroll-mt-[var(--site-header-h)]", bandIndex > 0 ? "mt-20" : "mt-14")}
             >
               <div>
                 <h3 className="font-heading text-2xl font-semibold text-foreground sm:text-3xl">
@@ -195,7 +195,7 @@ export function ProductPage({
                     key={product.id}
                     id={product.id}
                     className={cn(
-                      "group relative flex h-full scroll-mt-16 flex-col overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:border-brand-blue/40 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+                      "group relative flex h-full scroll-mt-[var(--site-header-h)] flex-col overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:border-brand-blue/40 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0",
                       product.illustration && "pt-0",
                     )}
                   >
@@ -207,7 +207,7 @@ export function ProductPage({
                       <span
                         id={product.legacyAnchorId}
                         aria-hidden
-                        className="absolute top-0 scroll-mt-16"
+                        className="absolute top-0 scroll-mt-[var(--site-header-h)]"
                       />
                     ) : null}
                     {product.illustration ? (
@@ -322,13 +322,13 @@ export function ProductPage({
                 // so mega-menu/footer #links still land here.
                 <Card
                   id={featured.id}
-                  className="group relative mt-6 scroll-mt-16 gap-0 overflow-hidden py-0 transition duration-200 hover:-translate-y-0.5 hover:border-brand-blue/40 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                  className="group relative mt-6 scroll-mt-[var(--site-header-h)] gap-0 overflow-hidden py-0 transition duration-200 hover:-translate-y-0.5 hover:border-brand-blue/40 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                 >
                   {featured.legacyAnchorId ? (
                     <span
                       id={featured.legacyAnchorId}
                       aria-hidden
-                      className="absolute top-0 scroll-mt-16"
+                      className="absolute top-0 scroll-mt-[var(--site-header-h)]"
                     />
                   ) : null}
                   {/* Below sm this reads exactly like the other product cards

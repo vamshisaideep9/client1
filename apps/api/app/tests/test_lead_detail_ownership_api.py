@@ -142,7 +142,7 @@ async def test_public_capture_cannot_overwrite_agent_owned_details(
         json={
             "mobile": mobile,
             "name": "Agent Supplied",
-            "requirement": {"message": "Agent message"},
+            "requirement": {"notes": "Agent message"},
         },
         headers={"Authorization": f"Bearer {_agent_token(agent_user, agent_profile)}"},
     )
@@ -166,9 +166,12 @@ async def test_public_capture_cannot_overwrite_agent_owned_details(
         lead = await db.get(Lead, uuid.UUID(created.json()["id"]))
         assert lead is not None
         assert lead.name == "Agent Supplied"
-        assert lead.requirement["message"] == "Agent message"
+        assert lead.requirement["notes"] == "Agent message"
         assert lead.detail_ownership["name"]["role"] == "agent"
-        assert lead.detail_ownership["requirement.message"]["role"] == "agent"
+        assert lead.detail_ownership["requirement.notes"]["role"] == "agent"
+        # The public form may only add its own, unclaimed field beside them.
+        assert lead.requirement["message"] == "Public overwrite"
+        assert lead.detail_ownership["requirement.message"]["role"] == "unclaimed"
 
 
 @pytest.mark.asyncio
@@ -189,23 +192,38 @@ async def test_agent_retry_preserves_system_owned_requirement(
         "/api/v1/agent/leads",
         json={
             "mobile": mobile,
-            "requirement": {"product": "Original product", "notes": "Original notes"},
+            "name": "Agent Supplied",
+            "requirement": {"notes": "Original notes"},
         },
         headers=headers,
     )
     assert created.status_code == 201, created.text
 
+    # Agents may only send notes / property_id / product_slug, so a
+    # system-owned field reaches the lead from the platform side.
+    import app.db.session as session_module
+    from app.services.lead_details import owner
+
+    async with session_module.AsyncSessionLocal() as db:
+        lead = await db.get(Lead, uuid.UUID(created.json()["id"]))
+        assert lead is not None
+        lead.requirement = {**(lead.requirement or {}), "product": "Original product"}
+        lead.detail_ownership = {
+            **(lead.detail_ownership or {}),
+            "requirement.product": owner("system"),
+        }
+        await db.commit()
+
     retried = await client.post(
         "/api/v1/agent/leads",
         json={
             "mobile": mobile,
-            "requirement": {"product": "Overwrite", "notes": "Updated notes"},
+            "name": "Agent Supplied",
+            "requirement": {"notes": "Updated notes"},
         },
         headers=headers,
     )
     assert retried.status_code == 201, retried.text
-
-    import app.db.session as session_module
 
     async with session_module.AsyncSessionLocal() as db:
         lead = await db.get(Lead, uuid.UUID(created.json()["id"]))
@@ -246,7 +264,7 @@ async def test_agent_claim_transfers_unclaimed_but_preserves_system_metadata(
         json={
             "mobile": mobile,
             "name": "Agent name",
-            "requirement": {"page": "overwrite", "message": "Agent message"},
+            "requirement": {"notes": "Agent message"},
         },
         headers={"Authorization": f"Bearer {_agent_token(agent_user, agent_profile)}"},
     )
@@ -257,12 +275,16 @@ async def test_agent_claim_transfers_unclaimed_but_preserves_system_metadata(
     async with session_module.AsyncSessionLocal() as db:
         lead = await db.get(Lead, uuid.UUID(claimed.json()["id"]))
         assert lead is not None
+        # The unclaimed public name transfers to the claiming Agent; system
+        # metadata and the visitor's own message are left as they were.
         assert lead.name == "Agent name"
         assert lead.requirement["page"] == "contact"
-        assert lead.requirement["message"] == "Agent message"
+        assert lead.requirement["message"] == "Public message"
+        assert lead.requirement["notes"] == "Agent message"
         assert lead.detail_ownership["name"]["role"] == "agent"
         assert lead.detail_ownership["requirement.page"]["role"] == "system"
-        assert lead.detail_ownership["requirement.message"]["role"] == "agent"
+        assert lead.detail_ownership["requirement.message"]["role"] == "unclaimed"
+        assert lead.detail_ownership["requirement.notes"]["role"] == "agent"
 
 
 @pytest.mark.asyncio
@@ -341,6 +363,48 @@ async def test_agent_can_edit_assigned_but_not_working_lead(client: AsyncClient)
         headers=headers,
     )
     assert locked.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_admin_lead_details_list_what_the_client_applied_for(client: AsyncClient) -> None:
+    token, mobile = await full_registration(client, lines=["loans"])
+    details = await client.get(
+        "/api/v1/client/lead-details/loans",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    lead_id = details.json()["id"]
+    assert "requests" not in details.json()  # client shape unchanged
+    user_uuid = await _auth_user_uuid(mobile)
+
+    import app.db.session as _session_mod
+    from app.models.loan import LoanApplication, LoanType
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        lead = await db.get(Lead, uuid.UUID(lead_id))
+        assert lead is not None and lead.client_profile_uuid is not None
+        loan_type = LoanType(name=f"lt_{uuid.uuid4().hex[:8]}", label="Gold Loan")
+        db.add(loan_type)
+        await db.flush()
+        application = LoanApplication(
+            lead_uuid=lead.id,
+            client_profile_uuid=lead.client_profile_uuid,
+            business_line="loans",
+            loan_type_id=loan_type.id,
+        )
+        db.add(application)
+        await db.commit()
+        application_id = str(application.id)
+
+    admin_view = await client.get(
+        f"/api/v1/admin/leads/{lead_id}/details",
+        headers={"Authorization": f"Bearer {_admin_token(user_uuid)}"},
+    )
+    assert admin_view.status_code == 200, admin_view.text
+    [request] = admin_view.json()["requests"]
+    assert request["kind"] == "loan_application"
+    assert request["id"] == application_id
+    assert request["title"] == "Gold Loan"
+    assert request["applied_at"]
 
 
 @pytest.mark.asyncio

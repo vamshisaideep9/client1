@@ -6,6 +6,7 @@ import { Camera, Download, FileText, ImageIcon, Loader2, Trash2, Upload, Video }
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
+import { ViewDocumentButton } from "@/components/documents/document-viewer";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -284,6 +285,13 @@ export function DocumentsView() {
                             ) : null}
                           </div>
                           <div className="flex items-center gap-2">
+                            {document.download_url && !isVideo ? (
+                              <ViewDocumentButton
+                                url={document.download_url}
+                                title={label}
+                                className="flex-1"
+                              />
+                            ) : null}
                             {document.download_url ? (
                               <Button asChild type="button" size="sm" variant="outline" className="flex-1">
                                 <a href={document.download_url} target="_blank" rel="noreferrer">
