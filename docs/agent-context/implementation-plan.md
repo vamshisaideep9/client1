@@ -8,6 +8,14 @@ Evidence baseline: `115fd0f` (`upstream/main`, including merged
 [PR #295](https://github.com/brollysolutions/client1/pull/295)). The frozen
 release candidate remains merged PR #290 SHA `75e1031`.
 
+## Infra fixes in flight
+
+- **2026-11-16 — API Dockerfile Alpine pin bump** (branch
+  `fix/api-dockerfile-alpine-pins`, upstream PR pending): `libcrypto3`/`libssl3`
+  `3.5.8-r0 → 3.5.9-r0` so the API/scheduler image rebuilds again (the pinned
+  `3.5.8-r0` was dropped from Alpine `v3.23/main`). Build-only; no requirement
+  coverage change. Needed to deploy PR #364 to the dev droplet.
+
 ## Outcome
 
 Complete the approved Loans and Real Estate scope without weakening
