@@ -3,7 +3,8 @@
 Status: **Derived living implementation ledger**
 
 **In review — Batch A PR 2: Settings by role, self-service guards, small
-fixes** (2026-11-16; CS-021), branch `feat/filters-settings-by-role` stacked
+fixes** (2026-11-16; CS-021; PR [#368](https://github.com/brollysolutions/client1/pull/368),
+mirror vamshisaideep9/client1#69), branch `feat/filters-settings-by-role` stacked
 on PR 1. API, one additive data migration, web; no requirement-percentage
 change and no contract shape change.
 - Settings: `settingsForRole` — Client: editable, personalization, delete;
@@ -26,7 +27,13 @@ change and no contract shape change.
 - Analytics: My analytics, team and member analytics open on the previous
   calendar month; KPI tiles without a scope hint show the period. Agent
   "Commission by status" excludes cancelled.
-- Evidence: recorded on the PR.
+- Evidence: API affected tests in the python container 367 passed, 1
+  failed (`lead_list_signals` missing: the shared dev DB is at `c7e9a1b3d5f7`,
+  behind `f3a5c7e9b1d2`; unrelated); ruff clean; one Alembic head; OpenAPI
+  export identical to the committed contract; web lint/typecheck, 1016 unit
+  tests and the container build pass; Playwright 32 passed (settings by role,
+  filter system with follow-ups, staff analytics, team, lead signals,
+  listings, admin analytics).
 
 **In review — Batch A PR 1: one filter system across every dashboard**
 (2026-11-16; CS-021), branch `feat/unified-dashboard-filters` from

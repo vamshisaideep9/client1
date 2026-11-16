@@ -96,7 +96,9 @@ opened against `main`:
   container build, 25 mocked Playwright tests (incl. new
   `filter-system.spec.ts`).
 - *PR 2 — Settings by role, API guards, small fixes*, branch
-  `feat/filters-settings-by-role` stacked on PR 1. Settings: Client and
+  `feat/filters-settings-by-role` stacked on PR 1 (PR
+  [#368](https://github.com/brollysolutions/client1/pull/368), mirror
+  vamshisaideep9/client1#69). Settings: Client and
   Agent/Admin keep an editable profile and Delete account; only Clients get
   the personalization card; Telecaller, Employee and Sub Admin see a
   read-only "Your details" panel (ask an Admin) with no Save and no Danger
