@@ -28,14 +28,17 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select, update
+from pydantic import EmailStr, TypeAdapter, ValidationError
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 import app.db.session as db_session
 from app.cache.redis_keys import (
@@ -52,7 +55,7 @@ from app.core.config import settings
 from app.core.masking import mask_email, mask_mobile
 from app.core.security import verify_password
 from app.models.audit_log import AuditAction
-from app.models.auth import AuthEvent
+from app.models.auth import AuthEvent, RefreshToken
 from app.models.contact_change import (
     ACTIVE_CONTACT_CHANGE_STATUSES,
     ContactChangeHistory,
@@ -62,9 +65,22 @@ from app.models.contact_change import (
     ContactChangeStatus,
     ContactField,
 )
+from app.models.mobile_change import MobileChangeRequest, MobileChangeStatus
+from app.models.notification import Notification, NotificationType
+from app.models.push_subscription import PushSubscription
 from app.models.user import User, UserStatus
-from app.schemas.contact_change import ContactChangeChallengeResponse
+from app.schemas.contact_change import (
+    ContactChangeChallengeResponse,
+    ContactChangeRead,
+    ContactHistoryEntry,
+)
 from app.services.audit_log import record as record_audit
+from app.services.contact_identity import (
+    clear_identity_caches,
+    mobile_conflicts,
+    propagate_mobile,
+)
+from app.services.email import send_email
 from app.services.otp import (
     check_login_lock,
     check_otp_rate_ip,
@@ -116,6 +132,14 @@ class NotPermitted(ContactChangeError):
 
 class ValueUnavailable(ContactChangeError):
     """The new value cannot be used (same as now, or held elsewhere) (409)."""
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+        self.detail = detail
+
+
+class InvalidValue(ContactChangeError):
+    """The submitted value is not a valid number or address (422)."""
 
     def __init__(self, detail: str) -> None:
         super().__init__(detail)
@@ -631,6 +655,8 @@ def http_error(exc: ContactChangeError) -> HTTPException:
         return HTTPException(status.HTTP_403_FORBIDDEN, exc.detail)
     if isinstance(exc, ValueUnavailable):
         return HTTPException(status.HTTP_409_CONFLICT, exc.detail)
+    if isinstance(exc, InvalidValue):
+        return HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, exc.detail)
     if isinstance(exc, CodeTargetMismatch):
         return HTTPException(
             status.HTTP_400_BAD_REQUEST, "That code is no longer valid. Request a new code."
@@ -640,3 +666,524 @@ def http_error(exc: ContactChangeError) -> HTTPException:
             status.HTTP_429_TOO_MANY_REQUESTS, "Too many attempts. Please try again later."
         )
     return HTTPException(status.HTTP_400_BAD_REQUEST, "This change could not be completed.")
+
+
+# ---------------------------------------------------------------------------
+# Self-service change (Client, Agent, Admin)
+# ---------------------------------------------------------------------------
+
+_E164 = re.compile(r"^\+[1-9]\d{6,14}$")
+_EMAIL_ADAPTER: TypeAdapter[str] = TypeAdapter(EmailStr)
+_FIELD_NOUN = {ContactField.MOBILE: "number", ContactField.EMAIL: "email"}
+
+
+def normalize_new_value(field: str, value: str) -> str:
+    """Validate and normalize a submitted value for its field."""
+    value = value.strip()
+    if field == ContactField.MOBILE:
+        if not _E164.match(value):
+            raise InvalidValue("Enter the number with its country code, like +919876543210.")
+        return value
+    try:
+        return str(_EMAIL_ADAPTER.validate_python(value)).strip().lower()
+    except ValidationError as exc:
+        raise InvalidValue("Enter a valid email address.") from exc
+
+
+def current_value(user: User, field: str) -> str | None:
+    return user.mobile if field == ContactField.MOBILE else user.email
+
+
+def _noun(field: str) -> str:
+    return _FIELD_NOUN[ContactField(field)]
+
+
+def _current_matches(row: ContactChangeRequest, user: User) -> bool:
+    """The value being replaced is still the one the change started from."""
+    value = current_value(user, row.field)
+    return (
+        value is not None
+        and row.current_fingerprint is not None
+        and hmac.compare_digest(row.current_fingerprint, contact_fingerprint(row.field, value))
+    )
+
+
+async def _open_lost_number_request(db: AsyncSession, user_uuid: UUID) -> bool:
+    return (
+        await db.scalar(
+            select(MobileChangeRequest.id).where(
+                MobileChangeRequest.auth_user_uuid == user_uuid,
+                MobileChangeRequest.status.in_(
+                    (MobileChangeStatus.PENDING_REVIEW, MobileChangeStatus.PENDING_APPROVAL)
+                ),
+            )
+        )
+        is not None
+    )
+
+
+async def ensure_no_change_in_flight(db: AsyncSession, user_uuid: UUID) -> None:
+    """One change per account: any active change or open lost-number request."""
+    await expire_stale(db, user_uuid=user_uuid)
+    if await active_change(db, user_uuid) is not None:
+        raise ChangeInProgress
+    if await _open_lost_number_request(db, user_uuid):
+        raise ChangeInProgress
+
+
+async def _cancel(db: AsyncSession, cache: RedisCache, row: ContactChangeRequest) -> None:
+    _terminate(row, ContactChangeStatus.CANCELLED)
+    await db.commit()
+    for stage in ("current", "new"):
+        await _discard_code(cache, row.id, stage)
+
+
+async def precheck_new_value(db: AsyncSession, *, user: User, field: str, value: str) -> None:
+    """Refuse an unusable value before any code is sent.
+
+    Only what an existing public flow already reveals is checked here: a number
+    registered to another account (registration answers the same). Whether an
+    email or an enquiry belongs to someone is checked only after the code
+    proves control of the new value.
+    """
+    current = current_value(user, field)
+    if current is not None and current.lower() == value.lower():
+        raise ValueUnavailable(f"That is already your {_noun(field)}.")
+    if field == ContactField.MOBILE:
+        holder = await db.scalar(select(User.id).where(User.mobile == value, User.id != user.id))
+        if holder is not None:
+            raise ValueUnavailable("This number is already registered to another account.")
+
+
+async def start_self_service(
+    cache: RedisCache,
+    *,
+    actor: Actor,
+    field: str,
+    current_password: str,
+    ip: str | None,
+) -> ContactChangeChallengeResponse:
+    """Password, then a code to the CURRENT number or email."""
+    if actor.role in STAFF_REQUEST_ROLES:
+        raise NotPermitted(
+            "Your Admin manages your contact details. Send a contact change request instead."
+        )
+    await check_otp_rate_ip(cache, ip)
+    await check_account_budget(cache, actor.user_uuid)
+    async with _bypass_session() as db:
+        user = await lock_user(db, actor.user_uuid)
+        await reauthenticate(cache, user, current_password)
+        await ensure_no_change_in_flight(db, user.id)
+        if field == ContactField.EMAIL and (user.email is None or user.email_verified_at is None):
+            raise ValueUnavailable("Add and verify an email before changing it.")
+        current = current_value(user, field)
+        if current is None:
+            raise ValueUnavailable("Add and verify an email before changing it.")
+        row = ContactChangeRequest(
+            auth_user_uuid=user.id,
+            kind=ContactChangeKind.SELF_SERVICE.value,
+            field=field,
+            status=ContactChangeStatus.AWAITING_CURRENT_OTP.value,
+            current_fingerprint=contact_fingerprint(field, current),
+            expires_at=_now() + timedelta(minutes=settings.CONTACT_CHANGE_FLOW_EXPIRE_MINUTES),
+        )
+        db.add(row)
+        db.add(
+            AuthEvent(
+                auth_user_uuid=user.id,
+                event_type="contact_change_started",
+                mobile=None,
+                success=True,
+                detail={"field": field, "kind": ContactChangeKind.SELF_SERVICE.value},
+            )
+        )
+        try:
+            await db.commit()
+        except IntegrityError as exc:
+            raise ChangeInProgress from exc
+    channel, otp = await issue_code(
+        cache, change_id=row.id, stage="current", field=field, destination=current
+    )
+    return challenge_response(
+        row,
+        message=f"We sent a code to your current {_noun(field)}.",
+        destination=current,
+        channel=channel,
+        otp=otp,
+    )
+
+
+async def resend_self_service(
+    cache: RedisCache, *, actor: Actor, change_id: UUID, ip: str | None
+) -> ContactChangeChallengeResponse:
+    """Resend the code for whichever stage the change is waiting on."""
+    await check_otp_rate_ip(cache, ip)
+    await check_account_budget(cache, actor.user_uuid)
+    async with _bypass_session() as db:
+        user = await lock_user(db, actor.user_uuid)
+        row = await lock_own_change(db, change_id=change_id, user_uuid=actor.user_uuid)
+        if row.kind != ContactChangeKind.SELF_SERVICE:
+            raise StepConflict
+        if not _current_matches(row, user):
+            await _cancel(db, cache, row)
+            raise StepConflict
+        if row.status == ContactChangeStatus.AWAITING_CURRENT_OTP:
+            stage, destination = "current", current_value(user, row.field)
+        elif row.status == ContactChangeStatus.AWAITING_NEW_OTP and row.new_value:
+            stage, destination = "new", row.new_value
+        else:
+            raise StepConflict
+        await db.commit()
+    if destination is None:
+        raise StepConflict
+    if stage == "new":
+        await check_target_budget(cache, row.field, destination)
+    channel, otp = await issue_code(
+        cache, change_id=row.id, stage=stage, field=row.field, destination=destination, resend=True
+    )
+    return challenge_response(
+        row, message="We sent a new code.", destination=destination, channel=channel, otp=otp
+    )
+
+
+async def verify_current(
+    cache: RedisCache, *, actor: Actor, change_id: UUID, otp: str
+) -> ContactChangeChallengeResponse:
+    """The current value is proven; the change now waits for the new value."""
+    async with _bypass_session() as db:
+        user = await lock_user(db, actor.user_uuid)
+        row = await lock_own_change(db, change_id=change_id, user_uuid=actor.user_uuid)
+        if (
+            row.kind != ContactChangeKind.SELF_SERVICE
+            or row.status != ContactChangeStatus.AWAITING_CURRENT_OTP
+        ):
+            raise StepConflict
+        current = current_value(user, row.field)
+        if current is None or not _current_matches(row, user):
+            await _cancel(db, cache, row)
+            raise StepConflict
+        await verify_code(
+            cache,
+            change_id=row.id,
+            stage="current",
+            field=row.field,
+            expected_value=current,
+            otp=otp,
+        )
+        row.status = ContactChangeStatus.AWAITING_NEW_VALUE.value
+        row.current_verified_at = _now()
+        await db.commit()
+    return challenge_response(row, message=f"Code accepted. Enter your new {_noun(row.field)}.")
+
+
+async def submit_new_value(
+    cache: RedisCache, *, actor: Actor, change_id: UUID, value: str, ip: str | None
+) -> ContactChangeChallengeResponse:
+    """The new value, then a code to it. May be resubmitted until verified."""
+    await check_otp_rate_ip(cache, ip)
+    await check_account_budget(cache, actor.user_uuid)
+    async with _bypass_session() as db:
+        user = await lock_user(db, actor.user_uuid)
+        row = await lock_own_change(db, change_id=change_id, user_uuid=actor.user_uuid)
+        if row.kind != ContactChangeKind.SELF_SERVICE or row.status not in (
+            ContactChangeStatus.AWAITING_NEW_VALUE,
+            ContactChangeStatus.AWAITING_NEW_OTP,
+        ):
+            raise StepConflict
+        if not _current_matches(row, user):
+            await _cancel(db, cache, row)
+            raise StepConflict
+        value = normalize_new_value(row.field, value)
+        await precheck_new_value(db, user=user, field=row.field, value=value)
+        await check_target_budget(cache, row.field, value)
+        row.new_value = value
+        row.status = ContactChangeStatus.AWAITING_NEW_OTP.value
+        await db.commit()
+    channel, otp = await issue_code(
+        cache, change_id=row.id, stage="new", field=row.field, destination=value
+    )
+    return challenge_response(
+        row,
+        message=f"We sent a code to your new {_noun(row.field)}.",
+        destination=value,
+        channel=channel,
+        otp=otp,
+    )
+
+
+async def verify_new_and_apply(
+    cache: RedisCache, *, actor: Actor, change_id: UUID, otp: str
+) -> None:
+    """Verify the new-value code and apply the change atomically."""
+    async with _bypass_session() as db:
+        user = await lock_user(db, actor.user_uuid)
+        row = await lock_own_change(db, change_id=change_id, user_uuid=actor.user_uuid)
+        if (
+            row.kind != ContactChangeKind.SELF_SERVICE
+            or row.status != ContactChangeStatus.AWAITING_NEW_OTP
+            or row.new_value is None
+        ):
+            raise StepConflict
+        if not _current_matches(row, user):
+            await _cancel(db, cache, row)
+            raise StepConflict
+        await verify_code(
+            cache,
+            change_id=row.id,
+            stage="new",
+            field=row.field,
+            expected_value=row.new_value,
+            otp=otp,
+        )
+        applied = await apply_change(
+            db, row=row, user=user, actor=actor, method=ContactChangeMethod.SELF_SERVICE
+        )
+    await after_apply(cache, applied)
+
+
+async def cancel_change(cache: RedisCache, *, actor: Actor, change_id: UUID) -> None:
+    """Withdraw the caller's own change of any kind while it is active."""
+    async with _bypass_session() as db:
+        await lock_user(db, actor.user_uuid)
+        row = await lock_own_change(db, change_id=change_id, user_uuid=actor.user_uuid)
+        if row.status not in ACTIVE_CONTACT_CHANGE_STATUSES:
+            raise StepConflict
+        await _cancel(db, cache, row)
+
+
+async def active_for(actor: Actor) -> ContactChangeRead | None:
+    """The caller's own change in flight, if any, with its value masked."""
+    async with _bypass_session() as db:
+        await expire_stale(db, user_uuid=actor.user_uuid)
+        await db.commit()
+        row = await db.scalar(
+            select(ContactChangeRequest).where(
+                ContactChangeRequest.auth_user_uuid == actor.user_uuid,
+                ContactChangeRequest.status.in_(tuple(ACTIVE_CONTACT_CHANGE_STATUSES)),
+            )
+        )
+        if row is None:
+            return None
+        return ContactChangeRead(
+            change_id=row.id,
+            kind=row.kind,
+            field=row.field,
+            status=row.status,
+            new_value_hint=mask_value(row.field, row.new_value) if row.new_value else None,
+            expires_at=row.expires_at,
+            created_at=row.created_at,
+        )
+
+
+async def history_for_admin(
+    db: AsyncSession, *, target_uuid: UUID, actor: Actor
+) -> list[ContactHistoryEntry]:
+    """A platform Admin's read of one account's permanent history (audited).
+
+    Runs on the caller's RLS session: the history policy admits a platform
+    Admin only, so a role-gate slip still returns nothing to anyone else.
+    """
+    approver = aliased(User)
+    rows = (
+        await db.execute(
+            select(ContactChangeHistory, approver.first_name, approver.last_name)
+            .outerjoin(approver, approver.id == ContactChangeHistory.approved_by_user_uuid)
+            .where(ContactChangeHistory.auth_user_uuid == target_uuid)
+            .order_by(ContactChangeHistory.changed_at.desc(), ContactChangeHistory.id)
+        )
+    ).all()
+    await record_audit(
+        db,
+        action=AuditAction.CONTACT_HISTORY_VIEWED,
+        entity_type="auth_user",
+        entity_uuid=target_uuid,
+        actor_uuid=actor.user_uuid,
+        actor_role=actor.role,
+        detail={"entries": len(rows)},
+    )
+    await db.commit()
+    return [
+        ContactHistoryEntry(
+            id=entry.id,
+            field=entry.field,
+            old_value=entry.old_value,
+            new_value=entry.new_value,
+            method=entry.method,
+            proof_category=entry.proof_category,
+            proof_reference=entry.proof_reference,
+            approved_by_name=(
+                f"{first or ''} {last or ''}".strip() or None
+                if entry.approved_by_user_uuid
+                else None
+            ),
+            changed_at=entry.changed_at,
+        )
+        for entry, first, last in rows
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Applying a change (one transaction) and what follows the commit
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Applied:
+    field: str
+    old_value: str | None
+    new_value: str
+    # Verified addresses that receive the security notice after the commit.
+    notice_emails: tuple[str, ...]
+
+
+async def apply_change(
+    db: AsyncSession,
+    *,
+    row: ContactChangeRequest,
+    user: User,
+    actor: Actor,
+    method: ContactChangeMethod,
+    approved_by: UUID | None = None,
+) -> Applied:
+    """Replace the value, end every session and record history; commits.
+
+    The caller holds the account and change row locks and has verified the
+    last code (and, for a staff request, the approving Admin). A conflict found
+    here cancels the change (its value is cleared) and raises.
+    """
+    field = row.field
+    new_value = row.new_value
+    if new_value is None:
+        raise StepConflict
+    old_value = current_value(user, field)
+    old_email_verified = user.email_verified_at is not None
+    try:
+        if field == ContactField.MOBILE:
+            if await mobile_conflicts(db, user_uuid=user.id, requested_mobile=new_value):
+                raise ValueUnavailable(
+                    "This number is linked to another account or enquiry. Contact support."
+                )
+        else:
+            await claim_email(db, user=user, email=new_value)
+    except ValueUnavailable:
+        _terminate(row, ContactChangeStatus.CANCELLED)
+        await db.commit()
+        raise
+
+    now = _now()
+    if field == ContactField.MOBILE:
+        user.mobile = new_value
+        user.phone_verified_at = now
+        await propagate_mobile(db, user_uuid=user.id, new_mobile=new_value)
+        history_old = old_value
+        notices = (user.email,) if user.email and old_email_verified else ()
+    else:
+        user.email = new_value
+        user.email_verified_at = now
+        # An address that was never verified is not a previous email.
+        history_old = old_value if old_email_verified else None
+        notices = tuple(v for v in (history_old, new_value) if v)
+    user.session_version += 1
+    await db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.auth_user_uuid == user.id, RefreshToken.revoked.is_(False))
+        .values(revoked=True)
+    )
+    await db.execute(delete(PushSubscription).where(PushSubscription.user_uuid == user.id))
+
+    write_history(
+        db,
+        user_uuid=user.id,
+        field=field,
+        old_value=history_old,
+        new_value=new_value,
+        method=method,
+        request_uuid=row.id,
+        approved_by=approved_by,
+    )
+    row.new_verified_at = row.new_verified_at or now
+    row.completed_at = now
+    if approved_by is not None:
+        row.decided_by_user_uuid = approved_by
+        row.decided_at = now
+    _terminate(row, ContactChangeStatus.COMPLETED)
+    label = "phone number" if field == ContactField.MOBILE else "email"
+    db.add(
+        Notification(
+            user_uuid=user.id,
+            type=NotificationType.CONTACT_CHANGED,
+            title=f"Your {label} was changed",
+            body=(
+                f"The {label} on your account was changed and every device was signed "
+                "out. Contact support immediately if this was not you."
+            ),
+            href="/dashboard/settings",
+        )
+    )
+    db.add(
+        AuthEvent(
+            auth_user_uuid=user.id,
+            event_type="contact_changed",
+            mobile=None,
+            success=True,
+            detail={"change_id": str(row.id), "field": field, "method": method.value},
+        )
+    )
+    await record_audit(
+        db,
+        action=AuditAction.CONTACT_CHANGED,
+        entity_type="contact_change_request",
+        entity_uuid=row.id,
+        actor_uuid=actor.user_uuid,
+        actor_role=actor.role,
+        detail={"field": field, "method": method.value},
+    )
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        # The database's uniqueness is the final arbiter for a racing claim.
+        raise ValueUnavailable("This number or email is already used by another account.") from exc
+    return Applied(field=field, old_value=old_value, new_value=new_value, notice_emails=notices)
+
+
+async def after_apply(cache: RedisCache, applied: Applied) -> None:
+    """Best-effort work after the identity change committed.
+
+    Notices go to the old and the new address for an email change, and to the
+    verified email for a phone change: there is no SMS channel (DLT
+    registration is out of scope), so neither number can be messaged.
+    """
+    if applied.field == ContactField.MOBILE and applied.old_value:
+        await clear_identity_caches(cache, applied.old_value, applied.new_value)
+    when = datetime.now(UTC).strftime("%d %b %Y, %H:%M UTC")
+    if applied.field == ContactField.MOBILE:
+        subject = "Your Dhanadhara login number was changed"
+        body = (
+            f"On {when} the login number on your Dhanadhara account changed from "
+            f"{mask_mobile(applied.old_value)} to {mask_mobile(applied.new_value)}. "
+            "Every device was signed out.\n\n"
+            "If you did not make this change, contact support immediately."
+        )
+        for address in applied.notice_emails:
+            await send_email(address, subject, body)
+        return
+    for address in applied.notice_emails:
+        if address == applied.new_value:
+            await send_email(
+                address,
+                "This is now your Dhanadhara email",
+                (
+                    f"On {when} this address became the email on your Dhanadhara account. "
+                    "If you did not make this change, contact support immediately."
+                ),
+            )
+        else:
+            await send_email(
+                address,
+                "The email on your Dhanadhara account was changed",
+                (
+                    f"On {when} the email on your Dhanadhara account was changed to "
+                    f"{mask_email(applied.new_value)}. Every device was signed out.\n\n"
+                    "If you did not make this change, contact support immediately."
+                ),
+            )

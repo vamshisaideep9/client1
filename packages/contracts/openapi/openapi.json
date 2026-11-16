@@ -17,6 +17,25 @@
         "title": "AccountDeleteRequest",
         "type": "object"
       },
+      "ActiveContactChangeResponse": {
+        "properties": {
+          "change": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactChangeRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "change"
+        ],
+        "title": "ActiveContactChangeResponse",
+        "type": "object"
+      },
       "AdminAccountDeleteRequest": {
         "description": "FR-17.4 \u2014 Admin removal of a suspicious account. Unlike AgentRejectRequest.note\nabove, this reason IS persisted (AuthEvent.detail.reason).",
         "properties": {
@@ -8893,6 +8912,24 @@
         "title": "ContactChangeChallengeResponse",
         "type": "object"
       },
+      "ContactChangeCompletedResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "signed_out": {
+            "default": true,
+            "title": "Signed Out",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ContactChangeCompletedResponse",
+        "type": "object"
+      },
       "ContactChangeIdRequest": {
         "properties": {
           "change_id": {
@@ -8905,6 +8942,27 @@
           "change_id"
         ],
         "title": "ContactChangeIdRequest",
+        "type": "object"
+      },
+      "ContactChangeNewValueRequest": {
+        "properties": {
+          "change_id": {
+            "format": "uuid",
+            "title": "Change Id",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "change_id",
+          "value"
+        ],
+        "title": "ContactChangeNewValueRequest",
         "type": "object"
       },
       "ContactChangeOtpRequest": {
@@ -8925,6 +8983,213 @@
           "otp"
         ],
         "title": "ContactChangeOtpRequest",
+        "type": "object"
+      },
+      "ContactChangeRead": {
+        "description": "The caller's own change in flight (to resume or cancel it).",
+        "properties": {
+          "change_id": {
+            "format": "uuid",
+            "title": "Change Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "field": {
+            "enum": [
+              "mobile",
+              "email"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "self_service",
+              "email_add",
+              "staff_request"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "new_value_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Value Hint"
+          },
+          "status": {
+            "enum": [
+              "awaiting_current_otp",
+              "awaiting_new_value",
+              "awaiting_new_otp",
+              "pending_approval",
+              "completed",
+              "rejected",
+              "cancelled",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "change_id",
+          "kind",
+          "field",
+          "status",
+          "new_value_hint",
+          "expires_at",
+          "created_at"
+        ],
+        "title": "ContactChangeRead",
+        "type": "object"
+      },
+      "ContactChangeStartRequest": {
+        "properties": {
+          "current_password": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "field": {
+            "enum": [
+              "mobile",
+              "email"
+            ],
+            "title": "Field",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "current_password"
+        ],
+        "title": "ContactChangeStartRequest",
+        "type": "object"
+      },
+      "ContactHistoryEntry": {
+        "description": "One completed change, old value included (platform Admin only).",
+        "properties": {
+          "approved_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By Name"
+          },
+          "changed_at": {
+            "format": "date-time",
+            "title": "Changed At",
+            "type": "string"
+          },
+          "field": {
+            "enum": [
+              "mobile",
+              "email"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "method": {
+            "enum": [
+              "self_service",
+              "email_added",
+              "admin_approved",
+              "lost_number_recovery"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "new_value": {
+            "title": "New Value",
+            "type": "string"
+          },
+          "old_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Value"
+          },
+          "proof_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proof Category"
+          },
+          "proof_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proof Reference"
+          }
+        },
+        "required": [
+          "id",
+          "field",
+          "old_value",
+          "new_value",
+          "method",
+          "proof_category",
+          "proof_reference",
+          "approved_by_name",
+          "changed_at"
+        ],
+        "title": "ContactHistoryEntry",
+        "type": "object"
+      },
+      "ContactHistoryResponse": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/ContactHistoryEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entries"
+        ],
+        "title": "ContactHistoryResponse",
         "type": "object"
       },
       "ContactInvitationRead": {
@@ -32308,6 +32573,55 @@
         ]
       }
     },
+    "/api/v1/admin/users/{auth_user_uuid}/contact-history": {
+      "get": {
+        "description": "CS-025 permanent phone/email history, old values included.\n\nPlatform Admin only (the dependency and the table's RLS policy both say\nso; the account holder cannot read it). Every read is audited.",
+        "operationId": "contact_history_api_v1_admin_users__auth_user_uuid__contact_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "auth_user_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Auth User Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactHistoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Contact History",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/users/{auth_user_uuid}/delete": {
       "post": {
         "description": "FR-17.4 \u2014 Admin removal of a suspicious account. Admin-only (not Sub\nAdmin): mirrors the require_platform_admin wall on the other irreversible\nplatform-identity actions above (staff provisioning, agent-app review).",
@@ -33816,6 +34130,312 @@
         "summary": "Change Password",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/contact-change/active": {
+      "get": {
+        "description": "The caller's own change in flight, if any (to resume or cancel it).",
+        "operationId": "active_api_v1_auth_contact_change_active_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveContactChangeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Active",
+        "tags": [
+          "contact-change"
+        ]
+      }
+    },
+    "/api/v1/auth/contact-change/cancel": {
+      "post": {
+        "description": "Withdraw the caller's own change (any kind) while it is still active.",
+        "operationId": "cancel_api_v1_auth_contact_change_cancel_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactChangeIdRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Cancel",
+        "tags": [
+          "contact-change"
+        ]
+      }
+    },
+    "/api/v1/auth/contact-change/new-value": {
+      "post": {
+        "operationId": "new_value_api_v1_auth_contact_change_new_value_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactChangeNewValueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChangeChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "New Value",
+        "tags": [
+          "contact-change"
+        ]
+      }
+    },
+    "/api/v1/auth/contact-change/resend": {
+      "post": {
+        "operationId": "resend_api_v1_auth_contact_change_resend_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactChangeIdRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChangeChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Resend",
+        "tags": [
+          "contact-change"
+        ]
+      }
+    },
+    "/api/v1/auth/contact-change/start": {
+      "post": {
+        "description": "Client, Agent or Admin: password, then a code to the current value.",
+        "operationId": "start_api_v1_auth_contact_change_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactChangeStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChangeChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Start",
+        "tags": [
+          "contact-change"
+        ]
+      }
+    },
+    "/api/v1/auth/contact-change/verify-current": {
+      "post": {
+        "operationId": "verify_current_api_v1_auth_contact_change_verify_current_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactChangeOtpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChangeChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Verify Current",
+        "tags": [
+          "contact-change"
+        ]
+      }
+    },
+    "/api/v1/auth/contact-change/verify-new": {
+      "post": {
+        "description": "Verify the new-value code; the change applies and every session ends.",
+        "operationId": "verify_new_api_v1_auth_contact_change_verify_new_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactChangeOtpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChangeCompletedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Verify New",
+        "tags": [
+          "contact-change"
         ]
       }
     },

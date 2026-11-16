@@ -66,6 +66,7 @@ from app.schemas.agent_invites import (
 )
 from app.schemas.audit_log import AuditLogListResponse, AuditLogRead
 from app.schemas.auth import MessageResponse
+from app.schemas.contact_change import ContactHistoryResponse
 from app.schemas.employee import TaskFeedbackMediaRead
 from app.schemas.financial_catalog import (
     AdminProviderOfferListResponse,
@@ -98,7 +99,7 @@ from app.schemas.support_tickets import (
     SupportTicketAdminRead,
     SupportTicketAdvanceRequest,
 )
-from app.services import agent_invites, staff_invites, storage
+from app.services import agent_invites, contact_change, staff_invites, storage
 from app.services.account_deletion import (
     AccountAlreadyDeleted,
     AccountNotFound,
@@ -386,6 +387,27 @@ async def update_staff_feature(
         additional_admin_limit=ADDITIONAL_ADMIN_LIMIT,
         additional_admin_count=additional_count,
     )
+
+
+@router.get("/users/{auth_user_uuid}/contact-history", response_model=ContactHistoryResponse)
+async def contact_history(
+    auth_user_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+) -> ContactHistoryResponse:
+    """CS-025 permanent phone/email history, old values included.
+
+    Platform Admin only (the dependency and the table's RLS policy both say
+    so; the account holder cannot read it). Every read is audited.
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    entries = await contact_change.history_for_admin(
+        db,
+        target_uuid=auth_user_uuid,
+        actor=contact_change.Actor(user_uuid=current_user.id, role=current_user.role),
+    )
+    return ContactHistoryResponse(entries=entries)
 
 
 @router.post("/users/{auth_user_uuid}/delete", response_model=MessageResponse)
