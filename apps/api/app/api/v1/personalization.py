@@ -40,6 +40,18 @@ async def require_personalization_viewer(
     return current_user
 
 
+async def require_personalization_owner(
+    current_user: CurrentUser = Depends(get_active_user),
+) -> CurrentUser:
+    """Consent and coarse-location settings are Client-only (CS-021 amends CS-008)."""
+    if current_user.role != "client":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Personalized content settings are available to client accounts only.",
+        )
+    return current_user
+
+
 def _private_no_store(response: Response) -> None:
     response.headers["Cache-Control"] = "private, no-store"
     response.headers["Vary"] = "Authorization"
@@ -48,7 +60,7 @@ def _private_no_store(response: Response) -> None:
 @router.get("/preferences", response_model=PersonalizationPreferenceRead)
 async def get_preferences(
     response: Response,
-    current_user: CurrentUser = Depends(require_personalization_viewer),
+    current_user: CurrentUser = Depends(require_personalization_owner),
     db: AsyncSession = Depends(get_db),
 ) -> PersonalizationPreferenceRead:
     _private_no_store(response)
@@ -61,7 +73,7 @@ async def update_preferences(
     payload: PersonalizationPreferenceUpdate,
     request: Request,
     response: Response,
-    current_user: CurrentUser = Depends(require_personalization_viewer),
+    current_user: CurrentUser = Depends(require_personalization_owner),
     db: AsyncSession = Depends(get_db),
 ) -> PersonalizationPreferenceRead:
     preference = await personalization.set_personalization_consent(
@@ -80,7 +92,7 @@ async def put_location(
     payload: LocationCaptureRequest,
     request: Request,
     response: Response,
-    current_user: CurrentUser = Depends(require_personalization_viewer),
+    current_user: CurrentUser = Depends(require_personalization_owner),
     db: AsyncSession = Depends(get_db),
     cache: RedisCache = Depends(get_cache),
 ) -> PersonalizationPreferenceRead:
@@ -121,7 +133,7 @@ async def put_location(
 async def delete_location(
     request: Request,
     response: Response,
-    current_user: CurrentUser = Depends(require_personalization_viewer),
+    current_user: CurrentUser = Depends(require_personalization_owner),
     db: AsyncSession = Depends(get_db),
 ) -> PersonalizationPreferenceRead:
     preference = await personalization.revoke_location(

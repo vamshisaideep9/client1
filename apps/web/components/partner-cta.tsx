@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LeadDialog } from "@/components/lead-dialog";
 
 // Home "Earn with Us" teaser: two earning tracks, agent commission and user
-// referral cashback, as a single split editorial band, content on the left, a
+// referral bonus, as a single split editorial band, content on the left, a
 // Storyset illustration on the right (earn-with-us.svg, shared with the full
 // /earn-with-us page; recolored to our blue/navy palette, ₹ swapped in for
 // the $ glyph; credit in site-footer). Recruits agents for BOTH lines; agents
@@ -19,7 +19,7 @@ export function PartnerCta() {
     <section
       id="partners"
       aria-labelledby="partners-heading"
-      className="relative w-full overflow-hidden scroll-mt-16 border-t border-[var(--nav-border)] bg-[var(--nav-bg)]"
+      className="relative w-full overflow-hidden scroll-mt-[var(--site-header-h)] border-t border-[var(--nav-border)] bg-[var(--nav-bg)]"
     >
       <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
         <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)] lg:gap-16">
@@ -29,10 +29,10 @@ export function PartnerCta() {
               id="partners-heading"
               className="font-heading text-3xl font-semibold text-foreground sm:text-4xl lg:text-5xl"
             >
-              Earn with us
+              Earn with Dhanadhara
             </h2>
             <p className="mt-4 max-w-md text-lg text-text-secondary sm:text-xl">
-              There are two ways to earn here. Both are free to start.
+              Two ways to earn. Joining is free.
             </p>
 
             <ul className="mt-6 max-w-md space-y-4">
@@ -42,8 +42,9 @@ export function PartnerCta() {
                 </span>
                 <p className="text-base text-foreground sm:text-lg">
                   <span className="font-semibold">Become a partner.</span>{" "}
-                  Bring us people who need a loan or a property. You earn
-                  commission on every deal that closes.
+                  Partners anywhere in India can bring us loan or property
+                  leads and earn commission when the deal closes, paid within
+                  45 days.
                 </p>
               </li>
               <li className="flex items-start gap-3">
@@ -52,8 +53,9 @@ export function PartnerCta() {
                 </span>
                 <p className="text-base text-foreground sm:text-lg">
                   <span className="font-semibold">Refer and earn.</span>{" "}
-                  Share your referral code. When a friend buys a property or
-                  closes a loan, you get cashback.
+                  Refer friends and earn a referral bonus when the
+                  friend&apos;s loan or purchase completes. The amount depends on
+                  the deal.
                 </p>
               </li>
             </ul>
@@ -64,7 +66,7 @@ export function PartnerCta() {
                 asChild
                 className="w-full bg-[var(--nav-primary)] text-white hover:bg-[var(--nav-primary-hover)] sm:w-auto"
               >
-                <Link href="/earn-with-us">See how earning works</Link>
+                <Link href="/earn-with-us#refer-and-earn">Refer and earn</Link>
               </Button>
               <LeadDialog
                 businessLine="loans"

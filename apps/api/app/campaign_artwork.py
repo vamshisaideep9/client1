@@ -62,6 +62,10 @@ DASHBOARD_BANNER = "dashboard_banner"
 DASHBOARD_OFFER = "dashboard_offer"
 CAMPAIGN = "campaign"
 LEGACY_PUBLIC_BANNER = "public_banner"
+# Short muted MP4 loop for a public banner. Not artwork: it has no ratio
+# spec, is accepted only as a banner's video source, and is processed by the
+# isolated video transcoder rather than the image sanitizer.
+BANNER_VIDEO = "banner_video"
 
 ARTWORK_SPECS: dict[str, ArtworkSpec] = {
     HOMEPAGE_BANNER: ArtworkSpec(
@@ -140,6 +144,14 @@ if set(BANNER_USAGE_TYPES_BY_PLACEMENT) != set(BannerPlacement):  # pragma: no c
     raise RuntimeError(f"BANNER_USAGE_TYPES_BY_PLACEMENT is missing placement(s): {missing}")
 
 OFFER_USAGE_TYPES: set[str] = {DASHBOARD_OFFER, CAMPAIGN}
+
+# Placements that may show a video (public campaigns only).
+VIDEO_PLACEMENTS: set[BannerPlacement] = {
+    BannerPlacement.HOMEPAGE,
+    BannerPlacement.HOMEPAGE_AD,
+    BannerPlacement.FINANCIAL_SERVICES,
+    BannerPlacement.PROPERTIES,
+}
 
 
 def template_usage_type(placement: BannerPlacement) -> str:

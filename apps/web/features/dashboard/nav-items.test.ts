@@ -94,6 +94,7 @@ describe("role-aware dashboard navigation", () => {
       "loan-officer",
       "client-transactions",
       "client-referrals",
+      "client-calculators",
     ]);
 
     expect(navKeys(context("client", null, "real_estate"))).toEqual([
@@ -106,6 +107,7 @@ describe("role-aware dashboard navigation", () => {
       "client-agent",
       "client-transactions",
       "client-referrals",
+      "client-calculators",
     ]);
   });
 
@@ -115,6 +117,7 @@ describe("role-aware dashboard navigation", () => {
       "agent-leads",
       "agent-earnings",
       "agent-transactions",
+      "my-analytics",
     ]);
     expect(navKeys(context("agent", "real_estate"))).toEqual([
       "home",
@@ -122,19 +125,24 @@ describe("role-aware dashboard navigation", () => {
       "agent-listings",
       "agent-earnings",
       "agent-transactions",
+      "my-analytics",
     ]);
     expect(navKeys(context("telecaller", "loans"))).toEqual([
       "home",
       "telecaller-leads",
+      "telecaller-calculators",
+      "my-analytics",
     ]);
     expect(navKeys(context("employee", "loans"))).toEqual([
       "home",
       "employee-tasks",
+      "my-analytics",
     ]);
     expect(navKeys(context("employee", "real_estate"))).toEqual([
       "home",
       "employee-tasks",
       "employee-vehicle-arrangements",
+      "my-analytics",
     ]);
   });
 
@@ -142,15 +150,19 @@ describe("role-aware dashboard navigation", () => {
     expect(navKeys(context("telecaller", "both", "loans"))).toEqual([
       "home",
       "telecaller-leads",
+      "telecaller-calculators",
+      "my-analytics",
     ]);
     expect(navKeys(context("employee", "both", "loans"))).toEqual([
       "home",
       "employee-tasks",
+      "my-analytics",
     ]);
     expect(navKeys(context("employee", "both", "real_estate"))).toEqual([
       "home",
       "employee-tasks",
       "employee-vehicle-arrangements",
+      "my-analytics",
     ]);
   });
 
@@ -164,6 +176,7 @@ describe("role-aware dashboard navigation", () => {
       "campaign-banners",
       "campaign-offers",
       "campaign-media",
+      "my-analytics",
     ]);
 
     expect(navKeys(context("sub_admin", null, "loans", undefined, ["payout_requests"]))).toEqual([
@@ -176,7 +189,23 @@ describe("role-aware dashboard navigation", () => {
       "campaign-banners",
       "campaign-offers",
       "campaign-media",
+      "my-analytics",
     ]);
+  });
+
+  it("shows My team only to a Sub Admin who manages a team", () => {
+    const manager = { ...context("sub_admin"), managesTeam: true };
+    expect(navKeys(manager)).toContain("sub-admin-team");
+    expect(navKeys(context("sub_admin"))).not.toContain("sub-admin-team");
+    expect(navKeys({ ...context("telecaller", "loans"), managesTeam: true })).not.toContain(
+      "sub-admin-team",
+    );
+    // The route stays open to every Sub Admin; the page explains an empty team.
+    expect(isDashboardPathAllowed("/dashboard/team", context("sub_admin"))).toBe(true);
+    expect(isDashboardPathAllowed("/dashboard/team/t1/members/m1", context("sub_admin"))).toBe(true);
+    expect(isDashboardPathAllowed("/dashboard/team", context("admin"))).toBe(false);
+    expect(isDashboardPathAllowed("/dashboard/teams", context("admin"))).toBe(true);
+    expect(isDashboardPathAllowed("/dashboard/teams", context("sub_admin"))).toBe(false);
   });
 
   it("makes every existing Admin workspace reachable in grouped navigation", () => {
@@ -192,6 +221,7 @@ describe("role-aware dashboard navigation", () => {
       "admin-property-review",
       "admin-document-verification",
       "admin-users",
+      "admin-teams",
       "admin-agents",
       "admin-support-tickets",
       "admin-payouts",

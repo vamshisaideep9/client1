@@ -2,21 +2,29 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, ClipboardList } from "lucide-react";
+import { ChevronRight, ClipboardList, X } from "lucide-react";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardHeader, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
+import { EMPTY_FILTERS, FilterBar } from "@/features/dashboard/filter-bar";
+import { optionsFromLabels } from "@/features/dashboard/filter-options";
 import { ListPagination, useListPagination } from "@/features/dashboard/list-pagination";
 import { FetchError } from "@/features/dashboard/fetch-error";
+import { useLine } from "@/features/dashboard/line-provider";
+import { leadSignalFilterGroups } from "@/features/telecaller/lead-signal-filter-fields";
+import {
+  DEFAULT_LEAD_SIGNAL_FILTERS,
+  formatReferrer,
+  leadSignalActiveCount,
+  leadSignalChips,
+  leadSignalFiltersActive,
+  type LeadSignalFilters,
+} from "@/features/telecaller/lead-signal-filters";
+import { DISPOSITION_LABEL } from "@/features/telecaller/telecaller-lead-status";
 import { cn } from "@/lib/utils";
 
+import { filterTasksByLeadSignals } from "./employee-task-filters";
 import { useEmployeeTasks } from "./use-employee-tasks";
 
 const STATUS_STYLE: Record<string, string> = {
@@ -41,6 +49,9 @@ const TYPE_LABEL: Record<string, string> = {
   background_check: "Background check",
 };
 
+const STATUS_OPTIONS = optionsFromLabels(STATUS_LABEL);
+const TYPE_OPTIONS = optionsFromLabels(TYPE_LABEL);
+
 function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "-";
   const d = new Date(iso);
@@ -55,15 +66,26 @@ export function EmployeeTasksView() {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
   const [typeFilter, setTypeFilter] = React.useState<string>("all");
+  const { activeLine } = useLine();
+  const [signalFilters, setSignalFilters] = React.useState<LeadSignalFilters>(DEFAULT_LEAD_SIGNAL_FILTERS);
   const { items, loading, error, reload } = useEmployeeTasks(
     statusFilter === "all" ? undefined : statusFilter,
     typeFilter === "all" ? undefined : typeFilter,
   );
-  const { page, pageItems, setPage } = useListPagination(items);
+  const filtered = React.useMemo(() => filterTasksByLeadSignals(items, signalFilters), [items, signalFilters]);
+  const { page, pageItems, setPage } = useListPagination(filtered);
+  const signalFiltersOn = leadSignalFiltersActive(signalFilters);
+  const showLoanStatus = activeLine === "loans";
+  const patchSignals = (patch: Partial<LeadSignalFilters>) => setSignalFilters((f) => ({ ...f, ...patch }));
 
   React.useEffect(() => {
     setPage(0);
-  }, [statusFilter, typeFilter, setPage]);
+  }, [statusFilter, typeFilter, signalFilters, setPage]);
+
+  // A loan-status filter has no meaning once the list switches to Real Estate.
+  React.useEffect(() => {
+    if (!showLoanStatus) setSignalFilters((f) => (f.loanStatus === "all" ? f : { ...f, loanStatus: "all" }));
+  }, [showLoanStatus]);
 
   return (
     <DashboardPage>
@@ -72,35 +94,29 @@ export function EmployeeTasksView() {
         description="Field and background-check tasks assigned to you."
       />
 
-      <div className="grid gap-2 rounded-xl border border-border bg-card p-3 sm:grid-cols-2">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger aria-label="Filter by status">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            {Object.entries(STATUS_LABEL).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger aria-label="Filter by task type">
-            <SelectValue placeholder="Task type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All task types</SelectItem>
-            {Object.entries(TYPE_LABEL).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <FilterBar
+        value={{ ...EMPTY_FILTERS, status: statusFilter, kind: typeFilter }}
+        onChange={(next) => {
+          setStatusFilter(next.status);
+          setTypeFilter(next.kind);
+        }}
+        searchLabel="Search tasks"
+        showSearch={false}
+        showLine={false}
+        showDates={false}
+        statusOptions={STATUS_OPTIONS}
+        kindOptions={TYPE_OPTIONS}
+        kindLabel="Task type"
+        more={leadSignalFilterGroups({ filters: signalFilters, showLoanStatus, onChange: patchSignals })}
+        moreActiveCount={leadSignalActiveCount(signalFilters, showLoanStatus)}
+        onClearMore={() => setSignalFilters(DEFAULT_LEAD_SIGNAL_FILTERS)}
+        chips={leadSignalChips(signalFilters, patchSignals, showLoanStatus)}
+        onClear={() => {
+          setStatusFilter("all");
+          setTypeFilter("all");
+          setSignalFilters(DEFAULT_LEAD_SIGNAL_FILTERS);
+        }}
+      />
 
       {loading ? (
         <Skeleton className="h-40 rounded-xl" />
@@ -116,8 +132,28 @@ export function EmployeeTasksView() {
             Tasks assigned to you by Admin will show up here.
           </p>
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-card px-6 py-14 text-center">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-text-secondary">
+            <ClipboardList className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <h2 className="mt-5 text-lg font-semibold text-text-primary">No tasks match your filters</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">Loosen a filter to see more tasks.</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4"
+            onClick={() => setSignalFilters(DEFAULT_LEAD_SIGNAL_FILTERS)}
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+            Clear lead filters
+          </Button>
+        </div>
       ) : (
-        <DashboardPanel title="Assigned tasks" description={`${items.length} tasks`}>
+        <DashboardPanel
+          title="Assigned tasks"
+          description={signalFiltersOn ? `${filtered.length} of ${items.length} tasks` : `${items.length} tasks`}
+        >
           <div className="animate-in fade-in-0 overflow-x-auto duration-200 motion-reduce:animate-none">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-border text-xs uppercase tracking-wide text-text-secondary">
@@ -154,6 +190,17 @@ export function EmployeeTasksView() {
                             ? "Contact via secure invitation"
                             : "Contact details hidden")}
                       </p>
+                      {task.lead_last_disposition ? (
+                        <p className="mt-1 text-xs text-text-secondary">
+                          Last call: {DISPOSITION_LABEL[task.lead_last_disposition] ?? task.lead_last_disposition}
+                        </p>
+                      ) : null}
+                      {task.lead_referrer ? (
+                        <p className="mt-1 text-xs text-text-secondary">
+                          Referred by{" "}
+                          <span className="font-medium text-text-primary">{formatReferrer(task.lead_referrer)}</span>
+                        </p>
+                      ) : null}
                     </td>
                     <td className="px-5 py-4 text-text-secondary">
                       {TYPE_LABEL[task.task_type] ?? task.task_type}
@@ -180,7 +227,7 @@ export function EmployeeTasksView() {
               </tbody>
             </table>
           </div>
-          <ListPagination page={page} total={items.length} onPageChange={setPage} label="Assigned tasks pages" />
+          <ListPagination page={page} total={filtered.length} onPageChange={setPage} label="Assigned tasks pages" />
         </DashboardPanel>
       )}
     </DashboardPage>
