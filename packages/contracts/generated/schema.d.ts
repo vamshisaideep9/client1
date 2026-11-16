@@ -2038,7 +2038,12 @@ export interface paths {
         get: operations["get_banner_api_v1_banners__banner_id__get"];
         put?: never;
         post?: never;
-        /** Delete Banner Draft */
+        /**
+         * Delete Banner Draft
+         * @description Sub Admin hard-deletes a banner until it goes live (draft, pending
+         *     approval, rejected or approved). Live banners come down only through the
+         *     Admin's soft Remove; archived and removed rows are kept.
+         */
         delete: operations["delete_banner_draft_api_v1_banners__banner_id__delete"];
         options?: never;
         head?: never;
@@ -9584,9 +9589,11 @@ export interface components {
          *       allowlist decision (see services/public_catalog.py's banner_type filter).
          *
          *     deep_link IS included -- it is the CTA href, author-supplied, and the hero
-         *     cannot function without it. The frontend (lib/public-banners.ts) applies
-         *     a same-origin guard before building a CTA from it; this schema stores
-         *     exactly what the author typed.
+         *     cannot function without it. Writes accept only a same-site path or a
+         *     strict https link (BannerCreate/BannerUpdate), and the frontend
+         *     (lib/banner-cta.ts) re-checks it before building a CTA, opening external
+         *     links in a new tab. Rows written before that validation are still
+         *     re-checked there.
          *
          *     image_url IS included -- the direct, unsigned URL for a `public/`-prefixed
          *     image_key (None if the banner has no image, or -- should never happen

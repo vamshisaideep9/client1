@@ -2,6 +2,34 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Banner lifecycle fixes (API slice)** (2026-11-16), branch
+`fix/banner-lifecycle-api` from `upstream/main` `8493823`. API, one additive
+RLS migration and the regenerated contract; the completion percentage is
+unchanged.
+- Delete: `DELETE /api/v1/banners/{id}` (Sub Admin only) removes a draft,
+  pending, rejected or approved banner in one conditional
+  `DELETE ... RETURNING` under RLS. 404 for missing or soft-removed rows; 409
+  for live ("Live banners can only be taken down by an Admin."), archived, a
+  banner another campaign is set to replace, or a lost race with activation.
+  `BANNER_DELETED` audit keeps `from_status`. Migration `c5e7a9b1d3f4`
+  recreates `banners_delete` as `sub_admin AND removed_at IS NULL AND status
+  IN (draft, pending_approval, rejected, approved)`; downgrade restores the
+  draft-only policy. Admins keep the soft Remove; Admin `DELETE` stays 403.
+- Archive: a Sub Admin can archive pending, approved or rejected banners;
+  live gets the same 409 pointing to Admin Remove.
+- Approve: after `APPROVED`, `activate_banner_if_due` (the job's own rules for
+  one id: due start, publishable property, category / sponsor slot,
+  replacement swap) runs in the same transaction inside a savepoint, so a
+  due banner whose slot is free is `live` in the response; otherwise it stays
+  approved for the job. Approval audit and notification are unchanged.
+- CTA: `deep_link` must be a same-site path or an https URL with a host, no
+  userinfo, a valid port and no whitespace/control characters (422
+  otherwise; blank clears it). The offers https rule moved to
+  `app/core/urls.py` and both offers modules import it unchanged.
+- Evidence: see the PR; `test_banners_api.py`, `test_banners_rls.py`,
+  `system/test_cms_activation.py` and the new `test_core_urls.py` cover the
+  rules above.
+
 **In review — Sub Admin analytics filters (API slice)** (2026-11-16; PR
 [#360](https://github.com/brollysolutions/client1/pull/360), mirror
 vamshisaideep9/client1#64),
