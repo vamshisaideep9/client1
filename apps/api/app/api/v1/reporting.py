@@ -703,3 +703,38 @@ async def export_agents_report_xlsx(
         truncated,
         _export_filename("agents", business_line, date_from, date_to, "xlsx"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Clients (bulk client-roster PII export)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/clients/export")
+async def export_clients(
+    current_user: CurrentUser = Depends(get_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """Admin-only CSV of every client account across BOTH business lines.
+
+    Unlike the aggregate exports above (counts per bucket, unaudited reads),
+    this streams row-level client contact data, so it is gated by
+    `require_platform_admin` (never role-only `require_admin`: a line-scoped
+    admin must get a real 403, not a silently line-filtered dump) and records
+    an audit entry. See `services/reporting.py::export_client_rows` for the
+    column contract -- id / name / phone / created_at / updated_at, with
+    password_hash deliberately never selected or emitted.
+
+    No date filter: the roster is a point-in-time snapshot of all clients, not
+    a windowed report. All DB work (fetch, audit flush, commit) completes
+    before the StreamingResponse is built, keeping the fetch-then-format
+    invariant this module's docstring describes.
+    """
+    await require_platform_admin(current_user)
+    rows, header, truncated = await reporting.export_client_rows(
+        db, actor_uuid=current_user.id, actor_role=current_user.role
+    )
+    await db.commit()  # persist the audit row recorded by export_client_rows
+    return _export_response(
+        rows, header, truncated, branded_filename(f"clients-{date.today().isoformat()}.csv")
+    )

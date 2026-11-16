@@ -47,14 +47,16 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import ColumnElement, and_, exists, func, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.audit_log import AuditAction
 from app.models.lead import Lead, LeadOrigin, LeadStatus
 from app.models.lead_activity import LeadActivity
 from app.models.loan import LoanApplication, LoanStatus
-from app.models.profile import AgentProfile
+from app.models.profile import AgentProfile, ClientProfile
 from app.models.property import Property
 from app.models.property_deal import PropertyDeal, PropertyDealStatus
 from app.models.referral import Referral
-from app.models.user import User
+from app.models.user import User, UserStatus
+from app.services import audit_log
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -771,3 +773,101 @@ async def list_telecaller_options(
         }
         for row in rows
     ]
+
+
+# ---------------------------------------------------------------------------
+# Client-roster export (admin-only, bulk client PII)
+# ---------------------------------------------------------------------------
+#
+# Distinct from the aggregate leads/loans/deals/agents exports above: those
+# stream *counts* per time bucket and write no audit row (reads of derived
+# numbers). This one streams row-level client contact data -- every client's
+# name and mobile across both business lines -- so it is a bulk-PII export and
+# records an audit entry (security-review decision, feature-status.md §3 #2).
+#
+# Columns are deliberately limited to id / name / phone / created_at /
+# updated_at. password_hash is NEVER selected or emitted: it is a one-way
+# credential hash whose export is forbidden by SECURITY.md, and there is no
+# cleartext password column to export even if one were asked for.
+#
+# "CLIENT user" == an auth_users row that owns at least one client_profiles
+# row. A user is returned at most once even if they hold a client profile in
+# both lines (IN-subquery, not a join, so no fan-out). Soft-deleted (tombstoned)
+# accounts are excluded: their PII is on its way to a retention purge and must
+# not be re-surfaced in a bulk download -- the same posture get_current_user and
+# audit_log._resolve_actors already take toward SOFT_DELETED.
+#
+# Runs on the request-scoped `db` session, so the caller's RLS context applies:
+# only a platform Admin (role='admin' AND platform_scope='true') bypasses the
+# auth_users_rls / client_profiles_rls line predicates and sees both lines; the
+# router's require_platform_admin is the access gate in front of that wall.
+
+_CLIENTS_HEADER = ["id", "name", "phone", "created_at", "updated_at"]
+
+
+def _fmt_dt(value: datetime | None) -> str:
+    """IST (business timezone) ISO-8601, e.g. 2026-11-16T14:30:00+05:30 -- date
+    and time, unambiguous and round-trippable, matching this module's IST-first
+    convention for every other time column."""
+    if value is None:
+        return ""
+    return value.astimezone(IST).isoformat()
+
+
+async def export_client_rows(
+    db: AsyncSession,
+    *,
+    actor_uuid: UUID,
+    actor_role: str | None,
+) -> tuple[list[dict[str, Any]], list[str], bool]:
+    """Fetch every client account (capped at EXPORT_ROW_CAP + 1 to detect
+    truncation) and record the bulk-PII download in the audit log on the same
+    session. Does not commit -- the router owns the commit, matching this
+    codebase's service/router boundary. Returns (rows, header, truncated)."""
+    fetch_limit = EXPORT_ROW_CAP + 1
+
+    client_user_ids = select(ClientProfile.auth_user_uuid)
+    result = (
+        await db.execute(
+            select(
+                User.id,
+                User.first_name,
+                User.last_name,
+                User.mobile,
+                User.created_at,
+                User.updated_at,
+            )
+            .where(User.id.in_(client_user_ids))
+            .where(User.status != UserStatus.SOFT_DELETED)
+            .order_by(User.created_at.asc(), User.id.asc())
+            .limit(fetch_limit)
+        )
+    ).all()
+
+    truncated = len(result) > EXPORT_ROW_CAP
+    if truncated:
+        result = result[:EXPORT_ROW_CAP]
+
+    rows: list[dict[str, Any]] = [
+        {
+            "id": str(r.id),
+            "name": f"{r.first_name} {r.last_name}".strip(),
+            "phone": r.mobile,
+            "created_at": _fmt_dt(r.created_at),
+            "updated_at": _fmt_dt(r.updated_at),
+        }
+        for r in result
+    ]
+
+    await audit_log.record(
+        db,
+        action=AuditAction.CLIENT_EXPORT_DOWNLOADED,
+        entity_type="client_export",
+        entity_uuid=None,
+        actor_uuid=actor_uuid,
+        actor_role=actor_role,
+        business_line=None,
+        detail={"exported_client_count": len(rows), "format": "csv", "truncated": truncated},
+    )
+
+    return rows, _CLIENTS_HEADER, truncated
