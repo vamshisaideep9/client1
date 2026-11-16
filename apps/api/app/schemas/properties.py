@@ -39,6 +39,7 @@ class PropertyRead(BaseModel):
     title: str
     type: str
     location: str
+    developer_name: str | None = None
     price_display: str
     price_paise: int
     security_deposit_paise: int | None
@@ -98,6 +99,7 @@ class PublicPropertyRead(BaseModel):
     title: str
     type: str
     location: str
+    developer_name: str | None = None
     price_display: str
     meta: str | None
     image: str | None
@@ -130,6 +132,7 @@ class PublicPropertyDetailRead(BaseModel):
     title: str
     type: str
     location: str
+    developer_name: str | None = None
     price_display: str
     security_deposit_display: str | None = None
     minimum_lease_months: int | None

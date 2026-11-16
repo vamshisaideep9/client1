@@ -38,7 +38,7 @@ def _property_data(prop: Property) -> dict:
     Mirrors app/api/v1/public_catalog.py's _public_property_data, which this
     authenticated catalog lacked: one stale row (structured_details that
     predates a since-tightened field requirement, e.g. a legacy
-    project_residence row missing its now-required amenities_description)
+    project_residence row missing its required about_project text)
     must not 500 the whole dashboard catalog for every Client/Agent/staff
     user. The typed common facts remain safe to serve and the invalid detail
     block is omitted with an identifier-only warning for repair.

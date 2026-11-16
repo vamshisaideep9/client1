@@ -15,6 +15,7 @@ import {
   MetricGrid,
 } from "@/features/dashboard/dashboard-ui";
 import { FetchError } from "@/features/dashboard/fetch-error";
+import { useMe } from "@/features/dashboard/me-provider";
 import { formatPaise } from "@/lib/format";
 
 import { useAgentEarnings } from "./use-agent-earnings";
@@ -51,6 +52,7 @@ function formatDate(iso: string | null | undefined): string {
 export function AgentHome() {
   const { home, status, error, errorStatus, retry } = useAgentHome();
   const { earnings, status: earningsStatus, retry: retryEarnings } = useAgentEarnings();
+  const { me } = useMe();
 
   if (status === "loading") {
     return <DashboardPageSkeleton overview />;
@@ -70,7 +72,7 @@ export function AgentHome() {
   return (
     <DashboardPage>
       <DashboardHeader
-        title="Agent workspace"
+        title={me?.firstName ? `Hi ${me.firstName}` : "Hi there"}
         description="Monitor introduced leads, registration standing, and commission progress."
         actions={
           <Button asChild className="bg-brand-cta text-white hover:bg-brand-cta/90">
