@@ -548,20 +548,40 @@ async def get_me(db: AsyncSession, current_user_id: UUID) -> MeResponse:
     )
 
 
+# CS-021 (2026-11-16): Telecaller, Employee and Sub Admin accounts (team
+# managers are Sub Admins) see their profile read-only and cannot delete
+# themselves; name/contact changes and account removal go through an Admin.
+# Clients, Agents and Admins keep self-service.
+SELF_SERVICE_LOCKED_ROLES = frozenset({"telecaller", "employee", "sub_admin"})
+
+
+def ensure_self_service_allowed(role: str | None, action: str) -> None:
+    """403 for a staff role whose own profile and account are Admin-managed."""
+    if role in SELF_SERVICE_LOCKED_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Your Admin manages your account. Ask an Admin to {action}.",
+        )
+
+
 async def update_me(
     db: AsyncSession,
     current_user_id: UUID,
     req: MeUpdateRequest,
     ip: str | None = None,
     user_agent: str | None = None,
+    *,
+    actor_role: str | None = None,
 ) -> MeResponse:
     """Update the logged-in user's own identity-wide profile fields.
 
-    Reachable by any authenticated, non-force-reset account; RLS confines every
+    Clients, Agents and Admins only (CS-021): a Telecaller, Employee or Sub
+    Admin gets 403 before anything is read. RLS confines every
     caller to their own auth_users row. mobile is immutable (account identity).
     Changing or clearing email resets email_verified_at. Same
     get->mutate->commit pattern as change_password.
     """
+    ensure_self_service_allowed(actor_role, "change your name or contact details")
     user = await db.get(User, current_user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized.")
@@ -1121,7 +1141,12 @@ async def delete_own_account(
     Password re-entry is this product's existing bar for a security-sensitive
     action taken from within a live session (see change_password) — the SRS
     only mandates a warning/confirmation step, not a new OTP purpose.
+
+    Telecaller, Employee and Sub Admin accounts get 403 before the password
+    is checked (CS-021); an Admin removes them through the account-removal
+    action instead.
     """
+    ensure_self_service_allowed(actor_role, "remove your account")
     user = await db.get(User, current_user_id)
     if not user or not user.password_hash:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized.")

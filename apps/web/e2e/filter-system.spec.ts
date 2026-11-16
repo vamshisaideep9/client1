@@ -91,6 +91,50 @@ test("leads open in status order with closed work last, and filters read their f
   await expect(page.getByRole("button", { name: "More filters" })).toBeVisible();
 });
 
+test("home follow-ups table scrolls after five rows and links to the due-only lead list", async ({ page, baseURL }, testInfo) => {
+  await mockMobileApi(page, "telecaller", "loans");
+  await page.context().addCookies([{ name: "session_hint", value: "1", url: baseURL! }]);
+  const past = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
+  const due = Array.from({ length: 7 }, (_, index) => ({
+    lead_uuid: `65000000-0000-4000-8000-0000000001${index}0`,
+    name: `Due Lead ${index + 1}`,
+    mobile: "+919876543210",
+    follow_up_at: past(7 - index),
+    latest_request: null,
+  }));
+  await page.route("**/api/v1/telecaller/home", (route) =>
+    route.fulfill({ json: { follow_ups_due: due, counts_by_status: { working: 9, closed: 1 } } }),
+  );
+  await page.route("**/api/v1/telecaller/leads", (route) =>
+    route.fulfill({
+      json: [
+        lead("65000000-0000-4000-8000-0000000000c1", "Overdue Lead", { next_follow_up_at: past(2) }),
+        lead("65000000-0000-4000-8000-0000000000c2", "Future Lead", {
+          next_follow_up_at: new Date(Date.now() + 86_400_000).toISOString(),
+        }),
+        lead("65000000-0000-4000-8000-0000000000c3", "Closed Overdue", { status: "closed", next_follow_up_at: past(5) }),
+      ],
+    }),
+  );
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+
+  const region = page.getByRole("region", { name: /^Follow-ups due, 7 leads/ });
+  await expect(region.getByRole("columnheader")).toHaveText(["Lead", "Request", "Due"]);
+  await expect(region.getByRole("row")).toHaveCount(8);
+  // Five rows tall: the region scrolls rather than growing.
+  expect(await region.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("telecaller-home-follow-ups.png") });
+
+  await page.getByRole("link", { name: "View all follow-ups" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/leads\?followUp=due/);
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator("tbody")).toContainText("Overdue Lead");
+  await page.getByRole("button", { name: "Remove filter Follow-up: due now" }).click();
+  await expect(page.locator("tbody tr")).toHaveCount(3);
+  await expect(page).not.toHaveURL(/followUp/);
+});
+
 for (const colorScheme of ["light", "dark"] as const) {
   for (const width of [1440, 390]) {
     test(`filter bar layout at ${width}px in ${colorScheme} mode`, async ({ page, baseURL }, testInfo) => {

@@ -2,6 +2,7 @@
 // framework-free so they're unit-testable without mounting the view. Mirrors
 // the shape of features/admin/operational-records-filter.ts.
 
+import { compareLeadsByDefaultOrder, leadStatusRank } from "@/features/dashboard/list-order";
 import { isInDateRange } from "@/lib/date-range";
 import type { TelecallerLead } from "@/lib/telecaller-api";
 
@@ -11,8 +12,6 @@ import {
   matchesLeadSignals,
   type LeadSignalFilters,
 } from "./lead-signal-filters";
-import { compareLeadsByDefaultOrder, leadStatusRank } from "@/features/dashboard/list-order";
-
 import { DISPOSITION_LABEL } from "./telecaller-lead-status";
 
 export type TelecallerLeadFilters = LeadSignalFilters & {
@@ -20,6 +19,8 @@ export type TelecallerLeadFilters = LeadSignalFilters & {
   status: string; // "all" | TelecallerLead["status"]
   followUpFrom: string; // "YYYY-MM-DD"
   followUpTo: string; // "YYYY-MM-DD"
+  /** "Follow-ups due": open leads whose next follow-up is now or overdue (`?followUp=due`). */
+  followUpDue: boolean;
 };
 
 export const DEFAULT_TELECALLER_LEAD_FILTERS: TelecallerLeadFilters = {
@@ -28,7 +29,21 @@ export const DEFAULT_TELECALLER_LEAD_FILTERS: TelecallerLeadFilters = {
   status: "all",
   followUpFrom: "",
   followUpTo: "",
+  followUpDue: false,
 };
+
+/** The URL value the home "View all follow-ups" link uses. */
+export const FOLLOW_UP_DUE_PARAM = "due";
+
+// Same rule as the home panel (services/telecaller.get_home_summary):
+// converted, closed and released leads are never "due".
+const FINISHED_LEAD_STATUSES = new Set(["converted", "closed", "released"]);
+
+export function isFollowUpDue(lead: Pick<TelecallerLead, "status" | "next_follow_up_at">, now: Date): boolean {
+  if (FINISHED_LEAD_STATUSES.has(lead.status) || !lead.next_follow_up_at) return false;
+  const due = new Date(lead.next_follow_up_at).getTime();
+  return !Number.isNaN(due) && due <= now.getTime();
+}
 
 export function telecallerLeadFiltersActive(filters: TelecallerLeadFilters): boolean {
   return (
@@ -36,6 +51,7 @@ export function telecallerLeadFiltersActive(filters: TelecallerLeadFilters): boo
     filters.status !== "all" ||
     filters.followUpFrom !== "" ||
     filters.followUpTo !== "" ||
+    filters.followUpDue ||
     leadSignalFiltersActive(filters)
   );
 }
@@ -43,10 +59,12 @@ export function telecallerLeadFiltersActive(filters: TelecallerLeadFilters): boo
 export function filterTelecallerLeads(
   leads: TelecallerLead[],
   filters: TelecallerLeadFilters,
+  now: Date = new Date(),
 ): TelecallerLead[] {
   const query = filters.search.trim().toLocaleLowerCase();
   return leads.filter((lead) => {
     if (filters.status !== "all" && lead.status !== filters.status) return false;
+    if (filters.followUpDue && !isFollowUpDue(lead, now)) return false;
     if (!isInDateRange(lead.next_follow_up_at, filters.followUpFrom, filters.followUpTo)) return false;
     if (
       !matchesLeadSignals(

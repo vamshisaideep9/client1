@@ -90,10 +90,33 @@ opened against `main`:
   agent / Referred by client everywhere; the analytics calendar shows
   From / To and tags the months "(From)" / "(To)". Default lead order
   applies to Telecaller, Agent, team and Admin assigned leads; Admin and
-  Client loan lists sink closed/rejected. Evidence and the PR link follow on
-  the PR.
+  Client loan lists sink closed/rejected. PR
+  [#367](https://github.com/brollysolutions/client1/pull/367), mirror
+  vamshisaideep9/client1#68. Evidence: lint, typecheck, 1010 unit tests,
+  container build, 25 mocked Playwright tests (incl. new
+  `filter-system.spec.ts`).
 - *PR 2 — Settings by role, API guards, small fixes*, branch
-  `feat/filters-settings-by-role` stacked on PR 1 (not yet opened).
+  `feat/filters-settings-by-role` stacked on PR 1 (PR
+  [#368](https://github.com/brollysolutions/client1/pull/368), mirror
+  vamshisaideep9/client1#69). Settings: Client and
+  Agent/Admin keep an editable profile and Delete account; only Clients get
+  the personalization card; Telecaller, Employee and Sub Admin see a
+  read-only "Your details" panel (ask an Admin) with no Save and no Danger
+  zone (`features/settings/settings-by-role.ts`). API:
+  `auth_service.ensure_self_service_allowed` makes `PATCH /auth/me` and
+  `DELETE /auth/me` return 403 for those roles (before the password check);
+  personalization `GET/PATCH /preferences` and `PUT/DELETE /location` are
+  Client-only (`require_personalization_owner`), placements still serve
+  Client, Agent, Employee and Telecaller and ignore any non-Client
+  preference; additive migration `d6f8a0b2c4e7` (revises `c5e7a9b1d3f4`,
+  single head) erases preferences of accounts with an active agent or staff
+  profile; downgrade is a no-op. Small fixes: Telecaller home "Follow-ups
+  due" is a five-row scrolling table (Lead, Request, Due) with "View all
+  follow-ups" to `/dashboard/leads?followUp=due`, which pre-filters to open
+  leads due now or overdue as a removable chip; My analytics and team
+  analytics open on the previous calendar month and KPI tiles carry the
+  period ("Oct 2026"); the Agent "Commission by status" breakdown leaves out
+  cancelled commissions. No contract shape change (only 403s).
 
 Next: ship PR 1, then PR 2. Recommended: Opus 5.5 / high (web; PR 2 adds a
 role guard and a data-clearing migration).

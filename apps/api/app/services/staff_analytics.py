@@ -552,8 +552,12 @@ async def agent_analytics(
     pending = sum(
         c.agreed_amount_paise for c in commissions if c.status == CommissionStatus.PENDING
     )
+    # CS-021: the breakdown shows money still owed or already paid; cancelled
+    # commissions stay in the Agent's commission history but not here.
     commission_by_status: Counter[str] = Counter()
     for commission in commissions:
+        if commission.status == CommissionStatus.CANCELLED:
+            continue
         commission_by_status[commission.status.value] += commission.agreed_amount_paise
 
     return _response(

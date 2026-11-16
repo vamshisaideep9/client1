@@ -111,9 +111,19 @@ test("telecaller analytics shows figures, a daily chart and breakdowns", async (
   await expect(page.getByRole("heading", { name: "Lead funnel" })).toBeVisible();
   await expect(page.getByText("15%")).toBeVisible(); // 3 of 20 converted
 
+  // The page opens on the previous calendar month and labels the KPI tiles with it.
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const daysInLastMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  expect(requested[0].get("date_from")).toBe(
+    `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-01`,
+  );
+  const monthLabel = new Intl.DateTimeFormat("en-IN", { month: "short", year: "numeric" }).format(lastMonth);
+  await expect(figures.getByText(monthLabel).first()).toBeVisible();
+
   // Table view for readers who cannot rely on color.
   await page.getByText("Show as table").first().click();
-  await expect(page.getByRole("table").first().getByRole("row")).toHaveCount(31);
+  await expect(page.getByRole("table").first().getByRole("row")).toHaveCount(daysInLastMonth + 1);
 
   // The navigation offers the page to this role.
   await expect(page.locator('nav[aria-label="Workspace"]:visible').getByRole("link", { name: "My analytics" })).toBeVisible();

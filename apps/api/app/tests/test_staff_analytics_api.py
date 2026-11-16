@@ -215,6 +215,42 @@ async def test_agent_and_sub_admin_get_their_shape(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_agent_commission_breakdown_leaves_out_cancelled(client: AsyncClient) -> None:
+    """CS-021: "Commission by status" shows pending and paid money only."""
+    from sqlalchemy import text
+
+    import app.db.session as _session_mod
+
+    from .test_commission_rls import _seed_agent, _seed_commission
+
+    agent_auth, agent_profile = await _seed_agent("loans")
+    statuses = {"pending": None, "paid": None, "cancelled": None}
+    for status in statuses:
+        statuses[status] = await _seed_commission(agent_auth, agent_profile, "loans")
+    async with _session_mod.AsyncSessionLocal() as db:
+        for status, commission_id in statuses.items():
+            await db.execute(
+                text(
+                    "UPDATE commissions SET status = CAST(:status AS commission_status) "
+                    "WHERE id = :id"
+                ),
+                {"status": status, "id": commission_id},
+            )
+        await db.commit()
+
+    res = await client.get(
+        "/api/v1/me/analytics",
+        headers=_token(agent_auth, "agent", agent_profile_uuid=agent_profile),
+    )
+    assert res.status_code == 200, res.text
+    breakdown = next(b for b in res.json()["breakdowns"] if b["key"] == "commission")
+    assert {item["key"] for item in breakdown["items"]} == {"pending", "paid"}
+    kpis = _kpis(res.json())
+    assert kpis["paid"] == 500
+    assert kpis["pending"] == 500
+
+
+@pytest.mark.asyncio
 async def test_clients_and_unauthenticated_callers_are_refused(client: AsyncClient) -> None:
     staff_auth, _ = await _seed_staff("telecaller")
     assert (await client.get("/api/v1/me/analytics")).status_code == 401

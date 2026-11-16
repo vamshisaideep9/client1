@@ -146,7 +146,7 @@ function MembersTable({ team, overview }: { team: StaffTeam; overview: TeamOverv
 
 function TeamOverviewPanel({ team }: { team: StaffTeam }) {
   const [range, setRange] = React.useState<DateRangeValue>(() =>
-    resolveRangePreset("last_30_days", new Date()),
+    resolveRangePreset("last_month", new Date()),
   );
   const [filters, setFilters] = React.useState<TeamAnalyticsFilters>({});
   const { state, retry } = useLoad(

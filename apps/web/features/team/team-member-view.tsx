@@ -31,7 +31,7 @@ import { useLoad } from "./use-load";
 
 function MemberAnalytics({ team, memberId }: { team: StaffTeam; memberId: string }) {
   const [range, setRange] = React.useState<DateRangeValue>(() =>
-    resolveRangePreset("last_30_days", new Date()),
+    resolveRangePreset("last_month", new Date()),
   );
   const [filters, setFilters] = React.useState<TeamAnalyticsFilters>({});
   const { state, retry } = useLoad(

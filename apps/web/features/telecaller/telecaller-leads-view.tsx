@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, PhoneCall, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
 import {
   DEFAULT_TELECALLER_LEAD_FILTERS,
   DEFAULT_TELECALLER_LEAD_SORT,
+  FOLLOW_UP_DUE_PARAM,
   filterTelecallerLeads,
   sortTelecallerLeads,
   telecallerLeadFiltersActive,
@@ -89,7 +90,12 @@ export function TelecallerLeadsView() {
   const router = useRouter();
   const { activeLine } = useLine();
   const { items, loading, error, reload } = useTelecallerLeads();
-  const [filters, setFilters] = React.useState<TelecallerLeadFilters>(DEFAULT_TELECALLER_LEAD_FILTERS);
+  const searchParams = useSearchParams();
+  // "View all follow-ups" on the home page links here with ?followUp=due.
+  const [filters, setFilters] = React.useState<TelecallerLeadFilters>(() => ({
+    ...DEFAULT_TELECALLER_LEAD_FILTERS,
+    followUpDue: searchParams.get("followUp") === FOLLOW_UP_DUE_PARAM,
+  }));
   const [sort, setSort] = React.useState<TelecallerLeadSort>(DEFAULT_TELECALLER_LEAD_SORT);
 
   const filtered = React.useMemo(() => filterTelecallerLeads(items, filters), [items, filters]);
@@ -112,9 +118,21 @@ export function TelecallerLeadsView() {
     setSort((prev) => (prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
   }
 
+  // Keep the URL honest once the due-only filter is dropped.
+  React.useEffect(() => {
+    if (!filters.followUpDue && searchParams.get("followUp")) router.replace("/dashboard/leads", { scroll: false });
+  }, [filters.followUpDue, searchParams, router]);
+
   function clearFilters() {
     setFilters(DEFAULT_TELECALLER_LEAD_FILTERS);
   }
+
+  const chips = [
+    ...(filters.followUpDue
+      ? [{ id: "followUpDue", label: "Follow-up: due now", onRemove: () => patchFilters({ followUpDue: false }) }]
+      : []),
+    ...leadSignalChips(filters, patchFilters, showLoanStatus),
+  ];
 
   function patchFilters(patch: Partial<TelecallerLeadFilters>) {
     setFilters((f) => ({ ...f, ...patch }));
@@ -169,7 +187,7 @@ export function TelecallerLeadsView() {
             more={leadSignalFilterGroups({ filters, showLoanStatus, onChange: patchFilters })}
             moreActiveCount={leadSignalActiveCount(filters, showLoanStatus)}
             onClearMore={() => patchFilters(DEFAULT_LEAD_SIGNAL_FILTERS)}
-            chips={leadSignalChips(filters, patchFilters, showLoanStatus)}
+            chips={chips}
             onClear={clearFilters}
             hasExternalFilters={filtersActive}
           />
