@@ -92,6 +92,18 @@ unchanged.
   `c5e7a9b1d3f4` now revises `a7c9e1b3d5f6` (one head; the full chain
   upgrades, downgrades and re-upgrades on a fresh database).
 
+**In review — API image build fix (Alpine pin bump)** (2026-11-16; upstream PR
+pending), branch `fix/api-dockerfile-alpine-pins` from `upstream/main`
+`e09659a1`. Bumps the `apps/api/Dockerfile` `apk --upgrade` pins `libcrypto3`
+and `libssl3` from `3.5.8-r0` to `3.5.9-r0`: the exact `3.5.8-r0` strings no
+longer resolve in the Alpine `v3.23/main` repository (superseded by `3.5.9-r0`),
+so every API/scheduler image rebuild failed with `apk add ... exit code 9`.
+Forward patch bump (at least as patched as the CVE-reviewed `3.5.8-r0`);
+`sqlite-libs=3.53.4-r0` still resolves and is unchanged. No application
+behavior change — infra/build only. Unblocks the dev-droplet deploy of the
+client-export feature (PR #364). Verification: API image builds on the dev
+droplet.
+
 **In review — admin client-roster CSV export** (2026-11-16; upstream PR
 [#364](https://github.com/brollysolutions/client1/pull/364); origin mirror
 DEFERRED pending fork sync — origin/main is 134
