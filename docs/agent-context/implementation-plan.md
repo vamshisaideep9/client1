@@ -119,7 +119,25 @@ stacked on Batch D PR 2:
   (password; applied like a self-service change, history `admin_approved`
   with the approver) and `/{id}/reject` (password, PII-free reason). An Admin
   never decides a request on their own account; Admins cannot file one.
-- *PR E4 — web.*
+- *PR E4 — web*, branch `feat/batch-e-contact-change-web` stacked on E3.
+  Registration shows a "Verify your email" step when verify-otp says the
+  server requires it (the optional email field left the profile step); a
+  blocking `/add-email` page (middleware `email_required` hint cookie +
+  dashboard route guard on `/auth/me`) verifies the address on file or adds
+  one with password + code (staff may only verify the Admin-set one, or ask an
+  Admin); Settings gains "Phone and email": Clients, Agents and Admins
+  change phone or email in a dialog (password → code to the current value →
+  new value → code to the new value → signed out to `/login?changed=…`),
+  add or verify an email, resume or cancel an unfinished change; Telecallers,
+  Employees and Sub Admins send a request and can withdraw it; everyone gets
+  "Lost access to your number?" → `/change-mobile`. The profile form no
+  longer edits email. Admin: the support-tickets queue becomes "Contact change
+  requests" (staff requests, one-Admin approve/reject with password, above the
+  two-Admin lost-number reviews) and a "Contact history" dialog on each
+  request and in the account dialog on Users. Privacy notice: email collected
+  and verified, the contact history kept for the life of the account (platform
+  Admins only, erased with the account), how to change phone/email —
+  **needs legal review before release**.
 
 Before turning `EMAIL_REQUIRED_ENFORCED` on in an environment: SMTP
 configured with `EMAIL_ENABLED=true`, a real code delivered to an inbox and

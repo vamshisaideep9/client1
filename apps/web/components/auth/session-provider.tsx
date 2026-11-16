@@ -47,6 +47,20 @@ function shouldProbeSession(): boolean {
   }
 }
 
+// CS-025: a readable routing hint that this account still owes the "Add your
+// email" step, so middleware can send /dashboard straight to /add-email. Same
+// non-authoritative trust as session_hint: the API refuses every business
+// endpoint for such an account regardless of this cookie.
+const EMAIL_REQUIRED_COOKIE = "email_required";
+
+export function setEmailRequiredHint(on: boolean): void {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = on
+    ? `${EMAIL_REQUIRED_COOKIE}=1; Path=/; Max-Age=${60 * 60 * 24}; SameSite=Lax${secure}`
+    : `${EMAIL_REQUIRED_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+}
+
 function setSessionHintCookie(on: boolean): void {
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
   document.cookie = on
@@ -70,6 +84,7 @@ type Session = {
   role: UserRole;
   phoneVerified: boolean;
   emailVerified: boolean;
+  emailRequired: boolean;
   businessLine: StaffBusinessLine | null;
   staffFeatures: StaffFeature[];
 };
@@ -81,6 +96,8 @@ type AuthContextValue = {
   // this so they don't bounce a user who is actually logged in.
   isLoading: boolean;
   setSession: (tokens: AuthTokens) => void;
+  // CS-025: the email step was just completed (or found owed) in this tab.
+  setEmailRequired: (required: boolean) => void;
   clear: () => void;
 };
 
@@ -110,15 +127,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role: tokens.role,
       phoneVerified: tokens.phoneVerified,
       emailVerified: tokens.emailVerified,
+      emailRequired: tokens.emailRequired,
       businessLine: tokens.businessLine,
       staffFeatures: tokens.staffFeatures,
     });
     setSessionHint(true);
+    setEmailRequiredHint(tokens.emailRequired);
+  }, []);
+
+  const setEmailRequired = React.useCallback((required: boolean) => {
+    setSessionState((current) =>
+      current
+        ? { ...current, emailRequired: required, emailVerified: current.emailVerified || !required }
+        : current,
+    );
+    setEmailRequiredHint(required);
   }, []);
 
   const clear = React.useCallback(() => {
     setSessionState(null);
     setSessionHint(false);
+    setEmailRequiredHint(false);
     rememberBookmarkedIds(null);
     rememberOwnReferralCode(null);
   }, []);
@@ -204,9 +233,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: session !== null,
       isLoading,
       setSession,
+      setEmailRequired,
       clear,
     }),
-    [session, isLoading, setSession, clear],
+    [session, isLoading, setSession, setEmailRequired, clear],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

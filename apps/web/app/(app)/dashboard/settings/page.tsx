@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BadgeCheck, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmailVerifyBanner } from "@/components/auth/email-verify-banner";
@@ -13,7 +13,6 @@ import {
   type OptionalProfileDraft,
 } from "@/components/profile/optional-profile-fields";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
-import { Badge } from "@/components/ui/badge";
 import { FieldError, RequiredIndicator } from "@/components/ui/field-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,11 +25,10 @@ import { PayoutDetailsCard } from "@/features/settings/payout-details-card";
 import { PersonalizationSettingsCard } from "@/features/settings/personalization-settings-card";
 import { settingsForRole } from "@/features/settings/settings-by-role";
 import { AppearanceSettingsCard } from "@/features/settings/appearance-settings-card";
+import { ContactDetailsCard } from "@/features/settings/contact-details-card";
 import { updateProfile, type Me } from "@/lib/auth";
-import { formatMobile } from "@/lib/phone";
 import {
   apiIssuesToFieldErrors,
-  emailError,
   focusFirstInvalidField,
   requiredTextError,
 } from "@/lib/form-validation";
@@ -65,21 +63,12 @@ export default function SettingsPage() {
       ) : status === "error" ? (
         <FetchError status={errorStatus} message={error} onRetry={retry} />
       ) : me && sections && !sections.profileEditable ? (
-        <ReadOnlyProfile
-          firstName={me.firstName}
-          lastName={me.lastName}
-          email={me.email}
-          mobile={me.mobile}
-          emailVerified={emailVerified}
-        />
+        <ReadOnlyProfile firstName={me.firstName} lastName={me.lastName} />
       ) : me && sections ? (
         <ProfileForm
-          key={`${me.firstName}|${me.lastName}|${me.email}|${me.gender}|${me.incomeAmountMinor}|${me.occupation}|${me.location}`}
+          key={`${me.firstName}|${me.lastName}|${me.gender}|${me.incomeAmountMinor}|${me.occupation}|${me.location}`}
           firstName={me.firstName}
           lastName={me.lastName}
-          email={me.email}
-          mobile={me.mobile}
-          emailVerified={emailVerified}
           gender={me.gender}
           genderSelfDescription={me.genderSelfDescription}
           incomeSource={me.incomeSource}
@@ -88,9 +77,17 @@ export default function SettingsPage() {
           occupation={me.occupation}
           location={me.location}
           includePersonalDetails={includePersonalDetails}
-          onSaved={(next) => {
+          onSaved={setMe}
+        />
+      ) : null}
+
+      {status === "ready" && me && sections ? (
+        <ContactDetailsCard
+          me={me}
+          mode={sections.contactChange}
+          onMeChange={(next) => {
             setMe(next);
-            if (next.email !== me.email) setEmailJustVerified(false);
+            setEmailJustVerified(next.emailVerified);
           }}
         />
       ) : null}
@@ -123,39 +120,10 @@ export default function SettingsPage() {
  * Telecaller, Employee and Sub Admin accounts are managed by an Admin
  * (CS-021): their details are shown, not edited, and the API refuses changes.
  */
-function ReadOnlyProfile({
-  firstName,
-  lastName,
-  email,
-  mobile,
-  emailVerified,
-}: {
-  firstName: string;
-  lastName: string;
-  email: string | null;
-  mobile: string;
-  emailVerified: boolean;
-}) {
+function ReadOnlyProfile({ firstName, lastName }: { firstName: string; lastName: string }) {
   const rows: { label: string; value: React.ReactNode }[] = [
     { label: "First name", value: firstName },
     { label: "Last name", value: lastName },
-    {
-      label: "Email",
-      value: email ? (
-        <span className="inline-flex flex-wrap items-center gap-2">
-          {email}
-          {emailVerified ? (
-            <Badge variant="secondary" className="gap-1 bg-success/10 text-success">
-              <BadgeCheck className="h-3 w-3" aria-hidden="true" />
-              Verified
-            </Badge>
-          ) : null}
-        </span>
-      ) : (
-        <span className="text-text-secondary">Not added</span>
-      ),
-    },
-    { label: "Mobile", value: formatMobile(mobile) },
   ];
   return (
     <section aria-labelledby="profile-details-heading" className="space-y-4 rounded-xl border border-border bg-card p-6">
@@ -164,7 +132,8 @@ function ReadOnlyProfile({
           Your details
         </h2>
         <p className="text-sm text-text-secondary">
-          Your Admin manages these details. To change your name, email or mobile number, ask an Admin.
+          Your Admin manages these details. To change your name, ask an Admin; to change your
+          phone number or email, send a request below.
         </p>
       </div>
       <dl className="grid gap-4 sm:grid-cols-2">
@@ -182,9 +151,6 @@ function ReadOnlyProfile({
 function ProfileForm({
   firstName: initialFirst,
   lastName: initialLast,
-  email: initialEmail,
-  mobile,
-  emailVerified,
   gender: initialGender,
   genderSelfDescription: initialGenderSelfDescription,
   incomeSource: initialIncomeSource,
@@ -197,9 +163,6 @@ function ProfileForm({
 }: {
   firstName: string;
   lastName: string;
-  email: string | null;
-  mobile: string;
-  emailVerified: boolean;
   gender: Me["gender"];
   genderSelfDescription: Me["genderSelfDescription"];
   incomeSource: Me["incomeSource"];
@@ -212,7 +175,6 @@ function ProfileForm({
 }) {
   const [firstName, setFirstName] = React.useState(initialFirst);
   const [lastName, setLastName] = React.useState(initialLast);
-  const [email, setEmail] = React.useState(initialEmail ?? "");
   const [optionalProfile, setOptionalProfile] = React.useState<OptionalProfileDraft>({
     gender: initialGender ?? "",
     genderSelfDescription: initialGenderSelfDescription ?? "",
@@ -227,7 +189,6 @@ function ProfileForm({
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const formRef = React.useRef<HTMLFormElement>(null);
 
-  const emailChanged = email.trim().toLowerCase() !== (initialEmail ?? "").toLowerCase();
   const optionalChanged = includePersonalDetails && (
     optionalProfile.gender !== (initialGender ?? "") ||
     optionalProfile.genderSelfDescription.trim() !== (initialGenderSelfDescription ?? "") ||
@@ -238,20 +199,15 @@ function ProfileForm({
     optionalProfile.occupation.trim() !== (initialOccupation ?? "") ||
     optionalProfile.location.trim() !== (initialLocation ?? ""));
   const dirty =
-    firstName.trim() !== initialFirst ||
-    lastName.trim() !== initialLast ||
-    emailChanged ||
-    optionalChanged;
+    firstName.trim() !== initialFirst || lastName.trim() !== initialLast || optionalChanged;
   const canSave = dirty && !saving;
 
   function validate() {
     const next: Record<string, string> = {};
     const firstNameError = requiredTextError(firstName, "First name", 100);
     const lastNameError = requiredTextError(lastName, "Last name", 100);
-    const nextEmailError = emailError(email);
     if (firstNameError) next.firstName = firstNameError;
     if (lastNameError) next.lastName = lastNameError;
-    if (nextEmailError) next.email = nextEmailError;
     if (includePersonalDetails) Object.assign(next, validateOptionalProfile(optionalProfile));
     setFieldErrors(next);
     if (Object.keys(next).length > 0) {
@@ -278,7 +234,6 @@ function ProfileForm({
     const basePayload = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      email: emailChanged ? email.trim().toLowerCase() || null : undefined,
     };
     let res;
     if (includePersonalDetails) {
@@ -296,18 +251,11 @@ function ProfileForm({
     setSaving(false);
     if (res.ok) {
       onSaved(res.data);
-      toast.success("Profile updated.", {
-        description: emailChanged
-          ? email.trim()
-            ? "We saved your details. Please verify your new email address."
-            : "We saved your details and removed your email address."
-          : "Your details have been saved.",
-      });
+      toast.success("Profile updated.", { description: "Your details have been saved." });
     } else {
       const serverErrors = apiIssuesToFieldErrors(res.issues, {
         first_name: "firstName",
         last_name: "lastName",
-        email: "email",
         gender_self_description: "genderSelfDescription",
         income_amount_minor: "incomeAmountRupees",
         income_period: "incomePeriod",
@@ -350,44 +298,9 @@ function ProfileForm({
           />
           <FieldError id="last-name-error">{fieldErrors.lastName}</FieldError>
         </div>
-        <div className="space-y-2 sm:col-span-2">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="email">Email</Label>
-            {emailVerified && !emailChanged && (
-              <Badge variant="secondary" className="gap-1 bg-success/10 text-success">
-                <BadgeCheck className="h-3 w-3" />
-                Verified
-              </Badge>
-            )}
-          </div>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => { setEmail(e.target.value); clearError("email"); }}
-            autoComplete="email"
-            maxLength={254}
-            aria-invalid={Boolean(fieldErrors.email)}
-            aria-describedby={fieldErrors.email ? "email-error" : undefined}
-          />
-          <FieldError id="email-error">{fieldErrors.email}</FieldError>
-          <p className="text-xs text-text-secondary">
-            {emailChanged
-              ? email.trim()
-                ? "You will need to verify this new address after saving."
-                : "Saving will remove your optional email address."
-              : initialEmail
-                ? "We use this for account notifications and recovery."
-                : "Optional. Add an email if you want account recovery and updates."}
-          </p>
-        </div>
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="mobile">Mobile</Label>
-          <Input id="mobile" value={mobile} readOnly disabled />
-          <p className="text-xs text-text-secondary">
-            Your mobile number is your account ID and cannot be changed here.
-          </p>
-        </div>
+        <p className="text-xs text-text-secondary sm:col-span-2">
+          Your phone number and email are changed in “Phone and email” below.
+        </p>
 
         {includePersonalDetails ? (
           <div className="border-t border-border pt-5 sm:col-span-2">

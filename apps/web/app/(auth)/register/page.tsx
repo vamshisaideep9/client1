@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Lock, Smartphone, UserRound } from "lucide-react";
+import { ArrowLeft, Lock, Mail, Smartphone, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -32,6 +32,8 @@ import { apiIssuesToFieldErrors, emailError, focusFirstInvalidField } from "@/li
 import {
   describeAuthError,
   getMe,
+  registerEmailInitiate,
+  registerEmailVerify,
   registerInitiate,
   registerSetPassword,
   registerVerifyOtp,
@@ -72,8 +74,18 @@ type WizardState = {
   mobile: string;
   e164: string;
   registrationToken: string;
+  // CS-025: the server asked for an email proven by a code before set-password.
+  emailRequired?: boolean;
   expiresAt: number;
 };
+
+// Wizard steps. The email step only appears while the server enforces
+// mandatory email (EMAIL_REQUIRED_ENFORCED), as told by verify-otp.
+const STEP_DETAILS = 0;
+const STEP_PHONE = 1;
+const STEP_EMAIL = 2;
+const STEP_PASSWORD = 3;
+const STEP_PROFILE = 4;
 
 function loadWizard(): WizardState | null {
   if (typeof window === "undefined") return null;
@@ -112,7 +124,15 @@ function clearWizard() {
   }
 }
 
-const STEPS = ["Your details", "Verify phone", "Set password", "Complete profile"];
+const STEP_LABEL = ["Your details", "Verify phone", "Verify email", "Set password", "Complete profile"];
+
+function visibleSteps(emailRequired: boolean): string[] {
+  return emailRequired ? STEP_LABEL : STEP_LABEL.filter((_, index) => index !== STEP_EMAIL);
+}
+
+function stepIndex(step: number, emailRequired: boolean): number {
+  return !emailRequired && step > STEP_EMAIL ? step - 1 : step;
+}
 
 const PANEL = [
   {
@@ -124,6 +144,11 @@ const PANEL = [
     title: "Just one quick check.",
     subtitle:
       "We've sent a code to your phone to make sure it's really you. Pop it in and you're on your way.",
+  },
+  {
+    title: "Add your email.",
+    subtitle:
+      "We use it for security notices and to help you recover your account. A quick code confirms it's yours.",
   },
   {
     title: "Secure your account.",
@@ -174,7 +199,11 @@ function RegisterPageContent() {
     mobile: "",
     referralCode: "",
   });
-  const [profileEmail, setProfileEmail] = React.useState("");
+  const [emailRequired, setEmailRequired] = React.useState(false);
+  const [registrationEmail, setRegistrationEmail] = React.useState("");
+  const [registrationEmailError, setRegistrationEmailError] = React.useState<string | undefined>();
+  const [emailCodeSentTo, setEmailCodeSentTo] = React.useState<string | null>(null);
+  const [emailSending, setEmailSending] = React.useState(false);
   const [serviceLines, setServiceLines] = React.useState<ServiceLine[]>(
     registrationServiceLinesForReturn(returnTo),
   );
@@ -210,6 +239,7 @@ function RegisterPageContent() {
       setStep(saved.step);
       setE164(saved.e164);
       setRegistrationToken(saved.registrationToken);
+      setEmailRequired(saved.emailRequired === true);
       setDetails((d) => ({ ...d, mobile: saved.mobile }));
       setInteractive(true);
       return;
@@ -231,7 +261,7 @@ function RegisterPageContent() {
   }, [searchParams]);
 
   React.useEffect(() => {
-    if (!isLoading && isAuthenticated && step !== 3) router.replace(returnTo);
+    if (!isLoading && isAuthenticated && step !== STEP_PROFILE) router.replace(returnTo);
   }, [isAuthenticated, isLoading, returnTo, router, step]);
 
   // Single source of truth for a field's error, shared by the live (on-change)
@@ -317,9 +347,9 @@ function RegisterPageContent() {
 
     if (result.ok) {
       setE164(mobileE164);
-      setStep(1);
+      setStep(STEP_PHONE);
       saveWizard({
-        step: 1,
+        step: STEP_PHONE,
         mobile: details.mobile,
         e164: mobileE164,
         registrationToken: "",
@@ -355,10 +385,7 @@ function RegisterPageContent() {
     event.preventDefault();
     if (profileSaving) return;
 
-    const email = profileEmail.trim().toLowerCase();
     const nextErrors: Record<string, string> = { ...validateOptionalProfile(optionalProfile) };
-    const nextEmailError = emailError(email);
-    if (nextEmailError) nextErrors.email = nextEmailError;
     setProfileErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       requestAnimationFrame(() => {
@@ -388,16 +415,10 @@ function RegisterPageContent() {
       firstName = me.data.firstName;
       lastName = me.data.lastName;
     }
-    const result = await updateProfile({
-      firstName,
-      lastName,
-      email: email || null,
-      ...parsed.data,
-    });
+    const result = await updateProfile({ firstName, lastName, ...parsed.data });
     setProfileSaving(false);
     if (!result.ok) {
       const serverErrors = apiIssuesToFieldErrors(result.issues, {
-        email: "email",
         gender_self_description: "genderSelfDescription",
         income_amount_minor: "incomeAmountRupees",
         income_period: "incomePeriod",
@@ -415,15 +436,35 @@ function RegisterPageContent() {
     finishRegistration();
   }
 
+  async function sendRegistrationEmailCode(event?: React.FormEvent) {
+    event?.preventDefault();
+    if (emailSending) return;
+    const email = registrationEmail.trim().toLowerCase();
+    const invalid = emailError(email) ?? (email ? undefined : "Enter your email.");
+    setRegistrationEmailError(invalid);
+    if (invalid) return;
+    setEmailSending(true);
+    const result = await registerEmailInitiate(registrationToken, email);
+    setEmailSending(false);
+    if (!result.ok) {
+      setRegistrationEmailError(result.error);
+      return;
+    }
+    setEmailCodeSentTo(email);
+    if (result.data.otpHint && OTP_HINT_ALLOWED) {
+      toast.info("Dev verification code", { description: result.data.otpHint });
+    }
+  }
+
   return (
     <AuthShell
       scene="register"
       panelTitle={PANEL[step].title}
       panelSubtitle={PANEL[step].subtitle}
-      steps={STEPS}
-      activeStep={step}
+      steps={visibleSteps(emailRequired)}
+      activeStep={stepIndex(step, emailRequired)}
     >
-      {step === 0 && (
+      {step === STEP_DETAILS && (
         <>
           <Link
             href="/"
@@ -630,13 +671,13 @@ function RegisterPageContent() {
         </>
       )}
 
-      {step === 1 && (
+      {step === STEP_PHONE && (
         <>
           <button
             type="button"
             onClick={() => {
               clearWizard();
-              setStep(0);
+              setStep(STEP_DETAILS);
             }}
             className={cn(
               AUTH_BACK_LINK_CLASS,
@@ -669,13 +710,16 @@ function RegisterPageContent() {
             onSubmit={async (otp) => {
               const result = await registerVerifyOtp(e164, otp);
               if (result.ok) {
+                const next = result.data.emailRequired ? STEP_EMAIL : STEP_PASSWORD;
                 setRegistrationToken(result.data.registrationToken);
-                setStep(2);
+                setEmailRequired(result.data.emailRequired);
+                setStep(next);
                 saveWizard({
-                  step: 2,
+                  step: next,
                   mobile: details.mobile,
                   e164,
                   registrationToken: result.data.registrationToken,
+                  emailRequired: result.data.emailRequired,
                 });
               }
               return result;
@@ -695,7 +739,98 @@ function RegisterPageContent() {
         </>
       )}
 
-      {step === 2 && (
+      {step === STEP_EMAIL && (
+        <>
+          <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-brand-link">
+            <Mail className="h-6 w-6" aria-hidden="true" />
+          </span>
+
+          <div className="mb-5 space-y-2">
+            <h1 className="font-heading text-3xl font-bold text-text-primary">
+              Verify your email
+            </h1>
+            <p className="text-base text-text-secondary">
+              {emailCodeSentTo ? (
+                <>
+                  We sent a 6-digit code to{" "}
+                  <span className="break-all font-medium text-text-primary">{emailCodeSentTo}</span>.
+                </>
+              ) : (
+                "We use your email for security notices and account recovery."
+              )}
+            </p>
+          </div>
+
+          {emailCodeSentTo ? (
+            <div className="space-y-3">
+              <OtpForm
+                submitLabel="Verify & continue"
+                onSubmit={async (otp) => {
+                  const result = await registerEmailVerify(registrationToken, emailCodeSentTo, otp);
+                  if (result.ok) {
+                    setRegistrationToken(result.data.registrationToken);
+                    setStep(STEP_PASSWORD);
+                    saveWizard({
+                      step: STEP_PASSWORD,
+                      mobile: details.mobile,
+                      e164,
+                      registrationToken: result.data.registrationToken,
+                      emailRequired,
+                    });
+                  }
+                  return result;
+                }}
+                onResend={async () => {
+                  const result = await registerEmailInitiate(registrationToken, emailCodeSentTo);
+                  if (result.ok && result.data.otpHint && OTP_HINT_ALLOWED) {
+                    toast.info("Dev verification code", { description: result.data.otpHint });
+                  }
+                  return result;
+                }}
+              />
+              <button
+                type="button"
+                className={cn(AUTH_LINK_CLASS, "text-sm font-medium underline-offset-4 hover:underline")}
+                onClick={() => setEmailCodeSentTo(null)}
+              >
+                Use a different email
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={sendRegistrationEmailCode} noValidate className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="register-email">Email</Label>
+                <Input
+                  id="register-email"
+                  type="email"
+                  inputMode="email"
+                  value={registrationEmail}
+                  onChange={(event) => {
+                    setRegistrationEmail(event.target.value);
+                    setRegistrationEmailError(undefined);
+                  }}
+                  autoComplete="email"
+                  maxLength={254}
+                  placeholder="jane@example.com"
+                  aria-invalid={Boolean(registrationEmailError)}
+                  aria-describedby={registrationEmailError ? "register-email-error" : undefined}
+                />
+                <FieldError id="register-email-error">{registrationEmailError}</FieldError>
+              </div>
+              <Button
+                type="submit"
+                size="lg"
+                className={cn(AUTH_SUBMIT_CLASS, "h-12 w-full text-base")}
+                disabled={emailSending}
+              >
+                {emailSending ? "Sending…" : "Send code"}
+              </Button>
+            </form>
+          )}
+        </>
+      )}
+
+      {step === STEP_PASSWORD && (
         <>
           <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-brand-link">
             <Lock className="h-6 w-6" />
@@ -727,7 +862,7 @@ function RegisterPageContent() {
                 toast.success("Account created!", {
                   description: "Add optional profile details, or skip for now.",
                 });
-                setStep(3);
+                setStep(STEP_PROFILE);
               }
               return result;
             }}
@@ -735,7 +870,7 @@ function RegisterPageContent() {
         </>
       )}
 
-      {step === 3 && (
+      {step === STEP_PROFILE && (
         <>
           <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-brand-link">
             <UserRound className="h-6 w-6" aria-hidden="true" />
@@ -751,28 +886,6 @@ function RegisterPageContent() {
           </div>
 
           <form ref={profileFormRef} onSubmit={submitOptionalProfile} noValidate className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="profile-email">
-                Email <span className="font-normal text-text-secondary">(optional)</span>
-              </Label>
-              <Input
-                id="profile-email"
-                type="email"
-                value={profileEmail}
-                onChange={(event) => { setProfileEmail(event.target.value); setProfileErrors((current) => { const next = { ...current }; delete next.email; return next; }); }}
-                autoComplete="email"
-                maxLength={254}
-                disabled={profileSaving}
-                placeholder="jane@example.com"
-                aria-invalid={Boolean(profileErrors.email)}
-                aria-describedby={profileErrors.email ? "profile-email-error" : "profile-email-help"}
-              />
-              <p id="profile-email-help" className="text-xs text-text-secondary">
-                If added, you can verify it later for recovery and important updates.
-              </p>
-              <FieldError id="profile-email-error">{profileErrors.email}</FieldError>
-            </div>
-
             <OptionalProfileFields
               idPrefix="registration-profile"
               value={optionalProfile}
