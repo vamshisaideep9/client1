@@ -15,7 +15,11 @@ export type HeroBanner = {
   // hero-carousel.tsx's cream-placeholder branch handles that case.
   image?: string;
   reraVerified?: boolean;
-  cta?: { label: string; href: string };
+  /**
+   * Resolved by lib/banner-cta.ts. `external` marks a validated https link that
+   * opens in a new tab; otherwise `href` is a same-site path or fragment.
+   */
+  cta?: { label: string; href: string; external?: boolean };
   /** 11-character YouTube id; rendered as a privacy-enhanced click-to-play embed. */
   youtubeId?: string;
   /** Direct URL of a processed, public MP4 loop on the asset host. */

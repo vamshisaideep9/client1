@@ -2,6 +2,38 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Banner lifecycle fixes (web slice)** (2026-11-16), branch
+`fix/banner-lifecycle-web` stacked on `fix/banner-lifecycle-api`. Web only;
+no dependency or contract change beyond the API slice.
+- Workspace: Delete (with a confirm) for draft, pending, rejected and
+  approved banners; Archive only for pending, approved and rejected; a live
+  banner shows "Live — ask an Admin to remove it." Admin Remove is unchanged.
+- Create: the primary action is Submit for approval (`createBanner` then
+  `submitBanner`); Save draft stays secondary. A failed submit keeps the
+  draft and says why. Server field errors open the step that owns the field,
+  YouTube/uploaded video choices count as unsaved work, and Next no longer
+  submits the form by reusing its button node.
+- Live without reload: `serverFetchJson` takes cache tags and public banner
+  reads are tagged `public-banners`. `app/actions/revalidate-public-banners.ts`
+  verifies the caller's token with `GET /api/v1/auth/me`, then requires the
+  `admin` role claim of that verified token before `revalidateTag`; it runs
+  after approve and Remove. `useBannerQueue` polls every 30 s while visible
+  and refetches on focus (`queue-refresh.ts`); an open workspace adopts a
+  newer copy only with no unsaved edits, action or review note in progress.
+- CTA: `lib/banner-cta.ts` (site path via next/link, or strict https as a
+  new-tab anchor with "(opens in a new tab)"; YouTube fallback "Watch on
+  YouTube") is used by the public mapper, hero, sponsor strip, dashboard
+  banner card, CMS previews and both forms; the destination field explains
+  both kinds.
+- Offers: single-column list; from md the card is artwork (object-cover, 40%)
+  beside the copy, stacked on phones; coupon copy, focus and new-tab links
+  kept. The CMS offer preview uses the same list.
+- Follow-up (not in scope): dashboard-placement banners are still not
+  rendered to signed-in users; `PersonalizedPlacements` shows offers only.
+  Scheduler-activated (future-dated) banners still wait for the job tick
+  plus the 60-second ISR window, and open public pages are not pushed.
+- Evidence: see the PR.
+
 **In review — Banner lifecycle fixes (API slice)** (2026-11-16; PR
 [#363](https://github.com/brollysolutions/client1/pull/363), mirror
 vamshisaideep9/client1#66), branch

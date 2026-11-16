@@ -5,12 +5,13 @@ import { HeroCarousel } from "@/components/hero-carousel";
 import {
   DashboardBannerCard,
   DashboardOfferCard,
+  OFFER_LIST_CLASS,
 } from "@/features/dashboard/personalized-placements";
+import { resolveBannerCta } from "@/lib/banner-cta";
 import type { HeroBanner } from "@/lib/banners";
 import type { Banner } from "@/lib/banners-api";
 import type { Offer } from "@/lib/offers-api";
 import type { AuthenticatedBanner, AuthenticatedOffer } from "@/lib/personalization-api";
-import { isSafeLocalHref } from "@/lib/safe-local-href";
 
 import { DashboardPreviewChrome, PublicPreviewChrome } from "./preview-chrome";
 
@@ -32,6 +33,8 @@ export type BannerPreviewValue = Pick<
 > & {
   image_url?: string | null;
   rera_verified?: boolean;
+  /** Attached YouTube video; with no destination it becomes the CTA. */
+  youtube_video_id?: string | null;
 };
 export type OfferPreviewValue = Pick<
   Offer,
@@ -48,17 +51,21 @@ export function BannerPreview({
   context: "public" | "dashboard";
   placement?: Banner["placement"];
 }) {
-  const action = Boolean(
-    banner.cta_label && banner.deep_link && isSafeLocalHref(banner.deep_link),
-  );
+  // The same resolution visitors get (lib/banner-cta.ts), so the preview shows
+  // exactly the button -- or no button -- the published banner will have.
+  const cta = resolveBannerCta({
+    deepLink: banner.deep_link,
+    ctaLabel: banner.cta_label,
+    youtubeVideoId: context === "public" ? banner.youtube_video_id : null,
+  });
   if (context === "dashboard") {
     const value: AuthenticatedBanner = {
       id: "campaign-preview",
       banner_type: banner.banner_type,
       title: banner.title || "Banner title",
       subtitle: banner.subtitle ?? null,
-      cta_label: action ? banner.cta_label! : null,
-      deep_link: action ? banner.deep_link! : null,
+      cta_label: cta?.label ?? null,
+      deep_link: cta?.href ?? null,
       image_url: banner.image_url ?? null,
     };
     return (
@@ -74,7 +81,7 @@ export function BannerPreview({
     subtitle: banner.subtitle || undefined,
     image: banner.image_url || undefined,
     reraVerified: banner.rera_verified,
-    cta: action ? { label: banner.cta_label!, href: banner.deep_link! } : undefined,
+    cta: cta ?? undefined,
   };
   if (placement === "homepage_ad") {
     return (
@@ -111,12 +118,13 @@ export function OfferPreview({ offer }: { offer: OfferPreviewValue }) {
   };
   return (
     <DashboardPreviewChrome>
-      {/* The real dashboard lays offers out in this grid
-          (personalized-placements.tsx), so one authored offer occupies a third
-          of the row rather than the full width a lone card would take. */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Offers for you">
-        <DashboardOfferCard offer={value} interactive={false} />
-      </div>
+      {/* The real dashboard stacks offers in this single-column list
+          (personalized-placements.tsx), each a horizontal banner from md up. */}
+      <ul className={OFFER_LIST_CLASS} aria-label="Offers for you">
+        <li>
+          <DashboardOfferCard offer={value} interactive={false} />
+        </li>
+      </ul>
     </DashboardPreviewChrome>
   );
 }

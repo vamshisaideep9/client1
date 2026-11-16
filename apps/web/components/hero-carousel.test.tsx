@@ -40,6 +40,29 @@ describe("HeroCarousel", () => {
     expect(markup).not.toContain('rel="preload"');
   });
 
+  it("opens an external CTA in a new tab and keeps internal ones on next/link", () => {
+    const markup = renderToStaticMarkup(
+      <HeroCarousel
+        variant="hero"
+        label="Featured"
+        banners={[
+          {
+            id: "external",
+            title: "Partner home loans",
+            cta: { label: "Visit the partner", href: "https://partner.example/home", external: true },
+          },
+          { id: "internal", title: "Our loans", cta: { label: "Explore", href: "/loans" } },
+        ]}
+      />,
+    );
+    expect(markup).toMatch(
+      /<a[^>]*href="https:\/\/partner\.example\/home"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/,
+    );
+    expect(markup).toContain('<span class="sr-only"> (opens in a new tab)</span>');
+    expect(markup).toMatch(/<a[^>]*href="\/loans"/);
+    expect(markup.match(/target="_blank"/g)).toHaveLength(1);
+  });
+
   it("renders the homepage hero full-bleed and full-screen, with overlaid dots", () => {
     // The homepage hero is the only caller of variant="hero". It used to be a
     // centered peek-coverflow card; it is now edge-to-edge and fills the

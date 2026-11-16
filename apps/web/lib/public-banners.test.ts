@@ -40,7 +40,7 @@ describe("mapPublicBanner()", () => {
       subtitle: "Limited period rates",
       image: undefined,
       reraVerified: undefined,
-      cta: { label: "Apply now", href: "/loans" },
+      cta: { label: "Apply now", href: "/loans", external: false },
     });
   });
 
@@ -131,8 +131,37 @@ describe("mapPublicBanner()", () => {
     expect(banner.cta).toBeUndefined();
   });
 
-  it("omits the cta when deep_link is an absolute off-site URL (same-origin guard)", () => {
-    const banner = mapPublicBanner(wireBanner({ deep_link: "https://evil.example.com" }));
+  it("keeps an https deep_link as an external, new-tab cta", () => {
+    const banner = mapPublicBanner(wireBanner({ deep_link: "https://partner.example.com/offer" }));
+    expect(banner.cta).toEqual({
+      label: "Apply now",
+      href: "https://partner.example.com/offer",
+      external: true,
+    });
+  });
+
+  it.each(["http://partner.example.com", "javascript:alert(1)", "https://u:p@partner.example.com"])(
+    "omits the cta when deep_link is unsafe (%s)",
+    (deepLink) => {
+      expect(mapPublicBanner(wireBanner({ deep_link: deepLink })).cta).toBeUndefined();
+    },
+  );
+
+  it("links a YouTube banner without a destination to the video", () => {
+    const banner = mapPublicBanner(
+      wireBanner({ deep_link: null, cta_label: null, youtube_video_id: "dQw4w9WgXcQ" }),
+    );
+    expect(banner.cta).toEqual({
+      label: "Watch on YouTube",
+      href: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      external: true,
+    });
+  });
+
+  it("never builds a YouTube cta from a malformed video id", () => {
+    const banner = mapPublicBanner(
+      wireBanner({ deep_link: null, youtube_video_id: "dQw4w9WgXcQ\"><script>" }),
+    );
     expect(banner.cta).toBeUndefined();
   });
 
@@ -148,7 +177,7 @@ describe("mapPublicBanner()", () => {
 
   it("keeps the cta when deep_link is a repo-local path", () => {
     const banner = mapPublicBanner(wireBanner({ deep_link: "/real-estate" }));
-    expect(banner.cta).toEqual({ label: "Apply now", href: "/real-estate" });
+    expect(banner.cta).toEqual({ label: "Apply now", href: "/real-estate", external: false });
   });
 });
 
@@ -177,6 +206,19 @@ describe("getHeroBanners()", () => {
       expect.stringContaining("/api/v1/public/banners?placement=homepage_ad"),
       expect.anything(),
     );
+  });
+
+  it("tags the read so an Admin approval can clear it on demand", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) =>
+      fakeResponse(200, { banners: [] }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getHeroBanners();
+    const init = fetchMock.mock.calls[0][1] as RequestInit & {
+      next?: { revalidate?: number; tags?: string[] };
+    };
+    expect(init.next).toEqual({ revalidate: 60, tags: ["public-banners"] });
   });
 
   it("returns an empty array on a non-2xx response", async () => {

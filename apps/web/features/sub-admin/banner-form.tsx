@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 
 import type { components } from "@contracts/generated/schema";
@@ -19,7 +19,17 @@ import {
   formatTargetSize,
   primaryUsageType,
 } from "@/lib/campaign-artwork";
-import { createBanner, listBannerTemplates, type BannerTemplate } from "@/lib/banners-api";
+import {
+  BANNER_DESTINATION_ERROR,
+  isSafeBannerHref,
+  youtubeIdFromLink,
+} from "@/lib/banner-cta";
+import {
+  createBanner,
+  listBannerTemplates,
+  submitBanner,
+  type BannerTemplate,
+} from "@/lib/banners-api";
 import {
   isLegacyPropertyCampaignTemplate,
   isPropertyCampaignTemplate,
@@ -29,8 +39,7 @@ import {
 } from "@/lib/banner-properties";
 import { apiIssuesToFieldErrors, focusFirstInvalidField, integerError } from "@/lib/form-validation";
 import { getAdminProperties, type AdminProperty } from "@/lib/properties-api";
-import { DestinationInput } from "./destination-input";
-import { isSafeLocalHref } from "@/lib/safe-local-href";
+import { DESTINATION_HINT, DestinationInput } from "./destination-input";
 import { cn } from "@/lib/utils";
 
 import { AudienceRuleFields, emptyAudienceRules } from "./audience-rule-fields";
@@ -114,6 +123,26 @@ const STEPS = [
   { key: "message", label: "Message" },
 ] as const;
 type StepKey = (typeof STEPS)[number]["key"];
+
+// The step that owns each validation key, so a server-side field error takes
+// the author to the field instead of leaving them on a step that hides it.
+const ERROR_STEP: Record<string, StepKey> = {
+  artwork: "artwork",
+  video: "artwork",
+  title: "message",
+  deepLink: "message",
+  priority: "message",
+  schedule: "message",
+  audience: "message",
+};
+
+function stepForErrors(errors: Record<string, string>): StepKey | null {
+  const keys = Object.keys(errors);
+  for (const step of STEPS) {
+    if (keys.some((key) => ERROR_STEP[key] === step.key)) return step.key;
+  }
+  return null;
+}
 
 /** Line forced by the placement, or null when the author may choose. */
 function forcedLine(placement: Placement): BusinessLine | null {
@@ -221,6 +250,8 @@ export function BannerForm({
       templateId ||
       propertyId ||
       mediaAssetId ||
+      youtubeUrl.trim() ||
+      videoAssetId ||
       priority !== "0" ||
       startsAt ||
       endsAt ||
@@ -264,8 +295,8 @@ export function BannerForm({
     if (target === "message") {
       const next: Record<string, string> = {};
       if (!title.trim()) next.title = "Title is required.";
-      if (deepLink.trim() && !isSafeLocalHref(deepLink.trim())) {
-        next.deepLink = "Use a same-site path beginning with one slash.";
+      if (!propertyId && deepLink.trim() && !isSafeBannerHref(deepLink.trim())) {
+        next.deepLink = BANNER_DESTINATION_ERROR;
       }
       const priorityError = integerError(priority, "Priority", {
         required: true,
@@ -304,18 +335,35 @@ export function BannerForm({
     setStep(STEPS[Math.max(stepIndex - 1, 0)].key);
   }
 
+  function showErrors(errors: Record<string, string>) {
+    setFieldErrors(errors);
+    const owner = stepForErrors(errors);
+    if (owner) setStep(owner);
+    requestAnimationFrame(() => {
+      if (formRef.current) focusFirstInvalidField(formRef.current);
+    });
+  }
+
+  function finish() {
+    if (onCreated) onCreated();
+    else router.push("/dashboard/banners");
+  }
+
+  // Submit for approval is the primary action: create the campaign, then send
+  // it to the Admin queue in one go. "Save draft" keeps it private.
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
+    await save(true);
+  }
+
+  async function save(submitForApproval: boolean) {
+    if (submitting) return;
     const errors = { ...validateStep("artwork"), ...validateStep("message") };
-    setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
-      if (errors.artwork) setStep("artwork");
-      else setStep("message");
-      requestAnimationFrame(() => {
-        if (formRef.current) focusFirstInvalidField(formRef.current);
-      });
+      showErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     setSubmitting(true);
     const result = await createBanner({
@@ -338,8 +386,8 @@ export function BannerForm({
       starts_at: startsAt ? new Date(startsAt).toISOString() : null,
       ends_at: endsAt ? new Date(endsAt).toISOString() : null,
     });
-    setSubmitting(false);
     if (!result.ok) {
+      setSubmitting(false);
       const serverErrors = apiIssuesToFieldErrors(result.issues, {
         title: "title",
         template_id: "artwork",
@@ -350,16 +398,33 @@ export function BannerForm({
         priority: "priority",
         starts_at: "schedule",
         ends_at: "schedule",
+        audience_rules: "audience",
       });
-      if (Object.keys(serverErrors).length > 0) setFieldErrors(serverErrors);
+      if (Object.keys(serverErrors).length > 0) showErrors(serverErrors);
       toast.error("Could not create banner", { description: result.error });
       return;
     }
-    toast.success("Banner draft created", {
-      description: "Submit it for Admin approval when it is ready.",
+    if (!submitForApproval) {
+      setSubmitting(false);
+      toast.success("Banner draft created", {
+        description: "Submit it for Admin approval when it is ready.",
+      });
+      return finish();
+    }
+    const submitted = await submitBanner(result.data.id);
+    setSubmitting(false);
+    if (!submitted.ok) {
+      // The campaign exists as a draft; retrying here would create a second
+      // one, so close and let the author submit it from the list.
+      toast.error("Saved as a draft, but not submitted", {
+        description: `${submitted.error} Open the draft from the list to submit it.`,
+      });
+      return finish();
+    }
+    toast.success("Submitted for approval", {
+      description: "An Admin reviews it before it goes live.",
     });
-    if (onCreated) onCreated();
-    else router.push("/dashboard/banners");
+    finish();
   }
 
   const previewImage =
@@ -374,7 +439,7 @@ export function BannerForm({
       backHref="/dashboard/banners"
       backLabel="Back to banners"
       formTitle="Banner"
-      formDescription="Saved as a private draft. Admin approval is required before it goes live."
+      formDescription="Submit it for Admin approval, or save a private draft to finish later. Nothing goes live until an Admin approves it."
       embedded={embedded}
       wide
     >
@@ -397,6 +462,7 @@ export function BannerForm({
                 : deepLink || null,
               image_url: previewImage,
               rera_verified: selectedProperty?.rera_verification_status === "verified",
+              youtube_video_id: isPublic ? youtubeIdFromLink(youtubeUrl) : null,
             }}
           />
         </CampaignPreviewPanel>
@@ -739,7 +805,6 @@ export function BannerForm({
                     dashboard={!isPublic}
                     businessLine={businessLine}
                     audienceRoles={bannerType === "personalized" ? audienceRules.user_types : undefined}
-                    placeholder="/loans"
                     value={selectedProperty ? propertyCampaignHref(selectedProperty) : deepLink}
                     onValueChange={(value) => {
                       setDeepLink(value);
@@ -761,7 +826,7 @@ export function BannerForm({
               <p id="deep-link-help" className="-mt-2 text-xs text-text-secondary">
                 {selectedProperty
                   ? "Property enquiries always use the server-generated contact destination."
-                  : "Type / to browse destinations, then choose a page or enter a same-site path. Without a valid label and destination, no button is rendered."}
+                  : `${DESTINATION_HINT} With a YouTube video and no destination, the button opens the video (label defaults to "Watch on YouTube").`}
               </p>
               <FieldError id="deep-link-error">{fieldErrors.deepLink}</FieldError>
             </div>
@@ -854,8 +919,8 @@ export function BannerForm({
                 </div>
               </div>
               <p className="mt-2 text-xs text-text-secondary">
-                Leave both blank to publish on the next scheduler tick after approval, with no
-                automatic end.
+                Leave both blank to publish as soon as an Admin approves it (once its slot is
+                free), with no automatic end.
               </p>
               <FieldError id="banner-schedule-error">{fieldErrors.schedule}</FieldError>
             </div>
@@ -873,19 +938,30 @@ export function BannerForm({
             Back
           </Button>
           <div className="flex flex-wrap items-center gap-2">
-            {step === "artwork" ? (
-              <Button type="submit" variant="outline" disabled={submitting || catalogLoading}>
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+            {step === "artwork" || step === "message" ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={submitting || catalogLoading}
+                onClick={() => void save(false)}
+              >
                 Save draft
               </Button>
             ) : null}
+            {/* Distinct keys: reusing one <button> node would flip Next's type to
+                "submit" mid-click, and the browser would then submit the form
+                the moment the author reaches this step. */}
             {step === "message" ? (
-              <Button type="submit" disabled={submitting || catalogLoading}>
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-                {submitting ? "Saving…" : "Save draft"}
+              <Button key="submit" type="submit" disabled={submitting || catalogLoading}>
+                {submitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Send className="h-4 w-4" aria-hidden />
+                )}
+                {submitting ? "Saving…" : "Submit for approval"}
               </Button>
             ) : (
-              <Button type="button" onClick={goNext} disabled={catalogLoading}>
+              <Button key="next" type="button" onClick={goNext} disabled={catalogLoading}>
                 Next
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Button>
