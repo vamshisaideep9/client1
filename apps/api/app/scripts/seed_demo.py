@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -59,6 +60,7 @@ from app.models.profile import (
 from app.models.property import (
     ConstructionStatus,
     Furnishing,
+    ListingIntent,
     Property,
     PropertyCategory,
     PropertySubtype,
@@ -389,6 +391,51 @@ async def _seed_properties(
     return result
 
 
+@dataclass(frozen=True, slots=True)
+class _ListingFacets:
+    """Listing facts for a demo submission; defaults are the original Kondapur flat."""
+
+    listing_intent: ListingIntent = ListingIntent.SALE
+    type: str = "Apartment"
+    category: PropertyCategory = PropertyCategory.APARTMENTS
+    property_subtype: PropertySubtype = PropertySubtype.STANDALONE_APARTMENT
+    city: str = "Hyderabad"
+    locality: str = "Kondapur"
+    state: str = "Telangana"
+    pincode: str = "500084"
+    developer_name: str | None = None
+    image: str = "/illustrations/properties/apartment-2.svg"
+    price_paise: int = 1_20_00_00_000
+    security_deposit_paise: int | None = None
+    minimum_lease_months: int | None = None
+    available_from: date | None = None
+    bhk: int = 3
+    area_sqft: int = 1750
+    furnishing: Furnishing | None = Furnishing.SEMI
+    construction_status: ConstructionStatus | None = ConstructionStatus.READY
+    amenities: tuple[str, ...] = ("Lift", "Parking", "Power Backup")
+    age_years: int = 3
+    rera_number: str | None = "RERA/TS/DEMO/SUB01"
+    rera_applicability: ReraApplicability = ReraApplicability.APPLICABLE
+    # None derives the review state from the submission status, as before.
+    rera_verification_status: ReraVerificationStatus | None = None
+    review_note: str | None = None
+    created_days_ago: int = 7
+
+    @property
+    def location(self) -> str:
+        return f"{self.locality}, {self.city}"
+
+    @property
+    def meta(self) -> str:
+        if self.bhk:
+            return f"{self.bhk} bed · {self.area_sqft:,} sqft"
+        return f"{self.area_sqft:,} sqft"
+
+
+_DEFAULT_FACETS = _ListingFacets()
+
+
 def _submission(
     key: str,
     *,
@@ -397,56 +444,338 @@ def _submission(
     status: SubmissionStatus,
     property_id: Any | None = None,
     reviewer_uuid: Any | None = None,
+    rera_reviewer_uuid: Any | None = None,
+    facets: _ListingFacets = _DEFAULT_FACETS,
     now: datetime,
 ) -> PropertySubmission:
+    rera_status = facets.rera_verification_status or (
+        ReraVerificationStatus.VERIFIED
+        if status == SubmissionStatus.APPROVED
+        else ReraVerificationStatus.NOT_REVIEWED
+    )
+    rera_reviewed = rera_status != ReraVerificationStatus.NOT_REVIEWED
     return PropertySubmission(
         id=demo_uuid(f"property-submission:{key}"),
         submitter_uuid=submitter_uuid,
         business_line="real_estate",
         status=status,
         review_note=(
-            "Synthetic rejection: clarify the ownership narrative."
+            (facets.review_note or "Synthetic rejection: clarify the ownership narrative.")
             if status == SubmissionStatus.REJECTED
             else None
         ),
         reviewed_by_uuid=reviewer_uuid,
         reviewed_at=now - timedelta(days=2) if reviewer_uuid else None,
         approved_property_id=property_id,
+        listing_intent=facets.listing_intent,
         title=title,
-        type="Apartment",
-        location="Kondapur, Hyderabad",
-        meta="3 bed · 1,750 sqft",
-        image="/illustrations/properties/apartment-2.svg",
-        category=PropertyCategory.APARTMENTS,
-        property_subtype=PropertySubtype.STANDALONE_APARTMENT,
-        city="Hyderabad",
-        locality="Kondapur",
-        state="Telangana",
-        pincode="500084",
-        price_paise=1_20_00_00_000,
-        bhk=3,
-        area_sqft=1750,
-        furnishing=Furnishing.SEMI,
-        construction_status=ConstructionStatus.READY,
-        amenities=["Lift", "Parking", "Power Backup"],
-        age_years=3,
-        rera_number="RERA/TS/DEMO/SUB01",
-        rera_applicability=ReraApplicability.APPLICABLE,
-        rera_verification_status=(
-            ReraVerificationStatus.VERIFIED
-            if status == SubmissionStatus.APPROVED
-            else ReraVerificationStatus.NOT_REVIEWED
-        ),
-        rera_verified_at=now - timedelta(days=2) if status == SubmissionStatus.APPROVED else None,
-        rera_verified_by_uuid=reviewer_uuid if status == SubmissionStatus.APPROVED else None,
+        type=facets.type,
+        location=facets.location,
+        developer_name=facets.developer_name,
+        meta=facets.meta,
+        image=facets.image,
+        category=facets.category,
+        property_subtype=facets.property_subtype,
+        city=facets.city,
+        locality=facets.locality,
+        state=facets.state,
+        pincode=facets.pincode,
+        price_paise=facets.price_paise,
+        security_deposit_paise=facets.security_deposit_paise,
+        minimum_lease_months=facets.minimum_lease_months,
+        available_from=facets.available_from,
+        bhk=facets.bhk,
+        area_sqft=facets.area_sqft,
+        furnishing=facets.furnishing,
+        construction_status=facets.construction_status,
+        amenities=list(facets.amenities),
+        age_years=facets.age_years,
+        rera_number=facets.rera_number,
+        rera_applicability=facets.rera_applicability,
+        rera_verification_status=rera_status,
+        rera_verified_at=now - timedelta(days=2) if rera_reviewed else None,
+        rera_verified_by_uuid=(rera_reviewer_uuid or reviewer_uuid) if rera_reviewed else None,
         details={"demo": True},
-        created_at=now - timedelta(days=7),
+        created_at=now - timedelta(days=facets.created_days_ago),
     )
 
 
-async def _seed_property_submissions(
-    db: AsyncSession, users: dict[str, User], properties: dict[str, Property], now: datetime
-) -> None:
+# The demo Sub Admin's own listings: every review state, sale and rent, all five
+# categories and nine subtypes, three cities and each RERA review outcome, so
+# every filter on the Property listings page has rows to show. Approved rows
+# reuse the two demo Properties that no other submission originates.
+_SUB_ADMIN_LISTINGS: tuple[tuple[str, str, SubmissionStatus, str | None, _ListingFacets], ...] = (
+    (
+        "sub-admin-approved-villa",
+        "Demo Lakeview Villa",
+        SubmissionStatus.APPROVED,
+        "villa",
+        _ListingFacets(
+            type="Villa",
+            category=PropertyCategory.VILLAS,
+            property_subtype=PropertySubtype.VILLA,
+            locality="Kokapet",
+            pincode="500075",
+            image="/illustrations/properties/villa-1.svg",
+            price_paise=2_40_00_00_000,
+            bhk=4,
+            area_sqft=3200,
+            amenities=("Parking", "Security", "Power Backup"),
+            age_years=2,
+            rera_number="RERA/TS/DEMO/0001",
+            created_days_ago=40,
+        ),
+    ),
+    (
+        "sub-admin-approved-plot",
+        "Demo Gated Community Plot",
+        SubmissionStatus.APPROVED,
+        "plot",
+        _ListingFacets(
+            type="Plot",
+            category=PropertyCategory.PLOTS,
+            property_subtype=PropertySubtype.PLOT,
+            locality="Mokila",
+            pincode="501203",
+            image="/illustrations/properties/plot-1.svg",
+            price_paise=58_00_00_000,
+            bhk=0,
+            area_sqft=2400,
+            furnishing=Furnishing.UNFURNISHED,
+            amenities=("Parking", "Security", "Power Backup"),
+            age_years=0,
+            rera_number="RERA/TS/DEMO/0003",
+            created_days_ago=35,
+        ),
+    ),
+    (
+        "sub-admin-pending-rent-house",
+        "Demo Hanamkonda Family House for Rent",
+        SubmissionStatus.PENDING,
+        None,
+        _ListingFacets(
+            listing_intent=ListingIntent.RENT,
+            type="House",
+            category=PropertyCategory.HOUSES,
+            property_subtype=PropertySubtype.INDIVIDUAL_HOUSE,
+            city="Warangal",
+            locality="Hanamkonda",
+            pincode="506001",
+            image="/illustrations/properties/villa-2.svg",
+            price_paise=25_000_00,
+            security_deposit_paise=75_000_00,
+            minimum_lease_months=11,
+            available_from=date(2026, 12, 1),
+            bhk=3,
+            area_sqft=1600,
+            furnishing=Furnishing.FURNISHED,
+            amenities=("Parking", "Power Backup", "Garden"),
+            age_years=8,
+            rera_number=None,
+            rera_applicability=ReraApplicability.UNSURE,
+            created_days_ago=2,
+        ),
+    ),
+    (
+        "sub-admin-pending-office-rent",
+        "Demo HITEC City Office Floor for Lease",
+        SubmissionStatus.PENDING,
+        None,
+        _ListingFacets(
+            listing_intent=ListingIntent.RENT,
+            type="Office",
+            category=PropertyCategory.COMMERCIAL,
+            property_subtype=PropertySubtype.LOCKED_SPACE,
+            locality="HITEC City",
+            pincode="500081",
+            developer_name="Cyber Towers Demo Realty",
+            image="/illustrations/properties/commercial-1.svg",
+            price_paise=1_20_000_00,
+            security_deposit_paise=7_20_000_00,
+            minimum_lease_months=36,
+            available_from=date(2027, 1, 1),
+            bhk=0,
+            area_sqft=2200,
+            furnishing=Furnishing.FURNISHED,
+            amenities=("Lift", "Parking", "Power Backup", "Security"),
+            age_years=5,
+            rera_number="P02400000101",
+            rera_verification_status=ReraVerificationStatus.MISMATCH,
+            created_days_ago=5,
+        ),
+    ),
+    (
+        "sub-admin-pending-gated",
+        "Demo Madhurawada Gated Community Flat",
+        SubmissionStatus.PENDING,
+        None,
+        _ListingFacets(
+            property_subtype=PropertySubtype.GATED_COMMUNITY_APARTMENT,
+            city="Visakhapatnam",
+            locality="Madhurawada",
+            state="Andhra Pradesh",
+            pincode="530048",
+            developer_name="Bayview Demo Homes",
+            image="/illustrations/properties/apartment-3.svg",
+            price_paise=85_00_00_000,
+            bhk=2,
+            area_sqft=1180,
+            furnishing=Furnishing.UNFURNISHED,
+            construction_status=ConstructionStatus.UNDER_CONSTRUCTION,
+            amenities=("Lift", "Clubhouse", "Gym", "Security"),
+            age_years=0,
+            rera_number="P03200000204",
+            created_days_ago=1,
+        ),
+    ),
+    (
+        "sub-admin-pending-farmland",
+        "Demo Mamnoor Farmland",
+        SubmissionStatus.PENDING,
+        None,
+        _ListingFacets(
+            type="Farmland",
+            category=PropertyCategory.PLOTS,
+            property_subtype=PropertySubtype.FARMLAND,
+            city="Warangal",
+            locality="Mamnoor",
+            pincode="506166",
+            image="/illustrations/properties/plot-2.svg",
+            price_paise=45_00_00_000,
+            bhk=0,
+            area_sqft=43_560,
+            furnishing=None,
+            construction_status=None,
+            amenities=(),
+            age_years=0,
+            rera_number=None,
+            rera_applicability=ReraApplicability.EXEMPTION_CLAIMED,
+            rera_verification_status=ReraVerificationStatus.EXEMPTION_VERIFIED,
+            created_days_ago=10,
+        ),
+    ),
+    (
+        "sub-admin-rejected-rent-flat",
+        "Demo Gachibowli Flat for Rent",
+        SubmissionStatus.REJECTED,
+        None,
+        _ListingFacets(
+            listing_intent=ListingIntent.RENT,
+            locality="Gachibowli",
+            pincode="500032",
+            image="/illustrations/properties/apartment-1.svg",
+            price_paise=32_000_00,
+            security_deposit_paise=96_000_00,
+            minimum_lease_months=11,
+            available_from=date(2026, 12, 15),
+            bhk=2,
+            area_sqft=1100,
+            amenities=("Lift", "Parking"),
+            age_years=6,
+            rera_number="P02400000307",
+            rera_verification_status=ReraVerificationStatus.MISMATCH,
+            review_note="Synthetic rejection: the RERA number belongs to a different project.",
+            created_days_ago=20,
+        ),
+    ),
+    (
+        "sub-admin-rejected-retail",
+        "Demo Dwaraka Nagar Retail Space",
+        SubmissionStatus.REJECTED,
+        None,
+        _ListingFacets(
+            type="Retail",
+            category=PropertyCategory.COMMERCIAL,
+            property_subtype=PropertySubtype.UNLOCKED_SPACE,
+            city="Visakhapatnam",
+            locality="Dwaraka Nagar",
+            state="Andhra Pradesh",
+            pincode="530016",
+            image="/illustrations/properties/commercial-2.svg",
+            price_paise=1_80_00_00_000,
+            bhk=0,
+            area_sqft=1500,
+            furnishing=Furnishing.UNFURNISHED,
+            construction_status=ConstructionStatus.UNDER_CONSTRUCTION,
+            amenities=("Parking", "Power Backup"),
+            age_years=0,
+            rera_number=None,
+            rera_applicability=ReraApplicability.UNSURE,
+            review_note="Synthetic rejection: add the frontage width and floor plan.",
+            created_days_ago=25,
+        ),
+    ),
+    (
+        "sub-admin-withdrawn-villa-rent",
+        "Demo Rushikonda Sea View Villa for Rent",
+        SubmissionStatus.WITHDRAWN,
+        None,
+        _ListingFacets(
+            listing_intent=ListingIntent.RENT,
+            type="Villa",
+            category=PropertyCategory.VILLAS,
+            property_subtype=PropertySubtype.VILLA,
+            city="Visakhapatnam",
+            locality="Rushikonda",
+            state="Andhra Pradesh",
+            pincode="530045",
+            image="/illustrations/properties/villa-3.svg",
+            price_paise=85_000_00,
+            security_deposit_paise=2_55_000_00,
+            minimum_lease_months=11,
+            available_from=date(2026, 12, 20),
+            bhk=5,
+            area_sqft=4200,
+            furnishing=Furnishing.FURNISHED,
+            amenities=("Parking", "Swimming Pool", "Garden", "Security"),
+            age_years=4,
+            rera_number="P03200000412",
+            created_days_ago=30,
+        ),
+    ),
+    (
+        "sub-admin-withdrawn-agriland",
+        "Demo Hasanparthy Agricultural Land",
+        SubmissionStatus.WITHDRAWN,
+        None,
+        _ListingFacets(
+            type="Agri land",
+            category=PropertyCategory.PLOTS,
+            property_subtype=PropertySubtype.AGRILAND,
+            city="Warangal",
+            locality="Hasanparthy",
+            pincode="506371",
+            image="/illustrations/properties/plot-3.svg",
+            price_paise=30_00_00_000,
+            bhk=0,
+            area_sqft=87_120,
+            furnishing=None,
+            construction_status=None,
+            amenities=(),
+            age_years=0,
+            rera_number=None,
+            rera_applicability=ReraApplicability.EXEMPTION_CLAIMED,
+            created_days_ago=45,
+        ),
+    ),
+)
+# Media variety for the listings above: every row gets two photos.
+_SUB_ADMIN_PANORAMA_KEYS = frozenset(
+    {"sub-admin-approved-villa", "sub-admin-pending-gated", "sub-admin-withdrawn-villa-rent"}
+)
+_SUB_ADMIN_DOCUMENT_KEYS = frozenset(
+    {
+        "sub-admin-approved-villa",
+        "sub-admin-approved-plot",
+        "sub-admin-pending-office-rent",
+        "sub-admin-pending-farmland",
+    }
+)
+
+
+def _property_submission_rows(
+    users: dict[str, User], properties: dict[str, Property], now: datetime
+) -> tuple[PropertySubmission, ...]:
     rows = (
         _submission(
             "agent-pending",
@@ -480,7 +809,31 @@ async def _seed_property_submissions(
             now=now,
         ),
     )
-    for row in rows:
+    sub_admin_rows = tuple(
+        _submission(
+            key,
+            submitter_uuid=users["sub_admin"].id,
+            title=title,
+            status=status,
+            property_id=properties[origin].id if origin else None,
+            reviewer_uuid=(
+                users["admin"].id
+                if status in {SubmissionStatus.APPROVED, SubmissionStatus.REJECTED}
+                else None
+            ),
+            rera_reviewer_uuid=users["admin"].id,
+            facets=facets,
+            now=now,
+        )
+        for key, title, status, origin, facets in _SUB_ADMIN_LISTINGS
+    )
+    return rows + sub_admin_rows
+
+
+async def _seed_property_submissions(
+    db: AsyncSession, users: dict[str, User], properties: dict[str, Property], now: datetime
+) -> None:
+    for row in _property_submission_rows(users, properties, now):
         await _add_once(db, row)
 
 
@@ -1941,36 +2294,76 @@ async def _seed_listing_media(
                     )
                 )
 
-        # Pending submissions: private media the Admin reviews and approves.
-        for key, owner in (
-            ("agent-pending", users["agent_real_estate"].id),
-            ("sub-admin-pending", users["sub_admin"].id),
-        ):
+        # Submissions: private media the Admin reviews and approves. The demo
+        # Sub Admin's listings vary 360° images and documents so the media
+        # filters on the Property listings page have rows on both sides.
+        submission_media = [
+            ("agent-pending", users["agent_real_estate"].id, True, False),
+            ("sub-admin-pending", users["sub_admin"].id, True, False),
+        ] + [
+            (
+                key,
+                users["sub_admin"].id,
+                key in _SUB_ADMIN_PANORAMA_KEYS,
+                key in _SUB_ADMIN_DOCUMENT_KEYS,
+            )
+            for key, *_ in _SUB_ADMIN_LISTINGS
+        ]
+        for key, owner, with_panorama, with_document in submission_media:
             submission_id = demo_uuid(f"property-submission:{key}")
             if await db.get(PropertySubmission, submission_id) is None:
                 continue
             submission_items = [
-                ("photo-1", PropertyMediaKind.IMAGE, demo_media.property_photo(label=key)),
+                (
+                    "photo-1",
+                    PropertyMediaKind.IMAGE,
+                    "image/jpeg",
+                    demo_media.property_photo(label=key),
+                ),
                 (
                     "photo-2",
                     PropertyMediaKind.IMAGE,
+                    "image/jpeg",
                     demo_media.property_photo(label=key, variant=1),
                 ),
-                ("panorama", PropertyMediaKind.PANORAMA, demo_media.panorama(label=key)),
             ]
-            for position, (name, kind, content) in enumerate(submission_items):
+            if with_panorama:
+                submission_items.append(
+                    (
+                        "panorama",
+                        PropertyMediaKind.PANORAMA,
+                        "image/jpeg",
+                        demo_media.panorama(label=key),
+                    )
+                )
+            if with_document:
+                submission_items.append(
+                    (
+                        "document",
+                        PropertyMediaKind.DOCUMENT,
+                        "application/pdf",
+                        demo_media.document_pdf(
+                            title="Ownership document",
+                            lines=(key, "Sale deed summary (synthetic)"),
+                        ),
+                    )
+                )
+            for position, (name, kind, content_type, content) in enumerate(submission_items):
                 media_id = demo_uuid(f"property-submission-media:{key}:{name}")
                 if await db.get(PropertySubmissionMedia, media_id) is not None:
                     continue
-                object_key = f"private/property-submissions/canonical/{owner}/{media_id}/asset.jpg"
-                await _put_once(object_key, content, "image/jpeg")
+                extension = ".pdf" if content_type == "application/pdf" else ".jpg"
+                object_key = (
+                    f"private/property-submissions/canonical/{owner}/{media_id}/asset{extension}"
+                )
+                await _put_once(object_key, content, content_type)
                 db.add(
                     PropertySubmissionMedia(
                         id=media_id,
                         submission_uuid=submission_id,
                         business_line="real_estate",
                         kind=kind,
-                        content_type="image/jpeg",
+                        content_type=content_type,
                         object_key=object_key,
                         size_bytes=len(content),
                         position=position,
