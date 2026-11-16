@@ -2,6 +2,50 @@
 
 Status: **Derived living implementation ledger**
 
+**In review — admin client-roster CSV export** (2026-11-16; upstream PR
+_pending publish_; origin mirror DEFERRED pending fork sync — origin/main is 134
+commits behind upstream/main and was not synced, so only the canonical
+`brollysolutions/client1` PR is opened for now), branch
+`feat/admin-client-export` from `upstream/main` `8493823c`. Adds
+`GET /api/v1/admin/reports/clients/export`, a platform-admin-only streaming CSV
+of every CLIENT account across both business lines. Columns are exactly
+`id, name, phone, created_at, updated_at` (name = `first_name last_name`, phone
+= `mobile`, timestamps in IST ISO-8601). `password_hash` is never selected or
+emitted — the originally-requested "password" column is deliberately omitted
+(one-way hash only; export forbidden by SECURITY.md). A CLIENT is an
+`auth_users` row owning at least one `client_profiles` row; multi-line clients
+appear once (IN-subquery, no fan-out); soft-deleted (tombstoned) accounts are
+excluded. Query/audit logic in `services/reporting.py::export_client_rows`; the
+route stays thin and async and reuses the existing `_csv_cell`
+formula-injection defense and `_csv_chunks` UTF-8-BOM streaming. CSV only (no
+xlsx) to keep the bulk-PII surface minimal.
+- Authorization: `deps.require_platform_admin` (server-derived `role='admin'
+  AND platform_scope='true'`), identical to the sibling report exports. Client,
+  agent, telecaller, employee, sub_admin, or line-scoped admin → 403;
+  unauthenticated → 401. The both-lines span is safe because the
+  `auth_users_rls`/`client_profiles_rls` admin-bypass predicate requires the
+  same scope, so even behind the gate the query cannot leak the other line.
+- Security-review decision: unlike the aggregate report exports (unaudited
+  counts), this row-level PII download records an `audit_log` entry
+  (`CLIENT_EXPORT_DOWNLOADED`, actor pinned to the admin, detail carries only
+  counts/format/truncated — no PII). Additive migration `a7c9e1b3d5f6`
+  (down_revision `b2d4f6a8c0e1`, upstream's current head) adds the enum label
+  (`ALTER TYPE audit_action ADD VALUE`, idempotent, no-op downgrade, ADR-0004
+  direct-to-5432 + rolling-restart ordering noted).
+- Fresh verification on the rebased (upstream-based) tree: `uv run ruff check .`
+  and `uv run ruff format --check .` pass (564 files); `uv run alembic heads`
+  reports exactly one head, `a7c9e1b3d5f6`. OpenAPI + typed-client regenerated
+  cleanly — the new `/clients/export` path is the only contract diff vs
+  `upstream/main`. **UNVERIFIED:** all DB-backed tests (new client-export
+  API/service cases plus the existing reporting suite) — host pytest cannot
+  reach Postgres (`getaddrinfo failed` on the `postgres`/`pgbouncer`
+  hostnames), and the Docker API container mounts a different checkout. Command
+  that would run them:
+  `docker exec client1-api-1 sh -lc 'cd /app && uv run pytest -q app/tests/test_reporting_api.py app/tests/test_reporting_service.py'`
+  (requires this branch mounted and migration `a7c9e1b3d5f6` applied first).
+- No web/UI, schema-table, or dependency change. Next: surface the export in the
+  admin reporting UI; sync the fork and open the deferred origin mirror PR.
+
 **In review — Sub Admin analytics filters (API slice)** (2026-11-16; PR
 [#360](https://github.com/brollysolutions/client1/pull/360), mirror
 vamshisaideep9/client1#64),

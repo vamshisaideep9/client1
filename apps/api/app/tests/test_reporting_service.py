@@ -600,3 +600,156 @@ async def test_deal_report_filters_by_status_city_and_category() -> None:
     assert await _count("deals", d, "real_estate", property_category="villas") == 0
     assert await _count("deals", d, "real_estate", deal_status="new") == 1
     assert await _count("deals", d, "real_estate", deal_status="closed") == 0
+
+
+# ---------------------------------------------------------------------------
+# Client-roster export (bulk client PII)
+# ---------------------------------------------------------------------------
+
+
+async def _seed_client(
+    *,
+    first_name: str = "Client",
+    last_name: str = "Person",
+    business_line: str = "loans",
+    status=None,
+    extra_lines: list[str] | None = None,
+) -> tuple[str, str]:
+    """Create an auth_users row owning one (or more) client_profiles.
+
+    Returns (auth_user_uuid, mobile). `extra_lines` attaches additional client
+    profiles to the SAME user, to exercise the no-duplicate-rows guarantee.
+    """
+    from app.models.profile import ClientProfile
+    from app.models.user import UserStatus
+
+    mobile = unique_mobile()
+    async with _session_mod.AsyncSessionLocal() as db:
+        user = User(
+            first_name=first_name,
+            last_name=last_name,
+            mobile=mobile,
+            email=f"cl_{uuid.uuid4().hex[:12]}@example.com",
+            password_hash="x",
+            status=status or UserStatus.ACTIVE,
+        )
+        db.add(user)
+        await db.flush()
+        profiles = [
+            ClientProfile(
+                auth_user_uuid=user.id,
+                business_line=business_line,
+                customer_code=f"CL{uuid.uuid4().hex[:8]}",
+                status=ProfileStatus.ACTIVE,
+            )
+        ]
+        for line in extra_lines or []:
+            profiles.append(
+                ClientProfile(
+                    auth_user_uuid=user.id,
+                    business_line=line,
+                    customer_code=f"CL{uuid.uuid4().hex[:8]}",
+                    status=ProfileStatus.ACTIVE,
+                )
+            )
+        db.add_all(profiles)
+        await db.commit()
+        return str(user.id), mobile
+
+
+@pytest.mark.asyncio
+async def test_export_client_rows_shape_and_never_exposes_password() -> None:
+    uid, mobile = await _seed_client(first_name="Asha", last_name="Rao")
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        rows, header, truncated = await reporting.export_client_rows(
+            db, actor_uuid=None, actor_role="admin"
+        )
+
+    assert header == ["id", "name", "phone", "created_at", "updated_at"]
+    # The hard exclusion: no credential column may ever appear.
+    assert "password" not in header
+    assert "password_hash" not in header
+    for row in rows:
+        assert set(row.keys()) == set(header)
+        assert "password" not in row
+        assert "password_hash" not in row
+
+    mine = next(r for r in rows if r["phone"] == mobile)
+    assert mine["id"] == uid
+    assert mine["name"] == "Asha Rao"
+    # date+time, IST offset, both columns populated
+    assert mine["created_at"].endswith("+05:30")
+    assert "T" in mine["created_at"]
+    assert mine["updated_at"].endswith("+05:30")
+    assert truncated is False
+
+
+@pytest.mark.asyncio
+async def test_export_client_rows_spans_both_business_lines() -> None:
+    _, loans_mobile = await _seed_client(business_line="loans")
+    _, re_mobile = await _seed_client(business_line="real_estate")
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        rows, _header, _truncated = await reporting.export_client_rows(
+            db, actor_uuid=None, actor_role="admin"
+        )
+
+    phones = {r["phone"] for r in rows}
+    assert loans_mobile in phones
+    assert re_mobile in phones
+
+
+@pytest.mark.asyncio
+async def test_export_client_rows_excludes_soft_deleted() -> None:
+    from app.models.user import UserStatus
+
+    _, deleted_mobile = await _seed_client(status=UserStatus.SOFT_DELETED)
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        rows, _header, _truncated = await reporting.export_client_rows(
+            db, actor_uuid=None, actor_role="admin"
+        )
+
+    assert deleted_mobile not in {r["phone"] for r in rows}
+
+
+@pytest.mark.asyncio
+async def test_export_client_rows_dedupes_multi_line_client() -> None:
+    """A client holding a profile in BOTH lines is one account, one row."""
+    uid, mobile = await _seed_client(business_line="loans", extra_lines=["real_estate"])
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        rows, _header, _truncated = await reporting.export_client_rows(
+            db, actor_uuid=None, actor_role="admin"
+        )
+
+    matching = [r for r in rows if r["id"] == uid]
+    assert len(matching) == 1
+    assert matching[0]["phone"] == mobile
+
+
+@pytest.mark.asyncio
+async def test_export_client_rows_records_audit_entry() -> None:
+    """The security-review decision: a bulk client-PII download is audited."""
+    from sqlalchemy import func, select
+
+    from app.models.audit_log import AuditAction, AuditLog
+
+    await _seed_client()
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        before = await db.scalar(
+            select(func.count())
+            .select_from(AuditLog)
+            .where(AuditLog.action == AuditAction.CLIENT_EXPORT_DOWNLOADED)
+        )
+        await reporting.export_client_rows(db, actor_uuid=None, actor_role="admin")
+        await db.commit()
+        after = await db.scalar(
+            select(func.count())
+            .select_from(AuditLog)
+            .where(AuditLog.action == AuditAction.CLIENT_EXPORT_DOWNLOADED)
+        )
+
+    assert after == (before or 0) + 1
