@@ -7,14 +7,15 @@ role-gated router in this codebase).
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.cache.redis_keys import RedisCache
 from app.core import field_crypto
-from app.core.deps import CurrentUser, require_agent
+from app.core.deps import CurrentUser, get_cache, require_agent
 from app.db.session import get_db
 from app.models.agent_payout_details import AgentPayoutDetails
 from app.models.field_visibility import FieldTargetRole, FieldVisibilityMode
@@ -22,14 +23,27 @@ from app.models.lead import Lead
 from app.schemas.agent import (
     AgentHomeResponse,
     AgentLeadCreate,
+    AgentLeadHistoryRead,
     AgentLeadRead,
     AgentLeadUpdate,
     AgentProfileStatusRead,
 )
-from app.schemas.agent_payout_details import AgentPayoutDetailsRead, AgentPayoutDetailsUpdate
-from app.schemas.commissions import AgentEarningsResponse
+from app.schemas.agent_payout_details import (
+    AgentChequeConfirm,
+    AgentChequePresignRequest,
+    AgentChequePresignResponse,
+    AgentPayoutDetailsRead,
+    AgentPayoutDetailsUpdate,
+)
+from app.schemas.commissions import (
+    AgentEarningsResponse,
+    AgentTransactionDetail,
+    CommissionStatusLiteral,
+    DealType,
+)
+from app.services import agent_dashboard
+from app.services import agent_payout_cheque as payout_cheque
 from app.services import agent_payout_details as payout_details
-from app.services import commissions
 from app.services.agent import (
     AgentProfileNotFound,
     InvalidLeadInterest,
@@ -243,13 +257,95 @@ async def resubmit_lead(
 
 @router.get("/earnings", response_model=AgentEarningsResponse)
 async def earnings(
+    response: Response,
+    status_filter: CommissionStatusLiteral | None = Query(default=None, alias="status"),
+    deal_type: DealType | None = None,
+    product_id: UUID | None = None,
+    bank_id: UUID | None = None,
+    property_category: str | None = Query(default=None, max_length=60),
+    amount_min_paise: int | None = Query(default=None, ge=0, le=10_000_000_000),
+    amount_max_paise: int | None = Query(default=None, ge=0, le=10_000_000_000),
+    date_from: date | None = None,
+    date_to: date | None = None,
+    q: str | None = Query(default=None, max_length=100),
     current_user: CurrentUser = Depends(require_agent),
     db: AsyncSession = Depends(get_db),
 ) -> AgentEarningsResponse:
-    """Read-only commission ledger + totals. No agent_profile_uuid filter
-    needed here — commissions_select RLS already scopes to the caller's own
-    agent_auth_user_uuid + business_line."""
-    return await commissions.list_for_agent(db)
+    """The Agent's commission history on their line with client and deal
+    details, filtered; totals always cover every commission. Read through the
+    confined ``agent_commission_ledger()`` function (caller's account, Agent
+    profile and line only). Dates are IST calendar days on the entry date;
+    amounts filter the commission amount."""
+    response.headers["Cache-Control"] = "private, no-store"
+    _agent_profile_uuid(current_user)
+    if (
+        amount_min_paise is not None
+        and amount_max_paise is not None
+        and amount_min_paise > amount_max_paise
+    ):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Minimum amount is above the maximum."
+        )
+    if date_from is not None and date_to is not None and date_from > date_to:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "From date is after To date.")
+    modes = await effective_modes(db, FieldTargetRole.AGENT)
+    return await agent_dashboard.list_earnings(
+        db,
+        filters=agent_dashboard.EarningsFilters(
+            status=status_filter,
+            deal_type=deal_type,
+            product_id=product_id,
+            bank_id=bank_id,
+            property_category=property_category,
+            amount_min_paise=amount_min_paise,
+            amount_max_paise=amount_max_paise,
+            date_from=date_from,
+            date_to=date_to,
+            q=q,
+        ),
+        modes=modes,
+    )
+
+
+@router.get("/transactions/{transaction_id}", response_model=AgentTransactionDetail)
+async def get_transaction_detail(
+    transaction_id: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+) -> AgentTransactionDetail:
+    """One of the Agent's own ledger rows with its payout trail and the
+    commission it paid. Another account's transaction reads as not found."""
+    response.headers["Cache-Control"] = "private, no-store"
+    _agent_profile_uuid(current_user)
+    modes = await effective_modes(db, FieldTargetRole.AGENT)
+    detail = await agent_dashboard.transaction_detail(
+        db, transaction_id=transaction_id, owner_uuid=current_user.id, modes=modes
+    )
+    if detail is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Transaction not found.")
+    return detail
+
+
+@router.get("/leads/{lead_id}/history", response_model=AgentLeadHistoryRead)
+async def get_lead_history(
+    lead_id: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+) -> AgentLeadHistoryRead:
+    """Applications, deals, enquiries, visits, calls and the status timeline
+    of a lead this Agent introduced. Any other lead reads as not found."""
+    response.headers["Cache-Control"] = "private, no-store"
+    agent_profile_uuid = _agent_profile_uuid(current_user)
+    lead = await get_lead_for_agent(db, lead_id, agent_profile_uuid)
+    if lead is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found.")
+    modes = await effective_modes(db, FieldTargetRole.AGENT)
+    history = await agent_dashboard.lead_history(db, lead, modes)
+    if history is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found.")
+    return history
 
 
 def _payout_details_read(row: AgentPayoutDetails | None) -> AgentPayoutDetailsRead:
@@ -262,6 +358,8 @@ def _payout_details_read(row: AgentPayoutDetails | None) -> AgentPayoutDetailsRe
         bank_hint=row.bank_hint,
         updated_at=row.updated_at,
         available=available,
+        cheque_uploaded_at=row.cheque_uploaded_at,
+        cheque_content_type=row.cheque_content_type,
     )
 
 
@@ -309,9 +407,89 @@ async def delete_payout_details(
     current_user: CurrentUser = Depends(require_agent),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Remove every saved payout destination."""
+    """Remove every saved payout destination (and any cancelled cheque)."""
     await payout_details.delete_own(
         db,
         agent_profile_uuid=_agent_profile_uuid(current_user),
         auth_user_uuid=current_user.id,
     )
+
+
+_CHEQUE_ERROR_STATUS = {
+    payout_cheque.PayoutDetailsMissing: status.HTTP_409_CONFLICT,
+    payout_cheque.UploadRateExceeded: status.HTTP_429_TOO_MANY_REQUESTS,
+    payout_cheque.ObjectKeyMismatch: status.HTTP_400_BAD_REQUEST,
+    payout_cheque.UploadMissing: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    payout_cheque.ContentTypeMismatch: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    payout_cheque.StorageUnavailable: status.HTTP_502_BAD_GATEWAY,
+    payout_cheque.ChequeNotFound: status.HTTP_404_NOT_FOUND,
+}
+
+
+def _cheque_error(exc: payout_cheque.ChequeError) -> HTTPException:
+    code = _CHEQUE_ERROR_STATUS.get(type(exc), status.HTTP_400_BAD_REQUEST)
+    return HTTPException(code, str(exc) or "The cancelled cheque could not be saved.")
+
+
+@router.post("/payout-details/cheque/presign", response_model=AgentChequePresignResponse)
+async def presign_payout_cheque(
+    payload: AgentChequePresignRequest,
+    response: Response,
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+    cache: RedisCache = Depends(get_cache),
+) -> AgentChequePresignResponse:
+    """Signed upload for an optional cancelled cheque (JPEG, PNG or PDF, up to
+    5 MB). Requires saved payout details."""
+    response.headers["Cache-Control"] = "private, no-store"
+    try:
+        object_key, upload_url, fields, max_bytes = await payout_cheque.presign_upload(
+            db,
+            cache,
+            agent_profile_uuid=_agent_profile_uuid(current_user),
+            auth_user_uuid=current_user.id,
+            content_type=payload.content_type,
+        )
+    except payout_cheque.ChequeError as exc:
+        raise _cheque_error(exc) from exc
+    return AgentChequePresignResponse(
+        object_key=object_key, upload_url=upload_url, fields=fields, max_bytes=max_bytes
+    )
+
+
+@router.put("/payout-details/cheque", response_model=AgentPayoutDetailsRead)
+async def confirm_payout_cheque(
+    payload: AgentChequeConfirm,
+    response: Response,
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+) -> AgentPayoutDetailsRead:
+    """Attach (or replace) the cancelled cheque after the browser uploaded it."""
+    response.headers["Cache-Control"] = "private, no-store"
+    try:
+        row = await payout_cheque.confirm_upload(
+            db,
+            agent_profile_uuid=_agent_profile_uuid(current_user),
+            auth_user_uuid=current_user.id,
+            object_key=payload.object_key,
+            content_type=payload.content_type,
+        )
+    except payout_cheque.ChequeError as exc:
+        raise _cheque_error(exc) from exc
+    return _payout_details_read(row)
+
+
+@router.delete("/payout-details/cheque", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_payout_cheque(
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Remove the cancelled cheque; the saved bank account and UPI ID stay."""
+    try:
+        await payout_cheque.delete_own(
+            db,
+            agent_profile_uuid=_agent_profile_uuid(current_user),
+            auth_user_uuid=current_user.id,
+        )
+    except payout_cheque.ChequeError as exc:
+        raise _cheque_error(exc) from exc

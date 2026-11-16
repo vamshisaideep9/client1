@@ -122,6 +122,10 @@ class Settings(BaseSettings):
     # loan-application KYC upload path (services/loan_documents.py).
     LOAN_DOCUMENT_MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     LOAN_DOCUMENT_MAX_PER_APPLICATION: int = 12
+    # Optional cancelled cheque an Agent attaches to their payout details
+    # (CS-022): JPEG, PNG or PDF, signed into the presigned-POST policy and
+    # re-checked at confirmation (services/agent_payout_cheque.py).
+    AGENT_PAYOUT_CHEQUE_MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     # Employee-collected task documents are equally sensitive and must use a
     # storage-signed cap, not an uncapped PUT. The hourly presign allowance
     # leaves room for three retries beyond a full 12-document collection.

@@ -3529,6 +3529,79 @@
         "title": "AgentBankAccount",
         "type": "object"
       },
+      "AgentChequeConfirm": {
+        "properties": {
+          "content_type": {
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "application/pdf"
+            ],
+            "title": "Content Type",
+            "type": "string"
+          },
+          "object_key": {
+            "maxLength": 300,
+            "title": "Object Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object_key",
+          "content_type"
+        ],
+        "title": "AgentChequeConfirm",
+        "type": "object"
+      },
+      "AgentChequePresignRequest": {
+        "properties": {
+          "content_type": {
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "application/pdf"
+            ],
+            "title": "Content Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content_type"
+        ],
+        "title": "AgentChequePresignRequest",
+        "type": "object"
+      },
+      "AgentChequePresignResponse": {
+        "properties": {
+          "fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Fields",
+            "type": "object"
+          },
+          "max_bytes": {
+            "title": "Max Bytes",
+            "type": "integer"
+          },
+          "object_key": {
+            "title": "Object Key",
+            "type": "string"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object_key",
+          "upload_url",
+          "fields",
+          "max_bytes"
+        ],
+        "title": "AgentChequePresignResponse",
+        "type": "object"
+      },
       "AgentContactRead": {
         "description": "Name + agent_code only -- never phone/email. Contact routes through\nthe support-ticket flow (POST /api/v1/support-tickets/tickets).",
         "properties": {
@@ -3550,6 +3623,13 @@
       },
       "AgentEarningsResponse": {
         "properties": {
+          "hidden_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hidden Fields",
+            "type": "array"
+          },
           "rows": {
             "items": {
               "$ref": "#/components/schemas/AgentEarningsRow"
@@ -3563,25 +3643,84 @@
         },
         "required": [
           "rows",
-          "totals"
+          "totals",
+          "hidden_fields"
         ],
         "title": "AgentEarningsResponse",
         "type": "object"
       },
       "AgentEarningsRow": {
+        "description": "One commission in the Agent's history (CS-022).\n\n``client_name`` follows the Admin's Agent \"Lead name\" rule and\n``deal_amount`` the Agent \"Loan and deal amounts\" rule; a hidden value is\nnull and listed in the response's ``hidden_fields``.",
         "properties": {
           "agreed_amount_paise": {
             "title": "Agreed Amount Paise",
             "type": "integer"
           },
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "bank_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Uuid"
+          },
           "business_line": {
             "title": "Business Line",
             "type": "string"
+          },
+          "client_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Name"
           },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "deal_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deal Amount"
+          },
+          "deal_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deal Status"
           },
           "deal_type": {
             "enum": [
@@ -3601,6 +3740,41 @@
             "title": "Id",
             "type": "string"
           },
+          "lead_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Status"
+          },
+          "lead_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Uuid"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
           "payout_txn_uuid": {
             "anyOf": [
               {
@@ -3613,7 +3787,69 @@
             ],
             "title": "Payout Txn Uuid"
           },
+          "product_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Label"
+          },
+          "product_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Uuid"
+          },
+          "property_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Category"
+          },
+          "property_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Title"
+          },
+          "property_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Uuid"
+          },
           "status": {
+            "enum": [
+              "pending",
+              "paid",
+              "cancelled"
+            ],
             "title": "Status",
             "type": "string"
           }
@@ -3626,13 +3862,55 @@
           "agreed_amount_paise",
           "status",
           "payout_txn_uuid",
-          "created_at"
+          "created_at",
+          "lead_uuid",
+          "lead_status",
+          "client_name",
+          "product_uuid",
+          "product_label",
+          "bank_uuid",
+          "bank_name",
+          "property_uuid",
+          "property_title",
+          "property_category",
+          "deal_status",
+          "deal_amount",
+          "paid_at"
         ],
         "title": "AgentEarningsRow",
         "type": "object"
       },
       "AgentEarningsTotals": {
+        "description": "Totals over every commission the Agent has on this line (filters do not\nchange them). ``last_month_*`` is the previous calendar month in IST.",
         "properties": {
+          "last_month_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Month End"
+          },
+          "last_month_paid_amount_paise": {
+            "title": "Last Month Paid Amount Paise",
+            "type": "integer"
+          },
+          "last_month_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Month Start"
+          },
           "paid_amount_paise": {
             "title": "Paid Amount Paise",
             "type": "integer"
@@ -3649,9 +3927,507 @@
         "required": [
           "pending_amount_paise",
           "paid_amount_paise",
-          "total_amount_paise"
+          "total_amount_paise",
+          "last_month_paid_amount_paise",
+          "last_month_start",
+          "last_month_end"
         ],
         "title": "AgentEarningsTotals",
+        "type": "object"
+      },
+      "AgentHistoryApplication": {
+        "properties": {
+          "amount_requested": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Requested"
+          },
+          "amount_sanctioned": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Sanctioned"
+          },
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "disbursed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disbursed At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          },
+          "product_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Label"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "product_label",
+          "bank_name",
+          "status",
+          "amount_requested",
+          "amount_sanctioned",
+          "opened_at",
+          "closed_at",
+          "disbursed_at"
+        ],
+        "title": "AgentHistoryApplication",
+        "type": "object"
+      },
+      "AgentHistoryCall": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "disposition": {
+            "$ref": "#/components/schemas/CallDisposition"
+          },
+          "follow_up_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Up At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "interest_level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InterestLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "staff_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Staff Name"
+          }
+        },
+        "required": [
+          "id",
+          "disposition",
+          "interest_level",
+          "notes",
+          "follow_up_at",
+          "created_at",
+          "staff_name"
+        ],
+        "title": "AgentHistoryCall",
+        "type": "object"
+      },
+      "AgentHistoryDeal": {
+        "properties": {
+          "booking_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booking Amount"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          },
+          "price_quoted": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Quoted"
+          },
+          "property_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Category"
+          },
+          "property_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Title"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "property_title",
+          "property_category",
+          "status",
+          "price_quoted",
+          "booking_amount",
+          "opened_at",
+          "closed_at"
+        ],
+        "title": "AgentHistoryDeal",
+        "type": "object"
+      },
+      "AgentHistoryEnquiry": {
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "locality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locality"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "locality",
+          "city",
+          "status",
+          "created_at"
+        ],
+        "title": "AgentHistoryEnquiry",
+        "type": "object"
+      },
+      "AgentHistoryEvent": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "event": {
+            "enum": [
+              "introduced",
+              "lead_assigned",
+              "agent_lead_expired",
+              "agent_lead_resubmitted",
+              "team_lead_status_updated",
+              "team_lead_reassigned",
+              "loan_application_updated",
+              "property_deal_updated"
+            ],
+            "title": "Event",
+            "type": "string"
+          },
+          "from_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Status"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "to_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Status"
+          }
+        },
+        "required": [
+          "event",
+          "at",
+          "request_id",
+          "from_status",
+          "to_status"
+        ],
+        "title": "AgentHistoryEvent",
+        "type": "object"
+      },
+      "AgentHistoryServiceEnquiry": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "product_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Category"
+          },
+          "product_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Label"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "product_label",
+          "product_category",
+          "status",
+          "submitted_at"
+        ],
+        "title": "AgentHistoryServiceEnquiry",
+        "type": "object"
+      },
+      "AgentHistorySiteVisit": {
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "locality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locality"
+          },
+          "preferred_date": {
+            "format": "date",
+            "title": "Preferred Date",
+            "type": "string"
+          },
+          "preferred_time_slot": {
+            "title": "Preferred Time Slot",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "locality",
+          "city",
+          "preferred_date",
+          "preferred_time_slot",
+          "status",
+          "created_at"
+        ],
+        "title": "AgentHistorySiteVisit",
         "type": "object"
       },
       "AgentHomeResponse": {
@@ -3844,6 +4620,104 @@
         "title": "AgentLeadCreate",
         "type": "object"
       },
+      "AgentLeadHistoryRead": {
+        "properties": {
+          "applications": {
+            "items": {
+              "$ref": "#/components/schemas/AgentHistoryApplication"
+            },
+            "title": "Applications",
+            "type": "array"
+          },
+          "calls": {
+            "items": {
+              "$ref": "#/components/schemas/AgentHistoryCall"
+            },
+            "title": "Calls",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deals": {
+            "items": {
+              "$ref": "#/components/schemas/AgentHistoryDeal"
+            },
+            "title": "Deals",
+            "type": "array"
+          },
+          "enquiries": {
+            "items": {
+              "$ref": "#/components/schemas/AgentHistoryEnquiry"
+            },
+            "title": "Enquiries",
+            "type": "array"
+          },
+          "hidden_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hidden Fields",
+            "type": "array"
+          },
+          "lead_id": {
+            "format": "uuid",
+            "title": "Lead Id",
+            "type": "string"
+          },
+          "service_enquiries": {
+            "items": {
+              "$ref": "#/components/schemas/AgentHistoryServiceEnquiry"
+            },
+            "title": "Service Enquiries",
+            "type": "array"
+          },
+          "site_visits": {
+            "items": {
+              "$ref": "#/components/schemas/AgentHistorySiteVisit"
+            },
+            "title": "Site Visits",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "assigned",
+              "working",
+              "converted",
+              "closed",
+              "released",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/AgentHistoryEvent"
+            },
+            "title": "Timeline",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lead_id",
+          "status",
+          "created_at",
+          "applications",
+          "service_enquiries",
+          "deals",
+          "enquiries",
+          "site_visits",
+          "calls",
+          "timeline",
+          "hidden_fields"
+        ],
+        "title": "AgentLeadHistoryRead",
+        "type": "object"
+      },
       "AgentLeadRead": {
         "properties": {
           "business_line": {
@@ -4000,6 +4874,39 @@
         "title": "AgentLeadUpdate",
         "type": "object"
       },
+      "AgentPayoutActor": {
+        "description": "A staff member on the payout trail: display name (null when the Admin\nhides payout staff names) and staff role.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "required": [
+          "name",
+          "role"
+        ],
+        "title": "AgentPayoutActor",
+        "type": "object"
+      },
       "AgentPayoutDetailsRead": {
         "description": "What the Agent sees about their own saved destination: masked only.",
         "properties": {
@@ -4017,6 +4924,29 @@
               }
             ],
             "title": "Bank Hint"
+          },
+          "cheque_content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cheque Content Type"
+          },
+          "cheque_uploaded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cheque Uploaded At"
           },
           "saved": {
             "title": "Saved",
@@ -4081,6 +5011,127 @@
           }
         },
         "title": "AgentPayoutDetailsUpdate",
+        "type": "object"
+      },
+      "AgentPayoutTrail": {
+        "properties": {
+          "approval_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "maker_checker",
+                  "standalone"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Mode"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentPayoutActor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "destination_hint": {
+            "title": "Destination Hint",
+            "type": "string"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "method": {
+            "$ref": "#/components/schemas/PayoutDestination"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/PayoutProvider"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentPayoutActor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reversed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reversed At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PayoutStatus"
+          }
+        },
+        "required": [
+          "status",
+          "method",
+          "provider",
+          "destination_hint",
+          "requested_at",
+          "approved_at",
+          "issued_at",
+          "paid_at",
+          "reversed_at",
+          "requested_by",
+          "approved_by",
+          "approval_mode"
+        ],
+        "title": "AgentPayoutTrail",
         "type": "object"
       },
       "AgentProfileStatusRead": {
@@ -4166,6 +5217,206 @@
           "note"
         ],
         "title": "AgentRejectRequest",
+        "type": "object"
+      },
+      "AgentTransactionDetail": {
+        "properties": {
+          "amount_paise": {
+            "title": "Amount Paise",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "hidden_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hidden Fields",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AgentTransactionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "payout": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentPayoutTrail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/TransactionStatus"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransactionType"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "amount_paise",
+          "currency",
+          "description",
+          "created_at",
+          "payout",
+          "items",
+          "hidden_fields"
+        ],
+        "title": "AgentTransactionDetail",
+        "type": "object"
+      },
+      "AgentTransactionItem": {
+        "description": "What a payout paid. Each payout pays exactly one commission today.",
+        "properties": {
+          "amount_paise": {
+            "title": "Amount Paise",
+            "type": "integer"
+          },
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "client_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Name"
+          },
+          "commission_id": {
+            "format": "uuid",
+            "title": "Commission Id",
+            "type": "string"
+          },
+          "deal_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deal Amount"
+          },
+          "deal_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deal Status"
+          },
+          "deal_type": {
+            "enum": [
+              "loan_application",
+              "property_deal"
+            ],
+            "title": "Deal Type",
+            "type": "string"
+          },
+          "deal_uuid": {
+            "format": "uuid",
+            "title": "Deal Uuid",
+            "type": "string"
+          },
+          "entered_at": {
+            "format": "date-time",
+            "title": "Entered At",
+            "type": "string"
+          },
+          "lead_uuid": {
+            "format": "uuid",
+            "title": "Lead Uuid",
+            "type": "string"
+          },
+          "product_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Label"
+          },
+          "property_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Title"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "paid",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "commission_id",
+          "amount_paise",
+          "status",
+          "deal_type",
+          "deal_uuid",
+          "lead_uuid",
+          "client_name",
+          "product_label",
+          "bank_name",
+          "property_title",
+          "deal_status",
+          "deal_amount",
+          "entered_at"
+        ],
+        "title": "AgentTransactionItem",
         "type": "object"
       },
       "AgentsReportResponse": {
@@ -6991,6 +8242,41 @@
           "status"
         ],
         "title": "CampaignMediaUsage",
+        "type": "object"
+      },
+      "CancelledChequeRead": {
+        "description": "Short-lived link to an Agent's cancelled cheque for one payout maker\n(audited read). Images open inline; a PDF downloads.",
+        "properties": {
+          "content_type": {
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "application/pdf"
+            ],
+            "title": "Content Type",
+            "type": "string"
+          },
+          "expires_in_seconds": {
+            "title": "Expires In Seconds",
+            "type": "integer"
+          },
+          "uploaded_at": {
+            "format": "date-time",
+            "title": "Uploaded At",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "content_type",
+          "uploaded_at",
+          "expires_in_seconds"
+        ],
+        "title": "CancelledChequeRead",
         "type": "object"
       },
       "ChangePasswordRequest": {
@@ -16933,6 +18219,18 @@
                 "type": "null"
               }
             ]
+          },
+          "cheque_uploaded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cheque Uploaded At"
           },
           "updated_at": {
             "format": "date-time",
@@ -29800,8 +31098,189 @@
     },
     "/api/v1/agent/earnings": {
       "get": {
-        "description": "Read-only commission ledger + totals. No agent_profile_uuid filter\nneeded here \u2014 commissions_select RLS already scopes to the caller's own\nagent_auth_user_uuid + business_line.",
+        "description": "The Agent's commission history on their line with client and deal\ndetails, filtered; totals always cover every commission. Read through the\nconfined ``agent_commission_ledger()`` function (caller's account, Agent\nprofile and line only). Dates are IST calendar days on the entry date;\namounts filter the commission amount.",
         "operationId": "earnings_api_v1_agent_earnings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "paid",
+                    "cancelled"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "deal_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "loan_application",
+                    "property_deal"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Deal Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "product_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "bank_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Bank Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "property_category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 60,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "amount_min_paise",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 10000000000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Min Paise"
+            }
+          },
+          {
+            "in": "query",
+            "name": "amount_max_paise",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 10000000000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Max Paise"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -29812,6 +31291,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -30057,6 +31546,55 @@
         ]
       }
     },
+    "/api/v1/agent/leads/{lead_id}/history": {
+      "get": {
+        "description": "Applications, deals, enquiries, visits, calls and the status timeline\nof a lead this Agent introduced. Any other lead reads as not found.",
+        "operationId": "get_lead_history_api_v1_agent_leads__lead_id__history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Lead Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentLeadHistoryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Lead History",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
     "/api/v1/agent/leads/{lead_id}/resubmit": {
       "post": {
         "description": "Resubmit this Agent's expired lead for a fresh 30-day window.",
@@ -30108,7 +31646,7 @@
     },
     "/api/v1/agent/payout-details": {
       "delete": {
-        "description": "Remove every saved payout destination.",
+        "description": "Remove every saved payout destination (and any cancelled cheque).",
         "operationId": "delete_payout_details_api_v1_agent_payout_details_delete",
         "responses": {
           "204": {
@@ -30191,6 +31729,167 @@
           }
         ],
         "summary": "Put Payout Details",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/v1/agent/payout-details/cheque": {
+      "delete": {
+        "description": "Remove the cancelled cheque; the saved bank account and UPI ID stay.",
+        "operationId": "delete_payout_cheque_api_v1_agent_payout_details_cheque_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Payout Cheque",
+        "tags": [
+          "agent"
+        ]
+      },
+      "put": {
+        "description": "Attach (or replace) the cancelled cheque after the browser uploaded it.",
+        "operationId": "confirm_payout_cheque_api_v1_agent_payout_details_cheque_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentChequeConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPayoutDetailsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Confirm Payout Cheque",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/v1/agent/payout-details/cheque/presign": {
+      "post": {
+        "description": "Signed upload for an optional cancelled cheque (JPEG, PNG or PDF, up to\n5 MB). Requires saved payout details.",
+        "operationId": "presign_payout_cheque_api_v1_agent_payout_details_cheque_presign_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentChequePresignRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentChequePresignResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Presign Payout Cheque",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/v1/agent/transactions/{transaction_id}": {
+      "get": {
+        "description": "One of the Agent's own ledger rows with its payout trail and the\ncommission it paid. Another account's transaction reads as not found.",
+        "operationId": "get_transaction_detail_api_v1_agent_transactions__transaction_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Transaction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTransactionDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Transaction Detail",
         "tags": [
           "agent"
         ]
@@ -36843,6 +38542,55 @@
         ]
       }
     },
+    "/api/v1/payouts/agents/{agent_profile_uuid}/cancelled-cheque": {
+      "get": {
+        "description": "Same as the recipient cheque view, keyed by Agent profile (commission payouts).",
+        "operationId": "get_agent_cancelled_cheque_api_v1_payouts_agents__agent_profile_uuid__cancelled_cheque_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_profile_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Profile Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelledChequeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Agent Cancelled Cheque",
+        "tags": [
+          "payouts"
+        ]
+      }
+    },
     "/api/v1/payouts/agents/{agent_profile_uuid}/saved-destination": {
       "get": {
         "description": "Same as the recipient prefill, keyed by Agent profile (commission payouts).",
@@ -36976,6 +38724,55 @@
           }
         ],
         "summary": "List Payout Recipients",
+        "tags": [
+          "payouts"
+        ]
+      }
+    },
+    "/api/v1/payouts/recipients/{user_uuid}/cancelled-cheque": {
+      "get": {
+        "description": "Open the cancelled cheque an Agent attached to their payout details.\n\nSame access as the saved-destination prefill; every successful view is\naudited (agent_payout_details_viewed, purpose cheque_view).",
+        "operationId": "get_recipient_cancelled_cheque_api_v1_payouts_recipients__user_uuid__cancelled_cheque_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelledChequeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Recipient Cancelled Cheque",
         "tags": [
           "payouts"
         ]

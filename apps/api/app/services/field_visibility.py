@@ -64,6 +64,32 @@ CATALOGUE: tuple[FieldDefinition, ...] = (
         lock_reason=_MOBILE_LOCK,
     ),
     FieldDefinition(FieldTargetRole.AGENT, "lead", "requirement", "Requirement details"),
+    # CS-022: an Agent's lead history, commission history and payout detail.
+    # All default visible (user-approved); the Admin may switch any of them off.
+    FieldDefinition(
+        FieldTargetRole.AGENT,
+        "lead_history",
+        "call_notes",
+        "Telecaller call notes on lead history",
+    ),
+    FieldDefinition(
+        FieldTargetRole.AGENT,
+        "lead_history",
+        "staff_names",
+        "Telecaller names on lead history",
+    ),
+    FieldDefinition(
+        FieldTargetRole.AGENT,
+        "deal",
+        "amount",
+        "Loan and property deal amounts",
+    ),
+    FieldDefinition(
+        FieldTargetRole.AGENT,
+        "payout",
+        "staff_names",
+        "Staff who requested and approved a payout (names)",
+    ),
     FieldDefinition(FieldTargetRole.TELECALLER, "lead", "name", "Lead name"),
     FieldDefinition(
         FieldTargetRole.TELECALLER,

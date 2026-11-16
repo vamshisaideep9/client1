@@ -33,6 +33,8 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 _PRESIGN_EXPIRE_SECONDS = 300
+# Public name for responses that tell the browser how long a signed link lasts.
+PRESIGN_EXPIRE_SECONDS = _PRESIGN_EXPIRE_SECONDS
 
 
 def _client(endpoint_url: str) -> BaseClient:

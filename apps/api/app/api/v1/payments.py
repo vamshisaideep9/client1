@@ -28,7 +28,7 @@ from app.core.config import settings
 from app.core.deps import CurrentUser, get_active_user, is_platform_admin
 from app.db.session import get_db
 from app.models.payout import Payout, PayoutProvider, PayoutStatus, PayoutType
-from app.schemas.agent_payout_details import SavedPayoutDestinationRead
+from app.schemas.agent_payout_details import CancelledChequeRead, SavedPayoutDestinationRead
 from app.schemas.payments import (
     ManualChequeIssue,
     PayoutCreate,
@@ -42,7 +42,7 @@ from app.schemas.payments import (
     PayoutReject,
     WebhookAck,
 )
-from app.services import agent_payout_details
+from app.services import agent_payout_cheque, agent_payout_details, storage
 from app.services import payments as payments_service
 from app.services.payout_links import list_link_divergences
 from app.services.payout_recipients import resolve_payout_identities, search_payout_recipients
@@ -434,8 +434,87 @@ async def _reveal_saved_destination(
             detail="This recipient has not saved payout details.",
         )
     return SavedPayoutDestinationRead(
-        upi_id=saved.upi_id, bank=saved.bank, updated_at=saved.updated_at
+        upi_id=saved.upi_id,
+        bank=saved.bank,
+        updated_at=saved.updated_at,
+        cheque_uploaded_at=saved.cheque_uploaded_at,
     )
+
+
+async def _view_cancelled_cheque(
+    current_user: CurrentUser,
+    *,
+    recipient_auth_user_uuid: UUID | None = None,
+    agent_profile_uuid: UUID | None = None,
+) -> CancelledChequeRead:
+    _require_payout_requester(current_user)
+    if recipient_auth_user_uuid == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot create a payout to yourself.",
+        )
+    try:
+        view = await agent_payout_cheque.view_for_payout(
+            actor_auth_user_uuid=current_user.id,
+            actor_role=current_user.role,
+            recipient_auth_user_uuid=recipient_auth_user_uuid,
+            agent_profile_uuid=agent_profile_uuid,
+        )
+    except agent_payout_cheque.SelfChequeViewForbidden as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot create a payout to yourself.",
+        ) from exc
+    if view is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This recipient has not uploaded a cancelled cheque.",
+        )
+    # A sanitized image may open inline; a PDF always downloads (it can carry
+    # active content), the same split as loan-document previews.
+    url = (
+        storage.presign_preview(view.object_key)
+        if view.content_type.startswith("image/")
+        else storage.presign_download(view.object_key)
+    )
+    return CancelledChequeRead(
+        url=url,
+        content_type=view.content_type,
+        uploaded_at=view.uploaded_at,
+        expires_in_seconds=storage.PRESIGN_EXPIRE_SECONDS,
+    )
+
+
+@router.get(
+    "/recipients/{user_uuid}/cancelled-cheque",
+    response_model=CancelledChequeRead,
+)
+async def get_recipient_cancelled_cheque(
+    user_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+) -> CancelledChequeRead:
+    """Open the cancelled cheque an Agent attached to their payout details.
+
+    Same access as the saved-destination prefill; every successful view is
+    audited (agent_payout_details_viewed, purpose cheque_view).
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    return await _view_cancelled_cheque(current_user, recipient_auth_user_uuid=user_uuid)
+
+
+@router.get(
+    "/agents/{agent_profile_uuid}/cancelled-cheque",
+    response_model=CancelledChequeRead,
+)
+async def get_agent_cancelled_cheque(
+    agent_profile_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+) -> CancelledChequeRead:
+    """Same as the recipient cheque view, keyed by Agent profile (commission payouts)."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return await _view_cancelled_cheque(current_user, agent_profile_uuid=agent_profile_uuid)
 
 
 @router.get(

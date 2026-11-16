@@ -81,6 +81,8 @@ PROPERTY_MEDIA_PRESIGN = "property_media_presign:{owner_uuid}"
 # Authenticated Loans media uploads. The authenticated account owns the quota;
 # the private object key separately binds the client profile and application.
 LOAN_MEDIA_PRESIGN = "loan_media_presign:{owner_uuid}"
+# Agent cancelled-cheque uploads (CS-022), per account.
+AGENT_CHEQUE_PRESIGN = "agent_cheque_presign:{owner_uuid}"
 
 # Assigned-Employee private site-visit feedback uploads.
 TASK_FEEDBACK_MEDIA_PRESIGN = "task_feedback_media_presign:{owner_uuid}"
@@ -111,6 +113,7 @@ TTL_MOBILE_CHANGE_RATE = 60 * 60
 TTL_MOBILE_CHANGE_OTP_DAILY = 24 * 60 * 60
 TTL_PROPERTY_MEDIA_PRESIGN = 60 * 60
 TTL_LOAN_MEDIA_PRESIGN = 60 * 60
+TTL_AGENT_CHEQUE_PRESIGN = 60 * 60
 TTL_TASK_FEEDBACK_MEDIA_PRESIGN = 60 * 60
 TTL_TASK_DOCUMENT_PRESIGN = 60 * 60
 TTL_TASK_DOCUMENT_UPLOAD = 10 * 60
@@ -321,6 +324,10 @@ def property_media_presign_key(owner_uuid: str) -> str:
 
 def loan_media_presign_key(owner_uuid: str) -> str:
     return LOAN_MEDIA_PRESIGN.format(owner_uuid=owner_uuid)
+
+
+def agent_cheque_presign_key(owner_uuid: str) -> str:
+    return AGENT_CHEQUE_PRESIGN.format(owner_uuid=owner_uuid)
 
 
 def task_feedback_media_presign_key(owner_uuid: str) -> str:

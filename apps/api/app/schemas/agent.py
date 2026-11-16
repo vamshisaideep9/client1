@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, StringConstraints, model_validator
+
+from app.models.lead_activity import CallDisposition, InterestLevel
 
 LeadStatusLiteral = Literal[
     "new", "assigned", "working", "converted", "closed", "released", "expired"
@@ -104,3 +107,111 @@ class AgentLeadRead(BaseModel):
     expired_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Lead history (CS-022): what happened to a lead the Agent introduced.
+# Read through the confined ``agent_lead_history`` database function; status
+# reasons, rates, fees, form answers, contact details and messages are never
+# part of it. Notes, amounts and staff names follow the Admin's Agent field
+# rules: a hidden value is null and its key is listed in ``hidden_fields``.
+# ---------------------------------------------------------------------------
+
+
+class AgentHistoryApplication(BaseModel):
+    id: UUID
+    product_label: str | None
+    bank_name: str | None
+    status: str
+    amount_requested: Decimal | None
+    amount_sanctioned: Decimal | None
+    opened_at: datetime
+    closed_at: datetime | None
+    disbursed_at: datetime | None
+
+
+class AgentHistoryServiceEnquiry(BaseModel):
+    id: UUID
+    product_label: str | None
+    product_category: str | None
+    status: str
+    submitted_at: datetime
+
+
+class AgentHistoryDeal(BaseModel):
+    id: UUID
+    property_title: str | None
+    property_category: str | None
+    status: str
+    price_quoted: Decimal | None
+    booking_amount: Decimal | None
+    opened_at: datetime
+    closed_at: datetime | None
+
+
+class AgentHistoryEnquiry(BaseModel):
+    id: UUID
+    title: str
+    locality: str | None
+    city: str | None
+    status: str
+    created_at: datetime
+
+
+class AgentHistorySiteVisit(BaseModel):
+    id: UUID
+    title: str
+    locality: str | None
+    city: str | None
+    preferred_date: date
+    preferred_time_slot: str
+    status: str
+    created_at: datetime
+
+
+class AgentHistoryCall(BaseModel):
+    id: UUID
+    disposition: CallDisposition
+    interest_level: InterestLevel | None
+    notes: str | None
+    follow_up_at: datetime | None
+    created_at: datetime
+    staff_name: str | None
+
+
+AgentHistoryEventKind = Literal[
+    "introduced",
+    "lead_assigned",
+    "agent_lead_expired",
+    "agent_lead_resubmitted",
+    "team_lead_status_updated",
+    "team_lead_reassigned",
+    "loan_application_updated",
+    "property_deal_updated",
+]
+
+
+class AgentHistoryEvent(BaseModel):
+    event: AgentHistoryEventKind
+    at: datetime
+    # The loan application or property deal an update belongs to.
+    request_id: UUID | None
+    from_status: str | None
+    to_status: str | None
+
+
+class AgentLeadHistoryRead(BaseModel):
+    lead_id: UUID
+    status: LeadStatusLiteral
+    created_at: datetime
+    applications: list[AgentHistoryApplication]
+    service_enquiries: list[AgentHistoryServiceEnquiry]
+    deals: list[AgentHistoryDeal]
+    enquiries: list[AgentHistoryEnquiry]
+    site_visits: list[AgentHistorySiteVisit]
+    calls: list[AgentHistoryCall]
+    # Oldest first, starting with the introduction.
+    timeline: list[AgentHistoryEvent]
+    # Agent field rules the Admin switched off ("call_notes", "staff_names",
+    # "deal_amount").
+    hidden_fields: list[str]
