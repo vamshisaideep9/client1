@@ -154,6 +154,102 @@ test("analytics fits a 360px phone", async ({ page, baseURL }, testInfo) => {
   await page.screenshot({ path: testInfo.outputPath("analytics-360.png"), fullPage: true });
 });
 
+function subAdminAnalytics(from: string | null, to: string | null) {
+  return {
+    role: "sub_admin",
+    range_days: 30,
+    date_from: from,
+    date_to: to,
+    bucket: "day",
+    kpis: [
+      { key: "created", label: "Content created", value: 6, unit: "count", hint: null },
+      { key: "live", label: "Live now", value: 2, unit: "count", hint: null },
+      { key: "pending", label: "Awaiting approval", value: 1, unit: "count", hint: null },
+      { key: "approval_rate", label: "Approval rate", value: 75, unit: "percent", hint: "Of your banners and offers that were reviewed" },
+    ],
+    trend: {
+      title: "Content created per day",
+      description: "Banners and offers you created.",
+      series: [
+        { key: "banners", label: "Banners" },
+        { key: "offers", label: "Offers" },
+      ],
+      points: days(30).map((point, index) => ({ day: point.day, values: { banners: index % 2, offers: index % 3 === 0 ? 1 : 0 } })),
+    },
+    breakdowns: [
+      {
+        key: "banner_status",
+        title: "Your banners by status",
+        description: "Every banner you created.",
+        kind: "share",
+        unit: "count",
+        items: [{ key: "live", label: "Live", value: 2 }],
+      },
+      {
+        key: "offer_status",
+        title: "Your offers by status",
+        description: "Every offer you created.",
+        kind: "ranked",
+        unit: "count",
+        items: [{ key: "active", label: "Active", value: 1 }],
+      },
+    ],
+    funnel: null,
+  };
+}
+
+test("sub admin analytics filters content by status, placement and type", async ({ page, baseURL }, testInfo) => {
+  await mockMobileApi(page, "sub_admin");
+  const requested: URLSearchParams[] = [];
+  await page.route("**/api/v1/me/analytics*", async (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    requested.push(params);
+    await route.fulfill({ json: subAdminAnalytics(params.get("date_from"), params.get("date_to")) });
+  });
+  await page.context().addCookies([{ name: "session_hint", value: "1", url: baseURL! }]);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/dashboard/insights", { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByRole("region", { name: "Key figures" }).getByText("Content created")).toBeVisible();
+  for (const name of ["Content type", "Review status", "Placement", "Banner type", "Discount type"]) {
+    await expect(page.getByRole("combobox", { name })).toBeVisible();
+  }
+
+  await page.getByRole("combobox", { name: "Review status" }).click();
+  await page.getByRole("option", { name: "Live", exact: true }).click();
+  await page.getByRole("combobox", { name: "Placement" }).click();
+  await page.getByRole("option", { name: "Homepage", exact: true }).click();
+  await expect
+    .poll(() => {
+      const last = requested.at(-1);
+      return `${last?.get("content_status")}|${last?.get("placement")}`;
+    })
+    .toBe("live|homepage");
+  await page.screenshot({ path: testInfo.outputPath("sub-admin-analytics-filters.png") });
+
+  // Offers have no placement or banner type: picking Offers hides and clears them.
+  await page.getByRole("combobox", { name: "Content type" }).click();
+  await page.getByRole("option", { name: "Offers", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "Placement" })).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Banner type" })).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Discount type" })).toBeVisible();
+  await expect
+    .poll(() => {
+      const last = requested.at(-1);
+      return `${last?.get("content_type")}|${last?.get("content_status")}|${last?.has("placement")}`;
+    })
+    .toBe("offers|live|false");
+
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect
+    .poll(() => {
+      const last = requested.at(-1);
+      return ["content_type", "content_status", "placement", "banner_type", "discount_type"].some((key) => last?.has(key));
+    })
+    .toBe(false);
+  await expect(page.getByRole("combobox", { name: "Placement" })).toBeVisible();
+});
+
 test("clients are sent back to their dashboard", async ({ page, baseURL }) => {
   await mockMobileApi(page, "client");
   await page.context().addCookies([{ name: "session_hint", value: "1", url: baseURL! }]);

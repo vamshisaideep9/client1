@@ -30,6 +30,36 @@ completion percentage is unchanged.
   `lead_list_signals` fail there for that reason only). Ruff check and format
   pass. OpenAPI and TypeScript schema regenerated. Next: the web slice.
 
+**In progress — Sub Admin analytics filters and Admin analytics charts (web
+slice)** (2026-11-16), branch `feat/sub-admin-analytics-filters-web` stacked
+on `feat/sub-admin-analytics-filters`. Web only; no dependency, API or
+contract change beyond slice A.
+- `/dashboard/insights` for a Sub Admin: Content type, Review status,
+  Placement, Banner type and Discount type selects (`filtersForRole` takes
+  the current filters; `withFilter` drops filters the new combination no
+  longer offers, so picking Offers clears Placement and Banner type). The
+  Team analytics bar is unchanged in behaviour.
+- `/dashboard/analytics`: `ReportCharts` between the tiles and the exports.
+  `useReportChart` reads the same filters independently of table sort and
+  page (`limit=500`, `offset=0`, `sort_by=bucket_start`, `sort_dir=asc`;
+  Agents `sort_by=leads_total`, `limit=10`) with a request-id race guard.
+  Leads/Loans/Deals: "<Noun> per week|month" stacked by line (the existing
+  lazy `TrendChart`, now with an optional label formatter) and a lazy
+  Recharts conversion-rate line (`conversion-chart.tsx`; empty buckets leave
+  a gap). Agents: "Top 10 agents by leads" ranked bars and a "Leads by line"
+  share bar from `team_summaries`. Every chart has "Show as table"; loading
+  skeletons, "No activity in this date range." and error-with-retry states;
+  a note when the period has more than 500 rows. Shaping lives in
+  `report-chart-data.ts` (bucket starts read as IST calendar dates).
+- Evidence: Vitest 915 passed (132 files), including
+  `report-chart-data.test.ts` (9) and the Sub Admin filter cases; lint and
+  typecheck pass; Playwright `staff-analytics.spec.ts` +
+  `admin-analytics-filters.spec.ts` 8 passed against `pnpm dev` (Sub Admin
+  filter params on the request and Clear filters; chart request
+  `limit=500&sort_by=bucket_start`; Agents chart request; 360 px no
+  horizontal scroll). `pnpm build` passes in a `node:22-alpine` container
+  (113/113 pages; the host build hits the known Windows symlink `EPERM`).
+
 **In review — Property listings advanced filters and demo Sub Admin
 listings** (2026-11-16; PR [#359](https://github.com/brollysolutions/client1/pull/359),
 mirror vamshisaideep9/client1#63), branch `feat/listing-advanced-filters` from

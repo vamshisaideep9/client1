@@ -73,7 +73,16 @@ scheduled, live is active, archived includes expired), banner-only
 scope; a filter that cannot match one kind of content leaves that kind out, so
 contradictions return zeroes; other roles sending them get 422. The Admin
 "Analytics & reports" page then gets charts on every tab. No migration, RLS,
-table or Admin report endpoint change. Recommended: Opus 5.5 / high.
+table or Admin report endpoint change. Web slice: the Sub Admin filter bar
+(Content type, Review status, Placement, Banner type, Discount type; filters
+that cannot apply are hidden and cleared) and, per Admin report tab, a
+chart-only read (`limit=500`, `sort_by=bucket_start` asc; Agents: top 10 by
+`leads_total`) shown as a stacked per-period-by-line chart plus a
+conversion-rate line (Leads/Loans/Deals) or top-10 Agents ranked bars plus a
+leads-by-line share bar (Agents), each with a table view and loading, empty
+and error-with-retry states. No new dependency. Next: the user reviews and
+merges both stacked PRs (opened by the main session). Recommended: Opus 5.5 /
+high.
 
 **In review — Property listings advanced filters and demo Sub Admin
 listings** (2026-11-16; PR [#359](https://github.com/brollysolutions/client1/pull/359),
