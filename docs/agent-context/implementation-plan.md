@@ -60,6 +60,21 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In review — documents viewable inside the dashboard** (2026-11-15; branch
+`feat/in-dashboard-document-viewer`, stacked on `chore/bulk-seed-listing-origins`;
+user request and decisions 2026-11-15, no requirement-percentage change).
+Document verification showed nothing usable: PDFs sat in an `<object>` that the
+CSP (`object-src 'none'`) blocks and whose signed URL forces a download, and
+extension-less task-document keys were treated as images. A shared
+`components/documents/document-viewer.tsx` now fetches the existing authorised
+signed URL, identifies the file from its bytes (`lib/document-sniff.ts`), shows
+JPEG/PNG/WebP from a typed blob URL and draws PDFs page by page with PDF.js
+(`pdfjs-dist` 6.4.299, pinned; canvas only, no annotation layer, XFA or
+scripting), offering download for anything else. Wired into Document
+verification, Agent applications, the Admin task queue, Loan documents,
+Employee task documents and visit photos, and Listing review documents. No
+API, CSP, storage or contract change. Recommended: Opus 5.5 / xhigh.
+
 **In review — bulk seeder listing origins** (2026-11-15; branch
 `chore/bulk-seed-listing-origins` from `upstream/main` `bf9b7a3`; user report,
 development-only, no requirement change). The Admin "Listing approvals →
