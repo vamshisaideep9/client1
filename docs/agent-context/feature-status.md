@@ -2,7 +2,9 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — Banner lifecycle fixes (API slice)** (2026-11-16), branch
+**In review — Banner lifecycle fixes (API slice)** (2026-11-16; PR
+[#363](https://github.com/brollysolutions/client1/pull/363), mirror
+vamshisaideep9/client1#66), branch
 `fix/banner-lifecycle-api` from `upstream/main` `8493823`. API, one additive
 RLS migration and the regenerated contract; the completion percentage is
 unchanged.
@@ -26,9 +28,15 @@ unchanged.
   userinfo, a valid port and no whitespace/control characters (422
   otherwise; blank clears it). The offers https rule moved to
   `app/core/urls.py` and both offers modules import it unchanged.
-- Evidence: see the PR; `test_banners_api.py`, `test_banners_rls.py`,
-  `system/test_cms_activation.py` and the new `test_core_urls.py` cover the
-  rules above.
+- Evidence (`python:3.13` container, fresh database at the single head
+  `c5e7a9b1d3f4`; upgrade/downgrade/upgrade checked): ruff check and format
+  pass; `test_core_urls`, `test_banners_api`, `test_banners_rls`,
+  `system/test_cms_activation`, `test_public_banners`, `test_offers_api`,
+  route-authorization coverage and `test_platform_scope_rls` give 190 passed
+  and 1 failed, the pre-existing `test_public_banners.py::
+  test_response_omits_internal_fields` (stale exact key set without the
+  public video fields; fails identically on `upstream/main` `8493823`).
+  Full API suite: running when the PR opened; result posted on the PR.
 
 **In review — Sub Admin analytics filters (API slice)** (2026-11-16; PR
 [#360](https://github.com/brollysolutions/client1/pull/360), mirror

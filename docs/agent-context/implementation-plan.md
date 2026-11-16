@@ -60,7 +60,9 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — Banner lifecycle fixes (API slice)** (2026-11-16; branch
+**In review — Banner lifecycle fixes (API slice)** (2026-11-16; PR
+[#363](https://github.com/brollysolutions/client1/pull/363), mirror
+vamshisaideep9/client1#66; branch
 `fix/banner-lifecycle-api` from `upstream/main` `8493823`; five
 client-reported Sub Admin/Admin CMS bugs, no requirement or
 completion-percentage change). A Sub Admin may delete a banner while it is
@@ -72,7 +74,8 @@ strict https link, validated server-side through the shared `core/urls.py`
 helper. One additive migration (`c5e7a9b1d3f4`) widens the `banners_delete`
 RLS policy. The web slice (`fix/banner-lifecycle-web`) follows: create-and-
 submit, live refresh, external CTAs and the horizontal dashboard offer card.
-Recommended: Opus 5.5 / extra-high (RLS, role guards, URL handling).
+Next: the user reviews and merges #363, then the web slice. Recommended:
+Opus 5.5 / extra-high (RLS, role guards, URL handling).
 
 **In review — Sub Admin analytics filters and Admin analytics charts**
 (2026-11-16; PRs [#360](https://github.com/brollysolutions/client1/pull/360)
