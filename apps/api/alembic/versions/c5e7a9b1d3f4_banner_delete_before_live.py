@@ -1,7 +1,7 @@
 """Sub Admin may delete a banner until it goes live.
 
 Revision ID: c5e7a9b1d3f4
-Revises: b2d4f6a8c0e1
+Revises: a7c9e1b3d5f6
 
 2026-11-16 product decision (client-reported CMS bugs): a Sub Admin can delete
 a banner while it is ``draft``, ``pending_approval``, ``rejected`` or
@@ -28,7 +28,7 @@ from collections.abc import Sequence
 from alembic import op
 
 revision: str = "c5e7a9b1d3f4"
-down_revision: str | Sequence[str] | None = "b2d4f6a8c0e1"
+down_revision: str | Sequence[str] | None = "a7c9e1b3d5f6"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

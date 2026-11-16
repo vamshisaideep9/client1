@@ -4764,7 +4764,8 @@
           "team_lead_status_updated",
           "team_task_updated",
           "team_note_added",
-          "team_task_viewed"
+          "team_task_viewed",
+          "client_export_downloaded"
         ],
         "title": "AuditAction",
         "type": "string"
@@ -25770,6 +25771,31 @@
           }
         ],
         "summary": "Export Agents Report Xlsx",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/admin/reports/clients/export": {
+      "get": {
+        "description": "Admin-only CSV of every client account across BOTH business lines.\n\nUnlike the aggregate exports above (counts per bucket, unaudited reads),\nthis streams row-level client contact data, so it is gated by\n`require_platform_admin` (never role-only `require_admin`: a line-scoped\nadmin must get a real 403, not a silently line-filtered dump) and records\nan audit entry. See `services/reporting.py::export_client_rows` for the\ncolumn contract -- id / name / phone / created_at / updated_at, with\npassword_hash deliberately never selected or emitted.\n\nNo date filter: the roster is a point-in-time snapshot of all clients, not\na windowed report. All DB work (fetch, audit flush, commit) completes\nbefore the StreamingResponse is built, keeping the fetch-then-format\ninvariant this module's docstring describes.",
+        "operationId": "export_clients_api_v1_admin_reports_clients_export_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Clients",
         "tags": [
           "reports"
         ]
