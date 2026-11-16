@@ -584,8 +584,8 @@ export function BannersView({
         searchLabel="Search banners"
         searchPlaceholder="Title or subtitle"
         statusOptions={Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }))}
-        statusLabel="banner states"
-        kindLabel="banner types"
+        statusLabel="Banner status"
+        kindLabel="Banner type"
         kindOptions={[
           { value: "default", label: "Default" },
           { value: "action", label: "Action" },

@@ -136,11 +136,15 @@ test("telecaller analytics shows figures, a daily chart and breakdowns", async (
     .toBe(true);
   await expect(page.getByRole("table").first().getByRole("row")).toHaveCount(8);
 
-  // Role filters travel to the API.
-  await page.getByRole("combobox", { name: "Call status" }).click();
+  // Role filters sit behind "More filters" and travel to the API.
+  await page.getByRole("button", { name: "More filters" }).click();
+  await page.getByRole("combobox", { name: "Filter by call status" }).click();
   await page.getByRole("option", { name: "Busy", exact: true }).click();
   await expect.poll(() => requested.some((params) => params.get("call_status") === "busy")).toBe(true);
-  await page.getByRole("button", { name: "Clear filters" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "More filters (1)" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Active filters" })).toContainText("Call status: Busy");
+  await page.getByRole("button", { name: "Clear all" }).click();
   await expect.poll(() => requested.at(-1)?.has("call_status")).toBe(false);
 });
 
@@ -211,13 +215,15 @@ test("sub admin analytics filters content by status, placement and type", async 
   await page.goto("/dashboard/insights", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByRole("region", { name: "Key figures" }).getByText("Content created")).toBeVisible();
-  for (const name of ["Content type", "Review status", "Placement", "Banner type", "Discount type"]) {
-    await expect(page.getByRole("combobox", { name })).toBeVisible();
-  }
 
-  await page.getByRole("combobox", { name: "Review status" }).click();
+  // Review status stays in the first row; the content filters sit behind "More filters".
+  await page.getByRole("combobox", { name: "Filter by review status" }).click();
   await page.getByRole("option", { name: "Live", exact: true }).click();
-  await page.getByRole("combobox", { name: "Placement" }).click();
+  await page.getByRole("button", { name: "More filters" }).click();
+  for (const name of ["Content type", "Placement", "Banner type", "Discount type"]) {
+    await expect(page.getByRole("combobox", { name: `Filter by ${name.toLowerCase()}` })).toBeVisible();
+  }
+  await page.getByRole("combobox", { name: "Filter by placement" }).click();
   await page.getByRole("option", { name: "Homepage", exact: true }).click();
   await expect
     .poll(() => {
@@ -226,15 +232,15 @@ test("sub admin analytics filters content by status, placement and type", async 
     })
     .toBe("live|homepage");
   // A placement means banners only, so the offer-only filter goes away.
-  await expect(page.getByRole("combobox", { name: "Discount type" })).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Filter by discount type" })).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("sub-admin-analytics-filters.png") });
 
   // Offers have no placement or banner type: picking Offers hides and clears them.
-  await page.getByRole("combobox", { name: "Content type" }).click();
+  await page.getByRole("combobox", { name: "Filter by content type" }).click();
   await page.getByRole("option", { name: "Offers", exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "Placement" })).toHaveCount(0);
-  await expect(page.getByRole("combobox", { name: "Banner type" })).toHaveCount(0);
-  await expect(page.getByRole("combobox", { name: "Discount type" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Filter by placement" })).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Filter by banner type" })).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Filter by discount type" })).toBeVisible();
   await expect
     .poll(() => {
       const last = requested.at(-1);
@@ -242,14 +248,16 @@ test("sub admin analytics filters content by status, placement and type", async 
     })
     .toBe("offers|live|false");
 
-  await page.getByRole("button", { name: "Clear filters" }).click();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Clear all" }).click();
   await expect
     .poll(() => {
       const last = requested.at(-1);
       return ["content_type", "content_status", "placement", "banner_type", "discount_type"].some((key) => last?.has(key));
     })
     .toBe(false);
-  await expect(page.getByRole("combobox", { name: "Placement" })).toBeVisible();
+  await page.getByRole("button", { name: "More filters" }).click();
+  await expect(page.getByRole("combobox", { name: "Filter by placement" })).toBeVisible();
 });
 
 test("clients are sent back to their dashboard", async ({ page, baseURL }) => {

@@ -542,7 +542,7 @@ export function AuditLogView() {
         searchLabel="Filter activity by record type"
         searchPlaceholder="Record type"
         statusOptions={ACTION_OPTIONS}
-        statusLabel="actions"
+        statusLabel="Action"
         note="Open a row to inspect its immutable structured detail."
       />
 

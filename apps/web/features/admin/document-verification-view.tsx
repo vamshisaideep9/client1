@@ -283,9 +283,9 @@ export function DocumentVerificationView() {
         searchLabel="Search document subjects"
         searchPlaceholder="Lead, mobile, or subject"
         statusOptions={STATUS_OPTIONS}
-        statusLabel="review states"
+        statusLabel="Review status"
         kindOptions={SOURCE_OPTIONS}
-        kindLabel="Sources"
+        kindLabel="Source"
         lineOptions={[
           { value: "loans", label: "Loans" },
           { value: "real_estate", label: "Real Estate" },

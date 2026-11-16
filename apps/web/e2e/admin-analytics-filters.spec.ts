@@ -62,17 +62,18 @@ test("admin analytics filters by calendar range and lead filters", async ({ page
   await page.getByRole("group", { name: "Quick ranges" }).getByRole("button", { name: "Last month" }).click();
   await expect.poll(() => leadsRequests(requests).some((url) => url.searchParams.get("date_from")?.endsWith("-01"))).toBe(true);
 
-  await page.getByRole("combobox", { name: "Lead source" }).click();
-  await page.getByRole("option", { name: "Referred by a client" }).click();
+  await page.getByRole("button", { name: "More filters" }).click();
+  await page.getByRole("combobox", { name: "Filter by lead source" }).click();
+  await page.getByRole("option", { name: "Referred by client" }).click();
   await expect.poll(() => leadsRequests(requests).at(-1)?.searchParams.get("lead_source")).toBe("client");
 
-  await page.getByRole("combobox", { name: "Telecaller" }).click();
+  await page.getByRole("combobox", { name: "Filter by telecaller" }).click();
   await page.getByRole("option", { name: "Ravi Kumar (TC-0001)" }).click();
   await expect
     .poll(() => leadsRequests(requests).at(-1)?.searchParams.get("telecaller_profile_uuid"))
     .toBe("71000000-0000-4000-8000-000000000001");
 
-  await page.getByRole("combobox", { name: "Latest call status" }).click();
+  await page.getByRole("combobox", { name: "Filter by call status" }).click();
   await page.getByRole("option", { name: "Busy", exact: true }).click();
   await expect.poll(() => leadsRequests(requests).at(-1)?.searchParams.get("call_status")).toBe("busy");
   await page.screenshot({ path: testInfo.outputPath("admin-analytics-filters.png"), fullPage: true });
@@ -142,7 +143,8 @@ test("deals tab offers property filters", async ({ page, baseURL }) => {
   await page.goto("/dashboard/analytics", { waitUntil: "domcontentloaded" });
 
   await page.getByRole("tab", { name: "Deals" }).click();
-  await page.getByRole("combobox", { name: "Property category" }).click();
+  await page.getByRole("button", { name: "More filters" }).click();
+  await page.getByRole("combobox", { name: "Filter by property category" }).click();
   await page.getByRole("option", { name: "Villas" }).click();
   await page.getByRole("textbox", { name: "Property city" }).fill("Hyderabad");
   await expect

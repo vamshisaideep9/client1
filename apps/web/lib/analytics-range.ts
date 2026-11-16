@@ -125,6 +125,25 @@ export function formatRangeLabel(range: DateRangeValue): string {
   return `${(sameYear ? SHORT : LONG).format(from)} – ${LONG.format(to)}`;
 }
 
+/** "15 Nov 2026" for one ISO day, or "" when none is chosen yet. */
+export function formatIsoDay(isoDate: string): string {
+  return isoDate ? LONG.format(asUtcDate(isoDate)) : "";
+}
+
+/**
+ * Which ends of a picked range fall in a displayed calendar month, so the
+ * month caption can read "(From)", "(To)" or "(From · To)". Dates are the
+ * calendar's local Date objects.
+ */
+export function rangeMonthTags(month: Date, from: Date | undefined, to: Date | undefined): ("From" | "To")[] {
+  const same = (date: Date | undefined) =>
+    date !== undefined && date.getFullYear() === month.getFullYear() && date.getMonth() === month.getMonth();
+  const tags: ("From" | "To")[] = [];
+  if (same(from)) tags.push("From");
+  if (same(to ?? from)) tags.push("To");
+  return tags;
+}
+
 /** Calendar widgets work in local Date objects; keep the calendar day intact. */
 export function isoToLocalDate(isoDate: string): Date {
   const { y, m0, d } = parts(isoDate);

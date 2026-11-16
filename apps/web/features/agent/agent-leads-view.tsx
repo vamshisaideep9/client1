@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardHeader, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
 import { ListPagination, clampPaginationPage, paginateItems } from "@/features/dashboard/list-pagination";
 import { FetchError } from "@/features/dashboard/fetch-error";
+import { sortLeadsByDefaultOrder } from "@/features/dashboard/list-order";
 import { resubmitAgentLead } from "@/lib/agent-api";
 import { formatMobile } from "@/lib/phone";
 import { cn } from "@/lib/utils";
@@ -42,7 +43,9 @@ const STATUS_LABEL: Record<string, string> = {
 // where the requirement can still be edited until a telecaller picks it up.
 export function AgentLeadsView() {
   const router = useRouter();
-  const { items, loading, error, reload } = useAgentLeads();
+  const { items: loaded, loading, error, reload } = useAgentLeads();
+  // Open leads first (New > Assigned > Working > Converted > Closed > Released > Expired).
+  const items = React.useMemo(() => sortLeadsByDefaultOrder(loaded, (lead) => lead.status), [loaded]);
   const searchParams = useSearchParams();
   const requestedPage = Number(searchParams.get("page") ?? 1);
   const page = clampPaginationPage(Number.isSafeInteger(requestedPage) ? requestedPage - 1 : 0, items.length);

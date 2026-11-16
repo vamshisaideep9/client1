@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 // is styled through classNames with the design tokens, and the selection state
 // is always conveyed by more than colour (filled pill for the ends, tinted band
 // for the middle, plus aria-selected from the library).
-export function Calendar({ className, classNames, ...props }: React.ComponentProps<typeof DayPicker>) {
+export function Calendar({ className, classNames, components, ...props }: React.ComponentProps<typeof DayPicker>) {
   return (
     <DayPicker
       weekStartsOn={1}
@@ -50,6 +50,7 @@ export function Calendar({ className, classNames, ...props }: React.ComponentPro
           ) : (
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
           ),
+        ...components,
       }}
       {...props}
     />

@@ -2,6 +2,34 @@
 
 Status: **Derived living implementation ledger**
 
+**In review — Batch A PR 1: one filter system across every dashboard**
+(2026-11-16; CS-021), branch `feat/unified-dashboard-filters` from
+`upstream/main` `5e8aaf7b`. Web only; no contract, dependency or
+requirement-percentage change.
+- Naming: an unfiltered select shows its field name (`Status`, `Call status`,
+  `Lead interest`, `Lead source`, `Loan status`, `Task type`, `Business
+  line`, …); the first option is `All`; accessible names are `Filter by
+  <field>`. `FilterBar` takes field names (`statusLabel="Payout status"`,
+  `kindLabel="Category"`) on all ~30 surfaces that use it.
+- Lead source: `Direct lead` / `Referred by agent` / `Referred by client`
+  (one `REFERRER_SOURCE_LABEL`); the referrer line reads "Referred by Agent ·
+  AG-…" / "Client · …".
+- More filters: first row keeps search, status, business line, type and the
+  From / To dates; lead signals, product, property, review and money filters
+  move behind "More filters (n)" (popover; bottom sheet under 40rem) with
+  grouped sections, removable chips and one "Clear all". The team work
+  list's own "Filters (n)" disclosure and the listings' "More filters"
+  disclosure now use it.
+- Dates: paired inputs show visible From / To; the analytics calendar shows
+  "From: … To: …" above the months and tags month captions "(From)" /
+  "(To)".
+- Order: Telecaller (default sort; a column sort still overrides, Status
+  sorts by rank), Agent, team work and Admin assigned leads open on New >
+  Assigned > Working > Converted > Closed > Released, then next follow-up.
+  Admin and Client loan lists put closed/rejected applications last.
+- Evidence: recorded on the PR (lint, typecheck, unit tests, container
+  build, Playwright specs).
+
 **In review — Banner lifecycle fixes (web slice)** (2026-11-16; PR
 [#366](https://github.com/brollysolutions/client1/pull/366), mirror
 vamshisaideep9/client1#67), branch

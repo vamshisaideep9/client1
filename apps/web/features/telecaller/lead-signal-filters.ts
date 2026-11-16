@@ -4,6 +4,15 @@
 
 import type { components } from "@contracts/generated/schema";
 
+import {
+  compactChips,
+  selectFilterChip,
+  textFilterChip,
+  type ActiveFilterChip,
+} from "@/features/dashboard/filter-options";
+
+import { DISPOSITION_LABEL } from "./telecaller-lead-status";
+
 export type LeadReferrer = components["schemas"]["LeadReferrerRead"];
 type LoanStatus = NonNullable<components["schemas"]["TelecallerLeadRead"]["loan_statuses"]>[number];
 type CallStatus = NonNullable<components["schemas"]["TelecallerLeadRead"]["last_disposition"]>;
@@ -57,9 +66,9 @@ export const LOAN_STATUS_OPTIONS = Object.keys(LOAN_STATUS_LABEL) as LoanStatus[
 export const INTEREST_LABEL: Record<InterestLevel, string> = { hot: "Hot", warm: "Warm", cold: "Cold" };
 
 export const REFERRER_SOURCE_LABEL: Record<ReferrerSource, string> = {
-  direct: "Not referred",
-  agent: "Referred by an agent",
-  client: "Referred by a client",
+  direct: "Direct lead",
+  agent: "Referred by agent",
+  client: "Referred by client",
 };
 
 export function leadSignalFiltersActive(filters: LeadSignalFilters): boolean {
@@ -90,8 +99,50 @@ export function matchesLeadSignals(values: LeadSignalValues, filters: LeadSignal
   return true;
 }
 
-/** "Agent · AG-1234" / "Client referral · 7K2M9QXA", or null when not referred. */
+/** "Agent · AG-1234" / "Client · 7K2M9QXA" (read after "Referred by"), or null for a direct lead. */
 export function formatReferrer(referrer: LeadReferrer | null | undefined): string | null {
   if (!referrer) return null;
-  return `${referrer.kind === "agent" ? "Agent" : "Client referral"} · ${referrer.reference_id}`;
+  return `${referrer.kind === "agent" ? "Agent" : "Client"} · ${referrer.reference_id}`;
+}
+
+/** Call-status filter choices: "Not called yet" plus every logged outcome. */
+export const CALL_STATUS_FILTER_LABEL: Record<string, string> = {
+  not_called: "Not called yet",
+  ...DISPOSITION_LABEL,
+};
+
+/** How many lead-signal filters are narrowing the list (loan status only where it applies). */
+export function leadSignalActiveCount(filters: LeadSignalFilters, showLoanStatus = true): number {
+  return [
+    showLoanStatus && filters.loanStatus !== "all",
+    filters.callStatus !== "all",
+    filters.interest !== "all",
+    filters.source !== "all",
+    filters.referredBy.trim() !== "",
+  ].filter(Boolean).length;
+}
+
+/** Removable chips for the active lead-signal filters. */
+export function leadSignalChips(
+  filters: LeadSignalFilters,
+  onChange: (patch: Partial<LeadSignalFilters>) => void,
+  showLoanStatus = true,
+): ActiveFilterChip[] {
+  return compactChips([
+    showLoanStatus
+      ? selectFilterChip("loanStatus", "Loan status", filters.loanStatus, LOAN_STATUS_LABEL, () =>
+          onChange({ loanStatus: "all" }),
+        )
+      : null,
+    selectFilterChip("callStatus", "Call status", filters.callStatus, CALL_STATUS_FILTER_LABEL, () =>
+      onChange({ callStatus: "all" }),
+    ),
+    selectFilterChip("interest", "Lead interest", filters.interest, INTEREST_LABEL, () =>
+      onChange({ interest: "all" }),
+    ),
+    selectFilterChip("source", "Lead source", filters.source, REFERRER_SOURCE_LABEL, () =>
+      onChange({ source: "all" }),
+    ),
+    textFilterChip("referredBy", "Referred by ID", filters.referredBy, () => onChange({ referredBy: "" })),
+  ]);
 }

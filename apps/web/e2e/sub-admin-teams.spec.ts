@@ -191,9 +191,11 @@ test("a manager filters team analytics by period and call outcome", async ({ pag
   await expect(table.getByRole("row")).toHaveCount(3);
 
   const filters = page.getByRole("group", { name: "Analytics filters" });
-  await filters.getByRole("combobox", { name: "Call status" }).click();
+  await filters.getByRole("button", { name: "More filters" }).click();
+  await page.getByRole("combobox", { name: "Filter by call status" }).click();
   await page.getByRole("option", { name: "Connected", exact: true }).click();
   await expect.poll(() => calls.overview.some((query) => query.includes("call_status=connected"))).toBe(true);
+  await page.keyboard.press("Escape");
 
   await filters.getByRole("button", { name: "Members" }).click();
   await page.getByRole("checkbox", { name: "Bala Rao" }).click();
@@ -218,18 +220,21 @@ test("a manager filters the team's work, changes a lead and leaves a note", asyn
   await page.getByRole("option", { name: "Bala Rao" }).click();
   await expect(list.getByRole("listitem")).toHaveCount(1);
   await expect(list).toContainText("Priya Shah");
-  await page.getByRole("button", { name: "Clear filters" }).click();
+  await page.getByRole("button", { name: "Clear all" }).click();
   await expect(list.getByRole("listitem")).toHaveCount(2);
   await filters.getByLabel("Search client name or mobile").fill("98000");
   await expect(list.getByRole("listitem")).toHaveCount(1);
   await expect(list).toContainText("Kiran Kumar");
   await filters.getByLabel("Search client name or mobile").fill("");
-  await filters.getByRole("combobox", { name: "Filter by interest" }).click();
+  await filters.getByRole("button", { name: "More filters" }).click();
+  await page.getByRole("combobox", { name: "Filter by lead interest" }).click();
   await page.getByRole("option", { name: "Hot" }).click();
   await expect(list.getByRole("listitem")).toHaveCount(1);
   await expect(list).toContainText("Priya Shah");
   await page.screenshot({ path: testInfo.outputPath("my-team-work-1440.png"), fullPage: true });
-  await page.getByRole("button", { name: "Clear filters" }).click();
+  await page.keyboard.press("Escape");
+  await expect(filters.getByRole("list", { name: "Active filters" })).toContainText("Lead interest: Hot");
+  await page.getByRole("button", { name: "Clear all" }).click();
 
   await page.getByRole("button", { name: "Edit Kiran Kumar" }).click();
   const edit = page.getByRole("dialog", { name: "Change lead status" });
@@ -293,10 +298,10 @@ test("my team fits a 360px phone", async ({ page, baseURL }, testInfo) => {
 
   await page.getByRole("tab", { name: "Work" }).click();
   await expect(page.getByRole("list", { name: "Leads" })).toContainText("Priya Shah");
-  // Phones fold the selects behind one button so the list stays in view.
-  await expect(page.getByRole("combobox", { name: "Filter by interest" })).toBeHidden();
-  await page.getByRole("button", { name: "Filters" }).click();
-  await expect(page.getByRole("combobox", { name: "Filter by interest" })).toBeVisible();
+  // Phones keep the lead signals behind "More filters", which opens as a bottom sheet.
+  await expect(page.getByRole("combobox", { name: "Filter by lead interest" })).toHaveCount(0);
+  await page.getByRole("button", { name: "More filters" }).click();
+  await expect(page.getByRole("dialog", { name: "More filters" }).getByRole("combobox", { name: "Filter by lead interest" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   await page.screenshot({ path: testInfo.outputPath("my-team-work-360.png"), fullPage: true });
 

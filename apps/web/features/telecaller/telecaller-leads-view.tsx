@@ -5,18 +5,22 @@ import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, PhoneCall, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardHeader, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
+import { EMPTY_FILTERS, FilterBar } from "@/features/dashboard/filter-bar";
 import { ListPagination, useListPagination } from "@/features/dashboard/list-pagination";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { useLine } from "@/features/dashboard/line-provider";
 import { formatMobile } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
-import { LeadSignalFilterFields } from "./lead-signal-filter-fields";
-import { formatReferrer } from "./lead-signal-filters";
+import { leadSignalFilterGroups } from "./lead-signal-filter-fields";
+import {
+  DEFAULT_LEAD_SIGNAL_FILTERS,
+  formatReferrer,
+  leadSignalActiveCount,
+  leadSignalChips,
+} from "./lead-signal-filters";
 import {
   DEFAULT_TELECALLER_LEAD_FILTERS,
   DEFAULT_TELECALLER_LEAD_SORT,
@@ -31,7 +35,9 @@ import { DISPOSITION_LABEL, STATUS_LABEL, STATUS_STYLE, formatDateTime } from ".
 import { REQUEST_KIND_LABEL, formatAppliedAt } from "./telecaller-requests";
 import { useTelecallerLeads } from "./use-telecaller-leads";
 
-const STATUS_FILTER_OPTIONS = ["new", "assigned", "working", "converted", "closed", "released"] as const;
+const STATUS_FILTER_OPTIONS = (["new", "assigned", "working", "converted", "closed", "released"] as const).map(
+  (value) => ({ value, label: STATUS_LABEL[value] }),
+);
 
 const COLUMNS: { key: TelecallerLeadSortKey; label: string }[] = [
   { key: "name", label: "Lead" },
@@ -110,6 +116,10 @@ export function TelecallerLeadsView() {
     setFilters(DEFAULT_TELECALLER_LEAD_FILTERS);
   }
 
+  function patchFilters(patch: Partial<TelecallerLeadFilters>) {
+    setFilters((f) => ({ ...f, ...patch }));
+  }
+
   return (
     <DashboardPage>
       <DashboardHeader
@@ -133,46 +143,36 @@ export function TelecallerLeadsView() {
         </div>
       ) : (
         <>
-          <div className="grid gap-2 rounded-xl border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Input
-              aria-label="Search leads"
-              placeholder="Name or mobile"
-              value={filters.search}
-              maxLength={100}
-              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-            />
-            <Select value={filters.status} onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}>
-              <SelectTrigger className="w-full" aria-label="Filter by status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                {STATUS_FILTER_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {STATUS_LABEL[s]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              aria-label="Follow-up from date"
-              type="date"
-              value={filters.followUpFrom}
-              onChange={(e) => setFilters((f) => ({ ...f, followUpFrom: e.target.value }))}
-            />
-            <Input
-              aria-label="Follow-up to date"
-              type="date"
-              min={filters.followUpFrom || undefined}
-              value={filters.followUpTo}
-              onChange={(e) => setFilters((f) => ({ ...f, followUpTo: e.target.value }))}
-            />
-            <LeadSignalFilterFields
-              filters={filters}
-              showLoanStatus={showLoanStatus}
-              onChange={(patch) => setFilters((f) => ({ ...f, ...patch }))}
-            />
-          </div>
+          <FilterBar
+            value={{
+              ...EMPTY_FILTERS,
+              search: filters.search,
+              status: filters.status,
+              from: filters.followUpFrom,
+              to: filters.followUpTo,
+            }}
+            onChange={(next) =>
+              setFilters((f) => ({
+                ...f,
+                search: next.search,
+                status: next.status,
+                followUpFrom: next.from,
+                followUpTo: next.to,
+              }))
+            }
+            searchLabel="Search leads"
+            searchPlaceholder="Name or mobile"
+            statusOptions={STATUS_FILTER_OPTIONS}
+            showLine={false}
+            dateFromLabel="Follow-up from date"
+            dateToLabel="Follow-up to date"
+            more={leadSignalFilterGroups({ filters, showLoanStatus, onChange: patchFilters })}
+            moreActiveCount={leadSignalActiveCount(filters, showLoanStatus)}
+            onClearMore={() => patchFilters(DEFAULT_LEAD_SIGNAL_FILTERS)}
+            chips={leadSignalChips(filters, patchFilters, showLoanStatus)}
+            onClear={clearFilters}
+            hasExternalFilters={filtersActive}
+          />
 
           {sorted.length === 0 ? (
             <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-card px-6 py-14 text-center">
@@ -195,14 +195,6 @@ export function TelecallerLeadsView() {
               title="Assigned leads"
               description={
                 filtersActive ? `${sorted.length} of ${items.length} leads` : `${items.length} leads`
-              }
-              action={
-                filtersActive ? (
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
-                    <X className="h-4 w-4" aria-hidden="true" />
-                    Clear filters
-                  </Button>
-                ) : undefined
               }
             >
               <div className="animate-in fade-in-0 overflow-x-auto duration-200 motion-reduce:animate-none">

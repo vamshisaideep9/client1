@@ -69,9 +69,18 @@ async function mockTelecaller(page: Page, baseURL: string) {
   );
 }
 
+/** Picks an option; secondary filters live behind "More filters", which opens first. */
 async function pick(page: Page, label: string, option: string) {
-  await page.getByRole("combobox", { name: label }).click();
+  const box = page.getByRole("combobox", { name: label });
+  if (!(await box.isVisible())) await page.getByRole("button", { name: /^More filters/ }).click();
+  await box.click();
   await page.getByRole("option", { name: option, exact: true }).click();
+}
+
+/** Closes "More filters" and clears everything from the bar. */
+async function clearAll(page: Page) {
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Clear all" }).click();
 }
 
 const rows = (page: Page) => page.locator("tbody tr");
@@ -83,13 +92,20 @@ test("telecaller filters leads by loan status, call status, interest and referre
 
   await expect(rows(page)).toHaveCount(3);
   await expect(page.getByText("Agent · AG-1234ABCD")).toBeVisible();
-  await expect(page.getByText("Client referral · 7K2M9QXA")).toBeVisible();
+  await expect(page.getByText("Client · 7K2M9QXA")).toBeVisible();
+  // Unfiltered selects read the field name; the secondary ones wait behind More filters.
+  await expect(page.getByRole("combobox", { name: "Filter by status" })).toHaveText("Status");
+  await expect(page.getByRole("combobox", { name: "Filter by lead interest" })).toHaveCount(0);
+  await expect(page.getByText("From", { exact: true })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("telecaller-leads-filters.png"), fullPage: true, animations: "disabled" });
 
   await pick(page, "Filter by loan status", "Approved");
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText("Agent Lead");
-  await page.getByRole("button", { name: "Clear filters" }).first().click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "More filters (1)" })).toBeVisible();
+  await page.getByRole("button", { name: "Remove filter Loan status: Approved" }).click();
+  await expect(rows(page)).toHaveCount(3);
 
   await pick(page, "Filter by call status", "Busy");
   await expect(rows(page)).toHaveCount(1);
@@ -97,16 +113,17 @@ test("telecaller filters leads by loan status, call status, interest and referre
   await pick(page, "Filter by call status", "Not called yet");
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText("Direct Lead");
-  await page.getByRole("button", { name: "Clear filters" }).first().click();
+  await clearAll(page);
 
-  await pick(page, "Filter by interest", "Hot");
+  await pick(page, "Filter by lead interest", "Hot");
   await expect(rows(page)).toHaveCount(1);
-  await page.getByRole("button", { name: "Clear filters" }).first().click();
+  await clearAll(page);
 
-  await pick(page, "Filter by referral", "Referred by a client");
+  await pick(page, "Filter by lead source", "Referred by client");
   await expect(rows(page)).toHaveCount(1);
-  await page.getByRole("button", { name: "Clear filters" }).first().click();
+  await clearAll(page);
 
+  await page.getByRole("button", { name: /^More filters/ }).click();
   await page.getByRole("textbox", { name: "Referred by ID" }).fill("ag-1234");
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText("Agent Lead");
@@ -117,7 +134,7 @@ test("lead detail shows who referred the lead", async ({ page, baseURL }) => {
   await page.setViewportSize({ width: 1365, height: 900 });
   await page.goto(`/dashboard/leads/${CLIENT_LEAD}`);
 
-  await expect(page.getByTestId("lead-referrer")).toHaveText("Referred by Client referral · 7K2M9QXA");
+  await expect(page.getByTestId("lead-referrer")).toHaveText("Referred by Client · 7K2M9QXA");
 });
 
 test("employee tasks filter by the lead's signals and show the referrer", async ({ page, baseURL }) => {
@@ -168,12 +185,12 @@ test("employee tasks filter by the lead's signals and show the referrer", async 
   await expect(page.getByText("Agent · AG-1234ABCD")).toBeVisible();
   await expect(page.getByText("Last call: Connected")).toBeVisible();
 
-  await pick(page, "Filter by interest", "Warm");
+  await pick(page, "Filter by lead interest", "Warm");
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText("Agent Lead");
 
-  await pick(page, "Filter by interest", "Any interest");
-  await pick(page, "Filter by referral", "Not referred");
+  await pick(page, "Filter by lead interest", "All");
+  await pick(page, "Filter by lead source", "Direct lead");
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText("Direct Lead");
 });

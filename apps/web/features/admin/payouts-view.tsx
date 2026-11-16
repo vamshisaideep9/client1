@@ -392,9 +392,9 @@ export function PayoutsView() {
         searchLabel="Search payouts"
         searchPlaceholder={canReview ? "Recipient, maker, checker, or destination" : "Recipient or destination"}
         statusOptions={FILTER_OPTIONS}
-        statusLabel="payout states"
+        statusLabel="Payout status"
         kindOptions={TYPE_OPTIONS}
-        kindLabel="Payout types"
+        kindLabel="Payout type"
         note={
           canReview
             ? "The Admin who raises a payout cannot approve it. Manual cheques settle only after clearance."

@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import type { TelecallerLead } from "@/lib/telecaller-api";
 
-import { DEFAULT_TELECALLER_LEAD_FILTERS, filterTelecallerLeads, sortTelecallerLeads } from "./telecaller-lead-filters";
+import {
+  DEFAULT_TELECALLER_LEAD_FILTERS,
+  DEFAULT_TELECALLER_LEAD_SORT,
+  filterTelecallerLeads,
+  sortTelecallerLeads,
+} from "./telecaller-lead-filters";
 
 function lead(overrides: Partial<TelecallerLead>): TelecallerLead {
   return {
@@ -97,5 +102,45 @@ describe("sortTelecallerLeads", () => {
     const original = [...leads];
     sortTelecallerLeads(leads, { key: "name", dir: "asc" });
     expect(leads).toEqual(original);
+  });
+
+  it("lands on open work first, then the soonest follow-up, so closed leads leave page 1", () => {
+    const leads: TelecallerLead[] = [
+      lead({ id: "closed-soon", status: "closed", next_follow_up_at: "2026-01-01T09:00:00Z" }),
+      lead({ id: "released", status: "released" }),
+      lead({ id: "working-late", status: "working", next_follow_up_at: "2026-03-01T09:00:00Z" }),
+      lead({ id: "assigned", status: "assigned" }),
+      lead({ id: "working-soon", status: "working", next_follow_up_at: "2026-02-01T09:00:00Z" }),
+      lead({ id: "converted", status: "converted" }),
+      lead({ id: "new", status: "new" }),
+    ];
+    expect(DEFAULT_TELECALLER_LEAD_SORT.key).toBe("default");
+    expect(sortTelecallerLeads(leads, DEFAULT_TELECALLER_LEAD_SORT).map((l) => l.id)).toEqual([
+      "new",
+      "assigned",
+      "working-soon",
+      "working-late",
+      "converted",
+      "closed-soon",
+      "released",
+    ]);
+  });
+
+  it("sorts the Status column by the same rank, not alphabetically", () => {
+    const leads: TelecallerLead[] = [
+      lead({ id: "closed", status: "closed" }),
+      lead({ id: "new", status: "new" }),
+      lead({ id: "working", status: "working" }),
+    ];
+    expect(sortTelecallerLeads(leads, { key: "status", dir: "asc" }).map((l) => l.id)).toEqual([
+      "new",
+      "working",
+      "closed",
+    ]);
+    expect(sortTelecallerLeads(leads, { key: "status", dir: "desc" }).map((l) => l.id)).toEqual([
+      "closed",
+      "working",
+      "new",
+    ]);
   });
 });

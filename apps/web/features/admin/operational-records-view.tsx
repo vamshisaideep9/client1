@@ -6,14 +6,8 @@ import { Database, Loader2, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FilterSelect } from "@/features/dashboard/filter-select";
 import {
   listAdminAuthEvents,
   listAdminEnquiries,
@@ -491,17 +485,13 @@ export function OperationalRecordsView() {
                   maxLength={100}
                   onChange={(event) => setSearch(event.target.value)}
                 />
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger aria-label="Filter operational records by status" className="w-full">
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    {statusOptions.map((status) => (
-                      <SelectItem key={status} value={status}>{status}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FilterSelect
+                  label="Status"
+                  ariaLabel="Filter operational records by status"
+                  value={statusFilter}
+                  options={statusOptions.map((status) => ({ value: status, label: status }))}
+                  onValueChange={setStatusFilter}
+                />
               </div>
               {visibleRecords.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-text-secondary">
