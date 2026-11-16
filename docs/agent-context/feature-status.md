@@ -3,7 +3,9 @@
 Status: **Derived living implementation ledger**
 
 **In progress — Batch C PR 2: filters by product, property, status,
-transactions and earnings (web)** (2026-11-17; CS-023), branch
+transactions and earnings (web)** (2026-11-17; CS-023; PR
+[#372](https://github.com/brollysolutions/client1/pull/372), mirror
+vamshisaideep9/client1#73), branch
 `feat/batch-c-filters-web` stacked on Batch C PR 1. Web only; consumes the
 C1 contracts; no requirement-percentage change.
 - Shared: `product-filter-options.ts` (labels, `mergeOptions`, bank-name

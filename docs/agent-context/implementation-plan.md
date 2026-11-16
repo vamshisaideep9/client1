@@ -100,7 +100,9 @@ stacked PRs, both opened against `main`, stacked on Batch B PR 2:
   `property_subtype`. Logic fixes: team analytics lead source (managers read
   `team_lead_signals`), Agent lead status now narrows commissions, and the
   Admin "Referred by client" matches the staff lists.
-- *PR C2 — web*, branch `feat/batch-c-filters-web` stacked on C1. One set
+- *PR C2 — web*, branch `feat/batch-c-filters-web` stacked on C1 (PR
+  [#372](https://github.com/brollysolutions/client1/pull/372), mirror
+  vamshisaideep9/client1#73). One set
   of option sources everywhere (`product-filter-options.ts`,
   `use-product-catalogue.ts`): the catalogue's lending products and banks
   plus whatever the loaded rows carry, fixed category / type / status
