@@ -446,6 +446,35 @@ async def _seed_properties(db: AsyncSession, ctx: Ctx) -> None:
         )
     await db.flush()
 
+    # The approved submission each remaining catalogue listing came from, so it
+    # shows in the Admin "Published" view and its author's own listings.
+    for index in catalog.listing_origin_indices():
+        submission_id = bulk_uuid(f"property-submission:origin-{index}")
+        if await db.get(PropertySubmission, submission_id) is not None:
+            continue
+        prop = ctx.properties[index]
+        values = _listing_columns(index)
+        values.pop("price_display")
+        db.add(
+            PropertySubmission(
+                id=submission_id,
+                submitter_uuid=ctx.user(catalog.listing_origin_author(index)).id,
+                business_line="real_estate",
+                status=SubmissionStatus.APPROVED,
+                reviewed_by_uuid=ctx.user("admin-02").id,
+                reviewed_at=prop.created_at,
+                approved_property_id=prop.id,
+                details={},
+                details_version=1,
+                rera_verification_status=prop.rera_verification_status,
+                rera_verified_at=prop.rera_verified_at,
+                rera_verified_by_uuid=prop.rera_verified_by_uuid,
+                created_at=prop.created_at - timedelta(days=2),
+                **values,
+            )
+        )
+    await db.flush()
+
 
 # ---------------------------------------------------------------------------
 # Leads and telecaller activity
@@ -1738,6 +1767,57 @@ async def _seed_media(ctx: Ctx) -> dict[str, int]:
                 )
             for position, (name, kind, content_type, content) in enumerate(items):
                 media_id = bulk_uuid(f"submission-media:{plan.key}:{name}")
+                if await db.get(PropertySubmissionMedia, media_id) is not None:
+                    continue
+                extension = ".pdf" if content_type == "application/pdf" else ".jpg"
+                object_key = (
+                    f"private/property-submissions/canonical/{owner}/{media_id}/asset{extension}"
+                )
+                await put_once(object_key, content, content_type)
+                db.add(
+                    PropertySubmissionMedia(
+                        id=media_id,
+                        submission_uuid=submission_id,
+                        business_line="real_estate",
+                        kind=kind,
+                        content_type=content_type,
+                        object_key=object_key,
+                        size_bytes=len(content),
+                        position=position,
+                        processing_status=MediaProcessingStatus.READY,
+                        processed_at=now,
+                        sanitized_at=now,
+                    )
+                )
+                counts["submission_media"] += 1
+            await db.commit()
+
+        # Origin submissions keep the private intake copy a real approval leaves
+        # behind: one photo plus the ownership PDF the reviewer checked.
+        for index in catalog.listing_origin_indices():
+            key = f"origin-{index}"
+            submission_id = bulk_uuid(f"property-submission:{key}")
+            owner = ctx.user(catalog.listing_origin_author(index)).id
+            title = ctx.properties[index].title[:40]
+            origin_items = (
+                (
+                    "photo-1",
+                    PropertyMediaKind.IMAGE,
+                    "image/jpeg",
+                    demo_media.property_photo(label=title, variant=index % 3),
+                ),
+                (
+                    "document",
+                    PropertyMediaKind.DOCUMENT,
+                    "application/pdf",
+                    demo_media.document_pdf(
+                        title="Ownership document",
+                        lines=(title, "Sale deed summary (synthetic)"),
+                    ),
+                ),
+            )
+            for position, (name, kind, content_type, content) in enumerate(origin_items):
+                media_id = bulk_uuid(f"submission-media:{key}:{name}")
                 if await db.get(PropertySubmissionMedia, media_id) is not None:
                     continue
                 extension = ".pdf" if content_type == "application/pdf" else ".jpg"

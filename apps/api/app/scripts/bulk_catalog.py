@@ -836,6 +836,29 @@ def submission_plans() -> tuple[SubmissionPlan, ...]:
     return tuple(plans)
 
 
+# Real listings only ever go live through an approved submission, and the Admin
+# "Published" view lists approved submissions joined to their catalogue row. So
+# every catalogue listing not already covered by a planned approved submission
+# gets an approved "origin" submission from a real-estate author.
+LISTING_ORIGIN_AUTHORS = (
+    *(f"agent-{number:02d}" for number in range(9, 15)),
+    "subadmin-08",
+    "subadmin-09",
+    "admin-01",
+    "admin-02",
+)
+
+
+@cache
+def listing_origin_indices() -> tuple[int, ...]:
+    covered = {p.approved_listing for p in submission_plans() if p.approved_listing is not None}
+    return tuple(index for index in range(LISTING_COUNT) if index not in covered)
+
+
+def listing_origin_author(index: int) -> str:
+    return LISTING_ORIGIN_AUTHORS[index % len(LISTING_ORIGIN_AUTHORS)]
+
+
 # ---------------------------------------------------------------------------
 # Supporting rows
 # ---------------------------------------------------------------------------
