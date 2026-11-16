@@ -1484,6 +1484,385 @@ async def _seed_referrals(db: AsyncSession, ctx: Ctx) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Per-staff coverage clients
+# ---------------------------------------------------------------------------
+
+
+async def _seed_coverage(db: AsyncSession, ctx: Ctx) -> None:
+    """Clients that give every Telecaller, Employee and Agent a full filter set.
+
+    See ``bulk_catalog.coverage_leads``; every row reuses the builders above.
+    """
+    products = [
+        product
+        for product in (
+            await db.scalars(
+                select(LoanType)
+                .where(LoanType.active.is_(True), LoanType.category == "loan")
+                .order_by(LoanType.display_order, LoanType.name)
+            )
+        ).all()
+        if product.custom_fields
+    ]
+    listings = [prop for prop in ctx.properties if prop.active]
+    referrers = [
+        ctx.user(c.key) for c in catalog.client_accounts() if c.user_status == UserStatus.ACTIVE
+    ]
+    makers = [ctx.user("subadmin-06"), ctx.user("subadmin-07"), ctx.user("admin-01")]
+    destinations = (PayoutDestination.VPA, PayoutDestination.BANK_ACCOUNT, PayoutDestination.CHEQUE)
+    dispositions = {d.value: d for d in CallDisposition}
+    interests = {i.value: i for i in InterestLevel}
+
+    for position, lead_plan in enumerate(catalog.coverage_leads()):
+        account = catalog.account(lead_plan.account_key)
+        user = ctx.user(account.key)
+        line_code = "LN" if lead_plan.line == "loans" else "RE"
+
+        profile_id = bulk_uuid(f"client:{lead_plan.key}")
+        profile = await db.get(ClientProfile, profile_id)
+        if profile is None:
+            code = f"CL-{line_code}{account.code}"
+            await _assert_code_free(
+                db, ClientProfile, ClientProfile.customer_code, code, profile_id
+            )
+            profile = ClientProfile(
+                id=profile_id,
+                auth_user_uuid=user.id,
+                business_line=lead_plan.line,
+                customer_code=code,
+                status=ProfileStatus.ACTIVE,
+                created_at=_days_ago(ctx.now, lead_plan.ordinal, floor=20),
+            )
+            db.add(profile)
+            # The leads trigger checks the profile row, so it must exist first.
+            await db.flush()
+        ctx.clients[lead_plan.key] = profile
+
+        row = _lead_row(
+            key=lead_plan.key,
+            ctx=ctx,
+            line=lead_plan.line,
+            ordinal=lead_plan.ordinal,
+            name=f"{account.first_name} {account.last_name}",
+            mobile=account.mobile,
+            status=lead_plan.lead_status,
+            client=profile,
+            agent_key=lead_plan.agent_key,
+            telecaller_key=lead_plan.telecaller_key,
+            agent_expired=lead_plan.agent_expired,
+        )
+        lead = await db.get(Lead, row.id)
+        if lead is None:
+            db.add(row)
+            lead = row
+        ctx.leads[lead_plan.key] = lead
+        await db.flush()
+
+        telecaller = ctx.staff_of(lead_plan.telecaller_key)
+        if lead_plan.disposition and telecaller is not None:
+            open_lead = lead_plan.lead_status in {LeadStatus.ASSIGNED, LeadStatus.WORKING}
+            history = (
+                (dispositions["no_answer"], None),
+                (dispositions[lead_plan.disposition], interests[lead_plan.interest]),
+            )[1 - position % 2 :]
+            for number, (disposition, interest) in enumerate(history):
+                last = number == len(history) - 1
+                await add_once(
+                    db,
+                    LeadActivity(
+                        id=bulk_uuid(f"lead-activity:{lead_plan.key}:{number}"),
+                        lead_uuid=lead.id,
+                        telecaller_staff_profile_uuid=telecaller.id,
+                        business_line=lead_plan.line,
+                        disposition=disposition,
+                        interest_level=interest,
+                        notes=f"Synthetic call note {number + 1}.",
+                        follow_up_at=ctx.now + timedelta(hours=(-26, 3, 40)[position % 3])
+                        if open_lead and last
+                        else None,
+                        created_at=lead.created_at + timedelta(days=1 + number * 2),
+                    ),
+                )
+
+        if lead_plan.client_referral:
+            await add_once(
+                db,
+                Referral(
+                    id=bulk_uuid(f"referral:coverage:{lead_plan.key}"),
+                    referrer_auth_user_uuid=referrers[position % len(referrers)].id,
+                    referred_mobile=account.mobile,
+                    referred_auth_user_uuid=user.id,
+                    referred_lead_uuid=lead.id,
+                    conversion_status=ReferralStatus.PENDING,
+                    created_at=lead.created_at - timedelta(days=2),
+                ),
+            )
+
+        loan_or_deal_id: dict[str, UUID] = {}
+        if lead_plan.line == "loans":
+            product = products[lead_plan.loan_product_index % len(products)]
+            opened = _days_ago(ctx.now, lead_plan.ordinal, spread=300, floor=5)
+            plan: list[tuple[str, LoanStatus, LoanType, datetime]] = []
+            if lead_plan.closed_loan:
+                older = products[(lead_plan.loan_product_index + 3) % len(products)]
+                plan.append(("closed", LoanStatus.CLOSED, older, opened - timedelta(days=220)))
+            if lead_plan.rejected_loan:
+                other = products[(lead_plan.loan_product_index + 5) % len(products)]
+                plan.append(("rejected", LoanStatus.REJECTED, other, opened - timedelta(days=120)))
+            if lead_plan.current_loan_status is not None:
+                plan.append(("current", lead_plan.current_loan_status, product, opened))
+            for suffix, status, loan_type, opened_at in plan:
+                key = f"{lead_plan.key}:{suffix}"
+                loan = _loan_row(
+                    key=key,
+                    ctx=ctx,
+                    journey=lead_plan,
+                    product=loan_type,
+                    status=status,
+                    opened=opened_at,
+                )
+                application = await db.get(LoanApplication, loan.id)
+                if application is None:
+                    db.add(loan)
+                    application = loan
+                loan_or_deal_id[suffix] = application.id
+                if status in _SANCTIONED_OR_LATER:
+                    await add_once(
+                        db,
+                        LoanTxnHistory(
+                            id=bulk_uuid(f"loan-txn-history:{key}"),
+                            loan_application_uuid=application.id,
+                            business_line="loans",
+                            bank_name="Synthetic partner bank (test)",
+                            amount=application.amount_sanctioned,
+                            interest_rate=application.interest_rate,
+                            txn_date=(opened_at + timedelta(days=18)).date(),
+                            entered_by_staff_profile_uuid=telecaller.id if telecaller else None,
+                        ),
+                    )
+            await db.flush()
+        else:
+            primary = listings[(lead_plan.ordinal * 7) % len(listings)]
+            visit = None
+            if lead_plan.site_visit:
+                status = _visit_status(lead_plan)
+                preferred = (
+                    date.today() - timedelta(days=5 + lead_plan.ordinal % 40)
+                    if status in {SiteVisitStatus.DONE, SiteVisitStatus.CANCELLED}
+                    else date.today() + timedelta(days=1 + lead_plan.ordinal % 14)
+                )
+                visit_row = SiteVisit(
+                    id=bulk_uuid(f"site-visit:{lead_plan.key}"),
+                    user_uuid=user.id,
+                    lead_uuid=lead.id,
+                    business_line="real_estate",
+                    property_ref=str(primary.id),
+                    title=primary.title,
+                    locality=primary.locality,
+                    city=primary.city,
+                    contact_name=f"{account.first_name} {account.last_name}",
+                    contact_mobile=account.mobile,
+                    preferred_date=preferred,
+                    preferred_time_slot=tuple(SiteVisitTimeSlot)[lead_plan.ordinal % 3],
+                    message="Synthetic site visit request.",
+                    status=status,
+                    cancelled_at=ctx.now - timedelta(days=1)
+                    if status == SiteVisitStatus.CANCELLED
+                    else None,
+                    created_at=_days_ago(ctx.now, lead_plan.ordinal, spread=90, floor=6),
+                )
+                visit = await db.get(SiteVisit, visit_row.id)
+                if visit is None:
+                    db.add(visit_row)
+                    visit = visit_row
+                await db.flush()
+                if lead_plan.arrangement is not None:
+                    arrangement_status = VehicleArrangementStatus(lead_plan.arrangement.status)
+                    employee = ctx.staff_of(lead_plan.arrangement.employee_key)
+                    staffed = employee is not None
+                    pickup = datetime.combine(
+                        preferred, datetime.min.time(), tzinfo=UTC
+                    ) + timedelta(hours=9)
+                    await add_once(
+                        db,
+                        VehicleArrangement(
+                            id=bulk_uuid(f"vehicle:{lead_plan.key}"),
+                            site_visit_uuid=visit.id,
+                            business_line="real_estate",
+                            pickup_location=f"{primary.locality} Metro Station, Hyderabad",
+                            pickup_at=pickup,
+                            status=arrangement_status,
+                            vehicle_make_model="Synthetic Sedan"
+                            if arrangement_status != VehicleArrangementStatus.REQUESTED
+                            else None,
+                            vehicle_registration=f"TS09CV{lead_plan.ordinal:04d}"
+                            if arrangement_status != VehicleArrangementStatus.REQUESTED
+                            else None,
+                            driver_name="Synthetic Driver" if staffed else None,
+                            driver_mobile=catalog.bulk_mobile(90_000 + lead_plan.ordinal)
+                            if staffed
+                            else None,
+                            assigned_employee_profile_uuid=employee.id if employee else None,
+                            arranged_by_staff_profile_uuid=ctx.staff["admin-01"].id
+                            if arrangement_status != VehicleArrangementStatus.REQUESTED
+                            else None,
+                            completed_at=pickup + timedelta(hours=3)
+                            if arrangement_status == VehicleArrangementStatus.COMPLETED
+                            else None,
+                            cancelled_at=ctx.now - timedelta(days=1)
+                            if arrangement_status == VehicleArrangementStatus.CANCELLED
+                            else None,
+                            cancellation_reason="Synthetic cancellation: client rescheduled."
+                            if arrangement_status == VehicleArrangementStatus.CANCELLED
+                            else None,
+                        ),
+                    )
+            if lead_plan.deal_status is not None:
+                status = lead_plan.deal_status
+                opened = _days_ago(ctx.now, lead_plan.ordinal, spread=240, floor=10)
+                booked = status in _BOOKED_OR_LATER
+                deal_row = PropertyDeal(
+                    id=bulk_uuid(f"deal:{lead_plan.key}"),
+                    lead_uuid=lead.id,
+                    client_profile_uuid=profile.id,
+                    property_id=primary.id,
+                    business_line="real_estate",
+                    site_visit_uuid=visit.id if visit is not None else None,
+                    price_quoted=Decimal(primary.price_paise) / 100 if booked else None,
+                    booking_amount=Decimal(primary.price_paise) / 100 * Decimal("0.05")
+                    if booked
+                    else None,
+                    status=status,
+                    status_reason={
+                        PropertyDealStatus.ON_HOLD: "Synthetic hold: buyer arranging finance.",
+                        PropertyDealStatus.REJECTED: "Synthetic rejection: chose another unit.",
+                    }.get(status),
+                    opened_at=opened,
+                    closed_at=opened + timedelta(days=60)
+                    if status in {PropertyDealStatus.CLOSED, PropertyDealStatus.REJECTED}
+                    else None,
+                )
+                deal = await db.get(PropertyDeal, deal_row.id)
+                if deal is None:
+                    db.add(deal_row)
+                    deal = deal_row
+                loan_or_deal_id["deal"] = deal.id
+            await db.flush()
+
+        if lead_plan.task is not None and telecaller is not None:
+            task_plan = lead_plan.task
+            employee = ctx.staff_of(task_plan.employee_key)
+            status = TaskStatus(task_plan.status)
+            task_type = TaskType(task_plan.task_type)
+            due = ctx.now + timedelta(hours=(-50, -4, 6, 30, 80)[position % 5])
+            task_row = Task(
+                id=bulk_uuid(f"task:coverage:{lead_plan.key}"),
+                assigned_employee_profile_uuid=employee.id if employee else None,
+                raised_by_staff_profile_uuid=telecaller.id,
+                business_line=lead_plan.line,
+                task_type=task_type,
+                lead_uuid=lead.id,
+                status=status,
+                notes=f"Synthetic {task_type.value.replace('_', ' ')} task.",
+                outcome=tuple(BgCheckOutcome)[position % len(BgCheckOutcome)]
+                if task_type == TaskType.BACKGROUND_CHECK and status == TaskStatus.COMPLETED
+                else None,
+                due_at=due,
+                created_at=due - timedelta(days=3),
+            )
+            task = await db.get(Task, task_row.id)
+            if task is None:
+                db.add(task_row)
+                task = task_row
+            ctx.tasks.append(task)
+
+        if lead_plan.commission_status is not None and lead_plan.agent_key in ctx.agents:
+            agent_user = ctx.user(lead_plan.agent_key)
+            status = CommissionStatus(lead_plan.commission_status)
+            amount = (20_000 if lead_plan.line == "loans" else 60_000) * 100 + (
+                position % 50
+            ) * 500_00
+            payout = None
+            if status == CommissionStatus.PAID:
+                payout = await _payout(
+                    db,
+                    ctx,
+                    PayoutSpec(
+                        f"commission:coverage:{lead_plan.key}",
+                        agent_user,
+                        lead_plan.line,
+                        PayoutType.COMMISSION,
+                        amount,
+                        PayoutStatus.PAID,
+                        destinations[position % 3],
+                        makers[position % 3],
+                        ctx.user("admin-02"),
+                    ),
+                )
+            await add_once(
+                db,
+                Commission(
+                    id=bulk_uuid(f"commission:coverage:{lead_plan.key}"),
+                    agent_auth_user_uuid=agent_user.id,
+                    agent_profile_uuid=ctx.agents[lead_plan.agent_key].id,
+                    business_line=lead_plan.line,
+                    lead_uuid=lead.id,
+                    loan_application_uuid=loan_or_deal_id.get("current")
+                    if lead_plan.line == "loans"
+                    else None,
+                    property_deal_uuid=loan_or_deal_id.get("deal")
+                    if lead_plan.line == "real_estate"
+                    else None,
+                    agreed_amount_paise=amount,
+                    status=status,
+                    payout_uuid=payout.id if payout else None,
+                    payout_txn_uuid=payout.ledger_transaction_id if payout else None,
+                    entered_by_uuid=ctx.user("admin-01").id,
+                    notes="Synthetic negotiated commission.",
+                    cancelled_reason="Synthetic cancellation: deal terms changed."
+                    if status == CommissionStatus.CANCELLED
+                    else None,
+                ),
+            )
+
+        if position % 200 == 199:
+            await db.flush()
+    await db.flush()
+
+    # Extra pending and rejected listings for every active Real Estate Agent.
+    for plan in catalog.agent_listing_plans():
+        submission_id = bulk_uuid(f"property-submission:{plan.key}")
+        if await db.get(PropertySubmission, submission_id) is not None:
+            continue
+        values = _listing_columns(plan.index)
+        values.pop("price_display")
+        rejected = plan.status == "rejected"
+        rera_status = _submission_rera(values["rera_applicability"], plan.rera_status)
+        reviewed_rera = rera_status != ReraVerificationStatus.NOT_REVIEWED
+        db.add(
+            PropertySubmission(
+                id=submission_id,
+                submitter_uuid=ctx.user(plan.submitter_key).id,
+                business_line="real_estate",
+                status=SubmissionStatus(plan.status),
+                review_note="Synthetic rejection: ownership papers are incomplete."
+                if rejected
+                else None,
+                reviewed_by_uuid=ctx.user("admin-02").id if rejected else None,
+                reviewed_at=ctx.now - timedelta(days=2) if rejected else None,
+                details={},
+                details_version=1,
+                rera_verification_status=rera_status,
+                rera_verified_at=ctx.now - timedelta(days=2) if reviewed_rera else None,
+                rera_verified_by_uuid=ctx.user("admin-02").id if reviewed_rera else None,
+                created_at=ctx.now - timedelta(days=1 + plan.index % 20),
+                **values,
+            )
+        )
+    await db.flush()
+
+
+# ---------------------------------------------------------------------------
 # Support, notifications and audit
 # ---------------------------------------------------------------------------
 
@@ -1843,6 +2222,54 @@ async def _seed_media(ctx: Ctx) -> dict[str, int]:
                 counts["submission_media"] += 1
             await db.commit()
 
+        # Every active Real Estate Agent's extra pending/rejected listings.
+        for plan in catalog.agent_listing_plans():
+            submission_id = bulk_uuid(f"property-submission:{plan.key}")
+            owner = ctx.user(plan.submitter_key).id
+            agent_items = (
+                (
+                    "photo-1",
+                    PropertyMediaKind.IMAGE,
+                    "image/jpeg",
+                    demo_media.property_photo(label=plan.key[-20:], variant=plan.index % 3),
+                ),
+                (
+                    "document",
+                    PropertyMediaKind.DOCUMENT,
+                    "application/pdf",
+                    demo_media.document_pdf(
+                        title="Ownership document",
+                        lines=(plan.key, "Sale deed summary (synthetic)"),
+                    ),
+                ),
+            )
+            for position, (name, kind, content_type, content) in enumerate(agent_items):
+                media_id = bulk_uuid(f"submission-media:{plan.key}:{name}")
+                if await db.get(PropertySubmissionMedia, media_id) is not None:
+                    continue
+                extension = ".pdf" if content_type == "application/pdf" else ".jpg"
+                object_key = (
+                    f"private/property-submissions/canonical/{owner}/{media_id}/asset{extension}"
+                )
+                await put_once(object_key, content, content_type)
+                db.add(
+                    PropertySubmissionMedia(
+                        id=media_id,
+                        submission_uuid=submission_id,
+                        business_line="real_estate",
+                        kind=kind,
+                        content_type=content_type,
+                        object_key=object_key,
+                        size_bytes=len(content),
+                        position=position,
+                        processing_status=MediaProcessingStatus.READY,
+                        processed_at=now,
+                        sanitized_at=now,
+                    )
+                )
+                counts["submission_media"] += 1
+            await db.commit()
+
         loan_items = (
             ("salary_slip", "application/pdf"),
             ("bank_statement", "application/pdf"),
@@ -1991,6 +2418,10 @@ async def seed_bulk(*, include_media: bool = True) -> dict[str, int]:
         await _seed_support_and_notifications(db, ctx)
         await db.commit()
         print(f"[{SCRIPT}] payouts, referrals, tickets and notifications ready", flush=True)
+
+        await _seed_coverage(db, ctx)
+        await db.commit()
+        print(f"[{SCRIPT}] per-staff coverage clients ready", flush=True)
 
     media = await _seed_media(ctx) if include_media else {}
     async with AsyncSessionLocal() as db:

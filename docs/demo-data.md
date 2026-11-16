@@ -99,6 +99,7 @@ mobiles `+91 92000 xxxxx`:
 | 15 Employees | `+919200000151`-`165` | 01-08 Loans, 09-15 Real Estate; 15 inactive; 08 in no team |
 | 15 Agents | `+919200000171`-`185` | 01-08 Loans, 09-15 Real Estate (with RERA codes); 15 suspended |
 | 195 Clients | `+919200010001`-`10195` | 001-085 Loans, 086-170 Real Estate, 171-195 both lines |
+| 1,806 coverage clients | `+919200020001`-`21806` | One line each; see "Per-person coverage" below |
 
 The teams are Loans callers A and B, Real Estate callers, Loans field team and
 Real Estate field team.
@@ -129,6 +130,26 @@ What it covers:
 - Account states: suspended and pending-password-reset users; pending,
   suspended and inactive profiles; five profiles per line with no activity at
   all for empty-state screens.
+
+### Per-person coverage
+
+Every active Telecaller, Employee and Agent sees at least five records for
+every value of every filter on their own screens, so any filter can be tested
+from any account:
+
+- Telecallers: each lead status, each last call outcome (and "not called"),
+  each interest level, each referral source (direct, Agent, client), and, on
+  Loans, each of the 13 loan statuses. 120 coverage clients per Loans
+  Telecaller and 48 per Real Estate Telecaller.
+- Employees: each task status and task type, the same lead filters through
+  their tasks' leads, and, on Real Estate, assigned, completed and cancelled
+  vehicle pickups.
+- Agents: each lead status including Expired (45 introduced clients each), each
+  commission status, and, on Real Estate, pending, approved and rejected
+  listings.
+
+`test_seed_bulk.py` checks these minimums from the plan, and a run against the
+API confirmed them for every account.
 
 Not included, on purpose: banners, campaign artwork and videos (use
 `seed_demo` for those), and Aadhaar/PAN or other KYC images. Media is written

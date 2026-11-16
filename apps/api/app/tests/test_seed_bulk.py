@@ -208,6 +208,7 @@ async def test_every_phase_writes_valid_rows_in_one_transaction() -> None:
             await seeder._seed_tasks(db, ctx)
             await seeder._seed_money(db, ctx)
             await seeder._seed_support_and_notifications(db, ctx)
+            await seeder._seed_coverage(db, ctx)
             await db.flush()
 
             bulk_users = [user.id for user in ctx.users.values()]
@@ -322,3 +323,123 @@ async def test_seed_refuses_a_foreign_account_on_a_bulk_mobile() -> None:
                 await seeder._seed_users(db, seeder.Ctx(now=datetime.now(UTC)))
         finally:
             await db.rollback()
+
+
+def _staff_keys(role: str, line: str | None = None) -> list[str]:
+    return [
+        a.key
+        for a in catalog.accounts_by_role(role, line)
+        if a.profile_status == ProfileStatus.ACTIVE
+    ]
+
+
+def _lead_signal_values(lead: catalog.CoverageLead) -> dict[str, set[str]]:
+    loan_statuses: set[str] = set()
+    if lead.current_loan_status is not None:
+        loan_statuses.add(lead.current_loan_status.value)
+    if lead.closed_loan:
+        loan_statuses.add("closed")
+    if lead.rejected_loan:
+        loan_statuses.add("rejected")
+    return {
+        "lead_status": {lead.lead_status.value},
+        "call": {lead.disposition or "not_called"},
+        "interest": {lead.interest} if lead.interest else set(),
+        "source": {"agent" if lead.agent_key else "client" if lead.client_referral else "direct"},
+        "loan_status": loan_statuses,
+    }
+
+
+def _assert_min(counts: Counter, values, who: str, dimension: str) -> None:
+    for value in values:
+        assert counts[value] >= catalog.COVERAGE_MIN, (who, dimension, value, counts[value])
+
+
+def test_every_telecaller_sees_five_of_every_filter_value() -> None:
+    for line in ("loans", "real_estate"):
+        for telecaller in _staff_keys("telecaller", line):
+            mine = [lead for lead in catalog.coverage_leads() if lead.telecaller_key == telecaller]
+            dims: dict[str, Counter] = {}
+            for lead in mine:
+                for dimension, values in _lead_signal_values(lead).items():
+                    dims.setdefault(dimension, Counter()).update(values)
+            _assert_min(dims["lead_status"], catalog.TELECALLER_STATUSES, telecaller, "status")
+            _assert_min(dims["call"], ("not_called", *catalog.DISPOSITIONS), telecaller, "call")
+            _assert_min(dims["interest"], catalog.INTERESTS, telecaller, "interest")
+            _assert_min(dims["source"], ("direct", "agent", "client"), telecaller, "source")
+            if line == "loans":
+                _assert_min(dims["loan_status"], [s.value for s in LoanStatus], telecaller, "loan")
+
+
+def test_every_employee_sees_five_of_every_filter_value() -> None:
+    for line in ("loans", "real_estate"):
+        for employee in _staff_keys("employee", line):
+            mine = [
+                lead
+                for lead in catalog.coverage_leads()
+                if lead.task is not None and lead.task.employee_key == employee
+            ]
+            statuses = Counter(lead.task.status for lead in mine)
+            types = Counter(lead.task.task_type for lead in mine)
+            _assert_min(statuses, catalog.EMPLOYEE_TASK_STATUSES, employee, "task status")
+            _assert_min(types, catalog.TASK_TYPES_BY_LINE[line], employee, "task type")
+            dims: dict[str, Counter] = {}
+            for lead in mine:
+                for dimension, values in _lead_signal_values(lead).items():
+                    dims.setdefault(dimension, Counter()).update(values)
+            _assert_min(dims["call"], ("not_called", *catalog.DISPOSITIONS), employee, "call")
+            _assert_min(dims["interest"], catalog.INTERESTS, employee, "interest")
+            _assert_min(dims["source"], ("direct", "agent", "client"), employee, "source")
+            if line == "loans":
+                _assert_min(dims["loan_status"], [s.value for s in LoanStatus], employee, "loan")
+            else:
+                pickups = Counter(
+                    lead.arrangement.status
+                    for lead in catalog.coverage_leads()
+                    if lead.arrangement is not None and lead.arrangement.employee_key == employee
+                )
+                _assert_min(pickups, ("assigned", "completed", "cancelled"), employee, "pickup")
+
+
+def test_every_agent_sees_five_of_every_status() -> None:
+    for line in ("loans", "real_estate"):
+        for agent in _staff_keys("agent", line):
+            mine = [lead for lead in catalog.coverage_leads() if lead.agent_key == agent]
+            statuses = Counter(
+                "expired" if lead.agent_expired else lead.lead_status.value for lead in mine
+            )
+            _assert_min(statuses, (*catalog.TELECALLER_STATUSES, "expired"), agent, "lead")
+            commissions = Counter(lead.commission_status for lead in mine if lead.commission_status)
+            _assert_min(commissions, catalog.COMMISSION_CYCLE, agent, "commission")
+            if line == "real_estate":
+                listings = Counter(
+                    p.status for p in catalog.agent_listing_plans() if p.submitter_key == agent
+                )
+                listings["approved"] += sum(
+                    1
+                    for index in catalog.listing_origin_indices()
+                    if catalog.listing_origin_author(index) == agent
+                )
+                _assert_min(listings, ("pending", "approved", "rejected"), agent, "listing")
+
+
+def test_coverage_identities_are_unique_and_valid() -> None:
+    accounts = catalog.all_accounts()
+    for attribute in ("key", "mobile", "email", "code"):
+        values = [getattr(a, attribute) for a in accounts]
+        assert len(set(values)) == len(values), attribute
+    leads = catalog.coverage_leads()
+    assert len({lead.key for lead in leads}) == len(leads)
+    for lead in leads:
+        if lead.telecaller_key:
+            assert catalog.account(lead.telecaller_key).business_line == lead.line
+        if lead.task and lead.task.employee_key:
+            assert catalog.account(lead.task.employee_key).business_line == lead.line
+        if lead.commission_status:
+            assert lead.current_loan_status == LoanStatus.DISBURSED or lead.deal_status in {
+                PropertyDealStatus.BOOKED,
+                PropertyDealStatus.AGREEMENT_SIGNED,
+                PropertyDealStatus.CLOSED,
+            }
+    for plan in catalog.agent_listing_plans():
+        SubmissionFacts.model_validate(catalog.listing_facts(plan.index))
