@@ -25,7 +25,18 @@ export function getMyAnalytics(days: AnalyticsRange): Promise<ApiResponse<StaffA
 }
 
 type AnalyticsQuery = NonNullable<operations["my_analytics_api_v1_me_analytics_get"]["parameters"]["query"]>;
-type FilterKey = "call_status" | "interest" | "loan_status" | "lead_source" | "lead_status" | "task_type";
+type FilterKey =
+  | "call_status"
+  | "interest"
+  | "loan_status"
+  | "lead_source"
+  | "lead_status"
+  | "task_type"
+  | "content_type"
+  | "content_status"
+  | "placement"
+  | "banner_type"
+  | "discount_type";
 
 /** Optional role filters; the API rejects a filter that doesn't apply to the caller's role. */
 export type StaffAnalyticsFilterValues = { [K in FilterKey]?: NonNullable<AnalyticsQuery[K]> };

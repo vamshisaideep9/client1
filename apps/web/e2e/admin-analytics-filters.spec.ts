@@ -78,6 +78,63 @@ test("admin analytics filters by calendar range and lead filters", async ({ page
   await page.screenshot({ path: testInfo.outputPath("admin-analytics-filters.png"), fullPage: true });
 });
 
+test("every report tab has charts read from the whole filtered period", async ({ page, baseURL }, testInfo) => {
+  const requests = await mockReports(page);
+  await page.context().addCookies([{ name: "session_hint", value: "1", url: baseURL! }]);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/dashboard/analytics", { waitUntil: "domcontentloaded" });
+
+  // Leads: the stacked per-week chart and the conversion-rate line chart.
+  await expect(page.getByRole("heading", { name: "Leads per week" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Conversion rate" })).toBeVisible();
+  await expect(page.locator(".recharts-surface")).toHaveCount(2);
+  // The chart read is separate from the 25-row table page: first 500 rows, oldest first.
+  await expect
+    .poll(() =>
+      leadsRequests(requests).some(
+        (url) =>
+          url.searchParams.get("limit") === "500" &&
+          url.searchParams.get("offset") === "0" &&
+          url.searchParams.get("sort_by") === "bucket_start" &&
+          url.searchParams.get("sort_dir") === "asc",
+      ),
+    )
+    .toBe(true);
+  expect(leadsRequests(requests).some((url) => url.searchParams.get("limit") === "25")).toBe(true);
+
+  // Each chart has a table view; the conversion table shows 3 of 12 as 25%.
+  await page.getByText("Show as table").nth(1).click();
+  await expect(page.getByRole("table", { name: "Conversion rate" })).toContainText("25%");
+  await page.screenshot({ path: testInfo.outputPath("admin-analytics-charts.png"), fullPage: true });
+
+  // Agents: top agents and leads by line, with empty states when nothing matched.
+  await page.getByRole("tab", { name: "Agents" }).click();
+  await expect(page.getByRole("heading", { name: "Top 10 agents by leads" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Leads by line" })).toBeVisible();
+  await expect
+    .poll(() =>
+      requests.some(
+        (url) =>
+          url.pathname.endsWith("/reports/agents") &&
+          url.searchParams.get("sort_by") === "leads_total" &&
+          url.searchParams.get("limit") === "10",
+      ),
+    )
+    .toBe(true);
+  await expect(
+    page.getByRole("tabpanel", { name: "Agents" }).getByText("No activity in this date range.").first(),
+  ).toBeVisible();
+});
+
+test("charts fit a 360px phone", async ({ page, baseURL }) => {
+  await mockReports(page);
+  await page.context().addCookies([{ name: "session_hint", value: "1", url: baseURL! }]);
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto("/dashboard/analytics", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".recharts-surface").first()).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+});
+
 test("deals tab offers property filters", async ({ page, baseURL }) => {
   const requests = await mockReports(page);
   await page.context().addCookies([{ name: "session_hint", value: "1", url: baseURL! }]);

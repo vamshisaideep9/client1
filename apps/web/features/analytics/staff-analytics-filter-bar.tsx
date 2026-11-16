@@ -23,11 +23,69 @@ const TASK_TYPE_LABEL: Record<string, string> = {
   background_check: "Background check",
 };
 
+// Sub Admin content filters. The words match the Sub Admin's banner and offer
+// lists; for offers the API folds scheduled into Approved, active into Live
+// and expired into Archived.
+const CONTENT_TYPE_LABEL: Record<string, string> = { banners: "Banners", offers: "Offers" };
+const CONTENT_STATUS_LABEL: Record<string, string> = {
+  draft: "Draft",
+  pending_approval: "Pending approval",
+  approved: "Approved",
+  live: "Live",
+  rejected: "Changes requested",
+  archived: "Archived",
+};
+const PLACEMENT_LABEL: Record<string, string> = {
+  homepage: "Homepage",
+  homepage_ad: "Homepage sponsor",
+  financial_services: "Financial Services",
+  properties: "Properties",
+  dashboard: "Signed-in dashboard",
+};
+const BANNER_TYPE_LABEL: Record<string, string> = {
+  default: "Standard",
+  personalized: "Targeted",
+  action: "Action",
+};
+const DISCOUNT_TYPE_LABEL: Record<string, string> = {
+  percentage: "Percentage",
+  flat: "Flat amount",
+  "cashback-tie": "Cashback",
+};
+
 type FilterKey = keyof StaffAnalyticsFilterValues;
 type FilterSpec = { key: FilterKey; label: string; all: string; options: Record<string, string> };
 
-/** Which filters each role's analytics understand (mirrors the API). */
-export function filtersForRole(role: string | undefined, line: string): FilterSpec[] {
+/**
+ * Which filters each role's analytics understand (mirrors the API). The
+ * current filters only matter for the Sub Admin: banner-only filters hide
+ * while Content type is Offers, and the offer-only one while it is Banners.
+ */
+export function filtersForRole(
+  role: string | undefined,
+  line: string,
+  filters: StaffAnalyticsFilterValues = {},
+): FilterSpec[] {
+  if (role === "sub_admin") {
+    // A banner-only filter (placement, banner type) rules out offers and the
+    // offer-only one (discount type) rules out banners, as in the API, so a
+    // combination that could never match is never offered.
+    const banners = filters.content_type !== "offers" && !filters.discount_type;
+    const offers = filters.content_type !== "banners" && !filters.placement && !filters.banner_type;
+    return [
+      { key: "content_type", label: "Content type", all: "Banners and offers", options: CONTENT_TYPE_LABEL },
+      { key: "content_status", label: "Review status", all: "Any review status", options: CONTENT_STATUS_LABEL },
+      ...(banners
+        ? [
+            { key: "placement" as const, label: "Placement", all: "Any placement", options: PLACEMENT_LABEL },
+            { key: "banner_type" as const, label: "Banner type", all: "Any banner type", options: BANNER_TYPE_LABEL },
+          ]
+        : []),
+      ...(offers
+        ? [{ key: "discount_type" as const, label: "Discount type", all: "Any discount", options: DISCOUNT_TYPE_LABEL }]
+        : []),
+    ];
+  }
   if (role === "telecaller") {
     return [
       { key: "call_status", label: "Call status", all: "All call outcomes", options: DISPOSITION_LABEL },
@@ -47,6 +105,28 @@ export function filtersForRole(role: string | undefined, line: string): FilterSp
   return [];
 }
 
+/**
+ * Sets one filter and drops any other filter the new combination no longer
+ * offers (picking Offers clears Placement and Banner type, say), so a hidden
+ * control never keeps narrowing the numbers.
+ */
+export function withFilter(
+  role: string | undefined,
+  line: string,
+  filters: StaffAnalyticsFilterValues,
+  key: FilterKey,
+  value: string | undefined,
+): StaffAnalyticsFilterValues {
+  const next = { ...filters, [key]: value } as StaffAnalyticsFilterValues;
+  // The content type and the filter just picked decide what stays, so the
+  // newest choice wins over an older one it rules out.
+  const deciding = { content_type: next.content_type, [key]: value } as StaffAnalyticsFilterValues;
+  const offered = new Set(filtersForRole(role, line, deciding).map((spec) => spec.key));
+  return Object.fromEntries(
+    Object.entries(next).filter(([name, current]) => current && offered.has(name as FilterKey)),
+  ) as StaffAnalyticsFilterValues;
+}
+
 // Period + business line + role filters for "My analytics". The business-line
 // control switches the dashboard's active line, so every screen (and the API's
 // line-scoped access) stays on the same line.
@@ -64,7 +144,7 @@ export function StaffAnalyticsFilterBar({
   onFiltersChange: (filters: StaffAnalyticsFilterValues) => void;
 }) {
   const { activeLine, setActiveLine, lines, canSwitch } = useLine();
-  const specs = filtersForRole(role, activeLine);
+  const specs = filtersForRole(role, activeLine, filters);
   const active = Object.values(filters).some(Boolean);
 
   return (
@@ -93,7 +173,7 @@ export function StaffAnalyticsFilterBar({
           key={spec.key}
           value={filters[spec.key] ?? "all"}
           onValueChange={(value) =>
-            onFiltersChange({ ...filters, [spec.key]: value === "all" ? undefined : value })
+            onFiltersChange(withFilter(role, activeLine, filters, spec.key, value === "all" ? undefined : value))
           }
         >
           <SelectTrigger className="w-full" aria-label={spec.label}>

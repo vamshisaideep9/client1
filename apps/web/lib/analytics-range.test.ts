@@ -13,7 +13,7 @@ import {
 } from "@/lib/analytics-range";
 import { buildReportParams } from "@/lib/reports";
 import { buildMyAnalyticsQuery } from "@/lib/staff-analytics-api";
-import { filtersForRole } from "@/features/analytics/staff-analytics-filter-bar";
+import { filtersForRole, withFilter } from "@/features/analytics/staff-analytics-filter-bar";
 
 // 2026-11-15 20:00 UTC is 2026-11-16 01:30 IST: the IST date must win.
 const LATE_EVENING_UTC = new Date("2026-11-15T20:00:00Z");
@@ -99,6 +99,58 @@ describe("analytics request parameters", () => {
     expect(keys("telecaller", "real_estate")).toEqual(["call_status", "interest", "lead_source"]);
     expect(keys("employee")).toEqual(["task_type"]);
     expect(keys("agent")).toEqual(["lead_status"]);
-    expect(keys("sub_admin")).toEqual([]);
+    expect(keys("sub_admin")).toEqual(["content_type", "content_status", "placement", "banner_type", "discount_type"]);
+  });
+
+  it("hides Sub Admin filters that cannot match the chosen content type", () => {
+    const keys = (content_type?: "banners" | "offers") =>
+      filtersForRole("sub_admin", "loans", { content_type }).map((spec) => spec.key);
+    expect(keys("offers")).toEqual(["content_type", "content_status", "discount_type"]);
+    expect(keys("banners")).toEqual(["content_type", "content_status", "placement", "banner_type"]);
+    // A banner-only filter hides the offer-only one, and the reverse.
+    expect(filtersForRole("sub_admin", "loans", { placement: "homepage" }).map((spec) => spec.key)).toEqual([
+      "content_type",
+      "content_status",
+      "placement",
+      "banner_type",
+    ]);
+    expect(filtersForRole("sub_admin", "loans", { discount_type: "flat" }).map((spec) => spec.key)).toEqual([
+      "content_type",
+      "content_status",
+      "discount_type",
+    ]);
+    // Other roles ignore the current filters.
+    expect(filtersForRole("employee", "loans", { content_type: "offers" }).map((spec) => spec.key)).toEqual([
+      "task_type",
+    ]);
+  });
+
+  it("clears filters that no longer apply when the content type changes", () => {
+    const start = { content_status: "live", placement: "homepage", banner_type: "action", discount_type: "flat" } as const;
+    expect(withFilter("sub_admin", "loans", start, "content_type", "offers")).toEqual({
+      content_type: "offers",
+      content_status: "live",
+      discount_type: "flat",
+    });
+    expect(withFilter("sub_admin", "loans", start, "content_type", "banners")).toEqual({
+      content_type: "banners",
+      content_status: "live",
+      placement: "homepage",
+      banner_type: "action",
+    });
+    // Picking a banner-only filter drops the offer-only one, and the reverse.
+    expect(withFilter("sub_admin", "loans", { discount_type: "flat" }, "placement", "homepage")).toEqual({
+      placement: "homepage",
+    });
+    expect(withFilter("sub_admin", "loans", { banner_type: "action" }, "discount_type", "flat")).toEqual({
+      discount_type: "flat",
+    });
+    // Back to both kinds keeps what is left, and "all" removes the key.
+    expect(withFilter("sub_admin", "loans", { content_type: "offers", discount_type: "flat" }, "content_type", undefined)).toEqual({
+      discount_type: "flat",
+    });
+    expect(
+      withFilter("telecaller", "loans", { call_status: "busy", interest: "hot" }, "interest", undefined),
+    ).toEqual({ call_status: "busy" });
   });
 });

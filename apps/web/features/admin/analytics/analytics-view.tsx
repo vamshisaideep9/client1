@@ -36,6 +36,7 @@ import {
   type ReportSummary,
   type TeamPerformanceSummary,
 } from "@/lib/reports-api";
+import { ReportCharts } from "./report-charts";
 import { ReportFilterBar, type ReportFilterValue } from "./report-filter-bar";
 import { ReportTable, type ReportColumn } from "./report-table";
 import { useReport } from "./use-report";
@@ -281,6 +282,8 @@ function ReportPanel({ kind }: { kind: ReportKind }) {
           ))}
         </MetricGrid>
       )}
+
+      <ReportCharts kind={kind} filters={filters} />
 
       <div className="flex flex-wrap justify-end gap-2">
         <Button variant="outline" size="sm" onClick={() => void onExport("csv")} disabled={exporting || loading}>

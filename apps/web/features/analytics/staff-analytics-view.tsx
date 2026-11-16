@@ -65,7 +65,7 @@ export function KpiTile({ kpi }: { kpi: AnalyticsKpi }) {
   );
 }
 
-function Legend({ items }: { items: { key: string; label: string; detail?: string }[] }) {
+export function Legend({ items }: { items: { key: string; label: string; detail?: string }[] }) {
   return (
     <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-text-secondary" aria-label="Legend">
       {items.map((item, index) => (
@@ -83,7 +83,7 @@ function Legend({ items }: { items: { key: string; label: string; detail?: strin
   );
 }
 
-function TableToggle({ summary, children }: { summary: string; children: React.ReactNode }) {
+export function TableToggle({ summary, children }: { summary: string; children: React.ReactNode }) {
   return (
     <details className="group mt-3">
       <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-medium text-brand-link outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -153,7 +153,7 @@ function TrendPanel({ trend, bucket = "day" }: { trend: AnalyticsTrend; bucket?:
 }
 
 /** One whole split into a few parts: a segmented bar with a labeled legend. */
-function ShareBar({ breakdown }: { breakdown: AnalyticsBreakdown }) {
+export function ShareBar({ breakdown }: { breakdown: AnalyticsBreakdown }) {
   const parts = foldShareParts(breakdown.items);
   const total = parts.reduce((sum, item) => sum + item.value, 0);
   const color = (key: string, index: number) => (key === OTHER_KEY ? OTHER_COLOR : seriesColor(index));
@@ -189,7 +189,7 @@ function ShareBar({ breakdown }: { breakdown: AnalyticsBreakdown }) {
 }
 
 /** Compare parts: one hue, largest first, values labeled. */
-function RankedBars({
+export function RankedBars({
   items,
   unit,
   label,

@@ -23,17 +23,19 @@ function TrendTooltip({
   payload,
   label,
   trend,
+  formatLabel,
 }: {
   active?: boolean;
   payload?: readonly TooltipEntry[];
   label?: unknown;
   trend: AnalyticsTrend;
+  formatLabel: (day: string) => string;
 }) {
   if (!active || !payload?.length) return null;
   const total = payload.reduce((sum, entry) => sum + Number(entry.value ?? 0), 0);
   return (
     <div className="min-w-40 rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-md">
-      <p className="mb-1.5 font-medium text-text-primary">{formatDay(String(label))}</p>
+      <p className="mb-1.5 font-medium text-text-primary">{formatLabel(String(label))}</p>
       <ul className="space-y-1">
         {trend.series.map((series, index) => {
           const value = Number(payload.find((entry) => entry.dataKey === series.key)?.value ?? 0);
@@ -66,7 +68,14 @@ function TrendTooltip({
  * Day-by-day stacked bars (one hue per series in fixed order). The legend and
  * the table view live in the surrounding panel; this renders only the plot.
  */
-export default function TrendChart({ trend }: { trend: AnalyticsTrend }) {
+export default function TrendChart({
+  trend,
+  formatLabel = formatDay,
+}: {
+  trend: AnalyticsTrend;
+  /** X-axis and tooltip label for a point's ISO date; days by default. */
+  formatLabel?: (day: string) => string;
+}) {
   const rows: Row[] = trend.points.map((point) => ({ day: point.day, ...point.values }));
   const lastIndex = trend.series.length - 1;
   return (
@@ -76,7 +85,7 @@ export default function TrendChart({ trend }: { trend: AnalyticsTrend }) {
           <CartesianGrid vertical={false} stroke="var(--color-border, #e5e7eb)" strokeDasharray="0" />
           <XAxis
             dataKey="day"
-            tickFormatter={(value: string) => formatDay(value)}
+            tickFormatter={(value: string) => formatLabel(value)}
             tickLine={false}
             axisLine={false}
             minTickGap={24}
@@ -97,6 +106,7 @@ export default function TrendChart({ trend }: { trend: AnalyticsTrend }) {
                 payload={props.payload as readonly TooltipEntry[] | undefined}
                 label={props.label}
                 trend={trend}
+                formatLabel={formatLabel}
               />
             )}
           />
