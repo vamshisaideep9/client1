@@ -6019,6 +6019,10 @@
           "mobile_change_verified",
           "mobile_changed",
           "mobile_change_rejected",
+          "contact_changed",
+          "contact_change_requested",
+          "contact_change_rejected",
+          "contact_history_viewed",
           "vehicle_arrangement_updated",
           "banner_created",
           "banner_updated",
@@ -6208,6 +6212,11 @@
           "access_token": {
             "title": "Access Token",
             "type": "string"
+          },
+          "email_required": {
+            "default": false,
+            "title": "Email Required",
+            "type": "boolean"
           },
           "email_verified": {
             "default": false,
@@ -8786,6 +8795,138 @@
         "title": "ConstructionStatus",
         "type": "string"
       },
+      "ContactChangeChallengeResponse": {
+        "description": "One step of a change: where the code went and what comes next.",
+        "properties": {
+          "change_id": {
+            "format": "uuid",
+            "title": "Change Id",
+            "type": "string"
+          },
+          "delivery_channel": {
+            "anyOf": [
+              {
+                "enum": [
+                  "voice",
+                  "email",
+                  "none"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Channel"
+          },
+          "destination_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination Hint"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "field": {
+            "enum": [
+              "mobile",
+              "email"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "self_service",
+              "email_add",
+              "staff_request"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "otp_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Otp Hint"
+          },
+          "status": {
+            "enum": [
+              "awaiting_current_otp",
+              "awaiting_new_value",
+              "awaiting_new_otp",
+              "pending_approval",
+              "completed",
+              "rejected",
+              "cancelled",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "change_id",
+          "kind",
+          "field",
+          "status",
+          "expires_at",
+          "message"
+        ],
+        "title": "ContactChangeChallengeResponse",
+        "type": "object"
+      },
+      "ContactChangeIdRequest": {
+        "properties": {
+          "change_id": {
+            "format": "uuid",
+            "title": "Change Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "change_id"
+        ],
+        "title": "ContactChangeIdRequest",
+        "type": "object"
+      },
+      "ContactChangeOtpRequest": {
+        "properties": {
+          "change_id": {
+            "format": "uuid",
+            "title": "Change Id",
+            "type": "string"
+          },
+          "otp": {
+            "pattern": "^\\d{6}$",
+            "title": "Otp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "change_id",
+          "otp"
+        ],
+        "title": "ContactChangeOtpRequest",
+        "type": "object"
+      },
       "ContactInvitationRead": {
         "properties": {
           "valid": {
@@ -9418,6 +9559,28 @@
           "total"
         ],
         "title": "EligibleFeeApplicationListResponse",
+        "type": "object"
+      },
+      "EmailAddRequest": {
+        "description": "Add an email to an account that has no verified one (CS-025).",
+        "properties": {
+          "current_password": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "current_password"
+        ],
+        "title": "EmailAddRequest",
         "type": "object"
       },
       "EmailVerifyConfirmRequest": {
@@ -12870,6 +13033,11 @@
             ],
             "title": "Email"
           },
+          "email_required": {
+            "default": false,
+            "title": "Email Required",
+            "type": "boolean"
+          },
           "email_verified": {
             "title": "Email Verified",
             "type": "boolean"
@@ -13651,6 +13819,9 @@
           "mobile_change_requested",
           "mobile_changed",
           "mobile_change_rejected",
+          "contact_changed",
+          "contact_change_requested",
+          "contact_change_rejected",
           "vehicle_arrangement_updated",
           "campaign_approved",
           "campaign_changes_requested",
@@ -18321,6 +18492,84 @@
         "title": "ReferralStatus",
         "type": "string"
       },
+      "RegisterEmailInitiateRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "registration_token": {
+            "title": "Registration Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "registration_token",
+          "email"
+        ],
+        "title": "RegisterEmailInitiateRequest",
+        "type": "object"
+      },
+      "RegisterEmailInitiateResponse": {
+        "properties": {
+          "delivery_channel": {
+            "enum": [
+              "voice",
+              "email",
+              "none"
+            ],
+            "title": "Delivery Channel",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "otp_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Otp Hint"
+          }
+        },
+        "required": [
+          "message",
+          "delivery_channel"
+        ],
+        "title": "RegisterEmailInitiateResponse",
+        "type": "object"
+      },
+      "RegisterEmailVerifyRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "otp": {
+            "pattern": "^\\d{6}$",
+            "title": "Otp",
+            "type": "string"
+          },
+          "registration_token": {
+            "title": "Registration Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "registration_token",
+          "email",
+          "otp"
+        ],
+        "title": "RegisterEmailVerifyRequest",
+        "type": "object"
+      },
       "RegisterInitiateRequest": {
         "properties": {
           "first_name": {
@@ -18429,6 +18678,11 @@
       },
       "RegistrationTokenResponse": {
         "properties": {
+          "email_required": {
+            "default": false,
+            "title": "Email Required",
+            "type": "boolean"
+          },
           "registration_token": {
             "title": "Registration Token",
             "type": "string"
@@ -33565,6 +33819,146 @@
         ]
       }
     },
+    "/api/v1/auth/email/add": {
+      "post": {
+        "description": "Password, then a code to the new address. Only without a verified email.",
+        "operationId": "email_add_api_v1_auth_email_add_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailAddRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChangeChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Email Add",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/email/add/resend": {
+      "post": {
+        "operationId": "email_add_resend_api_v1_auth_email_add_resend_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactChangeIdRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChangeChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Email Add Resend",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/email/add/verify": {
+      "post": {
+        "description": "Verify the code; the address is stored verified and the email step clears.",
+        "operationId": "email_add_verify_api_v1_auth_email_add_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactChangeOtpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Email Add Verify",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/email/verify/confirm": {
       "post": {
         "operationId": "email_verify_confirm_api_v1_auth_email_verify_confirm_post",
@@ -34026,6 +34420,90 @@
           }
         },
         "summary": "Refresh Token",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/register/email/initiate": {
+      "post": {
+        "description": "CS-025: after the mobile code, send a code to the registering email.",
+        "operationId": "register_email_initiate_api_v1_auth_register_email_initiate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterEmailInitiateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterEmailInitiateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Email Initiate",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/register/email/verify": {
+      "post": {
+        "description": "CS-025: verify the email code; the returned token carries the address.",
+        "operationId": "register_email_verify_api_v1_auth_register_email_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterEmailVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Email Verify",
         "tags": [
           "auth"
         ]

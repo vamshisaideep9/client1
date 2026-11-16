@@ -68,6 +68,40 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In progress — Batch E: mandatory email, self-service contact changes and
+contact history (CS-025)** (2026-11-17; user-approved stakeholder feedback,
+batch E of A–G; identity-wide, both lines; no requirement or
+completion-percentage change). Stacked PRs, each opened against `main`,
+stacked on Batch D PR 2:
+
+- *PR E1 — API: mandatory email behind a server gate, schema*, branch
+  `feat/batch-e-email-required-api` from `feat/batch-d-eligibility-web`
+  `38a66ed2`. Migration `d4f6a8c0e2b4` (revises `c7e9a1b3d5f8`, single head)
+  adds `contact_change_requests` (one state machine for self-service changes,
+  added emails and staff requests; one active row per account; raw new value
+  only while active, enforced by CHECK) and `contact_change_history`
+  (permanent, platform-Admin-only SELECT), no api_user write grants, and the
+  confined definer `erase_contact_change_data(uuid)` (owner or platform Admin,
+  only for an already soft-deleted account) called in account deletion.
+  `EMAIL_REQUIRED_ENFORCED` (default off, `.env.example` only) gates
+  registration (email code step) and every endpoint except the email step;
+  `POST /auth/email/add` (+ `/resend`, `/verify`) adds a code-verified email
+  (password first); `PATCH /auth/me` no longer edits or clears email;
+  `/auth/me`, login and refresh carry `email_required`.
+- *PR E2 — API: self-service phone/email change and history* (Client, Agent,
+  Admin), lost-number completion records history, Admin history read
+  (audited).
+- *PR E3 — API: staff contact-change requests and one-Admin approval.*
+- *PR E4 — web.*
+
+Before turning `EMAIL_REQUIRED_ENFORCED` on in an environment: SMTP
+configured with `EMAIL_ENABLED=true`, a real code delivered to an inbox and
+verified through registration and the add-email step, and staff told that
+their Admin-set address must be verified at next sign-in.
+
+Next: the user merges B1 … D2, then E1 onward. Recommended: Opus 5.5 /
+extra-high (authentication, RLS, migration).
+
 **In progress — Batch D: lead and referral eligibility (CS-024)**
 (2026-11-17; user-approved stakeholder feedback, batch D of A–G; both lines;
 no requirement or completion-percentage change). Two stacked PRs, both

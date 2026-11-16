@@ -73,6 +73,10 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     "loan_txn_history": ClassificationMode.FIXED_LOANS,
     "loan_types": ClassificationMode.PLATFORM_CONFIG,
     "mobile_change_requests": ClassificationMode.IDENTITY,
+    # CS-025 phone/email changes and their permanent history are identity-wide
+    # (one account, both lines), like mobile_change_requests.
+    "contact_change_requests": ClassificationMode.IDENTITY,
+    "contact_change_history": ClassificationMode.IDENTITY,
     "notifications": ClassificationMode.IDENTITY,
     "offers": ClassificationMode.GLOBAL_CONTENT,
     "payouts": ClassificationMode.OPERATIONAL,

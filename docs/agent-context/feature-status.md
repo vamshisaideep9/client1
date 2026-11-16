@@ -2,6 +2,61 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch E PR 1: mandatory email behind a server gate (API)**
+(2026-11-17; CS-025), branch `feat/batch-e-email-required-api` stacked on
+Batch D PR 2. API, one migration and regenerated contracts (plus the web
+label maps the new notification and audit values require); no
+requirement-percentage change.
+- Store: migration `d4f6a8c0e2b4` (revises `c7e9a1b3d5f8`) adds
+  `contact_change_requests` (kind `self_service` / `email_add` /
+  `staff_request`, field, status per kind by CHECK, keyed fingerprint of the
+  current value, raw new value only while active by CHECK, one active row per
+  account by partial unique index) and `contact_change_history` (field, old,
+  new, method, proof category and reference, approver, time). RLS enabled and
+  forced on both: requests SELECT for owner or platform Admin; history SELECT
+  for platform Admin only; no api_user write grant; confined definer
+  `erase_contact_change_data(uuid)` refuses unless the caller is the owner or
+  a platform Admin AND the account is already soft-deleted; called in account
+  deletion Phase A. Audit values `contact_changed`, `contact_change_requested`,
+  `contact_change_rejected`, `contact_history_viewed`; notification values
+  `contact_changed`, `contact_change_requested`, `contact_change_rejected`.
+  Ledgers: both tables `identity`; Admin coverage minimized (requests) and
+  full Admin-only (history).
+- Gate: `EMAIL_REQUIRED_ENFORCED` (default off). `CurrentUser.email_required`
+  is read from the live row each request; `get_active_user` answers 403 (with
+  `X-Email-Required: 1`) while it is set; `get_active_user_allow_email_pending`
+  admits `GET /auth/me`, the email add/verify endpoints and `DELETE /auth/me`;
+  logout, refresh and change-password never used `get_active_user`.
+  `MeResponse`, login/refresh tokens and the registration token response carry
+  `email_required`.
+- Registration: `POST /auth/register/email/initiate` / `verify` (registration
+  token required, code keyed to the mobile and bound to the address's keyed
+  fingerprint, per-address daily cap, no existence lookup) upgrade the token;
+  set-password refuses without it when enforced and stores the address
+  verified (a verified holder elsewhere is refused, an unverified copy is
+  released).
+- Add email: `POST /auth/email/add` (password; shares the login failure lock
+  and a per-account hourly budget), `/resend`, `/verify` (code keyed to the
+  change id and stage, bound to the address; returns `/auth/me`). Staff may
+  only verify the Admin-set address. `PATCH /auth/me` refuses a different or
+  cleared email (422) and accepts the address on file as a no-op.
+- Housekeeping: `expire_contact_changes` scheduler job (15 min) expires
+  abandoned rows and clears their value.
+- Evidence (python 3.13 container, scratch database migrated to
+  `d4f6a8c0e2b4`; upgrade → downgrade → upgrade): new
+  `auth/test_email_required.py` (26: gate on/off, the endpoints left open,
+  logout/refresh/password change never locked out, add-email password,
+  budget, single-use code bound to its change and address, resubmission,
+  expiry and sweep, one active change, verified/unverified holders, staff
+  limits, registration with and without enforcement, history Admin-only RLS,
+  no api_user write, erasure refused while live and done with the account,
+  DB CHECKs) with the affected auth, mobile-change, deletion, Admin, ledger,
+  RLS-coverage, route-authorization, scheduler, notification, audit and
+  eligibility modules: 489 passed, 1 failed (`test_email_verify` changed the
+  address through PATCH; it now changes it directly) and the three email
+  modules rerun 55 passed. Ruff check/format clean; one Alembic head; web
+  `pnpm typecheck` and `pnpm lint` pass on the regenerated types.
+
 **In progress — Batch D PR 2: lead and referral eligibility (web)**
 (2026-11-17; CS-024; PR
 [#374](https://github.com/brollysolutions/client1/pull/374), mirror

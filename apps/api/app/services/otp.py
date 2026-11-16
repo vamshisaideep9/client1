@@ -22,11 +22,13 @@ from app.cache.redis_keys import (
     login_lock_key,
     login_rate_ip_key,
     otp_agent_apply_key,
+    otp_contact_change_key,
     otp_email_verify_key,
     otp_lock_key,
     otp_mobile_change_key,
     otp_rate_ip_key,
     otp_rate_key,
+    otp_register_email_key,
     otp_register_key,
     otp_resend_key,
     otp_reset_key,
@@ -55,12 +57,31 @@ def _otp_key(mobile: str, purpose: str) -> str:
         return otp_agent_apply_key(mobile)
     if purpose == "mobile_change":
         return otp_mobile_change_key(mobile)
+    if purpose == "register_email":
+        return otp_register_email_key(mobile)
+    # CS-025: the subject is the change row id, not a number, so a code is
+    # bound to one change and one stage.
+    if purpose == "contact_change_current":
+        return otp_contact_change_key("current", mobile)
+    if purpose == "contact_change_new":
+        return otp_contact_change_key("new", mobile)
     raise ValueError(f"Unknown OTP purpose: {purpose}")
 
 
-async def generate_and_store_otp(cache: RedisCache, mobile: str, purpose: str) -> str:
-    """Generate 6-digit OTP, hash+store in Redis, return plaintext."""
-    await check_otp_rate(cache, mobile)
+async def generate_and_store_otp(
+    cache: RedisCache,
+    mobile: str,
+    purpose: str,
+    *,
+    rate_subject: str | None = None,
+) -> str:
+    """Generate 6-digit OTP, hash+store in Redis, return plaintext.
+
+    ``mobile`` is the key subject. ``rate_subject`` (default: the subject)
+    selects the daily budget: contact-change codes are keyed by change id but
+    still draw from the destination number's (or address's) shared budget.
+    """
+    await check_otp_rate(cache, rate_subject or mobile)
     otp = f"{secrets.randbelow(10**6):06d}"
     # argon2 is CPU-heavy even for a 6-digit OTP — hash off the event loop.
     otp_hash = await anyio.to_thread.run_sync(_ph.hash, otp, limiter=ARGON2_LIMITER)
@@ -123,7 +144,9 @@ async def ensure_active_otp_session(cache: RedisCache, mobile: str, purpose: str
         )
 
 
-async def resend_otp(cache: RedisCache, mobile: str, purpose: str) -> str:
+async def resend_otp(
+    cache: RedisCache, mobile: str, purpose: str, *, rate_subject: str | None = None
+) -> str:
     """Resend OTP. Max 3 resends per window, then 1-hour lock (Auth Design §8)."""
     await ensure_active_otp_session(cache, mobile, purpose)
 
@@ -144,7 +167,7 @@ async def resend_otp(cache: RedisCache, mobile: str, purpose: str) -> str:
             detail="Too many resends. Try again in 1 hour.",
         )
 
-    return await generate_and_store_otp(cache, mobile, purpose)
+    return await generate_and_store_otp(cache, mobile, purpose, rate_subject=rate_subject)
 
 
 async def check_otp_rate(cache: RedisCache, mobile: str) -> None:

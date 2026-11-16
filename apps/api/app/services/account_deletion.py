@@ -302,6 +302,11 @@ async def delete_account(
     # (CS-024) go with it. api_user cannot DELETE them, so the same confined
     # definer shape: owner or platform Admin only, atomic with the scrub.
     await db.scalar(func.erase_lead_intake_attempts(target_auth_user_uuid))
+    # CS-025 contact changes and the permanent contact history go with the
+    # account. The definer refuses unless the account is already soft-deleted,
+    # so flush the scrub above first (sessions here do not autoflush).
+    await db.flush()
+    await db.scalar(func.erase_contact_change_data(target_auth_user_uuid))
     if cheque_keys:
         await db.flush()
     for key in cheque_keys:

@@ -181,6 +181,11 @@ This supersedes the former mandatory-email registration implementation and
 settles FR-3.3/FR-17.2 without changing CS-001 dual-line enrollment or CS-003
 profile/RLS scope.
 
+*Amended by CS-025 (2026-11-17):* email is again mandatory, now proven by a
+code at registration and added through a blocking step for existing accounts
+(enforced per environment), and it can no longer be cleared or edited through
+the profile form. The other optional profile fields are unchanged.
+
 ### CS-006 — vehicle arrangements are a dedicated site-visit workflow
 
 A Client may optionally request one pickup while creating a real-estate site
@@ -800,6 +805,51 @@ lines):**
 
 Evidence is listed in `feature-status.md` under Batch D.
 
+### CS-025 — Mandatory email, self-service contact changes and contact history
+
+**Decision (2026-11-17, user-approved stakeholder feedback, batch E; amends
+CS-005's optional email and the support-only mobile change):**
+
+- *Email is mandatory.* Registration requires an email proven by a code;
+  every existing account without a verified email is held on a blocking
+  "Add your email" step after sign-in until it adds and verifies one. Email
+  can no longer be cleared, and `PATCH /auth/me` no longer edits it.
+  Enforcement is behind the server setting `EMAIL_REQUIRED_ENFORCED` (off by
+  default) and is switched on per environment only after email delivery has
+  been proven there end to end. While it is on, every endpoint answers 403
+  for such an account except `/auth/me`, the add/verify email endpoints, a
+  staff contact-change request, account deletion, logout, refresh and
+  password change.
+- *Adding an email* needs the current password and a code sent to the new
+  address. A Telecaller, Employee or Sub Admin may only verify the address an
+  Admin set; a different one goes through a contact-change request. An
+  address verified on another account is refused (after the code, so the
+  check reveals nothing to someone who does not control it); an unverified
+  copy elsewhere is released to the proven owner.
+- *Self-service change (Client, Agent, Admin).* Current password, a code to
+  the current number or email, the new value, a code to the new value, then
+  one atomic update: the old value is replaced, the session version is
+  bumped, every refresh token is revoked and push subscriptions are removed.
+  Notices go in-app and by email to the old and the new address (an email
+  change) or to the verified email (a phone change: there is no SMS channel).
+  Phone and email are never changed together: one active change per account,
+  and an open lost-number request also blocks a new change (409).
+- *Lost number.* The public `/change-mobile` request flow (two Admins, proof
+  category only, no upload) is unchanged and linked from Settings.
+- *Staff requests.* Telecallers, Employees and Sub Admins (managers included)
+  request a phone or email change; the new value is proven by a code; one
+  platform Admin, never the requester, approves (applied like the
+  self-service change) or rejects with password re-entry.
+- *History.* `contact_change_history` keeps every completed change (field,
+  old value, new value, method, proof category and PII-free reference,
+  approver, time) permanently, readable by a platform Admin only (the account
+  holder cannot read it) and erased only with the account. Audit and auth
+  events carry ids, field and method, never the values. Change requests keep
+  the raw new value only while active (a database CHECK clears it on every
+  terminal status), as mobile-change requests already do.
+
+Evidence is listed in `feature-status.md` under Batch E.
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in
@@ -819,7 +869,7 @@ explicitly changes it.
 | Client status reasons | The API exposes `status_reason`, and the client loan UI renders it verbatim when present. | [`schemas/loans.py`](../../apps/api/app/schemas/loans.py), [`apps/web/lib/loans.ts`](../../apps/web/lib/loans.ts), [`loans-applications.tsx`](../../apps/web/features/dashboard/loans-applications.tsx) |
 | Referral payout execution | Sub Admin manages bonus configuration; creating the actual referral payout is restricted to platform Admin. | [`api/v1/referral_bonus.py`](../../apps/api/app/api/v1/referral_bonus.py), [`api/v1/referrals.py`](../../apps/api/app/api/v1/referrals.py) |
 | Agent lead expiry | Agent attribution has a fixed 30-day first-attribution deadline with converted/closed exclusions, idempotent scheduled release, audit, notifications, RLS denial, and Agent history/countdown. CS-017 (2026-11-14) adds same-Agent resubmission, a 7-day reminder, and policy copy in place of the countdown. | [PR #144](https://github.com/brollysolutions/client1/pull/144), [`services/lead_expiry.py`](../../apps/api/app/services/lead_expiry.py) |
-| Client registration and optional profile | Client registration is mobile-first; email and demographic/income/location details are optional, skippable, editable, clearable, and never gate account use. Location is entered manually through a search-style field; the web app does not request browser geolocation. | CS-005, [PR #148](https://github.com/brollysolutions/client1/pull/148), migration `e4b5c6d7e8f9` |
+| Client registration and optional profile | Client registration is mobile-first; demographic/income/location details are optional, skippable, editable, clearable, and never gate account use. Location is entered manually through a search-style field; the web app does not request browser geolocation. CS-025 (2026-11-17) makes email mandatory and code-verified (enforced per environment by `EMAIL_REQUIRED_ENFORCED`) and no longer clearable. | CS-005, CS-025, [PR #148](https://github.com/brollysolutions/client1/pull/148), migration `e4b5c6d7e8f9` |
 | Vehicle arrangements | One dedicated arrangement per site visit; Admin enters transport details, the service automatically assigns an eligible real-estate or dual-line Employee, the assignee fulfils it, and the owning Client follows it read-only. | CS-006, [PR #149](https://github.com/brollysolutions/client1/pull/149), migration `b8c9d0e1f2a3`, migration `dd45ee67ff89`, vehicle-arrangement and Employee-auto-assignment tests |
 | Authenticated personalization | Client/Agent dashboard banner layers and Client offers use a closed consented rule grammar; coarse optional location is retained for at most 30 days; public responses exclude targeted content. | CS-008, [PR #152](https://github.com/brollysolutions/client1/pull/152), migration `c9d0e1f2a3b4`, personalization API/RLS/web tests |
 

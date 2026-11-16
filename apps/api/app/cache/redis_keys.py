@@ -69,6 +69,21 @@ MOBILE_CHANGE_RATE_IP = "mobile_change_rate_ip:{ip}"
 MOBILE_CHANGE_RATE_ACCOUNT = "mobile_change_rate_account:{mobile}"
 MOBILE_CHANGE_OTP_DAILY = "mobile_change_otp_daily:{mobile}"
 
+# CS-025 phone/email changes. Every code is keyed to ONE change row and ONE
+# stage ("current" or "new"), so a code can never be replayed against another
+# change, another stage, or any login/registration purpose. The target key
+# holds the keyed fingerprint of the value the code was sent to; verification
+# refuses when it no longer matches the row (a resubmitted new value, or a
+# current value that changed underneath the flow). Owner:
+# services/contact_change.py. Registration's email code is keyed to the
+# verified mobile like the other registration codes.
+OTP_CONTACT_CHANGE = "otp:contact_change_{stage}:{change_id}"
+OTP_CONTACT_CHANGE_TARGET = "otp:contact_change_target:{stage}:{change_id}"
+OTP_REGISTER_EMAIL = "otp:register_email:{mobile}"
+OTP_REGISTER_EMAIL_TARGET = "otp:register_email_target:{mobile}"
+CONTACT_CHANGE_RATE_ACCOUNT = "contact_change_rate_account:{owner_uuid}"
+CONTACT_CHANGE_TARGET_DAILY = "contact_change_target_daily:{fingerprint}"
+
 # Admin broadcast (services/admin_notify.py::broadcast) — one send per admin
 # per ADMIN_BROADCAST_RATE_LIMIT_MINUTES window. A broadcast has no undo, so
 # this exists specifically to catch a double-clicked send, not general abuse.
@@ -111,6 +126,8 @@ TTL_AGENT_APPLY_PRESIGN = 15 * 60  # matches the ticket's own 15 min exp
 TTL_AGENT_APPLY_OTP_DAILY = 24 * 60 * 60  # 24 h daily cap, purpose-scoped
 TTL_MOBILE_CHANGE_RATE = 60 * 60
 TTL_MOBILE_CHANGE_OTP_DAILY = 24 * 60 * 60
+TTL_CONTACT_CHANGE_RATE_ACCOUNT = 60 * 60
+TTL_CONTACT_CHANGE_TARGET_DAILY = 24 * 60 * 60
 TTL_PROPERTY_MEDIA_PRESIGN = 60 * 60
 TTL_LOAN_MEDIA_PRESIGN = 60 * 60
 TTL_AGENT_CHEQUE_PRESIGN = 60 * 60
@@ -361,3 +378,31 @@ def mobile_change_rate_account_key(mobile: str) -> str:
 
 def mobile_change_otp_daily_key(mobile: str) -> str:
     return MOBILE_CHANGE_OTP_DAILY.format(mobile=mobile)
+
+
+def otp_contact_change_key(stage: str, change_id: str) -> str:
+    if stage not in ("current", "new"):
+        raise ValueError(f"Unknown contact-change stage: {stage}")
+    return OTP_CONTACT_CHANGE.format(stage=stage, change_id=change_id)
+
+
+def otp_contact_change_target_key(stage: str, change_id: str) -> str:
+    if stage not in ("current", "new"):
+        raise ValueError(f"Unknown contact-change stage: {stage}")
+    return OTP_CONTACT_CHANGE_TARGET.format(stage=stage, change_id=change_id)
+
+
+def otp_register_email_key(mobile: str) -> str:
+    return OTP_REGISTER_EMAIL.format(mobile=mobile)
+
+
+def otp_register_email_target_key(mobile: str) -> str:
+    return OTP_REGISTER_EMAIL_TARGET.format(mobile=mobile)
+
+
+def contact_change_rate_account_key(owner_uuid: str) -> str:
+    return CONTACT_CHANGE_RATE_ACCOUNT.format(owner_uuid=owner_uuid)
+
+
+def contact_change_target_daily_key(fingerprint: str) -> str:
+    return CONTACT_CHANGE_TARGET_DAILY.format(fingerprint=fingerprint)

@@ -103,6 +103,11 @@ class AuditAction(enum.StrEnum):
     MOBILE_CHANGE_VERIFIED = "mobile_change_verified"
     MOBILE_CHANGED = "mobile_changed"
     MOBILE_CHANGE_REJECTED = "mobile_change_rejected"
+    # CS-025 contact changes: ids, field and method only, never the values.
+    CONTACT_CHANGED = "contact_changed"
+    CONTACT_CHANGE_REQUESTED = "contact_change_requested"
+    CONTACT_CHANGE_REJECTED = "contact_change_rejected"
+    CONTACT_HISTORY_VIEWED = "contact_history_viewed"
     VEHICLE_ARRANGEMENT_UPDATED = "vehicle_arrangement_updated"
     BANNER_CREATED = "banner_created"
     BANNER_UPDATED = "banner_updated"

@@ -1896,6 +1896,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/email/add": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email Add
+         * @description Password, then a code to the new address. Only without a verified email.
+         */
+        post: operations["email_add_api_v1_auth_email_add_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/email/add/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Email Add Resend */
+        post: operations["email_add_resend_api_v1_auth_email_add_resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/email/add/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email Add Verify
+         * @description Verify the code; the address is stored verified and the email step clears.
+         */
+        post: operations["email_add_verify_api_v1_auth_email_add_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/email/verify/confirm": {
         parameters: {
             query?: never;
@@ -2062,6 +2119,46 @@ export interface paths {
         put?: never;
         /** Refresh Token */
         post: operations["refresh_token_api_v1_auth_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/register/email/initiate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register Email Initiate
+         * @description CS-025: after the mobile code, send a code to the registering email.
+         */
+        post: operations["register_email_initiate_api_v1_auth_register_email_initiate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/register/email/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register Email Verify
+         * @description CS-025: verify the email code; the returned token carries the address.
+         */
+        post: operations["register_email_verify_api_v1_auth_register_email_verify_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6983,7 +7080,7 @@ export interface components {
          *     `services/fee_cashbacks.py` (FR-6.6 processing-fee cashback).
          * @enum {string}
          */
-        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded";
+        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "contact_history_viewed" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded";
         /** AuditLogListResponse */
         AuditLogListResponse: {
             /** Entries */
@@ -7044,6 +7141,11 @@ export interface components {
         AuthTokensResponse: {
             /** Access Token */
             access_token: string;
+            /**
+             * Email Required
+             * @default false
+             */
+            email_required: boolean;
             /**
              * Email Verified
              * @default false
@@ -7870,6 +7972,63 @@ export interface components {
          * @enum {string}
          */
         ConstructionStatus: "ready" | "under_construction";
+        /**
+         * ContactChangeChallengeResponse
+         * @description One step of a change: where the code went and what comes next.
+         */
+        ContactChangeChallengeResponse: {
+            /**
+             * Change Id
+             * Format: uuid
+             */
+            change_id: string;
+            /** Delivery Channel */
+            delivery_channel?: ("voice" | "email" | "none") | null;
+            /** Destination Hint */
+            destination_hint?: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "mobile" | "email";
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "self_service" | "email_add" | "staff_request";
+            /** Message */
+            message: string;
+            /** Otp Hint */
+            otp_hint?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "awaiting_current_otp" | "awaiting_new_value" | "awaiting_new_otp" | "pending_approval" | "completed" | "rejected" | "cancelled" | "expired";
+        };
+        /** ContactChangeIdRequest */
+        ContactChangeIdRequest: {
+            /**
+             * Change Id
+             * Format: uuid
+             */
+            change_id: string;
+        };
+        /** ContactChangeOtpRequest */
+        ContactChangeOtpRequest: {
+            /**
+             * Change Id
+             * Format: uuid
+             */
+            change_id: string;
+            /** Otp */
+            otp: string;
+        };
         /** ContactInvitationRead */
         ContactInvitationRead: {
             /** Valid */
@@ -8132,6 +8291,19 @@ export interface components {
             applications: components["schemas"]["EligibleFeeApplication"][];
             /** Total */
             total: number;
+        };
+        /**
+         * EmailAddRequest
+         * @description Add an email to an account that has no verified one (CS-025).
+         */
+        EmailAddRequest: {
+            /** Current Password */
+            current_password: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
         };
         /** EmailVerifyConfirmRequest */
         EmailVerifyConfirmRequest: {
@@ -9289,6 +9461,11 @@ export interface components {
         MeResponse: {
             /** Email */
             email: string | null;
+            /**
+             * Email Required
+             * @default false
+             */
+            email_required: boolean;
             /** Email Verified */
             email_verified: boolean;
             /** First Name */
@@ -9521,7 +9698,7 @@ export interface components {
          * NotificationType
          * @enum {string}
          */
-        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "agent_lead_expiry_reminder" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed";
+        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "agent_lead_expiry_reminder" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed";
         /** OfferCreate */
         OfferCreate: {
             audience_rules?: components["schemas"]["AudienceRules"];
@@ -10985,6 +11162,40 @@ export interface components {
          * @enum {string}
          */
         ReferralStatus: "pending" | "converted" | "accrued" | "paid" | "void";
+        /** RegisterEmailInitiateRequest */
+        RegisterEmailInitiateRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Registration Token */
+            registration_token: string;
+        };
+        /** RegisterEmailInitiateResponse */
+        RegisterEmailInitiateResponse: {
+            /**
+             * Delivery Channel
+             * @enum {string}
+             */
+            delivery_channel: "voice" | "email" | "none";
+            /** Message */
+            message: string;
+            /** Otp Hint */
+            otp_hint?: string | null;
+        };
+        /** RegisterEmailVerifyRequest */
+        RegisterEmailVerifyRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Otp */
+            otp: string;
+            /** Registration Token */
+            registration_token: string;
+        };
         /** RegisterInitiateRequest */
         RegisterInitiateRequest: {
             /** First Name */
@@ -11019,6 +11230,11 @@ export interface components {
         };
         /** RegistrationTokenResponse */
         RegistrationTokenResponse: {
+            /**
+             * Email Required
+             * @default false
+             */
+            email_required: boolean;
             /** Registration Token */
             registration_token: string;
         };
@@ -16889,6 +17105,105 @@ export interface operations {
             };
         };
     };
+    email_add_api_v1_auth_email_add_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailAddRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeChallengeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    email_add_resend_api_v1_auth_email_add_resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactChangeIdRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeChallengeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    email_add_verify_api_v1_auth_email_add_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactChangeOtpRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     email_verify_confirm_api_v1_auth_email_verify_confirm_post: {
         parameters: {
             query?: never;
@@ -17231,6 +17546,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthTokensResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_email_initiate_api_v1_auth_register_email_initiate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterEmailInitiateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisterEmailInitiateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_email_verify_api_v1_auth_register_email_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterEmailVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationTokenResponse"];
                 };
             };
             /** @description Validation Error */
