@@ -68,6 +68,11 @@ class PayoutCreate(BaseModel):
         return self
 
 
+SimulatedGatewayEvent = Literal[
+    "payout.processed", "payout.failed", "payout.rejected", "payout.reversed"
+]
+
+
 class PayoutRead(BaseModel):
     id: UUID
     # Nullable: account deletion de-links a payout from its recipient (SRS
@@ -107,6 +112,15 @@ class PayoutRead(BaseModel):
     rejected_by_name: str | None = None
     viewer_is_maker: bool = False
     viewer_can_approve: bool = False
+    # Development gateway simulator only: the outcomes this Admin may apply now.
+    # Always empty in production, with live credentials, or for non-Admins.
+    simulate_events: list[SimulatedGatewayEvent] = Field(default_factory=list)
+
+
+class PayoutGatewaySimulation(BaseModel):
+    """Tester-chosen gateway outcome (development simulator only)."""
+
+    event: SimulatedGatewayEvent
 
 
 class PayoutListResponse(BaseModel):

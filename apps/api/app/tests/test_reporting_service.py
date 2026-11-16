@@ -446,3 +446,157 @@ async def test_loans_report_agent_filter_excludes_other_agents_loans() -> None:
     # filter must exclude the other agent's loan, not just narrow sorting.
     assert summary["total_count"] == 1
     assert summary["converted_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Report filters (telecaller, source, call outcome, statuses, property facets)
+# ---------------------------------------------------------------------------
+
+
+def _unique_day() -> date:
+    """A far-future day no other run has used, so totals stay exact on a reused DB."""
+    import secrets
+
+    return date(2100 + secrets.randbelow(800), 1 + secrets.randbelow(12), 1 + secrets.randbelow(28))
+
+
+async def _count(kind: str, d: date, line: str, **filters: object) -> int:
+    fn = {
+        "leads": reporting.get_leads_report,
+        "loans": reporting.get_loans_report,
+        "deals": reporting.get_deals_report,
+    }[kind]
+    async with _session_mod.AsyncSessionLocal() as db:
+        _rows, _total, summary = await fn(
+            db,
+            date_from=d,
+            date_to=d,
+            bucket="week",
+            business_line=line,
+            limit=500,
+            report_filters=reporting.ReportFilters(**filters),
+        )
+    return summary["total_count"]
+
+
+async def _telecaller_profile() -> str:
+    from app.models.profile import ProfileScope, StaffProfile, StaffRole
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        user = User(
+            first_name="Test",
+            last_name="Telecaller",
+            mobile=unique_mobile(),
+            email=f"tc_{uuid.uuid4().hex[:12]}@example.com",
+            password_hash="x",
+        )
+        db.add(user)
+        await db.flush()
+        profile = StaffProfile(
+            auth_user_uuid=user.id,
+            role=StaffRole.TELECALLER,
+            scope=ProfileScope.LINE,
+            business_line="loans",
+            staff_code=f"TC-{uuid.uuid4().hex[:8]}",
+            status=ProfileStatus.ACTIVE,
+        )
+        db.add(profile)
+        await db.commit()
+        return str(profile.id)
+
+
+@pytest.mark.asyncio
+async def test_lead_report_filters_by_telecaller_source_status_and_latest_call() -> None:
+    import secrets
+
+    from app.models.lead_activity import CallDisposition, InterestLevel, LeadActivity
+    from app.models.referral import Referral, ReferralCode
+
+    d = _unique_day()
+    ts = datetime(d.year, d.month, d.day, 6, 0, tzinfo=UTC)
+    telecaller = await _telecaller_profile()
+    agent = await _seed_agent("loans")
+    worked = await _seed_lead(business_line="loans", created_at=ts, status=LeadStatus.WORKING)
+    await _seed_lead(business_line="loans", created_at=ts, origin_agent_profile_uuid=agent)
+    referred = await _seed_lead(business_line="loans", created_at=ts)
+    await _seed_lead(business_line="loans", created_at=ts)
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        lead = await db.get(Lead, uuid.UUID(worked))
+        assert lead is not None
+        lead.assigned_telecaller_profile_uuid = uuid.UUID(telecaller)
+        for minutes, disposition, interest in ((0, "connected", "hot"), (30, "busy", None)):
+            db.add(
+                LeadActivity(
+                    lead_uuid=lead.id,
+                    telecaller_staff_profile_uuid=uuid.UUID(telecaller),
+                    business_line="loans",
+                    disposition=CallDisposition(disposition),
+                    interest_level=InterestLevel(interest) if interest else None,
+                    created_at=ts + timedelta(minutes=minutes),
+                )
+            )
+        referrer = User(
+            first_name="Ref",
+            last_name="Errer",
+            mobile=unique_mobile(),
+            email=f"ref_{uuid.uuid4().hex[:12]}@example.com",
+            password_hash="x",
+        )
+        db.add(referrer)
+        await db.flush()
+        code = "".join(secrets.choice("0123456789ABCDEFGHJKMNPQRSTVWXYZ") for _ in range(8))
+        db.add(ReferralCode(auth_user_uuid=referrer.id, code=code))
+        referred_lead = await db.get(Lead, uuid.UUID(referred))
+        assert referred_lead is not None
+        db.add(Referral(referrer_auth_user_uuid=referrer.id, referred_mobile=referred_lead.mobile))
+        await db.commit()
+
+    telecallers = (uuid.UUID(telecaller),)
+    assert await _count("leads", d, "loans") == 4
+    assert await _count("leads", d, "loans", telecaller_profile_uuids=telecallers) == 1
+    assert await _count("leads", d, "loans", lead_source="agent") == 1
+    assert await _count("leads", d, "loans", lead_source="client") == 1
+    assert await _count("leads", d, "loans", lead_source="direct") == 2
+    assert await _count("leads", d, "loans", lead_status="working") == 1
+    # Only the LATEST call counts: busy, not the earlier connected/hot call.
+    assert await _count("leads", d, "loans", call_status="busy") == 1
+    assert await _count("leads", d, "loans", call_status="connected") == 0
+    assert await _count("leads", d, "loans", interest="hot") == 0
+
+
+@pytest.mark.asyncio
+async def test_loan_report_filters_by_status_type_and_lead_source() -> None:
+    d = _unique_day()
+    ts = datetime(d.year, d.month, d.day, 6, 0, tzinfo=UTC)
+    first = await _seed_lead(business_line="loans", created_at=ts)
+    second = await _seed_lead(business_line="loans", created_at=ts)
+    new_app = await _seed_loan_application(lead_id=first, opened_at=ts)
+    await _seed_loan_application(lead_id=second, opened_at=ts, status=LoanStatus.SANCTIONED)
+    async with _session_mod.AsyncSessionLocal() as db:
+        application = await db.get(LoanApplication, uuid.UUID(new_app))
+        assert application is not None
+        new_type = application.loan_type_id
+
+    assert await _count("loans", d, "loans") == 2
+    assert await _count("loans", d, "loans", loan_status="sanctioned") == 1
+    assert await _count("loans", d, "loans", loan_type_id=new_type) == 1
+    assert await _count("loans", d, "loans", bank_id=uuid.uuid4()) == 0
+    assert await _count("loans", d, "loans", lead_source="agent") == 0
+    assert await _count("loans", d, "loans", lead_source="direct") == 2
+
+
+@pytest.mark.asyncio
+async def test_deal_report_filters_by_status_city_and_category() -> None:
+    d = _unique_day()
+    ts = datetime(d.year, d.month, d.day, 6, 0, tzinfo=UTC)
+    lead = await _seed_lead(business_line="real_estate", created_at=ts)
+    await _seed_property_deal(lead_id=lead, opened_at=ts)
+
+    assert await _count("deals", d, "real_estate") == 1
+    assert await _count("deals", d, "real_estate", property_city="  test CITY ") == 1
+    assert await _count("deals", d, "real_estate", property_city="Elsewhere") == 0
+    assert await _count("deals", d, "real_estate", property_category="apartments") == 1
+    assert await _count("deals", d, "real_estate", property_category="villas") == 0
+    assert await _count("deals", d, "real_estate", deal_status="new") == 1
+    assert await _count("deals", d, "real_estate", deal_status="closed") == 0

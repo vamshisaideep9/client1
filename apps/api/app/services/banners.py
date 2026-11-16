@@ -473,7 +473,7 @@ async def remove_banner(banner_id: UUID, reviewer_uuid: UUID, note: str) -> Bann
 _IMAGE_KEY_PREFIX = "public/banners/"
 _TEMPLATE_IMAGE_KEY_PREFIX = "public/banner-templates/"
 _TEMPLATE_STAGING_KEY_PREFIX = "private/banner-templates/staging/"
-IMAGE_MAX_BYTES = 2 * 1024 * 1024  # 2 MiB
+IMAGE_MAX_BYTES = 5 * 1024 * 1024  # 5 MiB
 _ALLOWED_IMAGE_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]")
 

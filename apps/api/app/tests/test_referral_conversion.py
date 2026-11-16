@@ -230,10 +230,22 @@ async def test_loan_disbursal_accrues_referral(client: AsyncClient) -> None:
     application_id = created.json()["id"]
 
     admin_headers = {"Authorization": f"Bearer {_admin_token(uid_a)}"}
+    import app.db.session as _session_mod
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        bank_id = str(
+            (
+                await db.execute(text("SELECT id FROM banks WHERE active = true LIMIT 1"))
+            ).scalar_one()
+        )
     for step in _LOAN_STEPS:
+        body: dict[str, str] = {"status": step}
+        if step == "sanctioned":
+            # Sanction requires the amount and lending bank (audit finding #5).
+            body.update(amount_sanctioned="500000", bank_id=bank_id)
         res = await client.patch(
             f"/api/v1/admin/loan-applications/{application_id}",
-            json={"status": step},
+            json=body,
             headers=admin_headers,
         )
         assert res.status_code == 200, res.text
@@ -322,6 +334,14 @@ async def test_property_deal_closed_accrues_referral(client: AsyncClient) -> Non
     assert row["business_line"] == "real_estate"
     assert await _notification_count(uid_a) == 1
 
+    # Activity detail: the referrer sees which listing converted, but only
+    # catalogue facts -- never the deal value or anything about the person.
+    item = row["converted_item"]
+    assert item["kind"] == "property"
+    assert item["title"]
+    assert set(item) == {"kind", "title", "location", "property_type", "property_id"}
+    assert "price" not in str(item).lower()
+
 
 # ---------------------------------------------------------------------------
 # Accrual-reason branches — direct service calls (D7-D12)
@@ -348,6 +368,60 @@ async def test_idempotent_against_double_call(client: AsyncClient) -> None:
     assert row["conversion_status"] == "accrued"
     assert row["bonus_amount_paise"] == 50000
     assert await _notification_count(uid_a) == 1
+
+
+@pytest.mark.asyncio
+async def test_second_transaction_after_reward_pays_nothing(client: AsyncClient) -> None:
+    """One referrer may reward one referred person once. After the first
+    successful transaction accrues the bonus, the edge is closed: a later loan
+    disbursal or property close by the same referred person (a different
+    transaction, even on the other business line) must not accrue again."""
+    _, mobile_a = await full_registration(client, lines=["loans", "real_estate"])
+    uid_a = await _auth_user_uuid(mobile_a)
+    referral_id, referred_uuid = await _seed_pending_referral(uid_a)
+    await _seed_config("loans", "500", {}, created_by_uuid=uid_a)
+    await _seed_config("real_estate", "900", {}, created_by_uuid=uid_a)
+
+    await referrals.record_conversion(
+        referred_auth_user_uuid=uuid.UUID(referred_uuid),
+        business_line="loans",
+        ref_type="loan_application",
+        ref_uuid=uuid.uuid4(),
+    )
+    first = await _get_referral(referral_id)
+    assert first["conversion_status"] == "accrued"
+    assert first["bonus_amount_paise"] == 50000
+
+    for business_line, ref_type in (
+        ("loans", "loan_application"),
+        ("real_estate", "property_deal"),
+    ):
+        await referrals.record_conversion(
+            referred_auth_user_uuid=uuid.UUID(referred_uuid),
+            business_line=business_line,
+            ref_type=ref_type,
+            ref_uuid=uuid.uuid4(),
+        )
+
+    after = await _get_referral(referral_id)
+    assert after["conversion_status"] == "accrued"
+    assert after["bonus_amount_paise"] == 50000
+    assert after["business_line"] == "loans"
+    assert after["converted_ref_uuid"] == first["converted_ref_uuid"]
+    assert await _notification_count(uid_a) == 1
+
+    import app.db.session as _session_mod
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        rows = await db.scalar(
+            text(
+                "SELECT count(*) FROM referrals"
+                " WHERE referrer_auth_user_uuid = :referrer"
+                " AND referred_auth_user_uuid = :referred"
+            ),
+            {"referrer": uid_a, "referred": referred_uuid},
+        )
+    assert rows == 1
 
 
 @pytest.mark.asyncio

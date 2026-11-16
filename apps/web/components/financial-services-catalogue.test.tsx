@@ -67,11 +67,13 @@ describe("Financial Services public discovery", () => {
     // cannot lose an event during hydration.
     expect(markup).toMatch(/<input type="search" disabled=""/);
 
-    // Seats flush under the 64px sticky SiteHeader and below its z-40.
-    expect(markup).toMatch(/class="[^"]*sticky top-16 z-30[^"]*"/);
+    // Seats flush under the sticky SiteHeader (whose height, --site-header-h,
+    // grows on tablets) and below its z-40.
+    const stickyBar = /class="[^"]*sticky top-\[var\(--site-header-h\)\] z-30[^"]*"/;
+    expect(markup).toMatch(stickyBar);
     // The updated toolbar uses the shared white surface token.
-    expect(markup).toMatch(/class="[^"]*sticky top-16[^"]*bg-surface[^"]*"/);
-    expect(markup).not.toMatch(/class="[^"]*sticky top-16[^"]*bg-card[^"]*"/);
+    expect(markup).toMatch(/class="[^"]*sticky top-\[var\(--site-header-h\)\][^"]*bg-surface[^"]*"/);
+    expect(markup).not.toMatch(/class="[^"]*sticky top-\[var\(--site-header-h\)\][^"]*bg-card[^"]*"/);
     // The aggregate "N service(s)" total is announced to assistive tech but
     // no longer shown visibly next to the bar.
     expect(markup).toMatch(/class="sr-only">1 service</);
@@ -124,17 +126,18 @@ describe("Financial Services public discovery", () => {
       </>,
     );
 
-    expect(markup).toContain("Loans, cards, and insurance that fit you");
-    expect(markup).toContain("Buy your property with confidence");
+    expect(markup).toContain("Loans for salaried and self-employed people");
+    expect(markup).toContain("Verified property in Hyderabad");
+    expect(markup).not.toMatch(/insurers|cards, and insurance/i);
     expect(markup).toContain("EMI Calculator");
     expect(markup).toContain("Loan Eligibility");
     expect(markup).toContain("Home Affordability");
     expect(markup).toContain("Stamp Duty");
     expect(markup).toContain('href="/calculators"');
-    expect(markup.indexOf("Loans, cards, and insurance that fit you")).toBeLessThan(
-      markup.indexOf("Buy your property with confidence"),
+    expect(markup.indexOf("Loans for salaried and self-employed people")).toBeLessThan(
+      markup.indexOf("Verified property in Hyderabad"),
     );
-    expect(markup.indexOf("Buy your property with confidence")).toBeLessThan(
+    expect(markup.indexOf("Verified property in Hyderabad")).toBeLessThan(
       markup.indexOf("Calculate before you decide"),
     );
     expect(markup).not.toContain("Free planning tools");

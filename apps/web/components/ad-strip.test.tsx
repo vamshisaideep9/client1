@@ -14,12 +14,17 @@ const SPONSOR: HeroBanner = {
 };
 
 describe("AdStrip", () => {
-  it("labels itself as sponsored with no dismiss or playback controls", () => {
+  it("labels itself as sponsored and offers a labelled dismiss control", () => {
     const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} />);
     expect(markup).toContain('aria-label="Sponsored"');
     expect(markup).toContain('data-layout="ad-strip"');
     expect(markup).toContain('data-presentation="static-sponsor-card"');
     expect(markup).toContain("Sponsored");
+    expect(markup).toContain('aria-label="Hide sponsored banner"');
+  });
+
+  it("omits the dismiss control in CMS previews", () => {
+    const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} dismissible={false} />);
     expect(markup).not.toContain("<button");
   });
 

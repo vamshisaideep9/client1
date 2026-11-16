@@ -12,7 +12,7 @@ export async function calculatorWorkbook(data: CalculatorExport, logo: ArrayBuff
     pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: "1:7" },
   });
   const image = workbook.addImage({ buffer: logo as ExcelJS.Buffer, extension: "png" });
-  sheet.addImage(image, { tl: { col: 0, row: 0 }, ext: { width: 240, height: 44 } });
+  sheet.addImage(image, { tl: { col: 0, row: 0 }, ext: { width: 240, height: 58 } });
   sheet.getCell("A4").value = data.title;
   sheet.getCell("A4").font = { bold: true, size: 14, color: { argb: "FF172878" } };
   sheet.getCell("A5").value = "Illustrative calculation. Actual terms may vary.";

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Camera, Download, FileText, ImageIcon, Loader2, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
+import { ViewDocumentButton } from "@/components/documents/document-viewer";
 import { Button } from "@/components/ui/button";
 import { DashboardPanel } from "@/features/dashboard/dashboard-ui";
 
@@ -70,6 +71,11 @@ export function EmployeeTaskFeedbackPanel({ taskId, disabled }: { taskId: string
                 </div>
               )}
               <div className="flex gap-2 p-3">
+                <ViewDocumentButton
+                  url={item.download_url}
+                  title={`Visit feedback ${index + 1}`}
+                  className="flex-1"
+                />
                 <Button asChild size="sm" variant="outline" className="flex-1">
                   <a href={item.download_url} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /> Download</a>
                 </Button>
