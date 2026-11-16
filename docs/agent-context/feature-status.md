@@ -2,6 +2,34 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Sub Admin analytics filters (API slice)** (2026-11-16),
+branch `feat/sub-admin-analytics-filters` from `upstream/main` `70f98fa`.
+API and generated contract only; no migration, RLS or table change, so the
+completion percentage is unchanged.
+- `GET /api/v1/me/analytics` accepts five Sub Admin filters, all `Literal`
+  validated: `content_type` (banners|offers), `content_status`
+  (draft|pending_approval|approved|live|rejected|archived), `placement` and
+  `banner_type` (banners only), `discount_type`
+  (percentage|flat|cashback-tie, offers only). `_ROLE_FILTERS["sub_admin"]`
+  lists them, so any other role sending one gets 422 and a Sub Admin sending a
+  Telecaller/Employee/Agent filter still gets 422.
+- `sub_admin_analytics` keeps the `created_by_uuid` and line scope and adds
+  the filters as SQL `where` clauses. Offer statuses fold into the shared
+  vocabulary (approved = approved + scheduled, live = active, archived =
+  archived + expired). A banner-only filter skips the offer query and an
+  offer-only filter skips the banner query, so contradictory combinations
+  return zeroes rather than errors. KPIs, trend and breakdowns come from the
+  narrowed rows.
+- Evidence: `test_staff_analytics_api.py` 18 new parametrized filter cases
+  (each filter, offer status mapping, combinations, contradictions), a
+  KPI/trend/breakdown narrowing test, a cross-Sub-Admin scope regression and 8
+  role-gating 422 cases. With `test_team_manager_api.py` and
+  `test_team_manager_edits_api.py`: 59 passed in a `python:3.13` container on a
+  fresh database migrated to the single head `b2d4f6a8c0e1` (the shared dev
+  database is behind head, so tests needing `staff_teams` or
+  `lead_list_signals` fail there for that reason only). Ruff check and format
+  pass. OpenAPI and TypeScript schema regenerated. Next: the web slice.
+
 **In review — Property listings advanced filters and demo Sub Admin
 listings** (2026-11-16; PR [#359](https://github.com/brollysolutions/client1/pull/359),
 mirror vamshisaideep9/client1#63), branch `feat/listing-advanced-filters` from

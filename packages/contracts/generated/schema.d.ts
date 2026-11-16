@@ -18739,6 +18739,16 @@ export interface operations {
                 lead_status?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
                 /** @description Employee: tasks of this type. */
                 task_type?: ("document_collection" | "property_visit" | "background_check") | null;
+                /** @description Sub Admin: only banners or only offers. */
+                content_type?: ("banners" | "offers") | null;
+                /** @description Sub Admin: content in this review status. For offers, approved includes scheduled, live means active and archived includes expired. */
+                content_status?: ("draft" | "pending_approval" | "approved" | "live" | "rejected" | "archived") | null;
+                /** @description Sub Admin: banners in this placement (leaves offers out). */
+                placement?: ("homepage" | "financial_services" | "properties" | "dashboard" | "homepage_ad") | null;
+                /** @description Sub Admin: banners of this type (leaves offers out). */
+                banner_type?: ("default" | "personalized" | "action") | null;
+                /** @description Sub Admin: offers with this discount type (leaves banners out). */
+                discount_type?: ("percentage" | "flat" | "cashback-tie") | null;
             };
             header?: never;
             path?: never;

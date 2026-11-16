@@ -28,7 +28,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.banner import Banner, BannerStatus
+from app.models.banner import Banner, BannerPlacement, BannerStatus, BannerType
 from app.models.commission import Commission, CommissionStatus
 from app.models.lead import Lead, LeadStatus
 from app.models.lead_activity import InterestLevel, LeadActivity
@@ -153,6 +153,12 @@ class StaffAnalyticsFilters:
     lead_source: LeadSource | None = None
     lead_status: str | None = None
     task_type: str | None = None
+    # Sub Admin content filters.
+    content_type: Literal["banners", "offers"] | None = None
+    content_status: str | None = None
+    placement: str | None = None
+    banner_type: str | None = None
+    discount_type: str | None = None
 
 
 NO_FILTERS = StaffAnalyticsFilters()
@@ -628,6 +634,33 @@ async def agent_analytics(
 _APPROVED_BANNER = {BannerStatus.APPROVED, BannerStatus.LIVE, BannerStatus.ARCHIVED}
 _APPROVED_OFFER = {OfferStatus.APPROVED, OfferStatus.SCHEDULED, OfferStatus.ACTIVE}
 
+# One review-status vocabulary for both kinds of content. Offers have more
+# lifecycle states than banners, so a few of them fold into the shared name:
+# scheduled offers are approved, an active offer is live, and an expired offer
+# is archived.
+_OFFER_STATUSES: dict[str, tuple[OfferStatus, ...]] = {
+    "draft": (OfferStatus.DRAFT,),
+    "pending_approval": (OfferStatus.PENDING_APPROVAL,),
+    "approved": (OfferStatus.APPROVED, OfferStatus.SCHEDULED),
+    "live": (OfferStatus.ACTIVE,),
+    "rejected": (OfferStatus.REJECTED,),
+    "archived": (OfferStatus.ARCHIVED, OfferStatus.EXPIRED),
+}
+
+
+def _wants_banners(filters: StaffAnalyticsFilters) -> bool:
+    # An offer-only filter (discount type) can never match a banner.
+    return filters.content_type != "offers" and filters.discount_type is None
+
+
+def _wants_offers(filters: StaffAnalyticsFilters) -> bool:
+    # A banner-only filter (placement, banner type) can never match an offer.
+    return (
+        filters.content_type != "banners"
+        and filters.placement is None
+        and filters.banner_type is None
+    )
+
 
 async def sub_admin_analytics(
     db: AsyncSession,
@@ -636,14 +669,33 @@ async def sub_admin_analytics(
     now: datetime,
     filters: StaffAnalyticsFilters = NO_FILTERS,
 ) -> StaffAnalyticsResponse:
-    banner_stmt = select(Banner).where(Banner.created_by_uuid == auth_user_uuid)
-    offer_stmt = select(Offer).where(Offer.created_by_uuid == auth_user_uuid)
+    """The Sub Admin's own banners and offers. Content filters narrow the rows
+    in SQL; a combination that cannot match one kind of content (an offer
+    filter with ``content_type=banners``, say) leaves that kind out instead of
+    failing, so contradictions simply return nothing."""
     lines = _lines(filters)
-    if lines:
-        banner_stmt = banner_stmt.where(Banner.business_line.in_(lines))
-        offer_stmt = offer_stmt.where(Offer.business_line.in_(lines))
-    banners = list(await db.scalars(banner_stmt))
-    offers = list(await db.scalars(offer_stmt))
+    banners: list[Banner] = []
+    offers: list[Offer] = []
+    if _wants_banners(filters):
+        banner_stmt = select(Banner).where(Banner.created_by_uuid == auth_user_uuid)
+        if lines:
+            banner_stmt = banner_stmt.where(Banner.business_line.in_(lines))
+        if filters.content_status:
+            banner_stmt = banner_stmt.where(Banner.status == BannerStatus(filters.content_status))
+        if filters.placement:
+            banner_stmt = banner_stmt.where(Banner.placement == BannerPlacement(filters.placement))
+        if filters.banner_type:
+            banner_stmt = banner_stmt.where(Banner.banner_type == BannerType(filters.banner_type))
+        banners = list(await db.scalars(banner_stmt))
+    if _wants_offers(filters):
+        offer_stmt = select(Offer).where(Offer.created_by_uuid == auth_user_uuid)
+        if lines:
+            offer_stmt = offer_stmt.where(Offer.business_line.in_(lines))
+        if filters.content_status:
+            offer_stmt = offer_stmt.where(Offer.status.in_(_OFFER_STATUSES[filters.content_status]))
+        if filters.discount_type:
+            offer_stmt = offer_stmt.where(Offer.discount_type == filters.discount_type)
+        offers = list(await db.scalars(offer_stmt))
 
     buckets = window.empty_points(["banners", "offers"])
     for key, rows in (("banners", banners), ("offers", offers)):
