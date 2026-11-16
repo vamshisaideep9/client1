@@ -12,6 +12,7 @@ from app.schemas.telecaller import (
     STAFF_NOTE_MAX_CHARS,
     CallDispositionLiteral,
     InterestLevelLiteral,
+    LeadFacets,
     LeadReferrerRead,
     LoanStatusLiteral,
     ManagerNoteRead,
@@ -58,6 +59,8 @@ class EmployeeTaskRead(BaseModel):
     lead_last_disposition: CallDispositionLiteral | None = None
     lead_last_interest_level: InterestLevelLiteral | None = None
     lead_loan_statuses: list[LoanStatusLiteral] = Field(default_factory=list)
+    # Products, banks and property facts of the lead (CS-023 list filters).
+    lead_facets: LeadFacets = Field(default_factory=LeadFacets)
     # Absent when Admin hides the "Referred by" field; null when nobody referred.
     lead_referrer: LeadReferrerRead | None = None
     # Detail only: notes from the Employee's Sub Admin manager (CS-020).

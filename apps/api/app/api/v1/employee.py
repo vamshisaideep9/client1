@@ -69,7 +69,7 @@ from app.services.field_visibility import (
 from app.services.field_visibility import (
     create_contact_share_link as create_contact_share_link_record,
 )
-from app.services.lead_signals import EMPTY_SIGNALS, LeadSignals, lead_signals_for_ids
+from app.services.lead_signals import EMPTY_SIGNALS, LeadSignals, facets, lead_signals_for_ids
 from app.services.task_feedback import (
     FeedbackLimitReached,
     FeedbackRateExceeded,
@@ -147,6 +147,7 @@ def _to_read(
             "lead_last_disposition": signals.last_disposition,
             "lead_last_interest_level": signals.last_interest_level,
             "lead_loan_statuses": signals.loan_statuses,
+            "lead_facets": facets(signals),
         }
     return EmployeeTaskRead(
         **signal_fields,

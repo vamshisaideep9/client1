@@ -719,6 +719,43 @@ lines, Agents stay line-scoped):**
 
 Evidence is listed in `feature-status.md` under Batch B.
 
+### CS-023 — Filters by product, property, status, transactions and earnings
+
+**Decision (2026-11-17, user-approved stakeholder feedback, batch C; both
+lines):**
+
+- *Every dashboard.* Lead lists (Telecaller leads, Employee tasks, a
+  manager's team work) and analytics (My analytics, team analytics, Admin
+  reports) filter by financial product, bank and loan status on the loans
+  line, and by property category, subtype and deal status on the real estate
+  line. Product and property filters describe one application or one deal:
+  "Home loan at HDFC, sanctioned" matches a lead only when one application is
+  all three. Options come from the active catalogue plus any product or bank
+  already on a loaded row.
+- *Telecaller transactions.* The Telecaller list (and a Telecaller team's
+  work list) filters by the loan transactions the Telecaller recorded: has a
+  transaction or none, date range, bank and amount range, one transaction
+  matching all of them. Bank options are the catalogue's names plus any name
+  already entered. Employees and Agents get no transaction data.
+- *Earnings.* Agent My analytics adds product, bank, loan or deal status,
+  property, commission status and a commission amount range; every filter
+  narrows both the leads and the commissions (a lead filter keeps the
+  commissions on those leads; a commission filter keeps the leads that have
+  one). Telecaller analytics take an amount range on the requested loan amount
+  or quoted price, while the Admin shows that amount to Telecallers.
+  Employees have no amount filter.
+- *Field rules.* The Admin's Telecaller rules for transaction bank, amount and
+  date hide those parts of the transaction data (and the matching filters)
+  for Telecallers and their managers; application and deal amounts never
+  reach the browser through the lists.
+- *Enforcement.* The facts come from the two existing confined readers
+  (`lead_list_signals`, now also for an Agent's own introduced leads, and
+  `team_lead_signals`), which re-check the caller; no table policy or grant
+  changes. A filter the role, line or field rules do not allow is refused
+  (422), never ignored.
+
+Evidence is listed in `feature-status.md` under Batch C.
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in

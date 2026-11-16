@@ -21,6 +21,7 @@ from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -30,9 +31,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.banner import Banner, BannerPlacement, BannerStatus, BannerType
 from app.models.commission import Commission, CommissionStatus
+from app.models.field_visibility import FieldTargetRole, FieldVisibilityMode
 from app.models.lead import Lead, LeadStatus
 from app.models.lead_activity import InterestLevel, LeadActivity
-from app.models.loan import LoanApplication, LoanStatus
 from app.models.offer import Offer, OfferStatus
 from app.models.task import Task, TaskStatus, TaskType
 from app.schemas.staff_analytics import (
@@ -46,7 +47,16 @@ from app.schemas.staff_analytics import (
     TrendPoint,
     TrendSeries,
 )
-from app.services.lead_signals import lead_signals
+from app.services.field_visibility import effective_modes
+from app.services.lead_signals import (
+    EMPTY_SIGNALS,
+    DealItem,
+    LeadSignals,
+    LoanItem,
+    lead_signals,
+    lead_signals_for_ids,
+    team_lead_signals_for_ids,
+)
 from app.services.telecaller import get_last_activities, request_summaries_for_leads
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -144,7 +154,16 @@ LeadSource = Literal["direct", "agent", "client"]
 
 @dataclass(frozen=True)
 class StaffAnalyticsFilters:
-    """Role filters; the route rejects any filter that does not apply to the role."""
+    """Role filters; the route rejects any filter that does not apply to the role.
+
+    Product and property filters (CS-023) select the leads (and, for an
+    Employee, the tasks on leads) that have one loan application matching every
+    loan filter at once — loan type, bank, status and, for a Telecaller, the
+    requested amount — or one property deal matching every property filter —
+    category, subtype, deal status and, for a Telecaller, the quoted price.
+    For an Agent, ``commission_status`` and ``amount_min/max`` (rupees) select
+    commissions, and the leads are narrowed to those with such a commission.
+    """
 
     business_line: str | None = None
     call_status: str | None = None
@@ -153,6 +172,15 @@ class StaffAnalyticsFilters:
     lead_source: LeadSource | None = None
     lead_status: str | None = None
     task_type: str | None = None
+    # Product and property filters (CS-023).
+    loan_type_id: UUID | None = None
+    bank_id: UUID | None = None
+    deal_status: str | None = None
+    property_category: str | None = None
+    property_subtype: str | None = None
+    commission_status: str | None = None
+    amount_min: Decimal | None = None
+    amount_max: Decimal | None = None
     # Sub Admin content filters.
     content_type: Literal["banners", "offers"] | None = None
     content_status: str | None = None
@@ -160,8 +188,133 @@ class StaffAnalyticsFilters:
     banner_type: str | None = None
     discount_type: str | None = None
 
+    @property
+    def loan_filtered(self) -> bool:
+        return any((self.loan_type_id, self.bank_id, self.loan_status))
+
+    @property
+    def deal_filtered(self) -> bool:
+        return any((self.deal_status, self.property_category, self.property_subtype))
+
+    @property
+    def amount_filtered(self) -> bool:
+        return self.amount_min is not None or self.amount_max is not None
+
+    def amount_matches(self, amount: Decimal | None) -> bool:
+        if not self.amount_filtered:
+            return True
+        if amount is None:
+            return False
+        if self.amount_min is not None and amount < self.amount_min:
+            return False
+        return not (self.amount_max is not None and amount > self.amount_max)
+
 
 NO_FILTERS = StaffAnalyticsFilters()
+
+# Filter families (CS-023). Loan filters exist on the loans line and property
+# filters on the real estate line; a role offers a filter only where it has
+# the data behind it.
+LOAN_FILTERS = frozenset({"loan_type_id", "bank_id", "loan_status"})
+PROPERTY_FILTERS = frozenset({"deal_status", "property_category", "property_subtype"})
+AMOUNT_FILTERS = frozenset({"amount_min", "amount_max"})
+_LINE_FILTERS = {"loans": LOAN_FILTERS, "real_estate": PROPERTY_FILTERS}
+
+ROLE_FILTERS: dict[str, frozenset[str]] = {
+    # Amount: the lead's requested loan amount or quoted property price.
+    "telecaller": frozenset(
+        {"call_status", "interest", "lead_source"} | LOAN_FILTERS | PROPERTY_FILTERS
+    )
+    | AMOUNT_FILTERS,
+    # Employees see no application or deal amounts, so no amount filter.
+    "employee": frozenset({"task_type"}) | LOAN_FILTERS | PROPERTY_FILTERS,
+    # Amount: the agreed commission (the Agent's earning).
+    "agent": frozenset({"lead_status", "commission_status"})
+    | LOAN_FILTERS
+    | PROPERTY_FILTERS
+    | AMOUNT_FILTERS,
+    "sub_admin": frozenset(
+        {"content_type", "content_status", "placement", "banner_type", "discount_type"}
+    ),
+}
+
+# Rupees; the bound only keeps an amount filter a sane number.
+AMOUNT_LIMIT = Decimal("1000000000000")
+
+# The Admin's Telecaller field rule behind the amount filter, per line.
+_AMOUNT_RULE = {
+    "loans": ("loan_application", "amount_requested"),
+    "real_estate": ("property_deal", "price_quoted"),
+}
+
+
+class InvalidAnalyticsFilter(ValueError):
+    """A filter the caller cannot use; the message is user-facing."""
+
+
+def requested_filters(filters: StaffAnalyticsFilters) -> set[str]:
+    return {
+        name
+        for name, value in vars(filters).items()
+        if name != "business_line" and value is not None
+    }
+
+
+async def hidden_filters(db: AsyncSession, role: str, line: str | None) -> list[str]:
+    """Filters of ``role`` the Admin's field rules rule out (the amount range
+    of a Telecaller who may not see the amount on this line)."""
+    if role != "telecaller":
+        return []
+    modes = await effective_modes(db, FieldTargetRole.TELECALLER)
+    rules = [_AMOUNT_RULE[line]] if line in _AMOUNT_RULE else list(_AMOUNT_RULE.values())
+    if any(
+        modes.get(rule, FieldVisibilityMode.DENY) != FieldVisibilityMode.ALLOW for rule in rules
+    ):
+        return sorted(AMOUNT_FILTERS)
+    return []
+
+
+async def validate_filters(
+    db: AsyncSession,
+    role: str,
+    line: str | None,
+    filters: StaffAnalyticsFilters,
+    *,
+    subject: str = "role",
+) -> None:
+    """Reject, never ignore, a filter the role, line or field rules rule out.
+
+    ``line`` is the request's (or team's) business line, or None for a caller
+    without one, who may use either family but not both at once. A Telecaller
+    may filter by amount only while the Admin shows them that amount."""
+    requested = requested_filters(filters)
+    unsupported = requested - ROLE_FILTERS.get(role, frozenset())
+    if unsupported:
+        raise InvalidAnalyticsFilter(
+            f"Filter not available for this {subject}: {', '.join(sorted(unsupported))}."
+        )
+    other_line = {
+        name
+        for other, names in _LINE_FILTERS.items()
+        if line is not None and other != line
+        for name in names & requested
+    }
+    if other_line:
+        raise InvalidAnalyticsFilter(
+            f"Filter not available on this business line: {', '.join(sorted(other_line))}."
+        )
+    if requested & LOAN_FILTERS and requested & PROPERTY_FILTERS:
+        raise InvalidAnalyticsFilter("Choose loan filters or property filters, not both.")
+    if (
+        filters.amount_min is not None
+        and filters.amount_max is not None
+        and filters.amount_min > filters.amount_max
+    ):
+        raise InvalidAnalyticsFilter("amount_min must not be more than amount_max.")
+    if requested & AMOUNT_FILTERS and set(await hidden_filters(db, role, line)) & requested:
+        raise InvalidAnalyticsFilter(
+            f"Filter not available for this {subject}: amount (hidden by the Admin)."
+        )
 
 
 def _lines(filters: StaffAnalyticsFilters) -> tuple[str, ...] | None:
@@ -247,30 +400,91 @@ def _response(role: str, window: AnalyticsWindow, **fields: object) -> StaffAnal
     )
 
 
+def _loan_matches(item: LoanItem, filters: StaffAnalyticsFilters, *, amount: bool) -> bool:
+    return (
+        (filters.loan_type_id is None or item.loan_type_id == filters.loan_type_id)
+        and (filters.bank_id is None or item.bank_id == filters.bank_id)
+        and (filters.loan_status is None or item.status == filters.loan_status)
+        and (not amount or filters.amount_matches(item.amount))
+    )
+
+
+def _deal_matches(item: DealItem, filters: StaffAnalyticsFilters, *, amount: bool) -> bool:
+    return (
+        (filters.deal_status is None or item.status == filters.deal_status)
+        and (filters.property_category is None or item.category == filters.property_category)
+        and (filters.property_subtype is None or item.subtype == filters.property_subtype)
+        and (not amount or filters.amount_matches(item.amount))
+    )
+
+
+def _signal_matches(
+    signal: LeadSignals, filters: StaffAnalyticsFilters, *, lead_amount: bool
+) -> bool:
+    """One application (or deal) must match every loan (or property) filter;
+    with ``lead_amount`` the amount range applies to that same application or
+    deal (requested amount / quoted price)."""
+    amount = lead_amount and filters.amount_filtered
+    if filters.loan_filtered and not any(
+        _loan_matches(item, filters, amount=amount) for item in signal.loans
+    ):
+        return False
+    if filters.deal_filtered and not any(
+        _deal_matches(item, filters, amount=amount) for item in signal.deals
+    ):
+        return False
+    if (
+        amount
+        and not filters.loan_filtered
+        and not filters.deal_filtered
+        and not any(filters.amount_matches(item.amount) for item in (*signal.loans, *signal.deals))
+    ):
+        return False
+    if filters.lead_source:
+        source = signal.referrer.kind if signal.referrer else "direct"
+        if source != filters.lead_source:
+            return False
+    return True
+
+
+def _lead_filtered(filters: StaffAnalyticsFilters, *, lead_amount: bool) -> bool:
+    return bool(
+        filters.loan_filtered
+        or filters.deal_filtered
+        or filters.lead_source
+        or (lead_amount and filters.amount_filtered)
+    )
+
+
+async def _signals_for(
+    db: AsyncSession, leads: list[Lead], *, for_manager: bool
+) -> dict[UUID, LeadSignals]:
+    # A manager reads through team_lead_signals (their live team reach);
+    # lead_list_signals answers only the lead's own Telecaller, Employee or Agent.
+    if for_manager:
+        return await team_lead_signals_for_ids(db, [lead.id for lead in leads])
+    return await lead_signals(db, leads)
+
+
 async def _lead_subset(
-    db: AsyncSession, leads: list[Lead], filters: StaffAnalyticsFilters
+    db: AsyncSession,
+    leads: list[Lead],
+    filters: StaffAnalyticsFilters,
+    *,
+    for_manager: bool = False,
+    lead_amount: bool = False,
 ) -> set[UUID] | None:
-    """Lead ids matching the loan-status / source filters, or None when unfiltered."""
-    if not filters.loan_status and not filters.lead_source:
+    """Lead ids matching the lead-level filters, or None when unfiltered."""
+    if not _lead_filtered(filters, lead_amount=lead_amount):
         return None
-    ids = {lead.id for lead in leads}
-    if filters.loan_status and ids:
-        ids &= set(
-            await db.scalars(
-                select(LoanApplication.lead_uuid).where(
-                    LoanApplication.lead_uuid.in_(ids),
-                    LoanApplication.status == LoanStatus(filters.loan_status),
-                )
-            )
-        )
-    if filters.lead_source and ids:
-        signals = await lead_signals(db, [lead for lead in leads if lead.id in ids])
-        ids = {
-            lead_id
-            for lead_id, signal in signals.items()
-            if (signal.referrer.kind if signal.referrer else "direct") == filters.lead_source
-        }
-    return ids
+    if not leads:
+        return set()
+    signals = await _signals_for(db, leads, for_manager=for_manager)
+    return {
+        lead.id
+        for lead in leads
+        if _signal_matches(signals.get(lead.id, EMPTY_SIGNALS), filters, lead_amount=lead_amount)
+    }
 
 
 # --- Telecaller ---------------------------------------------------------------
@@ -305,7 +519,7 @@ async def telecaller_analytics(
     leads = list(await db.scalars(lead_stmt))
     contacted_ids = set(await db.scalars(contacted_stmt))
 
-    subset = await _lead_subset(db, leads, filters)
+    subset = await _lead_subset(db, leads, filters, for_manager=for_manager, lead_amount=True)
     if subset is not None:
         leads = [lead for lead in leads if lead.id in subset]
         calls = [call for call in calls if call.lead_uuid in subset]
@@ -434,6 +648,20 @@ async def employee_analytics(
     if filters.task_type:
         stmt = stmt.where(Task.task_type == TaskType(filters.task_type))
     tasks = list(await db.scalars(stmt))
+    if (filters.loan_filtered or filters.deal_filtered) and tasks:
+        lead_ids = list(dict.fromkeys(task.lead_uuid for task in tasks))
+        signals = (
+            await team_lead_signals_for_ids(db, lead_ids)
+            if for_manager
+            else await lead_signals_for_ids(db, lead_ids)
+        )
+        tasks = [
+            task
+            for task in tasks
+            if _signal_matches(
+                signals.get(task.lead_uuid, EMPTY_SIGNALS), filters, lead_amount=False
+            )
+        ]
     # Tasks have no completion timestamp; the last update of a completed task
     # is when it was completed (status is the final write).
     completed = [
@@ -523,6 +751,55 @@ async def employee_analytics(
 # --- Agent ---------------------------------------------------------------------
 
 
+async def _agent_subset(
+    db: AsyncSession,
+    leads: list[Lead],
+    commissions: list[Commission],
+    filters: StaffAnalyticsFilters,
+) -> tuple[list[Lead], list[Commission]]:
+    """Every filter narrows both the leads and the commissions, so the page
+    describes one subset: lead filters keep the commissions earned on the
+    matching leads (and, for product/property filters, on the matching
+    application or deal); commission filters keep the leads that have such a
+    commission."""
+    if filters.lead_status or filters.loan_filtered or filters.deal_filtered:
+        if filters.loan_filtered or filters.deal_filtered:
+            signals = await lead_signals(db, leads)
+            leads = [
+                lead
+                for lead in leads
+                if _signal_matches(signals.get(lead.id, EMPTY_SIGNALS), filters, lead_amount=False)
+            ]
+            loans = {
+                item.id
+                for signal in signals.values()
+                for item in signal.loans
+                if _loan_matches(item, filters, amount=False)
+            }
+            deals = {
+                item.id
+                for signal in signals.values()
+                for item in signal.deals
+                if _deal_matches(item, filters, amount=False)
+            }
+            commissions = [
+                c
+                for c in commissions
+                if (not filters.loan_filtered or c.loan_application_uuid in loans)
+                and (not filters.deal_filtered or c.property_deal_uuid in deals)
+            ]
+        lead_ids = {lead.id for lead in leads}
+        commissions = [c for c in commissions if c.lead_uuid in lead_ids]
+    if filters.amount_filtered:
+        commissions = [
+            c for c in commissions if filters.amount_matches(Decimal(c.agreed_amount_paise) / 100)
+        ]
+    if filters.commission_status or filters.amount_filtered:
+        with_commission = {c.lead_uuid for c in commissions}
+        leads = [lead for lead in leads if lead.id in with_commission]
+    return leads, commissions
+
+
 async def agent_analytics(
     db: AsyncSession,
     agent_profile_uuid: UUID,
@@ -539,8 +816,13 @@ async def agent_analytics(
         commission_stmt = commission_stmt.where(Commission.business_line.in_(lines))
     if filters.lead_status:
         lead_stmt = lead_stmt.where(Lead.status == LeadStatus(filters.lead_status))
+    if filters.commission_status:
+        commission_stmt = commission_stmt.where(
+            Commission.status == CommissionStatus(filters.commission_status)
+        )
     leads = list(await db.scalars(lead_stmt))
     commissions = list(await db.scalars(commission_stmt))
+    leads, commissions = await _agent_subset(db, leads, commissions, filters)
     buckets = window.empty_points(["introduced"])
     for lead in leads:
         bucket = window.bucket_of(lead.created_at)

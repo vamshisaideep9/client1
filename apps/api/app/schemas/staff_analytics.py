@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 AnalyticsRole = Literal["telecaller", "employee", "agent", "sub_admin"]
 KpiUnit = Literal["count", "percent", "hours", "rupees"]
@@ -83,3 +83,7 @@ class StaffAnalyticsResponse(BaseModel):
     trend: AnalyticsTrend
     breakdowns: list[AnalyticsBreakdown]
     funnel: AnalyticsFunnel | None = None
+    # Filters of this role the caller cannot use because the Admin hides the
+    # field behind them (CS-023: a Telecaller's amount range); the API refuses
+    # them with 422, so the page leaves them out.
+    hidden_filters: list[str] = Field(default_factory=list)

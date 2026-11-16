@@ -8077,6 +8077,7 @@ export interface components {
              * @enum {string}
              */
             lead_contact_mode: "allow" | "deny" | "share_link";
+            lead_facets?: components["schemas"]["LeadFacets"];
             /** Lead Last Disposition */
             lead_last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
             /** Lead Last Interest Level */
@@ -8529,6 +8530,21 @@ export interface components {
             notes: string | null;
             request?: components["schemas"]["RequestRef"] | null;
         };
+        /**
+         * LeadDealFacet
+         * @description One property deal on the lead: stage and the property's kind.
+         */
+        LeadDealFacet: {
+            /** Property Category */
+            property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+            /** Property Subtype */
+            property_subtype?: ("individual_house" | "standalone_apartment" | "gated_community_apartment" | "villa" | "locked_space" | "unlocked_space" | "plot" | "farmland" | "agriland") | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold";
+        };
         /** LeadDetailsPatch */
         LeadDetailsPatch: {
             /** Name */
@@ -8572,6 +8588,44 @@ export interface components {
             updated_at: string;
         };
         /**
+         * LeadFacets
+         * @description Product and property facts of a lead, for the list filters (CS-023).
+         *
+         *     One entry per loan application (loans line) or property deal (real estate
+         *     line), so a filter on product, bank and status matches one application.
+         *     Ids and enums only; amounts are not included.
+         */
+        LeadFacets: {
+            /** Deals */
+            deals?: components["schemas"]["LeadDealFacet"][];
+            /** Loans */
+            loans?: components["schemas"]["LeadLoanFacet"][];
+        };
+        /**
+         * LeadLoanFacet
+         * @description One loan application on the lead: product, lender and stage (labels
+         *     included, so a filter can offer a product or bank no longer in the
+         *     active catalogue).
+         */
+        LeadLoanFacet: {
+            /** Bank Id */
+            bank_id?: string | null;
+            /** Bank Name */
+            bank_name?: string | null;
+            /**
+             * Loan Type Id
+             * Format: uuid
+             */
+            loan_type_id: string;
+            /** Loan Type Label */
+            loan_type_label?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold";
+        };
+        /**
          * LeadReferrerRead
          * @description Who brought a lead in, as an identifier only (no names or contacts).
          *
@@ -8611,6 +8665,46 @@ export interface components {
             status: string;
             /** Title */
             title: string;
+        };
+        /**
+         * LeadTransactionItem
+         * @description One recorded transaction; a part the Admin hides is null.
+         */
+        LeadTransactionItem: {
+            /** Amount */
+            amount?: number | null;
+            /** Bank Name */
+            bank_name?: string | null;
+            /** Txn Date */
+            txn_date?: string | null;
+        };
+        /**
+         * LeadTransactionSummary
+         * @description Loan transactions recorded on a lead (FR-6.5), summarised for filters.
+         *
+         *     Only for callers who may read the lead's transactions: the assigned
+         *     Telecaller, or the Sub Admin managing that Telecaller's team. A part the
+         *     Admin hides from Telecallers (bank name, amount, date) is null and named
+         *     in ``hidden_fields``. ``items`` holds the latest 50 transactions, so a
+         *     filter can require one transaction to match bank, date and amount together.
+         */
+        LeadTransactionSummary: {
+            /** Amount Max */
+            amount_max?: number | null;
+            /** Amount Min */
+            amount_min?: number | null;
+            /** Bank Names */
+            bank_names?: string[] | null;
+            /** Count */
+            count: number;
+            /** First Date */
+            first_date?: string | null;
+            /** Hidden Fields */
+            hidden_fields?: ("bank_names" | "amount" | "dates")[];
+            /** Items */
+            items?: components["schemas"]["LeadTransactionItem"][];
+            /** Last Date */
+            last_date?: string | null;
         };
         /** LeadsReportResponse */
         LeadsReportResponse: {
@@ -11076,6 +11170,8 @@ export interface components {
              */
             date_to: string;
             funnel?: components["schemas"]["AnalyticsFunnel"] | null;
+            /** Hidden Filters */
+            hidden_filters?: string[];
             /** Kpis */
             kpis: components["schemas"]["AnalyticsKpi"][];
             /** Range Days */
@@ -11894,6 +11990,7 @@ export interface components {
          * @description What the Telecaller / Employee lists filter on, for the same filters.
          */
         TeamLeadSignals: {
+            facets?: components["schemas"]["LeadFacets"];
             /** Last Disposition */
             last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
             /** Last Interest Level */
@@ -11901,6 +11998,7 @@ export interface components {
             /** Loan Statuses */
             loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold")[];
             referrer?: components["schemas"]["LeadReferrerRead"] | null;
+            transactions?: components["schemas"]["LeadTransactionSummary"] | null;
         };
         /** TeamLeadStatusUpdate */
         TeamLeadStatusUpdate: {
@@ -11971,6 +12069,8 @@ export interface components {
              * Format: date
              */
             date_to: string;
+            /** Hidden Filters */
+            hidden_filters?: string[];
             /** Members */
             members: components["schemas"]["TeamMemberSummary"][];
             /** Range Days */
@@ -12217,6 +12317,7 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            facets?: components["schemas"]["LeadFacets"];
             /**
              * Financial Enquiries
              * @default []
@@ -12280,6 +12381,7 @@ export interface components {
              * @default []
              */
             tasks: components["schemas"]["TaskRead"][];
+            transactions?: components["schemas"]["LeadTransactionSummary"] | null;
             /**
              * Updated At
              * Format: date-time
@@ -12298,6 +12400,7 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            facets?: components["schemas"]["LeadFacets"];
             /**
              * Id
              * Format: uuid
@@ -12326,6 +12429,7 @@ export interface components {
              * @enum {string}
              */
             status: "new" | "assigned" | "working" | "converted" | "closed" | "released";
+            transactions?: components["schemas"]["LeadTransactionSummary"] | null;
             /**
              * Updated At
              * Format: date-time
@@ -14762,12 +14866,17 @@ export interface operations {
                 deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
                 property_city?: string | null;
                 property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                property_subtype?: ("individual_house" | "standalone_apartment" | "gated_community_apartment" | "villa" | "locked_space" | "unlocked_space" | "plot" | "farmland" | "agriland") | null;
                 telecaller_profile_uuid?: string[] | null;
                 lead_source?: ("direct" | "agent" | "client") | null;
                 /** @description Latest call outcome. */
                 call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
                 /** @description Latest call interest level. */
                 interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Rupees: requested loan amount or quoted property price, at least. */
+                amount_min?: number | string | null;
+                /** @description Rupees; see amount_min. */
+                amount_max?: number | string | null;
             };
             header?: never;
             path?: never;
@@ -14806,12 +14915,17 @@ export interface operations {
                 deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
                 property_city?: string | null;
                 property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                property_subtype?: ("individual_house" | "standalone_apartment" | "gated_community_apartment" | "villa" | "locked_space" | "unlocked_space" | "plot" | "farmland" | "agriland") | null;
                 telecaller_profile_uuid?: string[] | null;
                 lead_source?: ("direct" | "agent" | "client") | null;
                 /** @description Latest call outcome. */
                 call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
                 /** @description Latest call interest level. */
                 interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Rupees: requested loan amount or quoted property price, at least. */
+                amount_min?: number | string | null;
+                /** @description Rupees; see amount_min. */
+                amount_max?: number | string | null;
             };
             header?: never;
             path?: never;
@@ -14850,12 +14964,17 @@ export interface operations {
                 deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
                 property_city?: string | null;
                 property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                property_subtype?: ("individual_house" | "standalone_apartment" | "gated_community_apartment" | "villa" | "locked_space" | "unlocked_space" | "plot" | "farmland" | "agriland") | null;
                 telecaller_profile_uuid?: string[] | null;
                 lead_source?: ("direct" | "agent" | "client") | null;
                 /** @description Latest call outcome. */
                 call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
                 /** @description Latest call interest level. */
                 interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Rupees: requested loan amount or quoted property price, at least. */
+                amount_min?: number | string | null;
+                /** @description Rupees; see amount_min. */
+                amount_max?: number | string | null;
             };
             header?: never;
             path?: never;
@@ -14896,12 +15015,28 @@ export interface operations {
                 limit?: number;
                 offset?: number;
                 lead_status?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
+                /** @description Leads with a loan application in this status. */
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Leads with a loan application for this product. */
+                loan_type_id?: string | null;
+                /** @description Leads with a loan application at this bank. */
+                bank_id?: string | null;
+                /** @description Leads with a property deal in this status. */
+                deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Leads with a deal on a property of this category. */
+                property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                /** @description Leads with a deal on a property of this subtype. */
+                property_subtype?: ("individual_house" | "standalone_apartment" | "gated_community_apartment" | "villa" | "locked_space" | "unlocked_space" | "plot" | "farmland" | "agriland") | null;
                 telecaller_profile_uuid?: string[] | null;
                 lead_source?: ("direct" | "agent" | "client") | null;
                 /** @description Latest call outcome. */
                 call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
                 /** @description Latest call interest level. */
                 interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Rupees: requested loan amount or quoted property price, at least. */
+                amount_min?: number | string | null;
+                /** @description Rupees; see amount_min. */
+                amount_max?: number | string | null;
             };
             header?: never;
             path?: never;
@@ -14938,12 +15073,28 @@ export interface operations {
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
                 lead_status?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
+                /** @description Leads with a loan application in this status. */
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Leads with a loan application for this product. */
+                loan_type_id?: string | null;
+                /** @description Leads with a loan application at this bank. */
+                bank_id?: string | null;
+                /** @description Leads with a property deal in this status. */
+                deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Leads with a deal on a property of this category. */
+                property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                /** @description Leads with a deal on a property of this subtype. */
+                property_subtype?: ("individual_house" | "standalone_apartment" | "gated_community_apartment" | "villa" | "locked_space" | "unlocked_space" | "plot" | "farmland" | "agriland") | null;
                 telecaller_profile_uuid?: string[] | null;
                 lead_source?: ("direct" | "agent" | "client") | null;
                 /** @description Latest call outcome. */
                 call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
                 /** @description Latest call interest level. */
                 interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Rupees: requested loan amount or quoted property price, at least. */
+                amount_min?: number | string | null;
+                /** @description Rupees; see amount_min. */
+                amount_max?: number | string | null;
             };
             header?: never;
             path?: never;
@@ -14980,12 +15131,28 @@ export interface operations {
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string[] | null;
                 lead_status?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
+                /** @description Leads with a loan application in this status. */
+                loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Leads with a loan application for this product. */
+                loan_type_id?: string | null;
+                /** @description Leads with a loan application at this bank. */
+                bank_id?: string | null;
+                /** @description Leads with a property deal in this status. */
+                deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Leads with a deal on a property of this category. */
+                property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                /** @description Leads with a deal on a property of this subtype. */
+                property_subtype?: ("individual_house" | "standalone_apartment" | "gated_community_apartment" | "villa" | "locked_space" | "unlocked_space" | "plot" | "farmland" | "agriland") | null;
                 telecaller_profile_uuid?: string[] | null;
                 lead_source?: ("direct" | "agent" | "client") | null;
                 /** @description Latest call outcome. */
                 call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
                 /** @description Latest call interest level. */
                 interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Rupees: requested loan amount or quoted property price, at least. */
+                amount_min?: number | string | null;
+                /** @description Rupees; see amount_min. */
+                amount_max?: number | string | null;
             };
             header?: never;
             path?: never;
@@ -15034,6 +15201,10 @@ export interface operations {
                 call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
                 /** @description Latest call interest level. */
                 interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Rupees: requested loan amount or quoted property price, at least. */
+                amount_min?: number | string | null;
+                /** @description Rupees; see amount_min. */
+                amount_max?: number | string | null;
             };
             header?: never;
             path?: never;
@@ -15078,6 +15249,10 @@ export interface operations {
                 call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
                 /** @description Latest call interest level. */
                 interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Rupees: requested loan amount or quoted property price, at least. */
+                amount_min?: number | string | null;
+                /** @description Rupees; see amount_min. */
+                amount_max?: number | string | null;
             };
             header?: never;
             path?: never;
@@ -15122,6 +15297,10 @@ export interface operations {
                 call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
                 /** @description Latest call interest level. */
                 interest?: ("hot" | "warm" | "cold") | null;
+                /** @description Rupees: requested loan amount or quoted property price, at least. */
+                amount_min?: number | string | null;
+                /** @description Rupees; see amount_min. */
+                amount_max?: number | string | null;
             };
             header?: never;
             path?: never;
@@ -19199,6 +19378,20 @@ export interface operations {
                 lead_source?: ("direct" | "agent" | "client") | null;
                 /** @description Employee teams: task type. */
                 task_type?: ("document_collection" | "property_visit" | "background_check") | null;
+                /** @description Loans teams: leads with an application for this product. */
+                loan_type_id?: string | null;
+                /** @description Loans teams: applications with this bank. */
+                bank_id?: string | null;
+                /** @description Real estate teams: deals in this status. */
+                deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Real estate teams: deals on a property of this category. */
+                property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                /** @description Real estate teams: deals on a property of this subtype. */
+                property_subtype?: ("individual_house" | "standalone_apartment" | "gated_community_apartment" | "villa" | "locked_space" | "unlocked_space" | "plot" | "farmland" | "agriland") | null;
+                /** @description Telecaller teams, rupees: requested loan amount or quoted property price, while the Admin shows it to Telecallers. */
+                amount_min?: number | string | null;
+                /** @description Rupees; see amount_min. */
+                amount_max?: number | string | null;
                 /** @description Only these members (repeatable); all when omitted. */
                 member?: string[] | null;
             };
@@ -19284,6 +19477,20 @@ export interface operations {
                 lead_source?: ("direct" | "agent" | "client") | null;
                 /** @description Employee teams: task type. */
                 task_type?: ("document_collection" | "property_visit" | "background_check") | null;
+                /** @description Loans teams: leads with an application for this product. */
+                loan_type_id?: string | null;
+                /** @description Loans teams: applications with this bank. */
+                bank_id?: string | null;
+                /** @description Real estate teams: deals in this status. */
+                deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Real estate teams: deals on a property of this category. */
+                property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                /** @description Real estate teams: deals on a property of this subtype. */
+                property_subtype?: ("individual_house" | "standalone_apartment" | "gated_community_apartment" | "villa" | "locked_space" | "unlocked_space" | "plot" | "farmland" | "agriland") | null;
+                /** @description Telecaller teams, rupees: requested loan amount or quoted property price, while the Admin shows it to Telecallers. */
+                amount_min?: number | string | null;
+                /** @description Rupees; see amount_min. */
+                amount_max?: number | string | null;
                 /** @description Only these members (repeatable); all when omitted. */
                 member?: string[] | null;
             };
@@ -19501,7 +19708,7 @@ export interface operations {
                 call_status?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
                 /** @description Telecaller: calls with this interest level. */
                 interest?: ("hot" | "warm" | "cold") | null;
-                /** @description Telecaller: leads with a loan application in this status. */
+                /** @description Telecaller, Employee, Agent (loans line): leads with a loan application in this status. */
                 loan_status?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold") | null;
                 /** @description Telecaller: leads from this referral source. */
                 lead_source?: ("direct" | "agent" | "client") | null;
@@ -19509,6 +19716,22 @@ export interface operations {
                 lead_status?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
                 /** @description Employee: tasks of this type. */
                 task_type?: ("document_collection" | "property_visit" | "background_check") | null;
+                /** @description Telecaller, Employee, Agent (loans line): leads with a loan application for this financial product. With bank_id, loan_status and (Telecaller) the amount, one application must match them all. */
+                loan_type_id?: string | null;
+                /** @description Telecaller, Employee, Agent (loans line): applications with this bank. */
+                bank_id?: string | null;
+                /** @description Telecaller, Employee, Agent (real estate line): deals in this status. */
+                deal_status?: ("new" | "contacted" | "site_visit_done" | "negotiation" | "booked" | "agreement_signed" | "closed" | "rejected" | "on_hold") | null;
+                /** @description Telecaller, Employee, Agent (real estate line): deals on a property of this category. */
+                property_category?: ("houses" | "apartments" | "villas" | "plots" | "commercial") | null;
+                /** @description Telecaller, Employee, Agent (real estate line): deals on a property of this subtype. */
+                property_subtype?: ("individual_house" | "standalone_apartment" | "gated_community_apartment" | "villa" | "locked_space" | "unlocked_space" | "plot" | "farmland" | "agriland") | null;
+                /** @description Agent: commissions in this status (and the leads behind them). */
+                commission_status?: ("pending" | "paid" | "cancelled") | null;
+                /** @description Rupees. Telecaller: requested loan amount or quoted property price, while the Admin shows it to Telecallers. Agent: agreed commission. */
+                amount_min?: number | string | null;
+                /** @description Rupees; see amount_min. */
+                amount_max?: number | string | null;
                 /** @description Sub Admin: only banners or only offers. */
                 content_type?: ("banners" | "offers") | null;
                 /** @description Sub Admin: content in this review status. For offers, approved includes scheduled, live means active and archived includes expired. */

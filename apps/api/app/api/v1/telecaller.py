@@ -40,7 +40,7 @@ from app.schemas.telecaller import (
     TelecallerSiteVisitRead,
 )
 from app.services.field_visibility import effective_modes, project_values
-from app.services.lead_signals import lead_signals
+from app.services.lead_signals import facets, lead_signals, transaction_summary
 from app.services.loan_applications import (
     BankNotAvailableForLoanType,
     SanctionTermsRequired,
@@ -219,6 +219,8 @@ async def list_leads(
                 updated_at=lead.updated_at,
                 latest_request=requests[0] if requests else None,
                 loan_statuses=signals.loan_statuses,
+                facets=facets(signals),
+                transactions=transaction_summary(signals.transactions, modes, lead.business_line),
                 **project_values(
                     modes,
                     "lead",
@@ -315,6 +317,8 @@ async def get_lead(
         updated_at=lead.updated_at,
         latest_request=requests[0] if requests else None,
         loan_statuses=signals.loan_statuses,
+        facets=facets(signals),
+        transactions=transaction_summary(signals.transactions, modes, lead.business_line),
         activities=[to_activity_read(a) for a in activities],
         loan_applications=loan_applications,
         financial_enquiries=financial_enquiries,
