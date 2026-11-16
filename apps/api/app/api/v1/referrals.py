@@ -86,6 +86,7 @@ async def list_referrals(
     db: AsyncSession = Depends(get_db),
 ) -> ReferralListResponse:
     rows = await referrals.list_referrals(db)
+    items = await referrals.converted_items(rows)
     return ReferralListResponse(
         referrals=[
             ReferralRead(
@@ -96,6 +97,7 @@ async def list_referrals(
                 bonus_amount_paise=r.bonus_amount_paise,
                 converted_at=r.converted_at,
                 created_at=r.created_at,
+                converted_item=items.get(r.id),
             )
             for r in rows
         ]

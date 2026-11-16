@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 LeadStatusLiteral = Literal[
     "new", "assigned", "working", "converted", "closed", "released", "expired"
@@ -28,18 +28,55 @@ class AgentHomeResponse(BaseModel):
     counts_by_status: dict[str, int]
 
 
+_AGENT_REQUIREMENT_KEYS = {"notes", "property_id", "product_slug"}
+
+# A lead must carry the person's name so the telecaller can address them. Leading
+# and trailing whitespace is stripped first, so a blank name is rejected.
+LeadName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+
+
 class AgentLeadCreate(BaseModel):
     mobile: Annotated[str, Field(pattern=r"^\+[1-9]\d{6,14}$")]
-    name: Annotated[str | None, Field(default=None, max_length=100)] = None
+    name: LeadName
+    # Agent-authored context: free-text notes plus, optionally, the one listing
+    # (real estate) or product (loans) the person is interested in. The service
+    # confirms the chosen item exists, is published, and matches the Agent's
+    # business line, then records its title for the telecaller.
     requirement: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def _known_requirement_shape(self) -> AgentLeadCreate:
+        if self.requirement is None:
+            return self
+        unknown = set(self.requirement) - _AGENT_REQUIREMENT_KEYS
+        if unknown:
+            raise ValueError("Requirement may only contain notes, property_id or product_slug.")
+        notes = self.requirement.get("notes")
+        if notes is not None and (not isinstance(notes, str) or len(notes) > 1000):
+            raise ValueError("Requirement notes must be text of at most 1000 characters.")
+        property_id = self.requirement.get("property_id")
+        if property_id is not None:
+            try:
+                UUID(str(property_id))
+            except ValueError as exc:
+                raise ValueError("Requirement property_id must be a property id.") from exc
+        slug = self.requirement.get("product_slug")
+        if slug is not None and (not isinstance(slug, str) or not 0 < len(slug) <= 80):
+            raise ValueError("Requirement product_slug must be a product identifier.")
+        if property_id is not None and slug is not None:
+            raise ValueError("Choose either a property or a loan product, not both.")
+        return self
 
 
 class AgentLeadUpdate(BaseModel):
-    name: Annotated[str | None, Field(default=None, max_length=100)] = None
+    # Omit name to leave it unchanged; a supplied name cannot be blank or null.
+    name: LeadName | None = None
     requirement: dict[str, Any] | None = None
 
     @model_validator(mode="after")
     def _at_least_one_field(self) -> AgentLeadUpdate:
+        if "name" in self.model_fields_set and self.name is None:
+            raise ValueError("Name is required and cannot be cleared.")
         if self.name is None and self.requirement is None:
             raise ValueError("Provide at least one of name or requirement.")
         return self
@@ -60,6 +97,9 @@ class AgentLeadRead(BaseModel):
     requirement: dict[str, Any] | None = None
     registered: bool
     editable: bool
+    # True when the originating Agent may resubmit this expired lead for a
+    # fresh window (2026-11-14 amendment to FR-4.6).
+    resubmittable: bool
     expires_at: datetime | None
     expired_at: datetime | None
     created_at: datetime

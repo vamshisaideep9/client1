@@ -19,6 +19,7 @@ export function mapProperty(raw: Schemas["PropertyRead"]): REListing {
     id: raw.id,
     title: raw.title,
     location: raw.location,
+    ...(raw.developer_name ? { developerName: raw.developer_name } : {}),
     price: raw.price_display,
     type: raw.type,
     listingIntent: raw.listing_intent,
