@@ -36,7 +36,13 @@ unchanged.
   and 1 failed, the pre-existing `test_public_banners.py::
   test_response_omits_internal_fields` (stale exact key set without the
   public video fields; fails identically on `upstream/main` `8493823`).
-  Full API suite: running when the PR opened; result posted on the PR.
+  Full API suite on `09b3093a`: 2447 passed, 6 failed (the 3 known upstream
+  failures, one pgbouncer-routing failure that fails identically on
+  upstream, and two shared-Redis collisions that pass when re-run alone).
+- Merged `upstream/main` `e09659a` (#364) into the branch; its migration
+  `a7c9e1b3d5f6` also revised `b2d4f6a8c0e1`, so the unmerged
+  `c5e7a9b1d3f4` now revises `a7c9e1b3d5f6` (one head; the full chain
+  upgrades, downgrades and re-upgrades on a fresh database).
 
 **In review — admin client-roster CSV export** (2026-11-16; upstream PR
 [#364](https://github.com/brollysolutions/client1/pull/364); origin mirror

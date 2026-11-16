@@ -74,8 +74,10 @@ strict https link, validated server-side through the shared `core/urls.py`
 helper. One additive migration (`c5e7a9b1d3f4`) widens the `banners_delete`
 RLS policy. The web slice (`fix/banner-lifecycle-web`) follows: create-and-
 submit, live refresh, external CTAs and the horizontal dashboard offer card.
-Next: the user reviews and merges #363, then the web slice. Recommended:
-Opus 5.5 / extra-high (RLS, role guards, URL handling).
+After #364 merged, `upstream/main` was merged in and `c5e7a9b1d3f4` now
+revises #364's `a7c9e1b3d5f6` (single head). Next: the user reviews and
+merges #363, then the web slice. Recommended: Opus 5.5 / extra-high (RLS,
+role guards, URL handling).
 
 **In review — admin client-roster CSV export** (2026-11-16; upstream PR
 [#364](https://github.com/brollysolutions/client1/pull/364); origin mirror
