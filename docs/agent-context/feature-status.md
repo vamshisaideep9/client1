@@ -2,6 +2,21 @@
 
 Status: **Derived living implementation ledger**
 
+**In review — documents viewable inside the dashboard** (2026-11-15), branch
+`feat/in-dashboard-document-viewer` stacked on the listing-origins seeder fix.
+Web-only plus one pinned dependency; no API, schema, CSP or contract change.
+- Root cause of the empty Document verification preview: `<object>` blocked by
+  `object-src 'none'` plus an `attachment` signed URL, and URL-extension type
+  detection that misread extension-less task documents.
+- `DocumentViewer`/`ViewDocumentButton` render images and PDFs in-dashboard;
+  bytes-based type detection; 25 MB inline cap; PDF.js 6.4.299 (no eval code
+  path in this major) draws canvases only. Six surfaces wired.
+- Evidence: `lib/document-sniff.test.ts` (3) in the web unit suite, 889 tests
+  pass; typecheck and lint pass; `e2e/document-viewer.spec.ts` 2 passed at 1280
+  and 390 px (two-page PDF drawn as two canvases, PNG via blob URL; screenshots
+  reviewed); `pnpm audit --prod` no known vulnerabilities. Production build passes in `node:22-alpine` with the PDF.js worker self-hosted.
+  Full API suite on the stack tip: 2341 passed, 3 failed (the same three pre-existing upstream failures).
+
 **In review — bulk seeder listing origins** (2026-11-15), branch
 `chore/bulk-seed-listing-origins` from `upstream/main` `bf9b7a3`.
 Development-only seeder fix; no product, schema or contract change.
