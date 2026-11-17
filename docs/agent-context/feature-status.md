@@ -2,6 +2,39 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch F PR 2: audience rules version 2 (API)** (2026-11-17;
+CS-026; PR link added on ship), branch `feat/batch-f-audience-v2-api`
+stacked on Batch F PR 1. API and regenerated contracts; no migration; no
+requirement-percentage change.
+- Grammar (`schemas/personalization.py`): version 1 or 2; version 2 adds
+  `pincodes` and `cities` ({district, state}); both need a Client-only
+  audience and fail closed in version 1; storage keeps version 1 for rules
+  without them.
+- Matching (`services/personalization.py`): circles, pincodes and cities are
+  one "where" dimension; the Client's profile pincode (read only with
+  consent) gives the pincode, city and circle point, ahead of a legacy coarse
+  point; consent off stops all location matching; Agents and staff never
+  match location targets.
+- Authoring: banner/offer create and update validate every pincode and city
+  against the list (422 naming the unknown ones) and store the list
+  spelling. `GET /api/v1/pincodes/districts` (signed in; shared lookup
+  budget; private cache) feeds the campaign form's city picker.
+- Evidence (python 3.13 container, scratch database): new
+  `test_audience_rules_v2.py` (version-1 parse/store/match unchanged,
+  version-2 round trip and minimal stored version, 12 invalid rules refused,
+  caps, pincode/city/one-dimension/consent matching, end to end: profile
+  pincode targets only after consent, another pincode keeps the city but
+  loses the pincode and 5 km circle, revoking consent stops it, profile
+  pincode beats a valid coarse point, offer and banner authoring refuse
+  unknown places and canonicalise cities, district list) with
+  `test_pincodes_api.py`: 84 passed. Banner, offer, campaign-media,
+  personalization, public-campaign, CMS-activation and coverage modules:
+  still running when this was committed; the result is recorded with the PR
+  link. The full API suite was started on the stack and stopped
+  deliberately (no failure up to 13 %) to free the machine; the plan requires
+  it only before the last slice of E and G. Ruff clean; contracts
+  regenerated; web `pnpm typecheck` passes.
+
 **In progress — Batch F PR 1: pincode reference data, profile pincode and
 lookups (API)** (2026-11-17; CS-026; PR
 [#379](https://github.com/brollysolutions/client1/pull/379), mirror

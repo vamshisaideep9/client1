@@ -93,12 +93,25 @@ against `main`, stacked on Batch E PR 4:
   Admin; 10/h per account) maps a position inside India to the nearest
   centroid within 100 km using an in-memory 0.5° grid and Haversine, so the
   position never reaches the database, logs, audit or Redis.
-- *PR F2 — API: audience rules version 2* (next).
+- *PR F2 — API: audience rules version 2*, branch
+  `feat/batch-f-audience-v2-api` stacked on F1 (PR link added on ship). No
+  migration. `AudienceRules.version` accepts 1 or 2; version 2 adds
+  `pincodes` (≤ 100, valid format, unique) and `cities` (≤ 50 district +
+  state pairs, unique case-insensitively), both requiring a Client-only
+  audience; storage writes the lowest version that can express the rule, so
+  version-1 rules stay byte-identical. Circles, pincodes and cities are one
+  "where" dimension (any match), ANDed with the rest. A consenting Client's
+  profile pincode supplies the pincode, the (district, state) and — taking
+  precedence over a legacy coarse point — the centroid for circles; nothing
+  is read without consent. Banner and offer create/update refuse pincodes or
+  cities not on the list (422) and store cities in the list's spelling.
+  `GET /pincodes/districts` lists the targetable cities.
 - *PR F3 — web: profile pincode, "Use my location", campaign location
   targets, privacy notice* (next).
 
-Next: the user merges A … E, then F1 onward. Recommended: Opus 5.5 /
-extra-high for F1 and F2 (migration, RLS, PII), high for F3.
+Next: the user merges F1, F2, F3 (A … E are on `main` as of `19857200`).
+Recommended: Opus 5.5 / extra-high for F1 and F2 (migration, RLS, PII),
+high for F3.
 
 **In review — Batch E: mandatory email, self-service contact changes and
 contact history (CS-025)** (2026-11-17; user-approved stakeholder feedback,
