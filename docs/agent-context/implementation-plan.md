@@ -88,7 +88,8 @@ stacked on Batch D PR 2:
   registration (email code step) and every endpoint except the email step;
   `POST /auth/email/add` (+ `/resend`, `/verify`) adds a code-verified email
   (password first); `PATCH /auth/me` no longer edits or clears email;
-  `/auth/me`, login and refresh carry `email_required`.
+  `/auth/me`, login and refresh carry `email_required`. The platform-scope
+  policy ledger test lists the two new admin-gated policies.
 - *PR E2 — API: self-service phone/email change and history* (Client, Agent,
   Admin), lost-number completion records history, Admin history read
   (audited).
