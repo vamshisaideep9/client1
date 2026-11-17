@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
@@ -17,6 +17,7 @@ from app.tests.contest_support import (
     admin_token,
     headers,
     seed_agent,
+    seed_call,
     seed_contest,
     seed_lead,
     seed_loan,
@@ -147,11 +148,10 @@ async def test_team_member_and_manager_views(client: AsyncClient) -> None:
     loner_user, loner = await seed_staff(StaffRole.TELECALLER, business_line="loans")
     await seed_team(manager, "loans", "telecaller", [ravi, sam])
     for person in (ravi, sam, sam):
-        await seed_loan(
-            await seed_lead("loans", telecaller=person),
-            loan_type=loan_type,
-            status=LoanStatus.SANCTIONED,
-        )
+        lead = await seed_lead("loans", telecaller=person)
+        # Telecaller credit needs a call before the counted stage.
+        await seed_call(person, lead, at=datetime.now(UTC) - timedelta(minutes=30))
+        await seed_loan(lead, loan_type=loan_type, status=LoanStatus.SANCTIONED)
     contest = await seed_contest(
         created_by=maker,
         audience="team",
