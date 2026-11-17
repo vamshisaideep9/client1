@@ -289,6 +289,26 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
     icon: Ban,
     tone: "bg-error/10 text-error",
   },
+  contact_changed: {
+    label: "Contact details changed",
+    icon: ShieldCheck,
+    tone: "bg-success/10 text-success",
+  },
+  contact_change_requested: {
+    label: "Contact change requested",
+    icon: BadgeCheck,
+    tone: "bg-warning/10 text-warning",
+  },
+  contact_change_rejected: {
+    label: "Contact change rejected",
+    icon: Ban,
+    tone: "bg-error/10 text-error",
+  },
+  contact_history_viewed: {
+    label: "Contact history viewed",
+    icon: ScrollText,
+    tone: "bg-loans-soft text-brand-link",
+  },
   banner_created: {
     label: "Banner created",
     icon: Megaphone,
@@ -369,6 +389,24 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   content_block_archived: { label: "Content block archived", icon: Archive, tone: "bg-muted text-text-secondary" },
   loan_application_updated: { label: "Loan application updated", icon: ClipboardList, tone: "bg-loans-soft text-brand-link" },
   property_deal_updated: { label: "Property deal updated", icon: Home, tone: "bg-realestate-soft text-brand-link" },
+  agent_lead_resubmitted: { label: "Agent lead resubmitted", icon: RefreshCw, tone: "bg-loans-soft text-brand-link" },
+  agent_payout_details_updated: { label: "Agent payout details saved", icon: Wallet, tone: "bg-muted text-text-secondary" },
+  agent_payout_details_deleted: { label: "Agent payout details removed", icon: Eraser, tone: "bg-muted text-text-secondary" },
+  agent_payout_details_viewed: { label: "Agent payout details viewed", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
+  staff_team_created: { label: "Team created", icon: UserPlus, tone: "bg-loans-soft text-brand-link" },
+  staff_team_updated: { label: "Team updated", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  staff_team_archived: { label: "Team archived", icon: Archive, tone: "bg-muted text-text-secondary" },
+  staff_team_member_added: { label: "Team member added", icon: UserPlus, tone: "bg-success/10 text-success" },
+  staff_team_member_removed: { label: "Team member removed", icon: UserMinus, tone: "bg-muted text-text-secondary" },
+  team_lead_viewed: { label: "Manager viewed a lead", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
+  team_lead_reassigned: { label: "Manager moved a lead", icon: RefreshCw, tone: "bg-loans-soft text-brand-link" },
+  team_task_reassigned: { label: "Manager moved a task", icon: RefreshCw, tone: "bg-loans-soft text-brand-link" },
+  team_lead_status_updated: { label: "Manager changed a lead status", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  team_task_updated: { label: "Manager changed a task", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  team_note_added: { label: "Manager added a note", icon: ScrollText, tone: "bg-muted text-text-secondary" },
+  team_task_viewed: { label: "Manager viewed a task", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
+  // Bulk client-PII download (#364); same warning tone as other sensitive reads.
+  client_export_downloaded: { label: "Client list exported", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
   vehicle_arrangement_updated: {
     label: "Vehicle arrangement updated",
     icon: CarFront,
@@ -524,7 +562,7 @@ export function AuditLogView() {
         searchLabel="Filter activity by record type"
         searchPlaceholder="Record type"
         statusOptions={ACTION_OPTIONS}
-        statusLabel="actions"
+        statusLabel="Action"
         note="Open a row to inspect its immutable structured detail."
       />
 

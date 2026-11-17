@@ -4,7 +4,9 @@ import {
   buildPayoutPayload,
   EMPTY_PAYOUT_FORM,
   rupeesToPaise,
+  savedDestinationToForm,
   validatePayoutForm,
+  type PayoutDestinationFormState,
   type PayoutFormState,
 } from "@/lib/payout-form";
 
@@ -215,5 +217,55 @@ describe("validatePayoutForm()", () => {
       }),
     );
     expect(errs).toEqual({});
+  });
+});
+
+describe("savedDestinationToForm()", () => {
+  const blank: PayoutDestinationFormState = {
+    destinationType: "",
+    vpa: "",
+    ifsc: "",
+    accountNumber: "",
+    accountName: "",
+  };
+  const bank = {
+    account_holder_name: "Test Agent",
+    account_number: "50100123456789",
+    ifsc: "HDFC0001234",
+    bank_name: null,
+  };
+  const updatedAt = "2026-11-14T00:00:00Z";
+
+  it("prefers UPI when the maker has not chosen a rail", () => {
+    expect(
+      savedDestinationToForm(blank, { upi_id: "me@okaxis", bank, updated_at: updatedAt }),
+    ).toEqual({ ...blank, destinationType: "vpa", vpa: "me@okaxis" });
+  });
+
+  it("keeps the chosen bank rail when a bank account is saved", () => {
+    expect(
+      savedDestinationToForm(
+        { ...blank, destinationType: "bank_account" },
+        { upi_id: "me@okaxis", bank, updated_at: updatedAt },
+      ),
+    ).toEqual({
+      destinationType: "bank_account",
+      vpa: "",
+      ifsc: "HDFC0001234",
+      accountNumber: "50100123456789",
+      accountName: "Test Agent",
+    });
+  });
+
+  it("falls back to the saved rail and returns null when nothing is saved", () => {
+    expect(
+      savedDestinationToForm(
+        { ...blank, destinationType: "vpa" },
+        { upi_id: null, bank, updated_at: updatedAt },
+      )?.destinationType,
+    ).toBe("bank_account");
+    expect(
+      savedDestinationToForm(blank, { upi_id: null, bank: null, updated_at: updatedAt }),
+    ).toBeNull();
   });
 });

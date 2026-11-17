@@ -17,7 +17,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from jwt import PyJWTError as JWTError
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,27 +25,16 @@ from app.cache.redis_keys import (
     TTL_MOBILE_CHANGE_OTP_DAILY,
     TTL_MOBILE_CHANGE_RATE,
     RedisCache,
-    login_fail_key,
-    login_lock_key,
     mobile_change_otp_daily_key,
     mobile_change_rate_account_key,
     mobile_change_rate_ip_key,
-    otp_email_verify_key,
-    otp_email_verify_target_key,
-    otp_lock_key,
-    otp_mobile_change_key,
-    otp_register_key,
-    otp_resend_key,
-    otp_reset_key,
-    reg_data_key,
 )
 from app.core.config import settings
 from app.core.security import create_access_token, decode_access_token, verify_password
 from app.db.session import AsyncSessionLocal
 from app.models.audit_log import AuditAction
 from app.models.auth import AuthEvent, RefreshToken
-from app.models.enquiry import Enquiry, EnquiryStatus
-from app.models.lead import Lead, LeadStatus
+from app.models.contact_change import ContactChangeMethod, ContactField
 from app.models.loan_document import LoanDocument
 from app.models.mobile_change import (
     MobileChangeProof,
@@ -55,22 +44,24 @@ from app.models.mobile_change import (
 )
 from app.models.notification import Notification, NotificationType
 from app.models.profile import (
-    AgentApplication,
     AgentProfile,
     ClientProfile,
     ProfileScope,
     ProfileStatus,
     StaffProfile,
     StaffRole,
-    SubmissionStatus,
 )
 from app.models.push_subscription import PushSubscription
-from app.models.referral import Referral, ReferralStatus
-from app.models.site_visit import SiteVisit, SiteVisitStatus
 from app.models.support_ticket import SupportCategory, SupportStatus, SupportTicket
 from app.models.user import User, UserStatus
 from app.schemas.mobile_change import MobileChangeAdminRead, MobileChangeChallengeResponse
 from app.services.audit_log import record as record_audit
+from app.services.contact_change import write_history
+from app.services.contact_identity import (
+    clear_identity_caches,
+    mobile_conflicts,
+    propagate_mobile,
+)
 from app.services.email import send_notification_email
 from app.services.notifications import emit_notification
 from app.services.otp import check_otp_rate_ip, generate_and_store_otp, resend_otp, verify_otp
@@ -400,48 +391,9 @@ async def _conflicts(db: AsyncSession, request: MobileChangeRequest) -> list[str
         conflicts.append("administrator_account")
     if user.mobile != current_mobile:
         conflicts.append("current_number_changed")
-    replacement_owner = await db.scalar(
-        select(User.id).where(User.mobile == requested_mobile, User.id != user.id)
+    conflicts.extend(
+        await mobile_conflicts(db, user_uuid=user.id, requested_mobile=requested_mobile)
     )
-    if replacement_owner is not None:
-        conflicts.append("replacement_number_in_use")
-
-    profile_ids = set(
-        await db.scalars(select(ClientProfile.id).where(ClientProfile.auth_user_uuid == user.id))
-    )
-    lead_conflict = select(Lead.id).where(Lead.mobile == requested_mobile)
-    if profile_ids:
-        lead_conflict = lead_conflict.where(
-            or_(
-                Lead.client_profile_uuid.is_(None),
-                Lead.client_profile_uuid.not_in(profile_ids),
-            )
-        )
-    if await db.scalar(lead_conflict.limit(1)) is not None:
-        conflicts.append("replacement_number_has_unlinked_lead")
-    referral_conflict = await db.scalar(
-        select(Referral.id)
-        .where(
-            Referral.referred_mobile == requested_mobile,
-            or_(
-                Referral.referred_auth_user_uuid.is_(None),
-                Referral.referred_auth_user_uuid != user.id,
-            ),
-        )
-        .limit(1)
-    )
-    if referral_conflict is not None:
-        conflicts.append("replacement_number_has_unlinked_referral")
-    application_rows = (
-        await db.scalars(
-            select(AgentApplication).where(
-                AgentApplication.mobile == requested_mobile,
-                AgentApplication.status == SubmissionStatus.PENDING,
-            )
-        )
-    ).all()
-    if any(row.applicant_auth_user_uuid != user.id for row in application_rows):
-        conflicts.append("replacement_number_has_unlinked_application")
     if request.status == MobileChangeStatus.PENDING_APPROVAL and (
         request.proof_method is None
         or not await _proof_is_available(db, user.id, request.proof_method)
@@ -689,52 +641,24 @@ async def _complete_transaction(
         old_mobile = request.current_mobile
         new_mobile = request.requested_mobile
         target_uuid = user.id
-        profile_ids = set(
-            await db.scalars(
-                select(ClientProfile.id).where(ClientProfile.auth_user_uuid == user.id)
-            )
-        )
 
         user.mobile = new_mobile
         user.phone_verified_at = now
         user.session_version += 1
-        if profile_ids:
-            await db.execute(
-                update(Lead)
-                .where(
-                    Lead.client_profile_uuid.in_(profile_ids),
-                    Lead.status.not_in((LeadStatus.CONVERTED, LeadStatus.CLOSED)),
-                )
-                .values(mobile=new_mobile)
-            )
-        await db.execute(
-            update(Referral)
-            .where(
-                Referral.referred_auth_user_uuid == user.id,
-                Referral.conversion_status == ReferralStatus.PENDING,
-            )
-            .values(referred_mobile=new_mobile)
-        )
-        await db.execute(
-            update(Enquiry)
-            .where(Enquiry.user_uuid == user.id, Enquiry.status != EnquiryStatus.CLOSED)
-            .values(contact_mobile=new_mobile)
-        )
-        await db.execute(
-            update(SiteVisit)
-            .where(
-                SiteVisit.user_uuid == user.id,
-                SiteVisit.status.in_((SiteVisitStatus.REQUESTED, SiteVisitStatus.CONFIRMED)),
-            )
-            .values(contact_mobile=new_mobile)
-        )
-        await db.execute(
-            update(AgentApplication)
-            .where(
-                AgentApplication.applicant_auth_user_uuid == user.id,
-                AgentApplication.status == SubmissionStatus.PENDING,
-            )
-            .values(mobile=new_mobile)
+        await propagate_mobile(db, user_uuid=user.id, new_mobile=new_mobile)
+        # CS-025: the request row still forgets both numbers below; the
+        # permanent copy lives only in the platform-Admin-only history.
+        write_history(
+            db,
+            user_uuid=user.id,
+            field=ContactField.MOBILE,
+            old_value=old_mobile,
+            new_value=new_mobile,
+            method=ContactChangeMethod.LOST_NUMBER_RECOVERY,
+            request_uuid=request.id,
+            approved_by=actor_uuid,
+            proof_category=request.proof_method.value if request.proof_method else None,
+            proof_reference=request.proof_attestation,
         )
         await db.execute(
             update(RefreshToken)
@@ -790,7 +714,7 @@ async def _complete_transaction(
         await db.commit()
 
     if old_mobile and new_mobile and target_uuid:
-        await _clear_identity_caches(cache, old_mobile, new_mobile)
+        await clear_identity_caches(cache, old_mobile, new_mobile)
     if notification_email:
         await send_notification_email(
             notification_email,
@@ -798,36 +722,6 @@ async def _complete_transaction(
             "Your login number was changed. Please sign in again on your devices.",
             "/login",
         )
-
-
-async def _clear_identity_caches(cache: RedisCache, old_mobile: str, new_mobile: str) -> None:
-    keys: list[str] = []
-    for number in (old_mobile, new_mobile):
-        keys.extend(
-            [
-                otp_mobile_change_key(number),
-                f"{otp_mobile_change_key(number)}:attempts",
-                otp_register_key(number),
-                f"{otp_register_key(number)}:attempts",
-                otp_reset_key(number),
-                f"{otp_reset_key(number)}:attempts",
-                otp_email_verify_key(number),
-                f"{otp_email_verify_key(number)}:attempts",
-                otp_email_verify_target_key(number),
-                otp_resend_key(number),
-                otp_lock_key(number),
-                login_fail_key(number),
-                login_lock_key(number),
-                reg_data_key(number),
-            ]
-        )
-    try:
-        await cache.delete(*keys)
-    except Exception:
-        # The database transaction is authoritative and already committed.
-        # These are short-lived defensive caches; a Redis outage must not turn
-        # a successful identity update into a misleading API failure/retry.
-        logger.warning("mobile_change.cache_cleanup_failed", exc_info=True)
 
 
 async def reject(

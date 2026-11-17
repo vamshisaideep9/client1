@@ -66,6 +66,7 @@ from app.schemas.agent_invites import (
 )
 from app.schemas.audit_log import AuditLogListResponse, AuditLogRead
 from app.schemas.auth import MessageResponse
+from app.schemas.contact_change import ContactHistoryResponse
 from app.schemas.employee import TaskFeedbackMediaRead
 from app.schemas.financial_catalog import (
     AdminProviderOfferListResponse,
@@ -76,7 +77,7 @@ from app.schemas.financial_catalog import (
     ProviderOfferCreate,
     ProviderOfferUpdate,
 )
-from app.schemas.lead_details import AdminLeadDetailsPatch, LeadDetailsRead
+from app.schemas.lead_details import AdminLeadDetailsPatch, AdminLeadDetailsRead, LeadDetailsRead
 from app.schemas.loan_config import (
     AdminBankListResponse,
     AdminBankRead,
@@ -98,7 +99,7 @@ from app.schemas.support_tickets import (
     SupportTicketAdminRead,
     SupportTicketAdvanceRequest,
 )
-from app.services import agent_invites, staff_invites, storage
+from app.services import agent_invites, contact_change, staff_invites, storage
 from app.services.account_deletion import (
     AccountAlreadyDeleted,
     AccountNotFound,
@@ -164,6 +165,7 @@ from app.services.lead_details import (
 from app.services.leads import list_assigned_leads, list_unassigned_leads
 from app.services.loan_applications import (
     BankNotAvailableForLoanType,
+    SanctionTermsRequired,
     StatusReasonRequired,
     TerminalApplication,
     TermsNotAllowedAtStage,
@@ -227,6 +229,7 @@ from app.services.support_tickets import (
 )
 from app.services.task_feedback import list_feedback_media
 from app.services.tasks import list_active_employees, list_tasks_for_admin
+from app.services.telecaller import request_summaries_for_leads
 
 router = APIRouter()
 
@@ -384,6 +387,27 @@ async def update_staff_feature(
         additional_admin_limit=ADDITIONAL_ADMIN_LIMIT,
         additional_admin_count=additional_count,
     )
+
+
+@router.get("/users/{auth_user_uuid}/contact-history", response_model=ContactHistoryResponse)
+async def contact_history(
+    auth_user_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+) -> ContactHistoryResponse:
+    """CS-025 permanent phone/email history, old values included.
+
+    Platform Admin only (the dependency and the table's RLS policy both say
+    so; the account holder cannot read it). Every read is audited.
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    entries = await contact_change.history_for_admin(
+        db,
+        target_uuid=auth_user_uuid,
+        actor=contact_change.Actor(user_uuid=current_user.id, role=current_user.role),
+    )
+    return ContactHistoryResponse(entries=entries)
 
 
 @router.post("/users/{auth_user_uuid}/delete", response_model=MessageResponse)
@@ -840,20 +864,23 @@ async def list_assigned(
     ]
 
 
-@router.get("/leads/{lead_id}/details", response_model=LeadDetailsRead)
+@router.get("/leads/{lead_id}/details", response_model=AdminLeadDetailsRead)
 async def get_lead_details(
     lead_id: UUID,
     response: Response,
     current_user: CurrentUser = Depends(require_platform_admin),
     db: AsyncSession = Depends(get_db),
-) -> LeadDetailsRead:
+) -> AdminLeadDetailsRead:
     response.headers["Cache-Control"] = "private, no-store"
     actor = DetailActor(role="admin", subject_uuid=current_user.id, auth_user_uuid=current_user.id)
     try:
         lead = await get_lead_details_for_actor(db, lead_id, actor)
     except LeadDetailsNotFound as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found.") from exc
-    return to_lead_details_read(lead, actor)
+    # What the client applied for and when (loan applications, enquiries,
+    # site visits, deals), newest first.
+    requests = (await request_summaries_for_leads(db, [lead.id]))[lead.id]
+    return AdminLeadDetailsRead(**to_lead_details_read(lead, actor).model_dump(), requests=requests)
 
 
 @router.patch("/leads/{lead_id}/details", response_model=LeadDetailsRead)
@@ -1006,6 +1033,11 @@ async def update_loan_application_progress(
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Deal terms can only be set once the application has been submitted to a bank.",
+        ) from exc
+    except SanctionTermsRequired as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Add the approved amount and bank before moving the loan to Approved or a later stage.",
         ) from exc
     except UnknownBank as exc:
         raise HTTPException(

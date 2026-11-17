@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CopyProtected } from "@/components/help/copy-protected";
 import { SITE_NAME } from "@/lib/site";
 
 
@@ -24,7 +25,7 @@ function BulletList({ items }: { items: string[] }) {
 
 export function PrivacyContent({ dashboard = false }: { dashboard?: boolean }) {
   return (
-    <section className="w-full bg-surface-sky px-4 py-10 sm:px-6 sm:py-14">
+    <CopyProtected className="w-full bg-surface-sky px-4 py-10 sm:px-6 sm:py-14">
       <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-surface px-5 py-10 leading-relaxed sm:px-10 sm:py-12">
         <h1 className="font-heading text-3xl font-semibold leading-tight tracking-tight text-[var(--nav-text)] sm:text-4xl">
           Privacy Policy
@@ -38,11 +39,12 @@ export function PrivacyContent({ dashboard = false }: { dashboard?: boolean }) {
           <SectionHeading>Information we collect</SectionHeading>
           <BulletList
             items={[
-              "Contact details you give us: your name and mobile number. Ordinary account registration lets you add an optional email; contact and partner application forms may request the additional details shown on those forms.",
+              "Contact details you give us: your name, mobile number and email address. Contact and partner application forms may request the additional details shown on those forms.",
               "Optional profile details: you may add gender, income information, occupation, and a manually entered location during registration or later in Profile settings. These details are not required to use your account, and the website does not request your browser location for this field.",
               "Property search: location terms you type or select are used only to filter available properties and do not update your Profile.",
               "Previously saved personalization location: if you opted in before browser-location capture was removed, you can delete the saved point from Settings and it otherwise expires automatically within 30 days. The website no longer captures or refreshes it.",
-              "Verification details: your mobile number is verified with a one-time code before we create an account. If you add an email, you may verify it after signing in.",
+              "Verification details: your mobile number and your email are each verified with a one-time code.",
+              "Contact change history: when your mobile number or email changes, we record the previous and the new value, when it changed, how the change was confirmed and, where one was needed, which administrator approved it.",
               "Enquiry details: the loan type, property interest, or other details you share so we can connect you with the right bank, lender, or real estate partner.",
               "Partner application documents: if you apply to become a partner agent, we collect identity documents (such as Aadhaar and PAN) to verify you before approval.",
               "Account activity: your enquiry history, application status, and any referral, cashback, or commission activity on your account.",
@@ -55,7 +57,7 @@ export function PrivacyContent({ dashboard = false }: { dashboard?: boolean }) {
               href={dashboard ? "/dashboard/cookies" : "/cookies"}
               className="font-medium text-brand-link underline underline-offset-4"
             >
-              Cookie Notice
+              Cookie Policy
             </Link>{" "}
             lists each cookie and the separate browser storage used by the
             website.
@@ -89,16 +91,23 @@ export function PrivacyContent({ dashboard = false }: { dashboard?: boolean }) {
           <p className="mt-4">
             We keep your account and enquiry information for as long as your account is active.
             If you delete your account, we permanently erase your personal information (name,
-            mobile number, optional email and profile details, and any identity documents)
+            mobile number, email and profile details, and any identity documents)
             immediately. Financial transaction and payout records are kept for 7 years,
             disconnected from your identity, as required for financial record-keeping, and are
             permanently purged after that period.
+          </p>
+          <p className="mt-4">
+            Your contact change history, including your previous mobile numbers and email
+            addresses, is kept for as long as your account exists, to protect your account
+            against fraud and to resolve disputes. Only our platform administrators can see it,
+            and it is erased together with your account.
           </p>
 
           <SectionHeading>Your rights and choices</SectionHeading>
           <BulletList
             items={[
               "You can view and update your profile details at any time from your dashboard.",
+              "You can change your mobile number or email from your account settings after confirming one-time codes sent to the old and the new one. Staff accounts ask an administrator, and if you lose access to your number our support team can help you recover your account.",
               "You can delete your account yourself, at any time, from your account settings. This is permanent and cannot be undone.",
               "You can contact us to ask what information we hold about you, or to raise any question or concern about how we handle your data.",
             ]}
@@ -134,6 +143,6 @@ export function PrivacyContent({ dashboard = false }: { dashboard?: boolean }) {
           Contact us with questions
         </Link>
       </div>
-    </section>
+    </CopyProtected>
   );
 }
