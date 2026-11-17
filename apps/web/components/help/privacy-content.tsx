@@ -40,7 +40,8 @@ export function PrivacyContent({ dashboard = false }: { dashboard?: boolean }) {
           <BulletList
             items={[
               "Contact details you give us: your name, mobile number and email address. Contact and partner application forms may request the additional details shown on those forms.",
-              "Optional profile details: you may add gender, income information, occupation, and a manually entered location during registration or later in Profile settings. These details are not required to use your account, and the website does not request your browser location for this field.",
+              "Optional profile details: you may add gender, income information, occupation, a manually entered location and a pincode during registration or later in Profile settings. These details are not required to use your account. The place name shown for your pincode (area, district and state) comes from our built-in pincode list and is not stored separately.",
+              "One-time device location: if you choose “Use my location” next to the pincode field, your browser asks your permission and shares your current position once. We use it only to find the nearest pincode and show it to you; we do not store, log or share the position, and nothing is saved until you save your profile. You can always type your pincode instead.",
               "Property search: location terms you type or select are used only to filter available properties and do not update your Profile.",
               "Previously saved personalization location: if you opted in before browser-location capture was removed, you can delete the saved point from Settings and it otherwise expires automatically within 30 days. The website no longer captures or refreshes it.",
               "Verification details: your mobile number and your email are each verified with a one-time code.",
@@ -68,6 +69,7 @@ export function PrivacyContent({ dashboard = false }: { dashboard?: boolean }) {
             items={[
               "To respond to your enquiry and connect you with a relevant bank, lender, or real estate partner.",
               "To create and secure your account, and verify your identity.",
+              "If you turn on both personalized content and “Offers for your area” in Settings, to show dashboard offers for your area based on the pincode in your profile. Turning either off stops this straight away.",
               "To process cashback, referral, or commission payouts you are eligible for.",
               "To send you updates about your enquiry, application, or account, by voice call or email.",
               "To improve this website and our services.",
@@ -133,7 +135,20 @@ export function PrivacyContent({ dashboard = false }: { dashboard?: boolean }) {
             We may update this policy from time to time. If we make a significant change, we will
             update the date below.
           </p>
-          <p className="mt-8 text-sm text-text-secondary/80">Last updated: 29 August 2026</p>
+          <p className="mt-4">
+            Pincode place names and locations come from{" "}
+            <a
+              href="https://www.geonames.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-brand-link underline underline-offset-4"
+            >
+              GeoNames
+            </a>
+            , used under the Creative Commons Attribution 4.0 licence. No outside map or location
+            service receives your information.
+          </p>
+          <p className="mt-8 text-sm text-text-secondary/80">Last updated: 17 November 2026</p>
         </div>
 
         <Link

@@ -86,6 +86,10 @@ export type Me = {
   incomePeriod: IncomePeriod | null;
   occupation: string | null;
   location: string | null;
+  // CS-026: optional profile pincode; its place name comes from the server's
+  // built-in list (null when no pincode is saved or the list doesn't know it).
+  pincode: string | null;
+  place: { pincode: string; area: string; district: string; state: string } | null;
   profiles: ClientLineProfile[];
 };
 
@@ -352,6 +356,8 @@ function mapMe(d: Schemas["MeResponse"]): Me {
     incomePeriod: d.income_period ?? null,
     occupation: d.occupation ?? null,
     location: d.location ?? null,
+    pincode: d.pincode ?? null,
+    place: d.place ?? null,
     profiles: d.profiles.map((p) => ({
       businessLine: p.business_line,
       customerCode: p.customer_code,
@@ -381,6 +387,7 @@ export async function updateProfile(input: {
   incomePeriod?: IncomePeriod | null;
   occupation?: string | null;
   location?: string | null;
+  pincode?: string | null;
 }): Promise<AuthResult<Me>> {
   const res = await apiRequest<Schemas["MeResponse"]>("/api/v1/auth/me", {
     method: "PATCH",
@@ -398,6 +405,7 @@ export async function updateProfile(input: {
       ...(input.incomePeriod !== undefined ? { income_period: input.incomePeriod } : {}),
       ...(input.occupation !== undefined ? { occupation: input.occupation } : {}),
       ...(input.location !== undefined ? { location: input.location } : {}),
+      ...(input.pincode !== undefined ? { pincode: input.pincode } : {}),
     } satisfies Schemas["MeUpdateRequest"],
   });
   return toResult(res, mapMe);

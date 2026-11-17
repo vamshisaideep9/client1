@@ -115,7 +115,21 @@ against `main`, stacked on Batch E PR 4:
   cities not on the list (422) and store cities in the list's spelling.
   `GET /pincodes/districts` lists the targetable cities.
 - *PR F3 — web: profile pincode, "Use my location", campaign location
-  targets, privacy notice* (next).
+  targets, privacy notice*, branch `feat/batch-f-location-web` stacked on F2
+  (PR [#381](https://github.com/brollysolutions/client1/pull/381), mirror
+  vamshisaideep9/client1#82). The optional profile fields (registration profile
+  step and Client Settings) gain a Pincode field that shows the place name
+  from the list and a "Use my location" button (one
+  `getCurrentPosition`, low accuracy, no cache; position POSTed once to
+  `/pincodes/nearest`, the suggested pincode fills the field and is saved
+  only with the profile); GeoNames CC BY 4.0 credit beside the field and in
+  the privacy notice. `Permissions-Policy` becomes `geolocation=(self)`.
+  The personalization card gains a separate "Offers for your area" consent
+  checkbox (pincode only, no position).
+  Sub Admin campaign audience: "Pincodes and cities" (pincode list with
+  format check; city picker from `/pincodes/districts`; chips) for
+  Clients-only audiences; rules are sent as version 2 only when used.
+  Privacy notice updated — **needs legal review before release**.
 
 Next: the user merges F1, F2, F3 (A … E are on `main` as of `19857200`).
 Recommended: Opus 5.5 / extra-high for F1 and F2 (migration, RLS, PII),

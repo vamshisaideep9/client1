@@ -2,6 +2,53 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch F PR 3: profile pincode, "Use my location" and
+campaign place targets (web)** (2026-11-17; CS-026; PR
+[#381](https://github.com/brollysolutions/client1/pull/381), mirror
+vamshisaideep9/client1#82),
+branch `feat/batch-f-location-web` stacked on Batch F PR 2. Web only;
+consumes the F1–F2 contracts; no requirement-percentage change.
+- Profile (`components/profile/pincode-field.tsx` inside
+  `optional-profile-fields.tsx`, so the registration profile step and Client
+  Settings): numeric Pincode field; a complete pincode is looked up and its
+  place shown ("Area, District, State"; unknown pincodes may still be
+  saved); "Use my location" calls `getCurrentPosition` once (low accuracy,
+  `maximumAge: 0`), POSTs the position to `/pincodes/nearest` and fills the
+  suggested pincode — saved only with the profile; copy says the position is
+  not stored; GeoNames CC BY 4.0 credit. `lib/pincodes.ts` holds the
+  helpers; `lib/auth.ts` maps `pincode`/`place` and sends `pincode`.
+- `Permissions-Policy`: `geolocation=()` → `geolocation=(self)` (same origin
+  only; frames still blocked).
+- Personalization card: a separate "Offers for your area" checkbox (the
+  CS-008 location consent, given through `PUT
+  /personalization/location/consent` with no position and withdrawn through
+  `DELETE /personalization/location`; disabled while personalized content is
+  off); the legacy saved-point notice shows only when a point exists.
+- Sub Admin audience (`audience-rule-fields.tsx` + `place-targets.tsx`):
+  "Pincodes and cities" for Clients-only audiences — pincode list with
+  format check and chips, city picker (`SearchableSelect`, now with
+  `disabled`) from `/pincodes/districts`; choosing Agents clears them; the
+  rule is version 2 only when they are used; summary counts cities and
+  pincodes.
+- Privacy notice: pincode and place-name source, one-time device location
+  (not stored), area offers only with both personalized content and
+  "Offers for your area" on, GeoNames credit; dated
+  17 November 2026. Flagged for legal review.
+- Evidence: `pnpm lint` and `pnpm typecheck` pass; `pnpm test` 1083 passed
+  (145 files, incl. new `lib/pincodes.test.ts` and extended profile,
+  audience, auth and security-header tests, two surfaces added to the form
+  registry); Playwright against `pnpm dev` (port 3157, mocked API, mocked
+  geolocation): new `pincode-location.spec.ts` 6 passed (typed pincode →
+  place, unlisted pincode, one-time location fills the pincode with the
+  position only in a POST body and nothing saved until Save, then only the
+  pincode saved, `Permissions-Policy: geolocation=(self)`, 1440 / 390 px with
+  no overflow; malformed pincode refused; "Offers for your area" consent
+  PUT/DELETE without a position; Sub Admin pincode/city targets 1280 / 390
+  px), and `settings-by-role`, `registration-profile`, `contact-change`,
+  `security-headers`, `banner-cta-and-offers`: 22 passed, 2 skipped
+  (pre-existing skips). `pnpm build` in `node:22-alpine` (clean
+  `--frozen-lockfile` install): passed, exit 0 (114 static pages).
+
 **In progress — Batch F PR 2: audience rules version 2 (API)** (2026-11-17;
 CS-026; PR [#380](https://github.com/brollysolutions/client1/pull/380), mirror
 vamshisaideep9/client1#81), branch `feat/batch-f-audience-v2-api`

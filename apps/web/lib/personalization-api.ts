@@ -21,6 +21,15 @@ export function setPersonalizationPreference(
   });
 }
 
+/** CS-026: area offers from the profile pincode; no device position is sent. */
+export function grantPersonalizationLocationConsent(): Promise<
+  ApiResponse<PersonalizationPreference>
+> {
+  return apiRequest<PersonalizationPreference>("/api/v1/personalization/location/consent", {
+    method: "PUT",
+  });
+}
+
 export function revokePersonalizationLocation(): Promise<ApiResponse<PersonalizationPreference>> {
   return apiRequest<PersonalizationPreference>("/api/v1/personalization/location", {
     method: "DELETE",

@@ -217,6 +217,8 @@ describe("profile mapping", () => {
         income_period: "annual",
         occupation: "Business owner",
         location: "Kondapur, Hyderabad",
+        pincode: "500032",
+        place: { pincode: "500032", area: "Gachibowli", district: "Hyderabad", state: "Telangana" },
         profiles: [],
       }),
     );
@@ -228,6 +230,8 @@ describe("profile mapping", () => {
       expect(res.data.gender).toBe("prefer_not_to_say");
       expect(res.data.incomeAmountMinor).toBe(12_500_000);
       expect(res.data.location).toBe("Kondapur, Hyderabad");
+      expect(res.data.pincode).toBe("500032");
+      expect(res.data.place?.area).toBe("Gachibowli");
     }
   });
 
@@ -259,6 +263,7 @@ describe("profile mapping", () => {
       incomePeriod: null,
       occupation: null,
       location: null,
+      pincode: null,
     });
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -270,6 +275,7 @@ describe("profile mapping", () => {
       income_period: null,
       occupation: null,
       location: null,
+      pincode: null,
     });
     // CS-025: email is never sent with a profile edit (it cannot be cleared).
     expect(body).not.toHaveProperty("email");
