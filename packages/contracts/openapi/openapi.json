@@ -13551,6 +13551,27 @@
             ],
             "title": "Occupation"
           },
+          "pincode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pincode"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PincodePlaceRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "profiles": {
             "items": {
               "$ref": "#/components/schemas/ClientProfileSummary"
@@ -13572,6 +13593,8 @@
           "income_period",
           "occupation",
           "location",
+          "pincode",
+          "place",
           "profiles"
         ],
         "title": "MeResponse",
@@ -13703,6 +13726,18 @@
               }
             ],
             "title": "Occupation"
+          },
+          "pincode": {
+            "anyOf": [
+              {
+                "pattern": "^[1-9][0-9]{5}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pincode"
           }
         },
         "required": [
@@ -14125,6 +14160,30 @@
           "stats"
         ],
         "title": "MyReferralResponse",
+        "type": "object"
+      },
+      "NearestPincodeRequest": {
+        "additionalProperties": false,
+        "description": "A one-time device position. Used for one lookup, then discarded.",
+        "properties": {
+          "latitude": {
+            "maximum": 37.6,
+            "minimum": 6.0,
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "maximum": 97.6,
+            "minimum": 68.0,
+            "title": "Longitude",
+            "type": "number"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "title": "NearestPincodeRequest",
         "type": "object"
       },
       "NotificationListResponse": {
@@ -15645,6 +15704,35 @@
           "personalization_enabled"
         ],
         "title": "PersonalizationPreferenceUpdate",
+        "type": "object"
+      },
+      "PincodePlaceRead": {
+        "description": "Place name for a pincode: area, district (treated as the city) and state.",
+        "properties": {
+          "area": {
+            "title": "Area",
+            "type": "string"
+          },
+          "district": {
+            "title": "District",
+            "type": "string"
+          },
+          "pincode": {
+            "title": "Pincode",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pincode",
+          "area",
+          "district",
+          "state"
+        ],
+        "title": "PincodePlaceRead",
         "type": "object"
       },
       "PlotDetails": {
@@ -43131,6 +43219,102 @@
         "summary": "Update Preferences",
         "tags": [
           "personalization"
+        ]
+      }
+    },
+    "/api/v1/pincodes/nearest": {
+      "post": {
+        "description": "Suggest the pincode nearest to a one-time device position (not stored).",
+        "operationId": "nearest_pincode_api_v1_pincodes_nearest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NearestPincodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PincodePlaceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Nearest Pincode",
+        "tags": [
+          "pincodes"
+        ]
+      }
+    },
+    "/api/v1/pincodes/{pincode}": {
+      "get": {
+        "description": "Place name (area, district, state) for a pincode.",
+        "operationId": "get_pincode_api_v1_pincodes__pincode__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pincode",
+            "required": true,
+            "schema": {
+              "pattern": "^[1-9][0-9]{5}$",
+              "title": "Pincode",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PincodePlaceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Pincode",
+        "tags": [
+          "pincodes"
         ]
       }
     },

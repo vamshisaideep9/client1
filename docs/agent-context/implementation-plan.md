@@ -68,7 +68,39 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — Batch E: mandatory email, self-service contact changes and
+**In progress — Batch F: profile pincode, place names and location-based
+campaigns (CS-026)** (2026-11-17; user-approved stakeholder feedback, batch F
+of A–G; identity-wide profile field plus Client-only targeting, both lines;
+no requirement or completion-percentage change). Stacked PRs, each opened
+against `main`, stacked on Batch E PR 4:
+
+- *PR F1 — API: pincode reference data, profile pincode and lookups*, branch
+  `feat/batch-f-pincode-api` from `feat/batch-e-contact-change-web`
+  `ee330543`; PR [#379](https://github.com/brollysolutions/client1/pull/379),
+  mirror vamshisaideep9/client1#80. Migration `e5a7c9b1d3f6` (revises
+  `d4f6a8c0e2b4`, single head) creates `pincodes` (pincode PK with format
+  CHECK, area, district, state, centroid with an India bounding-box CHECK;
+  indexes on state + district and latitude + longitude; RLS enabled and
+  forced, `SELECT USING (true)`, SELECT grant only) and seeds it from
+  `apps/api/app/data/pincodes.csv.gz` (19,238 pincodes, 212,551 bytes;
+  GeoNames, CC BY 4.0, recorded in `app/data/SOURCES.md`, rebuilt
+  deterministically by `scripts/build_pincode_reference.py`) through a
+  validating, idempotent upsert; adds `auth_users.pincode` (nullable, CHECK
+  `^[1-9][0-9]{5}$`, no FK). `/auth/me` returns `pincode` + derived `place`;
+  `PATCH /auth/me` saves or clears it (staff 403 as before); account deletion
+  clears it. `GET /pincodes/{pincode}` (any signed-in role, 120/h per
+  account) returns the place name; `POST /pincodes/nearest` (Client, Agent,
+  Admin; 10/h per account) maps a position inside India to the nearest
+  centroid within 100 km using an in-memory 0.5° grid and Haversine, so the
+  position never reaches the database, logs, audit or Redis.
+- *PR F2 — API: audience rules version 2* (next).
+- *PR F3 — web: profile pincode, "Use my location", campaign location
+  targets, privacy notice* (next).
+
+Next: the user merges A … E, then F1 onward. Recommended: Opus 5.5 /
+extra-high for F1 and F2 (migration, RLS, PII), high for F3.
+
+**In review — Batch E: mandatory email, self-service contact changes and
 contact history (CS-025)** (2026-11-17; user-approved stakeholder feedback,
 batch E of A–G; identity-wide, both lines; no requirement or
 completion-percentage change). Stacked PRs, each opened against `main`,

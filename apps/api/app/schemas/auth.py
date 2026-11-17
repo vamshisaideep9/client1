@@ -7,6 +7,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.core.security import REFERRAL_CODE_RE, normalize_referral_code
+from app.schemas.pincodes import PincodePlaceRead, PincodeValue
 
 # Channel an OTP was actually delivered through. "none" = all channels mocked/failed
 # (dev only — the response then carries otp_hint in non-production).
@@ -232,6 +233,10 @@ class MeResponse(BaseModel):
     income_period: Literal["monthly", "annual"] | None
     occupation: str | None
     location: str | None
+    # CS-026: optional profile pincode and its place name from the reference
+    # list (None when no pincode is saved or the list does not know it).
+    pincode: str | None
+    place: PincodePlaceRead | None
     # One summary per business line the client holds (both, for self-registered
     # clients). The dashboard switches between these.
     profiles: list[ClientProfileSummary]
@@ -255,6 +260,8 @@ class MeUpdateRequest(BaseModel):
     income_period: Literal["monthly", "annual"] | None = None
     occupation: Annotated[str | None, Field(min_length=1, max_length=120)] = None
     location: Annotated[str | None, Field(min_length=1, max_length=500)] = None
+    # CS-026: six digits, first digit 1-9. Omit to keep, null to clear.
+    pincode: PincodeValue | None = None
 
     @field_validator("first_name", "last_name")
     @classmethod

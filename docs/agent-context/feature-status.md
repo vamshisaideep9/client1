@@ -2,6 +2,48 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch F PR 1: pincode reference data, profile pincode and
+lookups (API)** (2026-11-17; CS-026; PR
+[#379](https://github.com/brollysolutions/client1/pull/379), mirror
+vamshisaideep9/client1#80), branch
+`feat/batch-f-pincode-api` stacked on Batch E PR 4. API, migration and
+regenerated contracts; no requirement-percentage change.
+- Data: `pincodes` seeded by migration `e5a7c9b1d3f6` from
+  `apps/api/app/data/pincodes.csv.gz` — GeoNames India postal codes
+  (CC BY 4.0, retrieved 2026-11-17, `IN.zip` SHA-256 `9d607ef6…6db5e`),
+  normalised to one row per pincode (19,238 rows, all with a centroid;
+  212,551 bytes gzip). The Department of Posts file on data.gov.in (GODL)
+  could not be downloaded without an API key. Licence, attribution, changes
+  and rebuild steps: `apps/api/app/data/SOURCES.md`;
+  `scripts/build_pincode_reference.py` reproduces the file byte for byte.
+- Profile: `auth_users.pincode` (CHECK, no FK); `/auth/me` adds `pincode`
+  and `place` (area, district, state from the list, null if unlisted);
+  `PATCH /auth/me` saves/clears it for Client, Agent and Admin; deletion
+  clears it.
+- Routes: `GET /api/v1/pincodes/{pincode}` (any signed-in role; 404
+  unknown, 422 malformed; 120 lookups/hour/account; private cache) and
+  `POST /api/v1/pincodes/nearest` (Client, Agent, Admin; India bounding box,
+  NaN/Infinity/extra fields refused; nearest centroid within 100 km or 404;
+  10/hour/account; no-store). The position is matched against an in-memory
+  centroid grid, so it never reaches a query, log, audit row, auth event,
+  Redis key or table.
+- Evidence (python 3.13 container, scratch database; `alembic upgrade head`
+  → `downgrade -1` → `upgrade head` clean): new `test_pincodes_api.py`
+  (seed checksum vs SOURCES.md, one valid row per pincode, malformed seed
+  rows refused, table seeded, loader idempotent and self-repairing, api_user
+  read-only, lookup auth/found/unknown/malformed/roles/budget, nearest equals
+  a brute-force Haversine scan on 309 positions, pincode + place only,
+  far-off 404, out-of-box/NaN/Infinity/extra fields 422, staff 403,
+  Agent/Admin allowed, budget, coordinates absent from logs, auth events,
+  audit, Redis and the account, profile save/derive/keep/clear, unlisted
+  pincode kept without place, validation, DB CHECK, staff 403) with
+  `test_update_me.py`, `test_delete_account.py` (pincode now erased),
+  `test_profile_schemas.py`, RLS coverage and route-authorization coverage:
+  128 passed; the whole `auth/` directory, personalization API + RLS,
+  contact-change self-service + staff, Admin users and `system/`: 463
+  passed. Ruff check/format clean; one Alembic head; contracts regenerated
+  (additions only); web `pnpm typecheck` passes on them.
+
 **In progress — Batch E PR 4: mandatory email and contact changes (web)**
 (2026-11-17; CS-025; PR
 [#378](https://github.com/brollysolutions/client1/pull/378), mirror

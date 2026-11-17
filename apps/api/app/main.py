@@ -47,6 +47,7 @@ from app.api.v1.notifications import router as notifications_router
 from app.api.v1.offers import router as offers_router
 from app.api.v1.payments import router as payments_router
 from app.api.v1.personalization import router as personalization_router
+from app.api.v1.pincodes import router as pincodes_router
 from app.api.v1.properties import router as properties_router
 from app.api.v1.property_deals import router as property_deals_router
 from app.api.v1.property_submissions import router as property_submissions_router
@@ -189,6 +190,7 @@ app.include_router(offers_router, prefix="/api/v1/offers", tags=["offers"])
 app.include_router(
     personalization_router, prefix="/api/v1/personalization", tags=["personalization"]
 )
+app.include_router(pincodes_router, prefix="/api/v1/pincodes", tags=["pincodes"])
 app.include_router(content_router, prefix="/api/v1/content-blocks", tags=["content-blocks"])
 app.include_router(
     referral_bonus_router, prefix="/api/v1/referral-bonus-config", tags=["referral-bonus-config"]

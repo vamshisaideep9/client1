@@ -4276,6 +4276,46 @@ export interface paths {
         patch: operations["update_preferences_api_v1_personalization_preferences_patch"];
         trace?: never;
     };
+    "/api/v1/pincodes/nearest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Nearest Pincode
+         * @description Suggest the pincode nearest to a one-time device position (not stored).
+         */
+        post: operations["nearest_pincode_api_v1_pincodes_nearest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pincodes/{pincode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Pincode
+         * @description Place name (area, district, state) for a pincode.
+         */
+        get: operations["get_pincode_api_v1_pincodes__pincode__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/properties": {
         parameters: {
             query?: never;
@@ -9926,6 +9966,9 @@ export interface components {
             mobile: string;
             /** Occupation */
             occupation: string | null;
+            /** Pincode */
+            pincode: string | null;
+            place: components["schemas"]["PincodePlaceRead"] | null;
             /** Profiles */
             profiles: components["schemas"]["ClientProfileSummary"][];
         };
@@ -9954,6 +9997,8 @@ export interface components {
             location?: string | null;
             /** Occupation */
             occupation?: string | null;
+            /** Pincode */
+            pincode?: string | null;
         };
         /** MessageResponse */
         MessageResponse: {
@@ -10104,6 +10149,16 @@ export interface components {
             /** Ineligible Reason */
             ineligible_reason: ("agent" | "staff" | "no_client_profile") | null;
             stats: components["schemas"]["ReferralStats"];
+        };
+        /**
+         * NearestPincodeRequest
+         * @description A one-time device position. Used for one lookup, then discarded.
+         */
+        NearestPincodeRequest: {
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
         };
         /** NotificationListResponse */
         NotificationListResponse: {
@@ -10559,6 +10614,20 @@ export interface components {
         PersonalizationPreferenceUpdate: {
             /** Personalization Enabled */
             personalization_enabled: boolean;
+        };
+        /**
+         * PincodePlaceRead
+         * @description Place name for a pincode: area, district (treated as the city) and state.
+         */
+        PincodePlaceRead: {
+            /** Area */
+            area: string;
+            /** District */
+            district: string;
+            /** Pincode */
+            pincode: string;
+            /** State */
+            state: string;
         };
         /** PlotDetails */
         PlotDetails: {
@@ -22608,6 +22677,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PersonalizationPreferenceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    nearest_pincode_api_v1_pincodes_nearest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NearestPincodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PincodePlaceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pincode_api_v1_pincodes__pincode__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pincode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PincodePlaceRead"];
                 };
             };
             /** @description Validation Error */

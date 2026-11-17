@@ -186,6 +186,11 @@ code at registration and added through a blocking step for existing accounts
 (enforced per environment), and it can no longer be cleared or edited through
 the profile form. The other optional profile fields are unchanged.
 
+*Amended by CS-026 (2026-11-17):* profiles gain an optional pincode whose
+place name comes from a built-in list, and an optional one-time "Use my
+location" that maps a browser position to the nearest pincode on the server
+without storing it.
+
 ### CS-006 — vehicle arrangements are a dedicated site-visit workflow
 
 A Client may optionally request one pickup while creating a real-estate site
@@ -275,6 +280,10 @@ Compatibility requirement: no clickstream, impression log, raw or historical
 location, IP geolocation, inferred demographic, arbitrary JSON/SQL expression,
 or staff targeting is introduced without a separately approved design and
 privacy/security review.
+
+*Amended by CS-026 (2026-11-17):* rule version 2 adds pincode and city
+targets; a consenting Client's profile pincode (its centroid for circles)
+takes precedence over the legacy coarse point.
 
 ### CS-009 — v1 payouts use UPI, bank transfer, or manual cheque
 
@@ -850,6 +859,50 @@ CS-005's optional email and the support-only mobile change):**
 
 Evidence is listed in `feature-status.md` under Batch E.
 
+### CS-026 — Profile pincode, place names, one-time GPS and location-targeted campaigns
+
+**Decision (2026-11-17, user-approved stakeholder feedback, batch F; amends
+CS-005's "no browser geolocation / manual location only" and CS-008's
+location dimension; "Does not fit" item 10 of the batch plan):**
+
+- *Profile pincode.* Every profile may carry an optional six-digit Indian
+  pincode (first digit 1–9; CHECK on `auth_users.pincode`). Clients are the
+  target; Agents and Admins may also set it through `PATCH /auth/me`;
+  Telecallers, Employees and Sub Admins stay read-only (CS-021). It is
+  cleared with the account. A well-formed pincode missing from the reference
+  list is accepted without a place name. The existing free-text location
+  field is unchanged.
+- *Place name.* Area, district and state come from a built-in reference list
+  (`pincodes`, one row per pincode with a centroid), never stored as free
+  text with the profile. Source: GeoNames India postal codes, CC BY 4.0,
+  attributed in the app; provenance, normalisation and checksum are in
+  `apps/api/app/data/SOURCES.md`. No outside map or geocoding service is
+  called.
+- *"Use my location".* Optional. The browser asks for the position once, the
+  server maps it to the nearest pincode centroid (Haversine, within 100 km,
+  India bounding box only) and returns the pincode and place name. The
+  position is used once in memory and never stored, logged, audited or sent
+  to the database; the person sees the suggestion and saves it like any
+  profile field. Telecallers, Employees and Sub Admins cannot use it.
+- *Location-based campaigns.* `AudienceRules` version 2 adds `pincodes` and
+  `cities` (a city is a district + state from the reference list) beside the
+  version-1 circles; version-1 rules keep matching unchanged. Circles,
+  pincodes and cities form one "where" dimension (any match counts), ANDed
+  with the other dimensions. Location matching uses the Client's profile
+  pincode — its centroid for circles — only while the Client has consented
+  to personalized content; turning consent off stops it at once. Precedence:
+  when a profile pincode with a centroid exists it is the Client's location
+  for circles; otherwise a still-valid legacy coarse point (CS-008, 30-day
+  retention) is used. Pincode and city targets match the profile pincode
+  only. Pincode and city targets need a Client-only audience, and every
+  targeted pincode or city must exist in the reference list.
+- *Privacy notice.* Updated for the pincode and one-time GPS use; flagged
+  for legal review before release.
+
+CS-008's compatibility requirement still holds: no clickstream, raw or
+historical location, IP geolocation or inferred demographic is introduced.
+Evidence is listed in `feature-status.md` under Batch F.
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in
@@ -869,9 +922,9 @@ explicitly changes it.
 | Client status reasons | The API exposes `status_reason`, and the client loan UI renders it verbatim when present. | [`schemas/loans.py`](../../apps/api/app/schemas/loans.py), [`apps/web/lib/loans.ts`](../../apps/web/lib/loans.ts), [`loans-applications.tsx`](../../apps/web/features/dashboard/loans-applications.tsx) |
 | Referral payout execution | Sub Admin manages bonus configuration; creating the actual referral payout is restricted to platform Admin. | [`api/v1/referral_bonus.py`](../../apps/api/app/api/v1/referral_bonus.py), [`api/v1/referrals.py`](../../apps/api/app/api/v1/referrals.py) |
 | Agent lead expiry | Agent attribution has a fixed 30-day first-attribution deadline with converted/closed exclusions, idempotent scheduled release, audit, notifications, RLS denial, and Agent history/countdown. CS-017 (2026-11-14) adds same-Agent resubmission, a 7-day reminder, and policy copy in place of the countdown. | [PR #144](https://github.com/brollysolutions/client1/pull/144), [`services/lead_expiry.py`](../../apps/api/app/services/lead_expiry.py) |
-| Client registration and optional profile | Client registration is mobile-first; demographic/income/location details are optional, skippable, editable, clearable, and never gate account use. Location is entered manually through a search-style field; the web app does not request browser geolocation. CS-025 (2026-11-17) makes email mandatory and code-verified (enforced per environment by `EMAIL_REQUIRED_ENFORCED`) and no longer clearable. | CS-005, CS-025, [PR #148](https://github.com/brollysolutions/client1/pull/148), migration `e4b5c6d7e8f9` |
+| Client registration and optional profile | Client registration is mobile-first; demographic/income/location details are optional, skippable, editable, clearable, and never gate account use. Location is entered manually through a search-style field; the web app does not request browser geolocation. CS-025 (2026-11-17) makes email mandatory and code-verified (enforced per environment by `EMAIL_REQUIRED_ENFORCED`) and no longer clearable. CS-026 (2026-11-17) adds an optional pincode with a place name from a built-in list and an optional one-time "Use my location" (position mapped to the nearest pincode on the server, never stored). | CS-005, CS-025, CS-026, [PR #148](https://github.com/brollysolutions/client1/pull/148), migration `e4b5c6d7e8f9` |
 | Vehicle arrangements | One dedicated arrangement per site visit; Admin enters transport details, the service automatically assigns an eligible real-estate or dual-line Employee, the assignee fulfils it, and the owning Client follows it read-only. | CS-006, [PR #149](https://github.com/brollysolutions/client1/pull/149), migration `b8c9d0e1f2a3`, migration `dd45ee67ff89`, vehicle-arrangement and Employee-auto-assignment tests |
-| Authenticated personalization | Client/Agent dashboard banner layers and Client offers use a closed consented rule grammar; coarse optional location is retained for at most 30 days; public responses exclude targeted content. | CS-008, [PR #152](https://github.com/brollysolutions/client1/pull/152), migration `c9d0e1f2a3b4`, personalization API/RLS/web tests |
+| Authenticated personalization | Client/Agent dashboard banner layers and Client offers use a closed consented rule grammar; coarse optional location is retained for at most 30 days; public responses exclude targeted content. CS-026 (2026-11-17) adds pincode and city targets and matches a consenting Client's profile pincode first. | CS-008, CS-026, [PR #152](https://github.com/brollysolutions/client1/pull/152), migration `c9d0e1f2a3b4`, personalization API/RLS/web tests |
 
 ## 4. Genuine open decisions and implementation gaps
 
