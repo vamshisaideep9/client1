@@ -3,7 +3,8 @@
 Status: **Derived living implementation ledger**
 
 **In progress — Batch F PR 2: audience rules version 2 (API)** (2026-11-17;
-CS-026; PR link added on ship), branch `feat/batch-f-audience-v2-api`
+CS-026; PR [#380](https://github.com/brollysolutions/client1/pull/380), mirror
+vamshisaideep9/client1#81), branch `feat/batch-f-audience-v2-api`
 stacked on Batch F PR 1. API, migration `f6b8d0a2c4e7` and regenerated
 contracts; no requirement-percentage change.
 - Grammar (`schemas/personalization.py`): version 1 or 2; version 2 adds
@@ -42,7 +43,11 @@ contracts; no requirement-percentage change.
   (before the consent fix): 309 passed, 1 failed —
   `test_public_banners.py::test_response_omits_internal_fields` (expects no
   `youtube_video_id` / `video_url`; a known failure on `main`, unrelated).
-  Consent fix: see the PR 2 link commit. The full API suite was started on the stack and stopped
+  Consent fix: `test_audience_rules_v2.py` (now with the both-consent end to
+  end, consent endpoint, CHECK and purge cases) with personalization API /
+  RLS / rules, account deletion, retention purge and coverage: 110 passed;
+  migration `f6b8d0a2c4e7` down (3 point-less consent rows withdrawn) and
+  up again clean, one head. The full API suite was started on the stack and stopped
   deliberately (no failure up to 13 %) to free the machine; the plan requires
   it only before the last slice of E and G. Ruff clean; contracts
   regenerated; web `pnpm typecheck` passes.
