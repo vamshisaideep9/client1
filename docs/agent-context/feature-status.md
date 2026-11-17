@@ -37,7 +37,13 @@ requirement-percentage change.
   and notice; not reviewable before the code; one active request; another
   staff member cannot verify it; Client 403; wrong password / registered
   number / malformed number; expiry; withdraw; Admins notified). Full API
-  suite: see Batch E PR 4 (run before the last slice).
+  suite on the stack (fresh scratch database at `d4f6a8c0e2b4`): 2618 passed,
+  5 failed — three pre-existing on main (`test_client_loan_copy_migration`
+  pinned head, `test_public_banners` / `test_public_properties` internal
+  fields) and two of this batch, both fixed: the platform-scope policy ledger
+  (E1) and "Admins notified", which assumed one Admin's row although
+  `notify_admins` caps its fan-out at 25 and the suite database held 34; it
+  now asserts the call. Rerun: 17 passed.
 
 **In progress — Batch E PR 2: self-service phone/email change and contact
 history (API)** (2026-11-17; CS-025; PR

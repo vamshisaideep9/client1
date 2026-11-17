@@ -120,6 +120,8 @@ stacked on Batch D PR 2:
   (password; applied like a self-service change, history `admin_approved`
   with the approver) and `/{id}/reject` (password, PII-free reason). An Admin
   never decides a request on their own account; Admins cannot file one.
+  Full API suite on the stack: no new failure once the two batch tests
+  were fixed (three pre-existing failures on main remain).
 - *PR E4 — web.*
 
 Before turning `EMAIL_REQUIRED_ENFORCED` on in an environment: SMTP
