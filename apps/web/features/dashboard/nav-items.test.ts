@@ -117,6 +117,7 @@ describe("role-aware dashboard navigation", () => {
       "agent-leads",
       "agent-earnings",
       "agent-transactions",
+      "my-contests",
       "my-analytics",
     ]);
     expect(navKeys(context("agent", "real_estate"))).toEqual([
@@ -125,23 +126,27 @@ describe("role-aware dashboard navigation", () => {
       "agent-listings",
       "agent-earnings",
       "agent-transactions",
+      "my-contests",
       "my-analytics",
     ]);
     expect(navKeys(context("telecaller", "loans"))).toEqual([
       "home",
       "telecaller-leads",
       "telecaller-calculators",
+      "my-contests",
       "my-analytics",
     ]);
     expect(navKeys(context("employee", "loans"))).toEqual([
       "home",
       "employee-tasks",
+      "my-contests",
       "my-analytics",
     ]);
     expect(navKeys(context("employee", "real_estate"))).toEqual([
       "home",
       "employee-tasks",
       "employee-vehicle-arrangements",
+      "my-contests",
       "my-analytics",
     ]);
   });
@@ -151,17 +156,20 @@ describe("role-aware dashboard navigation", () => {
       "home",
       "telecaller-leads",
       "telecaller-calculators",
+      "my-contests",
       "my-analytics",
     ]);
     expect(navKeys(context("employee", "both", "loans"))).toEqual([
       "home",
       "employee-tasks",
+      "my-contests",
       "my-analytics",
     ]);
     expect(navKeys(context("employee", "both", "real_estate"))).toEqual([
       "home",
       "employee-tasks",
       "employee-vehicle-arrangements",
+      "my-contests",
       "my-analytics",
     ]);
   });

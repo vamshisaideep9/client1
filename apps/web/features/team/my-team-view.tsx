@@ -41,6 +41,8 @@ import {
   type TeamOverview,
 } from "@/lib/staff-teams-api";
 
+import { TeamContestsPanel } from "@/features/contests/team-contests-panel";
+
 import { TeamAnalyticsFilterBar, useHiddenFilters, useTeamAnalyticsRequest } from "./team-analytics-filter-bar";
 import { TeamWorkList } from "./team-work-list";
 import { useLoad } from "./use-load";
@@ -239,6 +241,7 @@ export function MyTeamView() {
               {team.members.length === 1 ? "member" : "members"}
             </p>
           </div>
+          <TeamContestsPanel teamName={team.name} />
           <Tabs value={section} onValueChange={(value) => setSection(value as "overview" | "work")}>
             <TabsList aria-label="Team sections">
               <TabsTrigger value="overview">Overview</TabsTrigger>

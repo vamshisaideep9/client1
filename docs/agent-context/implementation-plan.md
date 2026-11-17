@@ -183,11 +183,37 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   or result id put into an API path must be a canonical UUID and is
   encoded (`isContestId` in `lib/contests-api.ts`); link ids are ignored
   otherwise.
-- *PR G5 — web: participant contests page, home card and team progress*
-  (planned).
+- *PR G5 — web: participant contests page, home card and team progress*,
+  branch `feat/batch-g-contests-participant-web` stacked on G4.
+  `/dashboard/contests` for Agents, Telecallers and Employees
+  (`MyContestsView`): contests grouped Live now / Starting soon / Ended with
+  the caller's standing; a contest page titled with the contest, its
+  progress against every target (bars, the at-most limit as its own row,
+  `progressRows` in `lib/contest-rules.ts`), the leaderboard (display name,
+  rank, achieved; "You" for the caller; hidden names and amounts shown as
+  "Participant" / "Hidden"), the result and prize once winners are
+  confirmed, and the rules; phones read progress, leaderboard, rules.
+  Team members see their team's progress and only their own contribution.
+  `ContestHomeCard` on the Agent, Telecaller and Employee homes (hidden
+  when nothing is open). My team (`TeamContestsPanel`): the managing Sub
+  Admin's team contests with the team's standing and, on request, its
+  progress and each member against the member minimum. Nav: "Contests" for
+  the three participant roles (Insights). Security review: a `?contest=`
+  value that is not a UUID shows the list and sends no request (covered by
+  `contests-participant.spec.ts`); contest links encode the id.
 
-Recommended: Opus 5.5 / extra-high (migration, RLS, money); high for the
-web slices.
+PRs: G1 [#382](https://github.com/brollysolutions/client1/pull/382)
+(mirror vamshisaideep9/client1#83), G2
+[#383](https://github.com/brollysolutions/client1/pull/383) (#84), G3
+[#384](https://github.com/brollysolutions/client1/pull/384) (#85), G4
+[#385](https://github.com/brollysolutions/client1/pull/385) (#86), G5
+#386 (#87). Full API suite on the stack: no new failure (three known on
+`main`). Before release: the accountant confirms the tax treatment of
+contest prizes; staff prizes are paid outside Payouts and only recorded.
+
+G1–G4 are merged to `main` (`12a1f2cf`, PRs #382–#385); G5 (#386) has
+`main` merged in. Next: the user merges G5. Recommended: Opus 5.5 /
+extra-high (migration, RLS, money); high for the web slices.
 
 **Done — Batch F: profile pincode, place names and location-based
 campaigns (CS-026)** (merged to `main` as `9f2c479f`, PRs #379–#381;

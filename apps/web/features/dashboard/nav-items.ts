@@ -33,6 +33,8 @@ const CAPABILITIES = {
   subAdmin: { roles: ["sub_admin"] },
   admin: { roles: ["admin"] },
   staffInsights: { roles: ["telecaller", "employee", "agent", "sub_admin"] },
+  // CS-027: the people contests can target (managers follow theirs in My team).
+  contestParticipant: { roles: ["agent", "telecaller", "employee"] },
   payouts: { roles: ["admin", "sub_admin"], staffFeature: "payout_requests" },
   subAdminPayouts: { roles: ["sub_admin"], staffFeature: "payout_requests" },
   // Shown only once /api/v1/manager/teams says the Sub Admin runs a team.
@@ -356,6 +358,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
     capability: "subAdmin",
     section: "content",
   },
+  // CS-027: contests open to the Agent, Telecaller or Employee.
+  {
+    key: "my-contests",
+    label: "Contests",
+    href: "/dashboard/contests",
+    icon: DASHBOARD_ICONS.contests,
+    capability: "contestParticipant",
+    section: "insights",
+  },
   {
     key: "my-analytics",
     label: "My analytics",
@@ -577,7 +588,11 @@ export const DASHBOARD_ROUTE_RULES: readonly DashboardRouteRule[] = [
   { path: "/dashboard/commissions", exact: true, capabilities: ["admin"] },
   // CS-027: one page, a view per role (Sub Admin authoring; the Admin is sent
   // on to Contest approvals).
-  { path: "/dashboard/contests", exact: true, capabilities: ["subAdmin", "admin"] },
+  {
+    path: "/dashboard/contests",
+    exact: true,
+    capabilities: ["subAdmin", "admin", "contestParticipant"],
+  },
   { path: "/dashboard/contest-approvals", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/compare", exact: true, capabilities: ["clientRealEstate"] },
   { path: "/dashboard/documents", exact: true, capabilities: ["clientLoans"] },
