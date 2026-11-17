@@ -28,7 +28,9 @@ from app.schemas.contests import (
     ContestListResponse,
     ContestRead,
     ContestReject,
+    ContestStandingsResponse,
 )
+from app.services import contest_views
 from app.services import contests as contest_service
 
 router = APIRouter()
@@ -104,6 +106,19 @@ async def get_contest(
     except contest_service.ContestError as exc:
         raise map_contest_error(exc) from exc
     return await _read(contest, current_user)
+
+
+@router.get("/{contest_id}/standings", response_model=ContestStandingsResponse)
+async def contest_standings(
+    contest_id: UUID,
+    current_user: CurrentUser = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+) -> ContestStandingsResponse:
+    """Full standings with names: live while running, the snapshot after."""
+    try:
+        return await contest_views.admin_standings(db, contest_id, current_user.id)
+    except contest_service.ContestError as exc:
+        raise map_contest_error(exc) from exc
 
 
 @router.put("/{contest_id}", response_model=ContestRead)

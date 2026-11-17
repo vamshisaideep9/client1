@@ -470,7 +470,8 @@ async def _locked(session: AsyncSession, contest_id: uuid.UUID) -> Contest:
 async def approve_contest(
     contest_id: uuid.UUID, *, reviewer_uuid: uuid.UUID, reviewer_role: str
 ) -> Contest:
-    """pending_approval -> approved by a platform Admin who is not the maker."""
+    """pending_approval -> approved by a platform Admin who is not the maker,
+    and live at once when the start date is today."""
     async with db_session.AsyncSessionLocal() as session:
         contest = await _locked(session, contest_id)
         if contest.status != ContestStatus.PENDING_APPROVAL.value:
@@ -493,6 +494,11 @@ async def approve_contest(
             actor_uuid=reviewer_uuid,
             actor_role=reviewer_role,
         )
+        # A contest approved on its start date goes live now (same rules and
+        # transaction as the lifecycle job); a later start waits for the job.
+        from app.services.contest_lifecycle import activate_if_due
+
+        await activate_if_due(session, contest, now)
         await session.commit()
         await session.refresh(contest)
     await emit_notification(

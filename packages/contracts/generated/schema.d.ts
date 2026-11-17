@@ -2962,6 +2962,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contests/{contest_id}/standings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Contest Standings
+         * @description Full standings with names: live while running, the snapshot after.
+         */
+        get: operations["contest_standings_api_v1_contests__contest_id__standings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contests/{contest_id}/submit": {
         parameters: {
             query?: never;
@@ -3743,6 +3763,40 @@ export interface paths {
         put?: never;
         /** Verify */
         post: operations["verify_api_v1_mobile_change_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my-contests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Contests */
+        get: operations["list_my_contests_api_v1_my_contests_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my-contests/{contest_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get My Contest */
+        get: operations["get_my_contest_api_v1_my_contests__contest_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8888,6 +8942,28 @@ export interface components {
          * @enum {string}
          */
         ContestMetric: "cases" | "amount" | "calls_logged" | "follow_ups_on_time" | "tasks_completed" | "tasks_on_time" | "site_visits_completed";
+        /**
+         * ContestProgress
+         * @description Achieved numbers for the populated targets (absent ones are null).
+         */
+        ContestProgress: {
+            /** Amount Paise */
+            amount_paise?: number | null;
+            /** Calls Logged */
+            calls_logged?: number | null;
+            /** Connect Rate Percent */
+            connect_rate_percent?: number | null;
+            /** Count */
+            count?: number | null;
+            /** Follow Ups On Time */
+            follow_ups_on_time?: number | null;
+            /** Site Visits Completed */
+            site_visits_completed?: number | null;
+            /** Tasks Completed */
+            tasks_completed?: number | null;
+            /** Tasks On Time */
+            tasks_on_time?: number | null;
+        };
         /** ContestRead */
         ContestRead: {
             audience: components["schemas"]["ContestAudience"];
@@ -8978,6 +9054,27 @@ export interface components {
         ContestReject: {
             /** Note */
             note: string;
+        };
+        /** ContestStandingsResponse */
+        ContestStandingsResponse: {
+            /** Computed At */
+            computed_at: string | null;
+            contest: components["schemas"]["ContestRead"];
+            /** Paid Total Paise */
+            paid_total_paise: number;
+            /** Prize Total Paise */
+            prize_total_paise: number;
+            /** Rows */
+            rows: components["schemas"]["StandingRow"][];
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "live" | "snapshot" | "none";
+            /** Team People */
+            team_people: components["schemas"]["StandingRow"][];
+            /** Winners */
+            winners: number;
         };
         /**
          * ContestStatus
@@ -9921,6 +10018,23 @@ export interface components {
             /** Last Date */
             last_date?: string | null;
         };
+        /**
+         * LeaderboardEntry
+         * @description Display name, rank and achieved value only. A name or amount the Admin
+         *     hides from this role is null for everyone but the caller.
+         */
+        LeaderboardEntry: {
+            /** Achieved */
+            achieved: number | null;
+            /** Is Me */
+            is_me: boolean;
+            /** Name */
+            name: string | null;
+            /** Qualified */
+            qualified: boolean;
+            /** Rank */
+            rank: number | null;
+        };
         /** LeadsReportResponse */
         LeadsReportResponse: {
             /** Rows */
@@ -10585,6 +10699,123 @@ export interface components {
             /** Otp */
             otp: string;
         };
+        /** MyContestDetail */
+        MyContestDetail: {
+            audience: components["schemas"]["ContestAudience"];
+            /** Budget Cap Paise */
+            budget_cap_paise: number | null;
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** Computed At */
+            computed_at: string | null;
+            criteria: components["schemas"]["ContestCriteria"];
+            /** Description */
+            description: string | null;
+            /** Eligible */
+            eligible: boolean;
+            /**
+             * Ends On
+             * Format: date
+             */
+            ends_on: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Leaderboard */
+            leaderboard: components["schemas"]["LeaderboardEntry"][];
+            /** Manager Prize Paise */
+            manager_prize_paise: number | null;
+            me: components["schemas"]["MyStanding"] | null;
+            /** Member Min Contribution */
+            member_min_contribution: number | null;
+            /** Member Prize Paise */
+            member_prize_paise: number | null;
+            metric: components["schemas"]["ContestMetric"];
+            /**
+             * My Role
+             * @enum {string}
+             */
+            my_role: "participant" | "team_member" | "team_manager";
+            /** Participants */
+            participants: number | null;
+            /** Prize Paise */
+            prize_paise: number | null;
+            /**
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+            status: components["schemas"]["ContestStatus"];
+            team: components["schemas"]["TeamStanding"] | null;
+            team_member_role: components["schemas"]["ContestTeamMemberRole"] | null;
+            /** Terms */
+            terms: string | null;
+            /** Title */
+            title: string;
+            /** Top N */
+            top_n: number | null;
+            win_mode: components["schemas"]["ContestWinMode"];
+        };
+        /** MyContestListResponse */
+        MyContestListResponse: {
+            /** Contests */
+            contests: components["schemas"]["MyContestSummary"][];
+        };
+        /** MyContestSummary */
+        MyContestSummary: {
+            audience: components["schemas"]["ContestAudience"];
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** Eligible */
+            eligible: boolean;
+            /**
+             * Ends On
+             * Format: date
+             */
+            ends_on: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Manager Prize Paise */
+            manager_prize_paise: number | null;
+            me: components["schemas"]["MyStanding"] | null;
+            /** Member Min Contribution */
+            member_min_contribution: number | null;
+            /** Member Prize Paise */
+            member_prize_paise: number | null;
+            metric: components["schemas"]["ContestMetric"];
+            /**
+             * My Role
+             * @enum {string}
+             */
+            my_role: "participant" | "team_member" | "team_manager";
+            /** Participants */
+            participants: number | null;
+            /** Prize Paise */
+            prize_paise: number | null;
+            /**
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+            status: components["schemas"]["ContestStatus"];
+            team_member_role: components["schemas"]["ContestTeamMemberRole"] | null;
+            /** Title */
+            title: string;
+            /** Top N */
+            top_n: number | null;
+            win_mode: components["schemas"]["ContestWinMode"];
+        };
         /** MyReferralResponse */
         MyReferralResponse: {
             /** Code */
@@ -10594,6 +10825,27 @@ export interface components {
             /** Ineligible Reason */
             ineligible_reason: ("agent" | "staff" | "no_client_profile") | null;
             stats: components["schemas"]["ReferralStats"];
+        };
+        /**
+         * MyStanding
+         * @description The caller's own standing (or their team's, for a manager).
+         */
+        MyStanding: {
+            /** Excluded Reason */
+            excluded_reason?: string | null;
+            /** Metric Value */
+            metric_value: number;
+            /** Payment Status */
+            payment_status?: string | null;
+            /** Prize Paise */
+            prize_paise?: number | null;
+            progress: components["schemas"]["ContestProgress"];
+            /** Qualified */
+            qualified: boolean;
+            /** Rank */
+            rank: number | null;
+            /** Won */
+            won?: boolean | null;
         };
         /**
          * NearestPincodeRequest
@@ -12733,6 +12985,50 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /**
+         * StandingRow
+         * @description One row of the Admin's full standings (names in full).
+         */
+        StandingRow: {
+            /** Achieved Amount Paise */
+            achieved_amount_paise: number;
+            /** Achieved Count */
+            achieved_count: number;
+            /** Excluded Reason */
+            excluded_reason: string | null;
+            /** Kind */
+            kind: string;
+            /** Metric Value */
+            metric_value: number;
+            /** Name */
+            name: string;
+            /** Paid Marked At */
+            paid_marked_at: string | null;
+            /** Paid Reference */
+            paid_reference: string | null;
+            /**
+             * Participant Type
+             * @enum {string}
+             */
+            participant_type: "agent" | "staff" | "team";
+            /** Payment Status */
+            payment_status: string;
+            /** Payout Uuid */
+            payout_uuid: string | null;
+            /** Prize Paise */
+            prize_paise: number;
+            progress: components["schemas"]["ContestProgress"];
+            /** Qualified */
+            qualified: boolean;
+            /** Rank */
+            rank: number | null;
+            /** Result Id */
+            result_id: string | null;
+            /** Team Name */
+            team_name: string | null;
+            /** Won */
+            won: boolean;
+        };
         /** SubAdminHomeResponse */
         SubAdminHomeResponse: {
             /** Content Drafts Count */
@@ -13413,6 +13709,27 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** TeamMemberStanding */
+        TeamMemberStanding: {
+            /**
+             * Is Me
+             * @default false
+             */
+            is_me: boolean;
+            /** Meets Member Minimum */
+            meets_member_minimum: boolean | null;
+            /** Metric Value */
+            metric_value: number;
+            /** Name */
+            name: string;
+            /** Payment Status */
+            payment_status?: string | null;
+            /** Prize Paise */
+            prize_paise?: number | null;
+            progress: components["schemas"]["ContestProgress"];
+            /** Won */
+            won?: boolean | null;
+        };
         /** TeamMemberSummary */
         TeamMemberSummary: {
             /** Kpis */
@@ -13528,6 +13845,22 @@ export interface components {
             id: string;
             /** Status */
             status: string;
+        };
+        /** TeamStanding */
+        TeamStanding: {
+            /** Members */
+            members: components["schemas"]["TeamMemberStanding"][];
+            /** Metric Value */
+            metric_value: number;
+            progress: components["schemas"]["ContestProgress"];
+            /** Qualified */
+            qualified: boolean;
+            /** Rank */
+            rank: number | null;
+            /** Team Name */
+            team_name: string;
+            /** Won */
+            won?: boolean | null;
         };
         /** TeamTaskDetailResponse */
         TeamTaskDetailResponse: {
@@ -20485,6 +20818,37 @@ export interface operations {
             };
         };
     };
+    contest_standings_api_v1_contests__contest_id__standings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestStandingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     submit_contest_api_v1_contests__contest_id__submit_post: {
         parameters: {
             query?: never;
@@ -22253,6 +22617,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_contests_api_v1_my_contests_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyContestListResponse"];
+                };
+            };
+        };
+    };
+    get_my_contest_api_v1_my_contests__contest_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyContestDetail"];
                 };
             };
             /** @description Validation Error */

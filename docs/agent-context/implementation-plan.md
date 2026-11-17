@@ -99,8 +99,31 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   approve or reject (never their own). Ledgers: business-line
   classification, Admin coverage and the platform-scope policy ledger list
   both tables; `pincodes` (missed by CS-026) is added to the first two.
-- *PR G2 — API: scoring, lifecycle job, participant and Admin standings*
-  (planned).
+- *PR G2 — API: scoring, lifecycle job, participant and Admin standings*,
+  branch `feat/batch-g-contests-scoring` stacked on G1.
+  `services/contest_scoring.py` computes standings on read: participants
+  (active profile and account on the line, optional tenure, KYC for
+  Agents; teams with their active managing Sub Admin and eligible members),
+  business credit (Agents: introduced leads, sharing
+  `loan_commission_eligible` / `deal_commission_eligible` now extracted in
+  `services/commissions.py`; Telecallers: leads they hold now; Employees:
+  leads with their non-cancelled tasks; teams: members' union), stage time
+  inside the IST window, true amount read live, per-case bounds, activity
+  (calls, connect rate, follow-ups kept by the end of the due IST day,
+  tasks completed / on time, site visits), targets, metric and competition
+  rank; `decide_winners` (threshold / top N with whole ties, budget cap by
+  rank groups, team manager and member prizes with the member minimum).
+  `services/contest_lifecycle.py` + `jobs/contest_lifecycle.py` (every 5
+  minutes): approved → live at the IST start with "contest is live"
+  notifications in the same transaction, live → ended after the IST end
+  with the snapshot into `contest_results`; per-contest locked transactions,
+  idempotent; approval on the start day goes live at once.
+  `services/contest_views.py`: `/api/v1/my-contests` (+ `/{id}`) for
+  Agents, Telecallers, Employees and managing Sub Admins — rules, own
+  standing, leaderboard of display name / rank / achieved (field-visibility
+  entries `contest_leaderboard.names` / `.amounts` per role), team standing
+  (members see only their own contribution, managers every member); Admin
+  `GET /api/v1/contests/{id}/standings` with full names.
 - *PR G3 — API: finalize, Agent prize payouts, staff mark-paid, Admin
   cancel* (planned).
 - *PR G4 — web: Sub Admin contests and Admin approvals / winners* (planned).

@@ -2,6 +2,31 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch G PR 2: contest scoring, lifecycle job and standings
+(API)** (2026-11-17; CS-027), branch `feat/batch-g-contests-scoring`
+stacked on G1. API and regenerated contracts; no migration; no
+requirement-percentage change.
+- Scoring, winner rules, lifecycle job, participant pages and Admin
+  standings as described in `implementation-plan.md` (Batch G2);
+  `services/commissions.py` exposes the commission-eligibility predicates
+  it already used, shared with Agent contest credit.
+- Evidence (same container and scratch database): `ruff` passes; new
+  `test_contest_winners.py` (ranking ties, threshold, top N cut-off ties,
+  zero results, budget cap groups, team member minimum, at-most and
+  connect-rate targets), `test_contest_scoring.py` (Agent loans with true
+  amount recomputed live, filters and the at-most rule; sanctioned stage
+  excludes rejected cases and applies per-case bounds; Agent real estate by
+  category, city and stage with listing-price fallback; eligibility by
+  tenure, KYC, line and status; Telecaller credit follows the current
+  assignee, calls / connect rate / follow-ups kept; Employee tasks, on-time
+  and site visits; team union and member contributions),
+  `test_contest_lifecycle.py` (IST midnight boundaries, idempotent go-live
+  and end, one notification, snapshot rows, overdue contest in one tick,
+  approval on the start day, job registration) and
+  `test_my_contests_api.py` (visibility, minimal leaderboard keys, hidden
+  names / amounts, team member vs manager views, Admin standings guard):
+  23 passed.
+
 **In progress — Batch G PR 1: contest model, migration, criteria grammar,
 authoring and review (API)** (2026-11-17; CS-027), branch
 `feat/batch-g-contests-model` from `upstream/main` `9f2c479f` (Batches A–F
