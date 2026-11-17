@@ -39,6 +39,7 @@ import {
   approveContest,
   cancelContest,
   finalizeContest,
+  isContestId,
   getStandings,
   listContests,
   markPrizePaid,
@@ -81,7 +82,10 @@ export function AdminContestsView() {
   const [error, setError] = React.useState<{ status: number | null; message: string } | null>(null);
   const [tab, setTab] = React.useState<Tab>("review");
   const [filters, setFilters] = React.useState<FilterBarValue>(EMPTY_FILTERS);
-  const [openId, setOpenId] = React.useState<string | null>(params.get("contest"));
+  const [openId, setOpenId] = React.useState<string | null>(() => {
+    const linked = params.get("contest");
+    return isContestId(linked) ? linked : null;
+  });
 
   const load = React.useCallback(async () => {
     const response = await listContests();

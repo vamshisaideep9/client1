@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/session-provider";
 import { MyContestsView } from "@/features/contests/my-contests-view";
 import { SubAdminContestsView } from "@/features/contests/sub-admin-contests-view";
 import { DashboardPageSkeleton } from "@/features/dashboard/dashboard-page-skeleton";
+import { isContestId } from "@/lib/contests-api";
 
 const PARTICIPANTS = new Set(["agent", "telecaller", "employee"]);
 
@@ -25,7 +26,7 @@ export default function ContestsPage() {
     if (role === "admin") {
       const contest = search.get("contest");
       router.replace(
-        contest
+        isContestId(contest)
           ? `/dashboard/contest-approvals?contest=${encodeURIComponent(contest)}`
           : "/dashboard/contest-approvals",
       );

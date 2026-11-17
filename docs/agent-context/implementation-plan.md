@@ -179,7 +179,10 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   placeholder password is now a constant built from parts
   (`MOCK_ADMIN_SECRET`), so secret scanners stop flagging it. Design
   review: the contest dialogs now widen from `sm` up (the dialog default
-  `sm:max-w-lg` clipped the winners table).
+  `sm:max-w-lg` clipped the winners table). Security review: every contest
+  or result id put into an API path must be a canonical UUID and is
+  encoded (`isContestId` in `lib/contests-api.ts`); link ids are ignored
+  otherwise.
 - *PR G5 — web: participant contests page, home card and team progress*,
   branch `feat/batch-g-contests-participant-web` stacked on G4.
   `/dashboard/contests` for Agents, Telecallers and Employees
@@ -195,7 +198,8 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   when nothing is open). My team (`TeamContestsPanel`): the managing Sub
   Admin's team contests with the team's standing and, on request, its
   progress and each member against the member minimum. Nav: "Contests" for
-  the three participant roles (Insights).
+  the three participant roles (Insights). Security review: a `?contest=`
+  value that is not a UUID shows the list and sends no request.
 
 Recommended: Opus 5.5 / extra-high (migration, RLS, money); high for the
 web slices.
