@@ -128,3 +128,99 @@ async def test_platform_admin_cannot_read_but_can_use_scoped_erasure_function(
             assert removed is True
     finally:
         await engine.dispose()
+
+
+async def _seed_profile(user_id: uuid.UUID, kind: str, *, active: bool = True) -> None:
+    import app.db.session as session_module
+    from app.models.profile import (
+        AgentProfile,
+        ProfileScope,
+        ProfileStatus,
+        StaffProfile,
+        StaffRole,
+    )
+
+    status = ProfileStatus.ACTIVE if active else ProfileStatus.INACTIVE
+    async with session_module.AsyncSessionLocal() as db:
+        if kind == "agent":
+            db.add(
+                AgentProfile(
+                    auth_user_uuid=user_id,
+                    agent_code=f"AG-{uuid.uuid4().hex[:8]}",
+                    business_line="loans",
+                    status=status,
+                )
+            )
+        else:
+            db.add(
+                StaffProfile(
+                    auth_user_uuid=user_id,
+                    role=StaffRole(kind),
+                    scope=ProfileScope.LINE,
+                    business_line="loans",
+                    staff_code=f"PZ-{uuid.uuid4().hex[:8]}",
+                    status=status,
+                )
+            )
+        await db.commit()
+
+
+def _client_only_migration():
+    import importlib.util
+    from pathlib import Path
+
+    path = (
+        Path(__file__).resolve().parents[2]
+        / "alembic"
+        / "versions"
+        / "d6f8a0b2c4e7_personalization_preferences_client_only.py"
+    )
+    spec = importlib.util.spec_from_file_location("client_only_preferences", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.asyncio
+async def test_migration_erases_only_non_client_preferences(client: AsyncClient) -> None:
+    """CS-021: the d6f8a0b2c4e7 statement keeps Client rows (including an
+    account whose only agent profile is inactive, which signs in as a Client)
+    and erases rows of accounts with an active agent or staff profile. It runs
+    in a rolled-back transaction so no other row in the database changes."""
+    ids: dict[str, uuid.UUID] = {}
+    for name in ("client", "agent", "telecaller", "sub_admin", "former_agent"):
+        _, mobile = await full_registration(client)
+        ids[name] = await _user_uuid(mobile)
+        await _seed_preference(ids[name])
+    await _seed_profile(ids["agent"], "agent")
+    await _seed_profile(ids["telecaller"], "telecaller")
+    await _seed_profile(ids["sub_admin"], "sub_admin")
+    await _seed_profile(ids["former_agent"], "agent", active=False)
+
+    statement = _client_only_migration().DELETE_NON_CLIENT_PREFERENCES
+    engine = _engine()
+    try:
+        async with engine.connect() as conn:
+            transaction = await conn.begin()
+            try:
+                await conn.execute(text(statement))
+                remaining = set(
+                    (
+                        await conn.execute(
+                            text(
+                                "SELECT auth_user_uuid FROM personalization_preferences "
+                                "WHERE auth_user_uuid = ANY(:ids)"
+                            ),
+                            {"ids": list(ids.values())},
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+            finally:
+                await transaction.rollback()
+    finally:
+        await engine.dispose()
+
+    assert remaining == {ids["client"], ids["former_agent"]}

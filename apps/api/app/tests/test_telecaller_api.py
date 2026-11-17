@@ -520,7 +520,499 @@ async def test_raise_task_notes_too_long_rejected(client: AsyncClient) -> None:
 
     res = await client.post(
         f"/api/v1/telecaller/leads/{lead_id}/tasks",
-        json={"notes": "x" * 1001},
+        json={"notes": "x" * 10_001},
         headers={"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"},
     )
     assert res.status_code == 422
+
+
+# About 1500 words of six characters each ("words ") is 9000 characters.
+_LONG_NOTE = ("words " * 1500).strip()
+
+
+@pytest.mark.asyncio
+async def test_call_log_accepts_1500_word_notes(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid)
+    headers = {"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"}
+
+    res = await client.post(
+        f"/api/v1/telecaller/leads/{lead_id}/activities",
+        json={"disposition": "busy", "notes": _LONG_NOTE},
+        headers=headers,
+    )
+    assert res.status_code == 201, res.text
+    assert res.json()["notes"] == _LONG_NOTE
+
+    too_long = await client.post(
+        f"/api/v1/telecaller/leads/{lead_id}/activities",
+        json={"disposition": "busy", "notes": "x" * 10_001},
+        headers=headers,
+    )
+    assert too_long.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_raise_task_accepts_1500_word_notes(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid)
+
+    res = await client.post(
+        f"/api/v1/telecaller/leads/{lead_id}/tasks",
+        json={"notes": _LONG_NOTE},
+        headers={"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"},
+    )
+    assert res.status_code == 201, res.text
+
+
+# --- Per-request workspace: applied times, linked calls, client history -----
+
+
+async def _seed_property_requests(lead_id: str) -> tuple[str, str]:
+    """A property enquiry and a site visit stamped onto ``lead_id`` for a
+    fresh Real Estate client. Returns (enquiry_id, site_visit_id)."""
+    from datetime import date
+
+    import app.db.session as _session_mod
+    from app.models.enquiry import Enquiry
+    from app.models.site_visit import SiteVisit, SiteVisitTimeSlot
+    from app.models.user import User
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        user = User(
+            first_name="Prop",
+            last_name="Client",
+            mobile=unique_mobile(),
+            email=f"pc_{uuid.uuid4().hex[:12]}@example.com",
+            password_hash="x",
+        )
+        db.add(user)
+        await db.flush()
+        common = {
+            "user_uuid": user.id,
+            "lead_uuid": uuid.UUID(lead_id),
+            "business_line": "real_estate",
+            "property_ref": str(uuid.uuid4()),
+            "title": "Lakeview 3BHK",
+            "locality": "Gachibowli",
+            "city": "Hyderabad",
+            "contact_name": "Prop Client",
+            "contact_mobile": user.mobile,
+        }
+        enquiry = Enquiry(**common, message="Is the price negotiable?")
+        visit = SiteVisit(
+            **common,
+            preferred_date=date.today() + timedelta(days=2),
+            preferred_time_slot=SiteVisitTimeSlot.MORNING,
+        )
+        db.add_all([enquiry, visit])
+        await db.commit()
+        return str(enquiry.id), str(visit.id)
+
+
+@pytest.mark.asyncio
+async def test_detail_and_list_show_what_was_applied_for_and_when(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid, status="working")
+    first = await _seed_loan_application(lead_id)
+    second = await _seed_loan_application(lead_id)
+    headers = {"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"}
+
+    detail = await client.get(f"/api/v1/telecaller/leads/{lead_id}", headers=headers)
+    assert detail.status_code == 200, detail.text
+    body = detail.json()
+    applications = {app["id"]: app for app in body["loan_applications"]}
+    assert set(applications) == {first, second}
+    assert all(app["opened_at"] for app in applications.values())
+    # Readable product label, not the internal slug.
+    assert {app["loan_type_name"] for app in applications.values()} == {"Home Loan"}
+    assert body["latest_request"]["kind"] == "loan_application"
+    assert body["latest_request"]["id"] == second
+    assert body["latest_request"]["title"] == "Home Loan"
+    assert body["latest_request"]["applied_at"]
+
+    listed = await client.get("/api/v1/telecaller/leads", headers=headers)
+    row = next(lead for lead in listed.json() if lead["id"] == lead_id)
+    assert row["latest_request"]["id"] == second
+
+
+@pytest.mark.asyncio
+async def test_call_can_be_linked_to_one_application_on_the_lead(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid, status="working")
+    application_id = await _seed_loan_application(lead_id)
+    headers = {"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"}
+
+    linked = await client.post(
+        f"/api/v1/telecaller/leads/{lead_id}/activities",
+        json={
+            "disposition": "busy",
+            "request": {"kind": "loan_application", "id": application_id},
+        },
+        headers=headers,
+    )
+    assert linked.status_code == 201, linked.text
+    assert linked.json()["request"] == {"kind": "loan_application", "id": application_id}
+
+    general = await client.post(
+        f"/api/v1/telecaller/leads/{lead_id}/activities",
+        json={"disposition": "no_answer"},
+        headers=headers,
+    )
+    assert general.status_code == 201
+    assert general.json()["request"] is None
+
+    detail = await client.get(f"/api/v1/telecaller/leads/{lead_id}", headers=headers)
+    refs = [activity["request"] for activity in detail.json()["activities"]]
+    assert {"kind": "loan_application", "id": application_id} in refs
+    assert None in refs
+
+
+@pytest.mark.asyncio
+async def test_call_cannot_be_linked_to_another_leads_application(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid, status="working")
+    my_other_lead = await _seed_assigned_lead("loans", staff_uuid, status="working")
+    _, other_staff = await _seed_telecaller("loans")
+    foreign_lead = await _seed_assigned_lead("loans", other_staff, status="working")
+    headers = {"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"}
+
+    for target_lead in (my_other_lead, foreign_lead):
+        application_id = await _seed_loan_application(target_lead)
+        res = await client.post(
+            f"/api/v1/telecaller/leads/{lead_id}/activities",
+            json={
+                "disposition": "busy",
+                "request": {"kind": "loan_application", "id": application_id},
+            },
+            headers=headers,
+        )
+        assert res.status_code == 422, res.text
+
+    unknown = await client.post(
+        f"/api/v1/telecaller/leads/{lead_id}/activities",
+        json={"disposition": "busy", "request": {"kind": "site_visit", "id": str(uuid.uuid4())}},
+        headers=headers,
+    )
+    assert unknown.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_real_estate_detail_shows_enquiries_and_visits_for_this_lead_only(
+    client: AsyncClient,
+) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("real_estate")
+    lead_id = await _seed_assigned_lead("real_estate", staff_uuid, status="working")
+    other_lead = await _seed_assigned_lead("real_estate", staff_uuid, status="working")
+    enquiry_id, visit_id = await _seed_property_requests(lead_id)
+    await _seed_property_requests(other_lead)
+    token = _telecaller_token(auth_uuid, staff_uuid, "real_estate")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    detail = await client.get(f"/api/v1/telecaller/leads/{lead_id}", headers=headers)
+    assert detail.status_code == 200, detail.text
+    body = detail.json()
+    assert [e["id"] for e in body["property_enquiries"]] == [enquiry_id]
+    assert body["property_enquiries"][0]["message"] == "Is the price negotiable?"
+    assert [v["id"] for v in body["site_visits"]] == [visit_id]
+    assert body["site_visits"][0]["preferred_time_slot"] == "morning"
+    assert body["latest_request"]["kind"] in {"property_enquiry", "site_visit"}
+
+    linked = await client.post(
+        f"/api/v1/telecaller/leads/{lead_id}/activities",
+        json={"disposition": "busy", "request": {"kind": "site_visit", "id": visit_id}},
+        headers=headers,
+    )
+    assert linked.status_code == 201, linked.text
+
+
+@pytest.mark.asyncio
+async def test_client_history_lists_own_journeys_and_own_calls(client: AsyncClient) -> None:
+    import app.db.session as _session_mod
+    from app.models.lead import Lead, LeadOrigin, LeadStatus
+    from app.models.lead_activity import CallDisposition, InterestLevel, LeadActivity
+
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    _, other_staff = await _seed_telecaller("loans")
+    current = await _seed_assigned_lead("loans", staff_uuid, status="working")
+    headers = {"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"}
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        current_lead = await db.get(Lead, uuid.UUID(current))
+        assert current_lead is not None
+        mobile = current_lead.mobile
+        earlier = Lead(
+            name="Test Lead",
+            mobile=mobile,
+            business_line="loans",
+            status=LeadStatus.CLOSED,
+            origin=LeadOrigin.DIRECT,
+            assigned_telecaller_profile_uuid=uuid.UUID(staff_uuid),
+            created_at=datetime.now(UTC) - timedelta(days=60),
+        )
+        elsewhere = Lead(
+            name="Test Lead",
+            mobile=mobile,
+            business_line="loans",
+            status=LeadStatus.CLOSED,
+            origin=LeadOrigin.DIRECT,
+            assigned_telecaller_profile_uuid=uuid.UUID(other_staff),
+            created_at=datetime.now(UTC) - timedelta(days=90),
+        )
+        db.add_all([earlier, elsewhere])
+        await db.flush()
+        db.add_all(
+            [
+                LeadActivity(
+                    lead_uuid=earlier.id,
+                    telecaller_staff_profile_uuid=uuid.UUID(staff_uuid),
+                    business_line="loans",
+                    disposition=CallDisposition.CONNECTED,
+                    interest_level=InterestLevel.WARM,
+                    notes="First journey call",
+                ),
+                LeadActivity(
+                    lead_uuid=current_lead.id,
+                    telecaller_staff_profile_uuid=uuid.UUID(other_staff),
+                    business_line="loans",
+                    disposition=CallDisposition.BUSY,
+                    notes="Another telecaller's call",
+                ),
+            ]
+        )
+        await db.commit()
+        earlier_id = str(earlier.id)
+        elsewhere_id = str(elsewhere.id)
+
+    res = await client.get(f"/api/v1/telecaller/leads/{current}/client-history", headers=headers)
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["business_line"] == "loans"
+    lead_ids = [lead["lead_id"] for lead in body["leads"]]
+    assert lead_ids == [current, earlier_id]
+    assert elsewhere_id not in lead_ids
+    notes = [a["notes"] for lead in body["leads"] for a in lead["activities"]]
+    assert notes == ["First journey call"]
+
+    stranger_auth, stranger_staff = await _seed_telecaller("loans")
+    forbidden = await client.get(
+        f"/api/v1/telecaller/leads/{current}/client-history",
+        headers={"Authorization": f"Bearer {_telecaller_token(stranger_auth, stranger_staff)}"},
+    )
+    assert forbidden.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_a_call_links_to_at_most_one_request() -> None:
+    import app.db.session as _session_mod
+    from app.models.lead_activity import CallDisposition, LeadActivity
+
+    _, staff_uuid = await _seed_telecaller("real_estate")
+    lead_id = await _seed_assigned_lead("real_estate", staff_uuid, status="working")
+    enquiry_id, visit_id = await _seed_property_requests(lead_id)
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        db.add(
+            LeadActivity(
+                lead_uuid=uuid.UUID(lead_id),
+                telecaller_staff_profile_uuid=uuid.UUID(staff_uuid),
+                business_line="real_estate",
+                disposition=CallDisposition.BUSY,
+                enquiry_uuid=uuid.UUID(enquiry_id),
+                site_visit_uuid=uuid.UUID(visit_id),
+            )
+        )
+        with pytest.raises(IntegrityError):
+            await db.commit()
+
+
+# --- Lead list signals: referrer, interest level, loan statuses, filters ---
+
+_CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+
+async def _seed_agent_profile(business_line: str = "loans") -> tuple[str, str]:
+    """Returns (agent_profile_uuid, agent_code)."""
+    import app.db.session as _session_mod
+    from app.models.profile import AgentProfile, ProfileStatus
+    from app.models.user import User
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        user = User(
+            first_name="Test",
+            last_name="Agent",
+            mobile=unique_mobile(),
+            email=f"ag_{uuid.uuid4().hex[:12]}@example.com",
+            password_hash="x",
+        )
+        db.add(user)
+        await db.flush()
+        code = f"AG-{uuid.uuid4().hex[:8]}"
+        profile = AgentProfile(
+            auth_user_uuid=user.id,
+            agent_code=code,
+            business_line=business_line,
+            status=ProfileStatus.ACTIVE,
+        )
+        db.add(profile)
+        await db.commit()
+        return str(profile.id), code
+
+
+async def _set_origin_agent(lead_id: str, agent_profile_uuid: str) -> None:
+    import app.db.session as _session_mod
+    from app.models.lead import Lead, LeadOrigin
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        lead = await db.get(Lead, uuid.UUID(lead_id))
+        assert lead is not None
+        lead.origin = LeadOrigin.AGENT
+        lead.origin_agent_profile_uuid = uuid.UUID(agent_profile_uuid)
+        await db.commit()
+
+
+async def _seed_client_referral(lead_id: str) -> str:
+    """A client's referral code claimed by the lead's mobile. Returns the code."""
+    import secrets
+
+    import app.db.session as _session_mod
+    from app.models.lead import Lead
+    from app.models.referral import Referral, ReferralCode
+    from app.models.user import User
+
+    code = "".join(secrets.choice(_CROCKFORD) for _ in range(8))
+    async with _session_mod.AsyncSessionLocal() as db:
+        lead = await db.get(Lead, uuid.UUID(lead_id))
+        assert lead is not None
+        referrer = User(
+            first_name="Ref",
+            last_name="Errer",
+            mobile=unique_mobile(),
+            email=f"ref_{uuid.uuid4().hex[:12]}@example.com",
+            password_hash="x",
+        )
+        db.add(referrer)
+        await db.flush()
+        db.add(ReferralCode(auth_user_uuid=referrer.id, code=code))
+        db.add(Referral(referrer_auth_user_uuid=referrer.id, referred_mobile=lead.mobile))
+        await db.commit()
+    return code
+
+
+async def _log_connected_call(lead_id: str, staff_uuid: str, interest: str) -> None:
+    import app.db.session as _session_mod
+    from app.models.lead_activity import CallDisposition, InterestLevel, LeadActivity
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        db.add(
+            LeadActivity(
+                lead_uuid=uuid.UUID(lead_id),
+                telecaller_staff_profile_uuid=uuid.UUID(staff_uuid),
+                business_line="loans",
+                disposition=CallDisposition.CONNECTED,
+                interest_level=InterestLevel(interest),
+            )
+        )
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_list_and_detail_carry_agent_referrer_interest_and_loan_statuses(
+    client: AsyncClient,
+) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid)
+    agent_uuid, agent_code = await _seed_agent_profile("loans")
+    await _set_origin_agent(lead_id, agent_uuid)
+    await _seed_loan_application(lead_id)
+    await _log_connected_call(lead_id, staff_uuid, "hot")
+    headers = {"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"}
+
+    listed = await client.get("/api/v1/telecaller/leads", headers=headers)
+    detail = await client.get(f"/api/v1/telecaller/leads/{lead_id}", headers=headers)
+
+    assert listed.status_code == 200, listed.text
+    assert detail.status_code == 200, detail.text
+    row = next(item for item in listed.json() if item["id"] == lead_id)
+    for body in (row, detail.json()):
+        assert body["referrer"] == {"kind": "agent", "reference_id": agent_code}
+        assert body["last_disposition"] == "connected"
+        assert body["last_interest_level"] == "hot"
+        assert body["loan_statuses"] == ["new"]
+
+
+@pytest.mark.asyncio
+async def test_client_referral_code_is_the_referrer_of_a_direct_lead(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid)
+    other_lead = await _seed_assigned_lead("loans", staff_uuid)
+    code = await _seed_client_referral(lead_id)
+
+    res = await client.get(
+        "/api/v1/telecaller/leads",
+        headers={"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"},
+    )
+
+    assert res.status_code == 200, res.text
+    by_id = {item["id"]: item for item in res.json()}
+    assert by_id[lead_id]["referrer"] == {"kind": "client", "reference_id": code}
+    assert by_id[other_lead]["referrer"] is None
+    assert by_id[other_lead]["loan_statuses"] == []
+    assert by_id[other_lead]["last_interest_level"] is None
+
+
+@pytest.mark.asyncio
+async def test_unknown_status_filter_is_rejected(client: AsyncClient) -> None:
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+
+    res = await client.get(
+        "/api/v1/telecaller/leads",
+        params={"status_filter": "nonsense"},
+        headers={"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"},
+    )
+
+    assert res.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_admin_can_hide_the_referrer_from_telecallers(client: AsyncClient) -> None:
+    from sqlalchemy import delete
+
+    import app.db.session as _session_mod
+    from app.models.field_visibility import (
+        FieldTargetRole,
+        FieldVisibilityConfig,
+        FieldVisibilityMode,
+    )
+
+    auth_uuid, staff_uuid = await _seed_telecaller("loans")
+    lead_id = await _seed_assigned_lead("loans", staff_uuid)
+    await _seed_client_referral(lead_id)
+    scope = (
+        FieldVisibilityConfig.target_role == FieldTargetRole.TELECALLER,
+        FieldVisibilityConfig.entity == "lead",
+        FieldVisibilityConfig.field_key == "referrer",
+    )
+    async with _session_mod.AsyncSessionLocal() as db:
+        await db.execute(delete(FieldVisibilityConfig).where(*scope))
+        db.add(
+            FieldVisibilityConfig(
+                target_role=FieldTargetRole.TELECALLER,
+                entity="lead",
+                field_key="referrer",
+                mode=FieldVisibilityMode.DENY,
+            )
+        )
+        await db.commit()
+    try:
+        headers = {"Authorization": f"Bearer {_telecaller_token(auth_uuid, staff_uuid)}"}
+        listed = await client.get("/api/v1/telecaller/leads", headers=headers)
+        detail = await client.get(f"/api/v1/telecaller/leads/{lead_id}", headers=headers)
+    finally:
+        async with _session_mod.AsyncSessionLocal() as db:
+            await db.execute(delete(FieldVisibilityConfig).where(*scope))
+            await db.commit()
+
+    row = next(item for item in listed.json() if item["id"] == lead_id)
+    assert "referrer" not in row
+    assert "referrer" not in detail.json()

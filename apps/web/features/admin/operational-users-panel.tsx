@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FilterSelect } from "@/features/dashboard/filter-select";
 import {
   DataTable,
   DataTablePrimaryCell,
@@ -276,7 +276,7 @@ export function OperationalUsersPanel({ compact = false }: { compact?: boolean }
           searchPlaceholder="Name, mobile, or email"
           statusOptions={STATUS_OPTIONS}
           kindOptions={ROLE_OPTIONS}
-          kindLabel="Roles"
+          kindLabel="Role"
           lineOptions={[
             { value: "loans", label: "Loans" },
             { value: "real_estate", label: "Real Estate" },
@@ -290,19 +290,12 @@ export function OperationalUsersPanel({ compact = false }: { compact?: boolean }
             setLoginFilter("all");
           }}
           extra={
-            <Select value={loginFilter} onValueChange={setLoginFilter}>
-              <SelectTrigger aria-label="Filter by sign-in history">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Any sign-in history</SelectItem>
-                {LOGIN_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FilterSelect
+              label="Sign-in history"
+              value={loginFilter}
+              options={LOGIN_OPTIONS}
+              onValueChange={setLoginFilter}
+            />
           }
         /> : null}
 

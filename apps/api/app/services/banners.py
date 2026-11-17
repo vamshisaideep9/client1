@@ -22,8 +22,10 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, exists, func, select
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app import campaign_artwork
 from app.banner_catalog import (
@@ -32,6 +34,7 @@ from app.banner_catalog import (
     property_category_matches_campaign,
 )
 from app.db.session import AsyncSessionLocal
+from app.jobs.cms_activation import activate_banner_if_due
 from app.models.audit_log import AuditAction
 from app.models.banner import Banner, BannerPlacement, BannerStatus, BannerTemplate
 from app.models.campaign_media import CampaignMediaAsset
@@ -63,6 +66,38 @@ class BannerInvalidAudience(Exception):
 
 class BannerInvalidConfiguration(Exception):
     """Raised when placement, template, line, Offer, or property disagree."""
+
+
+class BannerIsLive(Exception):
+    """Raised when a Sub Admin tries to delete or archive a live banner.
+
+    Only the platform Admin's soft Remove may take a live campaign down, so the
+    row, its review history and the removal reason are kept.
+    """
+
+
+class BannerHasReplacement(Exception):
+    """Raised when deleting a banner another campaign is set to replace.
+
+    The replacement's ``replaces_banner_id`` is immutable campaign identity
+    (trigger ``trg_banner_campaign_identity_immutable``), so the foreign key's
+    ``ON DELETE SET NULL`` cannot run; the replacement must go first.
+    """
+
+
+class BannerChanged(Exception):
+    """Raised when the row changed between the read and the conditional write."""
+
+
+# A Sub Admin may hard-delete a banner until it goes live. Mirrors the
+# banners_delete RLS policy (migration c5e7a9b1d3f4); both must change together.
+SUB_ADMIN_DELETABLE_STATUSES = (
+    BannerStatus.DRAFT,
+    BannerStatus.PENDING_APPROVAL,
+    BannerStatus.REJECTED,
+    BannerStatus.APPROVED,
+)
+_IDENTITY_TRIGGER_MESSAGE = "banner campaign identity is immutable"
 
 
 def template_image_url(image_ref: str, *, version: int | None = None) -> str | None:
@@ -362,6 +397,18 @@ async def approve_banner(banner_id: UUID, reviewer_uuid: UUID) -> Banner | None:
             business_line=banner.business_line,
             detail={"placement": banner.placement.value},
         )
+        await session.flush()
+        # Go live now when the banner is due and its slot is free, using the
+        # activation job's own rules. Otherwise it stays approved and the job
+        # activates it later. The savepoint covers the one race the slot lock
+        # cannot: another approval or the job filling an empty slot at the same
+        # moment, which the live-slot unique indexes reject.
+        try:
+            async with session.begin_nested():
+                await activate_banner_if_due(session, banner.id)
+                await session.flush()
+        except IntegrityError:
+            pass
         await session.commit()
         await session.refresh(banner)
         await emit_notification(
@@ -407,11 +454,74 @@ async def reject_banner(banner_id: UUID, reviewer_uuid: UUID, note: str) -> Bann
         return banner
 
 
+async def delete_banner_before_live(
+    db: AsyncSession, banner_id: UUID, actor_uuid: UUID, actor_role: str
+) -> bool:
+    """Hard-delete a banner that has not gone live, on the request session under RLS.
+
+    Returns False when the banner does not exist, is hidden by RLS, or was
+    already soft-removed. The delete is one conditional statement, so a banner
+    that goes live (approval or the activation job) after the read below is
+    never deleted; that lost race raises BannerChanged.
+    """
+    visible = await db.scalar(
+        select(Banner).where(Banner.id == banner_id, Banner.removed_at.is_(None))
+    )
+    if visible is None:
+        return False
+    if visible.status == BannerStatus.LIVE:
+        raise BannerIsLive
+    if visible.status not in SUB_ADMIN_DELETABLE_STATUSES:
+        raise BannerAlreadyReviewed
+    replacement = aliased(Banner)
+    replacement_exists = exists().where(replacement.replaces_banner_id == banner_id)
+    if await db.scalar(select(replacement_exists)):
+        raise BannerHasReplacement
+    statement = (
+        delete(Banner)
+        .where(
+            Banner.id == banner_id,
+            Banner.removed_at.is_(None),
+            Banner.status.in_(SUB_ADMIN_DELETABLE_STATUSES),
+            ~replacement_exists,
+        )
+        .returning(Banner.status, Banner.business_line, Banner.placement)
+        .execution_options(synchronize_session=False)
+    )
+    try:
+        deleted = (await db.execute(statement)).one_or_none()
+    except DBAPIError as exc:
+        # A replacement committed between the check above and this delete:
+        # the FK's SET NULL then trips the campaign-identity trigger.
+        if _IDENTITY_TRIGGER_MESSAGE not in str(exc.orig):
+            raise
+        await db.rollback()
+        raise BannerHasReplacement from exc
+    if deleted is None:
+        await db.rollback()
+        raise BannerChanged
+    await record_audit(
+        db,
+        action=AuditAction.BANNER_DELETED,
+        entity_type="banner",
+        entity_uuid=banner_id,
+        actor_uuid=actor_uuid,
+        actor_role=actor_role,
+        business_line=deleted.business_line,
+        detail={"placement": deleted.placement.value, "from_status": deleted.status.value},
+    )
+    await db.commit()
+    return True
+
+
 async def archive_banner(banner_id: UUID, actor_uuid: UUID, actor_role: str) -> Banner | None:
     async with AsyncSessionLocal() as session:
         banner = await session.get(Banner, banner_id, with_for_update=True)
         if banner is None or banner.removed_at is not None:
             return None
+        # A live campaign comes down only through the Admin's soft Remove.
+        if banner.status == BannerStatus.LIVE:
+            raise BannerIsLive
         if banner.status in (BannerStatus.DRAFT, BannerStatus.ARCHIVED):
             raise BannerAlreadyReviewed
         banner.status = BannerStatus.ARCHIVED
@@ -473,7 +583,7 @@ async def remove_banner(banner_id: UUID, reviewer_uuid: UUID, note: str) -> Bann
 _IMAGE_KEY_PREFIX = "public/banners/"
 _TEMPLATE_IMAGE_KEY_PREFIX = "public/banner-templates/"
 _TEMPLATE_STAGING_KEY_PREFIX = "private/banner-templates/staging/"
-IMAGE_MAX_BYTES = 2 * 1024 * 1024  # 2 MiB
+IMAGE_MAX_BYTES = 5 * 1024 * 1024  # 5 MiB
 _ALLOWED_IMAGE_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]")
 

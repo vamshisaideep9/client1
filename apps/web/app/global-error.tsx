@@ -36,7 +36,7 @@ export default function GlobalError({
         <main style={{ maxWidth: 480, padding: 24, textAlign: "center" }}>
           {/* Plain image: this boundary must work without RootLayout or Next image services. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={BRAND_ASSETS.horizontal.src} width={240} height={44} alt={SITE_NAME} style={{ maxWidth: "100%", height: "auto", marginBottom: 32 }} />
+          <img src={BRAND_ASSETS.horizontal.src} width={240} height={58} alt={SITE_NAME} style={{ maxWidth: "100%", height: "auto", marginBottom: 32 }} />
           <h1 style={{ fontSize: 22, fontWeight: 600, margin: "0 0 8px" }}>
             Something went wrong
           </h1>

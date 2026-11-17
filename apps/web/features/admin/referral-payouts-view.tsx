@@ -148,7 +148,7 @@ export function ReferralPayoutsView() {
     line: (referral) => referral.business_line,
     date: (referral) => referral.converted_at ?? referral.created_at,
     statusOptions: STATUS_OPTIONS,
-    statusLabel: "referral states",
+    statusLabel: "Referral status",
     initialStatus: statusFilter,
     onStatusChange: setStatusFilter,
     searchLabel: "Search referral payouts",

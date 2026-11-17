@@ -42,6 +42,7 @@ import { formatDate, formatPaise } from "@/lib/format";
 import type { Payout, PayoutStatus } from "@/lib/payouts-api";
 
 import { PayoutCreateDialog } from "./payout-create-dialog";
+import { PayoutGatewaySimulatorDialog } from "./payout-gateway-simulator-dialog";
 import { useAdminPayouts } from "./use-admin-payouts";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -107,8 +108,10 @@ export function PayoutsView() {
     clearCheque,
     failCheque,
     reverseCheque,
+    simulateGateway,
     truncated,
   } = useAdminPayouts();
+  const [simulating, setSimulating] = React.useState<Payout | null>(null);
 
   const [active, setActive] = React.useState<Payout | null>(null);
   const [rejecting, setRejecting] = React.useState(false);
@@ -183,8 +186,14 @@ export function PayoutsView() {
     const res = await approve(payout.id);
     setBusy(false);
     if (res.ok) {
-      toast.success("Payout approved");
       setActive(null);
+      if ((res.data.simulate_events ?? []).length > 0) {
+        // Development test mode: the payout waits at the simulated gateway.
+        toast.success("Payout approved and sent to the test gateway");
+        setSimulating(res.data);
+      } else {
+        toast.success("Payout approved");
+      }
     } else {
       toast.error("Could not approve payout", { description: res.error });
     }
@@ -348,6 +357,13 @@ export function PayoutsView() {
               </Button>
             );
           }
+          if (canReview && (payout.simulate_events ?? []).length > 0) {
+            return (
+              <Button size="sm" variant="outline" onClick={() => setSimulating(payout)}>
+                Test outcome
+              </Button>
+            );
+          }
           return null;
         },
       },
@@ -376,9 +392,9 @@ export function PayoutsView() {
         searchLabel="Search payouts"
         searchPlaceholder={canReview ? "Recipient, maker, checker, or destination" : "Recipient or destination"}
         statusOptions={FILTER_OPTIONS}
-        statusLabel="payout states"
+        statusLabel="Payout status"
         kindOptions={TYPE_OPTIONS}
-        kindLabel="Payout types"
+        kindLabel="Payout type"
         note={
           canReview
             ? "The Admin who raises a payout cannot approve it. Manual cheques settle only after clearance."
@@ -650,6 +666,12 @@ export function PayoutsView() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <PayoutGatewaySimulatorDialog
+        payout={simulating}
+        onOpenChange={(open) => !open && setSimulating(null)}
+        onSimulate={simulateGateway}
+      />
 
       <PayoutCreateDialog
         open={createOpen}
