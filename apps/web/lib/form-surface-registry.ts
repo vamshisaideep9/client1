@@ -27,6 +27,10 @@ export const FORM_SURFACE_REGISTRY = {
   "features/settings/contact-change-dialog.tsx": "mutation",
   "features/settings/staff-contact-request-dialog.tsx": "mutation",
   "features/admin/staff-contact-requests.tsx": "mutation",
+  // CS-027 contests: the Sub Admin form, and the list with its reason dialog
+  // (cancel, request changes, mark a prize paid).
+  "features/contests/contest-form-dialog.tsx": "mutation",
+  "features/contests/sub-admin-contests-view.tsx": "mutation",
   "components/auth/password-field.tsx": "composite",
   "components/auth/set-password-form.tsx": "mutation",
   "components/financial-provider-options.tsx": "filter",
