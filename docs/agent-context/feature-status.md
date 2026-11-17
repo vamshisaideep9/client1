@@ -3,7 +3,9 @@
 Status: **Derived living implementation ledger**
 
 **In progress — Batch E PR 4: mandatory email and contact changes (web)**
-(2026-11-17; CS-025), branch `feat/batch-e-contact-change-web` stacked on
+(2026-11-17; CS-025; PR
+[#378](https://github.com/brollysolutions/client1/pull/378), mirror
+vamshisaideep9/client1#79), branch `feat/batch-e-contact-change-web` stacked on
 Batch E PR 3. Web only; consumes the E1–E3 contracts; no
 requirement-percentage change.
 - Registration: after the phone code, a "Verify your email" step (email →

@@ -122,7 +122,9 @@ stacked on Batch D PR 2:
   never decides a request on their own account; Admins cannot file one.
   Full API suite on the stack: no new failure once the two batch tests
   were fixed (three pre-existing failures on main remain).
-- *PR E4 — web*, branch `feat/batch-e-contact-change-web` stacked on E3.
+- *PR E4 — web*, branch `feat/batch-e-contact-change-web` stacked on E3 (PR
+  [#378](https://github.com/brollysolutions/client1/pull/378), mirror
+  vamshisaideep9/client1#79).
   Registration shows a "Verify your email" step when verify-otp says the
   server requires it (the optional email field left the profile step); a
   blocking `/add-email` page (middleware `email_required` hint cookie +
