@@ -273,7 +273,7 @@ function ContestReviewDialog({
   return (
     <>
       <Dialog open onOpenChange={(next) => (next ? undefined : onClose())}>
-        <DialogContent className="max-h-[92dvh] w-[calc(100vw-2rem)] max-w-4xl overflow-y-auto">
+        <DialogContent className="max-h-[92dvh] w-[calc(100vw-2rem)] max-w-4xl overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2">
               {contest.title}
@@ -296,7 +296,7 @@ function ContestReviewDialog({
                   <p className="text-xs text-text-secondary">
                     {standings.source === "snapshot" ? "Snapshot at the end date" : "Updated just now"}
                     {finalized
-                      ? ` · ${standings.winners} winners · ${formatPaise(standings.prize_total_paise)} owed · ${formatPaise(standings.paid_total_paise)} paid`
+                      ? ` · ${standings.winners} ${standings.winners === 1 ? "winner" : "winners"} · ${formatPaise(standings.prize_total_paise)} owed · ${formatPaise(standings.paid_total_paise)} paid`
                       : ""}
                   </p>
                 ) : null}

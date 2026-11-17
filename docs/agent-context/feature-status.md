@@ -22,6 +22,11 @@ G1–G3 contracts; no requirement-percentage change.
   mark paid), `contact-change.spec.ts` 10 passed.
   `dashboard-navigation.spec.ts` needs a live API (`apiRequestContext` to
   :8000) and was not run here.
+- Design review (light and dark, 1440 and 390 px screenshots of the review
+  desk, form and rules dialogs): the three contest dialogs were capped by the
+  dialog's default `sm:max-w-lg`, which clipped the winners table and dates;
+  they now widen at `sm` and up. "1 winners" pluralised. Specs re-run: 2
+  passed.
 
 **In progress — Batch G PR 3: contest finalization and prizes (API)**
 (2026-11-17; CS-027), branch `feat/batch-g-contests-awards` stacked on G2.

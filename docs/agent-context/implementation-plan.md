@@ -177,7 +177,9 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   reference for staff prizes. Nav: Sub Admin "Contests" and Admin "Contest
   approvals" (People & access). Chore: the mocked contact-change spec's
   placeholder password is now a constant built from parts
-  (`MOCK_ADMIN_SECRET`), so secret scanners stop flagging it.
+  (`MOCK_ADMIN_SECRET`), so secret scanners stop flagging it. Design
+  review: the contest dialogs now widen from `sm` up (the dialog default
+  `sm:max-w-lg` clipped the winners table).
 - *PR G5 — web: participant contests page, home card and team progress*
   (planned).
 

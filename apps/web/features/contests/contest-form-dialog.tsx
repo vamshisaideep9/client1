@@ -294,7 +294,7 @@ export function ContestFormDialog({
     <Dialog open={open} onOpenChange={(next) => (!busy ? onOpenChange(next) : undefined)}>
       <DialogContent
         ref={contentRef}
-        className="max-h-[92dvh] w-[calc(100vw-2rem)] max-w-3xl overflow-y-auto"
+        className="max-h-[92dvh] w-[calc(100vw-2rem)] max-w-3xl overflow-y-auto sm:max-w-3xl"
       >
         <DialogHeader>
           <DialogTitle>{contest ? "Edit contest" : "New contest"}</DialogTitle>
