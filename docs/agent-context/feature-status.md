@@ -9,7 +9,7 @@ merged). API, migration `a8d0f2b4c6e9` and regenerated contracts; no
 requirement-percentage change.
 - Model and migration as described in `implementation-plan.md` (Batch G1):
   `contests`, `contest_results` (RLS enabled and forced, business-line
-  immutability triggers, consistency CHECKs incl. maker ≠ checker), five
+  immutability triggers, consistency CHECKs incl. maker ≠ checker; payout links `ON DELETE SET NULL` after the batch security review found that `RESTRICT` would block the 7-year retention purge), five
   loan / deal stage markers stamped once by
   `services/loan_applications.py` / `services/property_deals.py`, enum
   labels for `contest_reward` and the contest audit / notification values.

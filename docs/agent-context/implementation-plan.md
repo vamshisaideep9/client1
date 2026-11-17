@@ -83,7 +83,7 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   and reviewed statuses need a checker) and `contest_results` (individual /
   team / team manager / team member rows, achieved count, amount and metric,
   progress numbers, qualified, rank, won, prize, exclusion, payment status,
-  one payout per result, staff mark-paid fields; consistency CHECKs). RLS
+  one payout per result, staff mark-paid fields; consistency CHECKs; payout links `ON DELETE SET NULL` so the 7-year retention purge is never blocked). RLS
   enabled and forced: contests SELECT for platform Admin, any Sub Admin, and
   participants only at approved-or-later for their role and request line;
   INSERT / UPDATE / DELETE only by the maker Sub Admin while draft (UPDATE
