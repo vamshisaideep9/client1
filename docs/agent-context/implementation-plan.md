@@ -94,7 +94,9 @@ against `main`, stacked on Batch E PR 4:
   centroid within 100 km using an in-memory 0.5° grid and Haversine, so the
   position never reaches the database, logs, audit or Redis.
 - *PR F2 — API: audience rules version 2*, branch
-  `feat/batch-f-audience-v2-api` stacked on F1 (PR link added on ship).
+  `feat/batch-f-audience-v2-api` stacked on F1; PR
+  [#380](https://github.com/brollysolutions/client1/pull/380), mirror
+  vamshisaideep9/client1#81.
   Migration `f6b8d0a2c4e7` (revises `e5a7c9b1d3f6`, single head) lets the
   CS-008 location consent exist without a saved point (CHECK
   `location_consistent`); `PUT /personalization/location/consent` gives it
