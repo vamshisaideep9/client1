@@ -20,7 +20,7 @@ import logging
 from collections.abc import Sequence
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,9 +28,11 @@ from app.core.config import settings
 from app.core.deps import CurrentUser, get_active_user, is_platform_admin
 from app.db.session import get_db
 from app.models.payout import Payout, PayoutProvider, PayoutStatus, PayoutType
+from app.schemas.agent_payout_details import CancelledChequeRead, SavedPayoutDestinationRead
 from app.schemas.payments import (
     ManualChequeIssue,
     PayoutCreate,
+    PayoutGatewaySimulation,
     PayoutLinkDivergenceRead,
     PayoutLinkDivergencesRead,
     PayoutListResponse,
@@ -40,6 +42,7 @@ from app.schemas.payments import (
     PayoutReject,
     WebhookAck,
 )
+from app.services import agent_payout_cheque, agent_payout_details, storage
 from app.services import payments as payments_service
 from app.services.payout_links import list_link_divergences
 from app.services.payout_recipients import resolve_payout_identities, search_payout_recipients
@@ -156,6 +159,8 @@ async def _to_read(
             and p.maker_user_uuid != current_user.id
             and p.recipient_user_uuid != current_user.id
         )
+        if is_platform_admin(current_user) and p.recipient_user_uuid != current_user.id:
+            read.simulate_events = payments_service.simulator_events_for(p)
         reads.append(read)
     return reads
 
@@ -203,6 +208,34 @@ async def approve_payout(
         raise _map_error(exc) from None
 
     payout = await _get_payout_or_404(db, payout_id)
+    return (await _to_read([payout], current_user))[0]
+
+
+@router.post("/{payout_id}/simulate-gateway", response_model=PayoutRead)
+async def simulate_gateway(
+    payout_id: UUID,
+    body: PayoutGatewaySimulation,
+    current_user: CurrentUser = Depends(get_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> PayoutRead:
+    """Development-only RazorpayX test mode: an Admin picks the gateway outcome.
+
+    404 unless PAYOUT_GATEWAY_SIMULATOR is on, ENV is development and no live
+    Razorpay credentials exist; the outcome then runs through settle_from_webhook.
+    """
+    _require_admin(current_user, "Simulating a gateway outcome")
+    try:
+        await payments_service.simulate_gateway_event(
+            payout_id=payout_id,
+            event=body.event,
+            actor_user_uuid=current_user.id,
+        )
+    except payments_service.PayoutError as exc:
+        raise _map_error(exc) from None
+
+    payout = await _get_payout_or_404(db, payout_id)
+    # The settle ran on another session; read the committed state, not a cached row.
+    await db.refresh(payout)
     return (await _to_read([payout], current_user))[0]
 
 
@@ -358,6 +391,162 @@ async def list_payout_recipients(
             for h in hits
         ]
     )
+
+
+async def _reveal_saved_destination(
+    current_user: CurrentUser,
+    *,
+    recipient_auth_user_uuid: UUID | None = None,
+    agent_profile_uuid: UUID | None = None,
+) -> SavedPayoutDestinationRead:
+    _require_payout_requester(current_user)
+    if recipient_auth_user_uuid == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot create a payout to yourself.",
+        )
+    try:
+        saved = await agent_payout_details.reveal_for_payout(
+            actor_auth_user_uuid=current_user.id,
+            actor_role=current_user.role,
+            recipient_auth_user_uuid=recipient_auth_user_uuid,
+            agent_profile_uuid=agent_profile_uuid,
+        )
+    except agent_payout_details.SelfPayoutDetailsForbidden as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot create a payout to yourself.",
+        ) from exc
+    except agent_payout_details.PayoutDetailsUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Saved payout details are not available right now.",
+        ) from exc
+    except agent_payout_details.PayoutDetailsUnreadable as exc:
+        logger.error("payout.saved_destination_unreadable")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The saved payout details could not be read. Ask the Agent to save them again.",
+        ) from exc
+    if saved is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This recipient has not saved payout details.",
+        )
+    return SavedPayoutDestinationRead(
+        upi_id=saved.upi_id,
+        bank=saved.bank,
+        updated_at=saved.updated_at,
+        cheque_uploaded_at=saved.cheque_uploaded_at,
+    )
+
+
+async def _view_cancelled_cheque(
+    current_user: CurrentUser,
+    *,
+    recipient_auth_user_uuid: UUID | None = None,
+    agent_profile_uuid: UUID | None = None,
+) -> CancelledChequeRead:
+    _require_payout_requester(current_user)
+    if recipient_auth_user_uuid == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot create a payout to yourself.",
+        )
+    try:
+        view = await agent_payout_cheque.view_for_payout(
+            actor_auth_user_uuid=current_user.id,
+            actor_role=current_user.role,
+            recipient_auth_user_uuid=recipient_auth_user_uuid,
+            agent_profile_uuid=agent_profile_uuid,
+        )
+    except agent_payout_cheque.SelfChequeViewForbidden as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot create a payout to yourself.",
+        ) from exc
+    if view is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This recipient has not uploaded a cancelled cheque.",
+        )
+    # A sanitized image may open inline; a PDF always downloads (it can carry
+    # active content), the same split as loan-document previews.
+    url = (
+        storage.presign_preview(view.object_key)
+        if view.content_type.startswith("image/")
+        else storage.presign_download(view.object_key)
+    )
+    return CancelledChequeRead(
+        url=url,
+        content_type=view.content_type,
+        uploaded_at=view.uploaded_at,
+        expires_in_seconds=storage.PRESIGN_EXPIRE_SECONDS,
+    )
+
+
+@router.get(
+    "/recipients/{user_uuid}/cancelled-cheque",
+    response_model=CancelledChequeRead,
+)
+async def get_recipient_cancelled_cheque(
+    user_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+) -> CancelledChequeRead:
+    """Open the cancelled cheque an Agent attached to their payout details.
+
+    Same access as the saved-destination prefill; every successful view is
+    audited (agent_payout_details_viewed, purpose cheque_view).
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    return await _view_cancelled_cheque(current_user, recipient_auth_user_uuid=user_uuid)
+
+
+@router.get(
+    "/agents/{agent_profile_uuid}/cancelled-cheque",
+    response_model=CancelledChequeRead,
+)
+async def get_agent_cancelled_cheque(
+    agent_profile_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+) -> CancelledChequeRead:
+    """Same as the recipient cheque view, keyed by Agent profile (commission payouts)."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return await _view_cancelled_cheque(current_user, agent_profile_uuid=agent_profile_uuid)
+
+
+@router.get(
+    "/recipients/{user_uuid}/saved-destination",
+    response_model=SavedPayoutDestinationRead,
+)
+async def get_recipient_saved_destination(
+    user_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+) -> SavedPayoutDestinationRead:
+    """Prefill a payout from the bank account / UPI ID an Agent saved.
+
+    Same access as the recipient picker. Every successful read is audited
+    (agent_payout_details_viewed); a maker's own details are refused.
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    return await _reveal_saved_destination(current_user, recipient_auth_user_uuid=user_uuid)
+
+
+@router.get(
+    "/agents/{agent_profile_uuid}/saved-destination",
+    response_model=SavedPayoutDestinationRead,
+)
+async def get_agent_saved_destination(
+    agent_profile_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+) -> SavedPayoutDestinationRead:
+    """Same as the recipient prefill, keyed by Agent profile (commission payouts)."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return await _reveal_saved_destination(current_user, agent_profile_uuid=agent_profile_uuid)
 
 
 @router.get("/link-divergences", response_model=PayoutLinkDivergencesRead)

@@ -76,16 +76,21 @@ async def test_email_verify_without_email_returns_400(client: AsyncClient) -> No
 async def test_email_verify_code_is_bound_to_the_address_it_was_sent_to(
     client: AsyncClient,
 ) -> None:
-    access, _ = await full_registration(client, email=unique_email())
+    access, mobile = await full_registration(client, email=unique_email())
     headers = _auth(access)
     initiated = await client.post("/api/v1/auth/email/verify/initiate", headers=headers)
     assert initiated.status_code == 200, initiated.text
-    changed = await client.patch(
-        "/api/v1/auth/me",
-        headers=headers,
-        json={"first_name": "Test", "last_name": "User", "email": unique_email()},
-    )
-    assert changed.status_code == 200, changed.text
+    # CS-025: PATCH /auth/me no longer edits email; the address can still change
+    # underneath a pending code through another path (an Admin edit, an add-email
+    # completion), which this binding must catch.
+    from sqlalchemy import update
+
+    import app.db.session as session_mod
+    from app.models.user import User
+
+    async with session_mod.AsyncSessionLocal() as db:
+        await db.execute(update(User).where(User.mobile == mobile).values(email=unique_email()))
+        await db.commit()
 
     confirmed = await client.post(
         "/api/v1/auth/email/verify/confirm",

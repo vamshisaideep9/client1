@@ -1,0 +1,140 @@
+# Development-stack overrides for one internet-facing DigitalOcean droplet.
+#
+# Layer this file LAST (infra/dev-droplet/dc.sh does exactly this):
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml \
+#     -f infra/dev-droplet/compose.droplet.yml up -d
+#
+# It runs the API in ENV=development and the web app as the production
+# standalone image (apps/web/Dockerfile `prod` target, no hot reload) behind the
+# host Caddy proxy in ./Caddyfile, so page speed matches what users will get.
+# It is NOT a production topology; production uses
+# docker-compose.prod.example.yml and its launch gates.
+#
+# Object storage is a dedicated DigitalOcean Space (README "Object storage"),
+# not MinIO: MinIO no longer publishes the minio/minio and minio/mc images.
+# The SPACES_* values are added to the repository-root .env by hand, never by
+# init-env.sh, and the bucket's CORS rule and public/*-only read policy are
+# applied with `app.scripts.configure_storage --apply --verify`.
+#
+# Invariants (scripts/tests/test_dev_droplet.py enforces them):
+#   - no datastore publishes a host port; only the API and web ports that Caddy
+#     proxies are published, and only on 127.0.0.1 (Docker bypasses ufw);
+#   - MinIO and its bucket initialiser never start, and nothing depends on them;
+#   - every storage setting is required, and browsers are pointed at the Space
+#     itself (the dev overlay's localhost:9000 public endpoint is cleared);
+#   - every long-running service restarts after a reboot;
+#   - credentials come from the repository-root .env written by init-env.sh, so
+#     the committed app/app database default is never used.
+#
+# Requires Docker Compose v2.24+ for the !reset / !override tags.
+
+x-droplet-api-env: &droplet-api-env
+  ENV: development
+  LOG_LEVEL: info
+  SECRET_KEY: ${DEV_SECRET_KEY?run infra/dev-droplet/init-env.sh first}
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD?run infra/dev-droplet/init-env.sh first}@pgbouncer:5432/${POSTGRES_DB:-app}
+  ALLOWED_ORIGINS: '["https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}"]'
+  PUBLIC_WEB_ORIGIN: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
+  # Caddy is the single proxy in front of the API and replaces any client-sent
+  # X-Forwarded-For, so the rightmost entry is the real peer.
+  TRUST_PROXY_HEADERS: "true"
+  # Dedicated dev Space with a key scoped to it alone (README "Object
+  # storage"). Path-style URLs on the regional endpoint, so presigned uploads,
+  # public/ assets and the web CSP all share one exact origin.
+  SPACES_ENDPOINT_URL: ${SPACES_ENDPOINT_URL?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
+  SPACES_REGION: ${SPACES_REGION?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
+  SPACES_BUCKET: ${SPACES_BUCKET?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
+  SPACES_ACCESS_KEY: ${SPACES_ACCESS_KEY?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
+  SPACES_SECRET_KEY: ${SPACES_SECRET_KEY?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
+  # docker-compose.dev.yml points browsers at MinIO's localhost:9000. Empty
+  # falls back to SPACES_ENDPOINT_URL, which browsers reach directly.
+  SPACES_PUBLIC_ENDPOINT_URL: ""
+  # Spaces refuses bucket policies, so public/ objects are made readable with
+  # a per-object public-read ACL; everything else stays private.
+  SPACES_PUBLIC_OBJECT_ACL: "true"
+  # Payouts run in mock mode here (no Razorpay keys). The simulator makes an
+  # approved UPI/bank payout wait at a synthetic gateway so a tester can pick
+  # its outcome. The API refuses this flag outside ENV=development.
+  PAYOUT_GATEWAY_SIMULATOR: "true"
+
+services:
+  postgres:
+    ports: !reset []
+    restart: unless-stopped
+
+  redis:
+    ports: !reset []
+    restart: unless-stopped
+
+  pgbouncer:
+    ports: !reset []
+
+  clamav:
+    restart: unless-stopped
+
+  # Only started with an explicit `--profile object-storage`, which the
+  # droplet never uses (the images are no longer published).
+  minio:
+    profiles: ["object-storage"]
+    ports: !reset []
+  minio-init:
+    profiles: ["object-storage"]
+
+  api:
+    ports: !override
+      - "127.0.0.1:8000:8000"
+    # Same as docker-compose.yml without the MinIO dependency.
+    depends_on: !override
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
+    environment:
+      <<: *droplet-api-env
+
+  scheduler:
+    environment:
+      <<: *droplet-api-env
+
+  # The production standalone build, not `next dev`: the dev server ships ~7 MB
+  # of unminified JavaScript with no caching, which made page-speed numbers on
+  # this host meaningless. Rebuild after every pull:
+  #   infra/dev-droplet/dc.sh up -d --build web
+  web:
+    build:
+      target: prod
+      # The @contracts type import (apps/web/Dockerfile builder stage); the
+      # sparse checkout must include packages/contracts (README step 3).
+      additional_contexts:
+        contracts: ./packages/contracts
+      # NEXT_PUBLIC_* values are inlined at build time. The image runs in
+      # strict public-config mode, so the contact details are required; the
+      # defaults are the client-confirmed values in apps/web/lib/site.ts.
+      args:
+        # Same-origin: Caddy routes /api/* to the API on the app host.
+        NEXT_PUBLIC_API_BASE_URL: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
+        NEXT_PUBLIC_SITE_URL: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
+        # The Space origin: CSP connect/img/media-src, next/image remotePatterns
+        # and lib/allowed-asset-url.ts all trust exactly this origin.
+        NEXT_PUBLIC_ASSET_HOST: ${SPACES_ENDPOINT_URL?add the SPACES_* block to .env, see infra/dev-droplet/README.md}
+        NEXT_PUBLIC_CONTACT_PHONE: "${NEXT_PUBLIC_CONTACT_PHONE:-+91 90100 53010}"
+        NEXT_PUBLIC_CONTACT_EMAIL: "${NEXT_PUBLIC_CONTACT_EMAIL:-dhanadhara@gmail.com}"
+        NEXT_PUBLIC_CONTACT_HOURS: "${NEXT_PUBLIC_CONTACT_HOURS:-Monday to Saturday|10 AM to 6 PM|Sunday closed}"
+        NEXT_PUBLIC_CONTACT_ADDRESS: "${NEXT_PUBLIC_CONTACT_ADDRESS:-APHB Colony|Vikarabad, Telangana}"
+    # The image's CMD is `node server.js`; pnpm is not in the prod image.
+    command: !reset null
+    # No source bind mount or dev caches: the code is baked into the image.
+    volumes: !reset []
+    ports: !override
+      - "127.0.0.1:3001:3000"
+    environment:
+      NODE_ENV: production
+      # Docker sets HOSTNAME to the container ID, which server.js would bind
+      # to instead of every interface (the healthcheck dials 127.0.0.1).
+      HOSTNAME: 0.0.0.0
+      # Server-side reads of the same values (lib/site.ts at request time).
+      NEXT_PUBLIC_API_BASE_URL: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
+      NEXT_PUBLIC_SITE_URL: https://${DEV_DOMAIN?run infra/dev-droplet/init-env.sh first}
+      NEXT_PUBLIC_ASSET_HOST: ${SPACES_ENDPOINT_URL?add the SPACES_* block to .env, see infra/dev-droplet/README.md}

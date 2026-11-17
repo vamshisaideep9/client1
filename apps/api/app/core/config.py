@@ -1,3 +1,5 @@
+import base64
+import binascii
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
@@ -49,6 +51,14 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
+    # Agent payout destinations (bank account / UPI ID) are encrypted at rest
+    # with this base64 32-byte AES key (core/field_crypto.py). Development falls
+    # back to a fixed non-secret key; elsewhere an unset key disables only that
+    # feature (503) rather than blocking boot. Generate one with:
+    # python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())"
+    PAYOUT_DETAILS_ENCRYPTION_KEY: str = ""
+    PAYOUT_DETAILS_ENCRYPTION_KEY_VERSION: int = 1
+
     # OTP (Redis-backed, hashed, single-use per security rules)
     OTP_EXPIRE_SECONDS: int = 300
     OTP_MAX_ATTEMPTS: int = 5
@@ -95,6 +105,26 @@ class Settings(BaseSettings):
     MOBILE_CHANGE_OTP_DAILY_LIMIT: int = 3
     MOBILE_CHANGE_REQUEST_EXPIRE_DAYS: int = 7
 
+    # CS-025 mandatory email. When on, registration requires an OTP-verified
+    # email and every signed-in account without a verified email is limited to
+    # the "Add your email" step (plus /auth/me, logout, refresh, password
+    # change and account deletion) until one is added and verified. OFF by
+    # default: switch it on in an environment only after a real email has been
+    # delivered there end to end (SMTP configured, EMAIL_ENABLED=true, a code
+    # received and verified), or every unverified account is locked out.
+    EMAIL_REQUIRED_ENFORCED: bool = False
+    # CS-025 phone/email changes, added emails and staff contact-change
+    # requests. A code journey (password -> code to the current value -> new
+    # value -> code to the new value) must finish within the flow window; a
+    # staff request then waits for an Admin for the request window. The start
+    # budget counts every start, resend and wrong password per account per
+    # hour; the target budget caps codes sent to one new number or address per
+    # day, on top of the shared per-number OTP and per-IP caps.
+    CONTACT_CHANGE_FLOW_EXPIRE_MINUTES: int = 15
+    CONTACT_CHANGE_REQUEST_EXPIRE_DAYS: int = 7
+    CONTACT_CHANGE_START_LIMIT_PER_ACCOUNT: int = 6
+    CONTACT_CHANGE_TARGET_DAILY_LIMIT: int = 3
+
     # Staff first-login invite links. The two budgets are separate on purpose:
     # opening the page must never consume the budget for actually setting a
     # password, or a handful of page loads would lock a legitimate invitee out.
@@ -112,6 +142,10 @@ class Settings(BaseSettings):
     # loan-application KYC upload path (services/loan_documents.py).
     LOAN_DOCUMENT_MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     LOAN_DOCUMENT_MAX_PER_APPLICATION: int = 12
+    # Optional cancelled cheque an Agent attaches to their payout details
+    # (CS-022): JPEG, PNG or PDF, signed into the presigned-POST policy and
+    # re-checked at confirmation (services/agent_payout_cheque.py).
+    AGENT_PAYOUT_CHEQUE_MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     # Employee-collected task documents are equally sensitive and must use a
     # storage-signed cap, not an uncapped PUT. The hourly presign allowance
     # leaves room for three retries beyond a full 12-document collection.
@@ -130,6 +164,10 @@ class Settings(BaseSettings):
     MEDIA_PROCESS_BATCH_SIZE: int = 4
     MEDIA_VIDEO_MAX_UPLOAD_BYTES: int = 20 * 1024 * 1024
     LOAN_VIDEO_MAX_DURATION_SECONDS: int = 60
+    # Uploaded banner videos are muted loops of up to one minute (the media
+    # runtime's own ceiling); longer stories belong on YouTube, which banners
+    # can link by video id instead.
+    BANNER_VIDEO_MAX_DURATION_SECONDS: int = 60
     LOAN_VIDEO_MAX_PER_APPLICATION: int = 2
     TASK_FEEDBACK_MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     TASK_FEEDBACK_MAX_PER_TASK: int = 5
@@ -209,6 +247,13 @@ class Settings(BaseSettings):
     #   *_PAISE == 0 means "not configured": in LIVE mode an unset cap is treated
     #   as fail-closed (reject the payout — never move uncapped real money); in
     #   mock mode 0 means "no cap" for dev convenience. Enforced in the create guard.
+    # Development-only gateway simulator for testers. When on (and payments are in
+    # mock mode), approving a UPI/bank payout stops at INITIATED with a synthetic
+    # gateway id instead of auto-settling, and an Admin chooses the gateway
+    # outcome, which is applied through the same settle_from_webhook state
+    # machine a real RazorpayX webhook uses. Refused outside development; inert
+    # whenever real Razorpay credentials are present.
+    PAYOUT_GATEWAY_SIMULATOR: bool = False
     PAYOUT_MAX_AMOUNT_PAISE: int = 0  # per-payout ceiling
     PAYOUT_DAILY_CAP_PAISE: int = 0  # aggregate ceiling per calendar day (UTC)
     # Reject a duplicate (same recipient + type + amount + idempotency key) seen
@@ -284,6 +329,13 @@ class Settings(BaseSettings):
     SPACES_BUCKET: str = "task-documents"
     SPACES_ACCESS_KEY: str = "minioadmin"  # dev placeholder; real value in prod env
     SPACES_SECRET_KEY: str = "minioadmin"  # dev placeholder; real value in prod env
+    # DigitalOcean Spaces rejects bucket policies (403 even for a full-access
+    # key), so the `public/*` anonymous read that MinIO gets from its bucket
+    # policy is granted per object instead: every write to a `public/` key
+    # carries a `public-read` canned ACL. Keys outside `public/` never get an
+    # ACL and stay private. Off by default for local MinIO, which keeps using
+    # its `public/` bucket policy (docker-compose minio-init).
+    SPACES_PUBLIC_OBJECT_ACL: bool = False
 
     @model_validator(mode="after")
     def _guard_secret_key(self) -> "Settings":
@@ -298,6 +350,19 @@ class Settings(BaseSettings):
                 )
             if len(self.SECRET_KEY) < 32:
                 raise ValueError("SECRET_KEY must be at least 32 characters.")
+        return self
+
+    @model_validator(mode="after")
+    def _guard_payout_details_key(self) -> "Settings":
+        if not 1 <= self.PAYOUT_DETAILS_ENCRYPTION_KEY_VERSION <= 255:
+            raise ValueError("PAYOUT_DETAILS_ENCRYPTION_KEY_VERSION must be between 1 and 255.")
+        if self.PAYOUT_DETAILS_ENCRYPTION_KEY:
+            try:
+                key = base64.b64decode(self.PAYOUT_DETAILS_ENCRYPTION_KEY, validate=True)
+            except (binascii.Error, ValueError) as exc:
+                raise ValueError("PAYOUT_DETAILS_ENCRYPTION_KEY must be base64.") from exc
+            if len(key) != 32:
+                raise ValueError("PAYOUT_DETAILS_ENCRYPTION_KEY must decode to exactly 32 bytes.")
         return self
 
     @model_validator(mode="after")
@@ -330,6 +395,14 @@ class Settings(BaseSettings):
             # network-level interception.
             if not self.SPACES_ENDPOINT_URL.startswith("https://"):
                 raise ValueError("SPACES_ENDPOINT_URL must use https:// outside development.")
+            # The public endpoint is the one actually handed to browsers, so
+            # an http override would reopen exactly the exposure above.
+            if self.SPACES_PUBLIC_ENDPOINT_URL and not self.SPACES_PUBLIC_ENDPOINT_URL.startswith(
+                "https://"
+            ):
+                raise ValueError(
+                    "SPACES_PUBLIC_ENDPOINT_URL must use https:// outside development."
+                )
         return self
 
     @model_validator(mode="after")
@@ -410,6 +483,9 @@ class Settings(BaseSettings):
         # rotation) leaves the service in MOCK mode in production — payouts show
         # "paid" with no real money moving, and nothing fails or warns. Refuse to
         # boot outside development unless BOTH keys are set or NEITHER is.
+        if self.PAYOUT_GATEWAY_SIMULATOR and self.ENV != "development":
+            raise ValueError("PAYOUT_GATEWAY_SIMULATOR is development-only.")
+
         key_set = bool(self.RAZORPAY_KEY_ID)
         secret_set = bool(self.RAZORPAY_KEY_SECRET)
         if self.ENV != "development" and key_set != secret_set:

@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
 import * as React from "react";
 import Link from "next/link";
@@ -20,6 +19,7 @@ import { listCampaignMedia, type CampaignMediaAsset } from "@/lib/campaign-media
 import { cn } from "@/lib/utils";
 
 import { ArtworkUploadDialog } from "./artwork-upload-dialog";
+import { CampaignAssetThumb } from "./campaign-asset-thumb";
 
 type BusinessLine = "loans" | "real_estate" | "both";
 
@@ -285,15 +285,7 @@ function ArtworkGroup({
               )}
             >
               <span className={cn("relative block w-full bg-muted", surface.aspectClass)}>
-                <img
-                  src={asset.image_url}
-                  alt={asset.alt_text}
-                  width={surface.width}
-                  height={surface.height}
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
+                <CampaignAssetThumb asset={asset} width={surface.width} height={surface.height} />
                 {selected ? (
                   <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-[var(--nav-primary)] text-white">
                     <Check className="h-3.5 w-3.5" aria-hidden />

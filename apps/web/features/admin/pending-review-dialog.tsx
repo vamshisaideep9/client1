@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { CLOSE_BUTTON_CLASS } from "@/components/ui/close-button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { optionsFromLabels } from "@/features/dashboard/filter-options";
+import { DateRangeFields, FilterSelect } from "@/features/dashboard/filter-select";
 import type { AdminPendingItem } from "@/lib/admin-api";
 import { PANEL_DIALOG_FILTERED_CLASS } from "@/features/dashboard/workspace-dialog";
 import { cn } from "@/lib/utils";
@@ -69,25 +70,31 @@ export function PendingReviewDialog({
             maxLength={100}
             onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
           />
-          <Select value={filters.kind ?? "all"} onValueChange={(kind) => setFilters((current) => ({ ...current, kind: kind as PendingReviewFilters["kind"] }))}>
-            <SelectTrigger aria-label="Filter review items by type"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All review types</SelectItem>
-              {Object.entries(REVIEW_KIND_LABEL).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={filters.businessLine ?? "all"} onValueChange={(businessLine) => setFilters((current) => ({ ...current, businessLine: businessLine as PendingReviewFilters["businessLine"] }))}>
-            <SelectTrigger aria-label="Filter review items by business line"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All business lines</SelectItem>
-              {Object.entries(REVIEW_LINE_LABEL).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Input aria-label="Review items submitted from" type="date" value={filters.submittedFrom} onChange={(event) => setFilters((current) => ({ ...current, submittedFrom: event.target.value }))} />
-          <Input aria-label="Review items submitted to" type="date" min={filters.submittedFrom || undefined} value={filters.submittedTo} onChange={(event) => setFilters((current) => ({ ...current, submittedTo: event.target.value }))} />
+          <FilterSelect
+            label="Review type"
+            ariaLabel="Filter review items by type"
+            value={filters.kind ?? "all"}
+            options={optionsFromLabels(REVIEW_KIND_LABEL)}
+            onValueChange={(kind) => setFilters((current) => ({ ...current, kind: kind as PendingReviewFilters["kind"] }))}
+          />
+          <FilterSelect
+            label="Business line"
+            ariaLabel="Filter review items by business line"
+            value={filters.businessLine ?? "all"}
+            options={optionsFromLabels(REVIEW_LINE_LABEL)}
+            onValueChange={(businessLine) => setFilters((current) => ({ ...current, businessLine: businessLine as PendingReviewFilters["businessLine"] }))}
+          />
+          <DateRangeFields
+            from={filters.submittedFrom ?? ""}
+            to={filters.submittedTo ?? ""}
+            fromLabel="Review items submitted from"
+            toLabel="Review items submitted to"
+            onFromChange={(submittedFrom) => setFilters((current) => ({ ...current, submittedFrom }))}
+            onToChange={(submittedTo) => setFilters((current) => ({ ...current, submittedTo }))}
+          />
           <Button className="sm:col-span-2 lg:col-span-3 xl:col-span-5" variant="outline" onClick={() => setFilters(EMPTY_FILTERS)}>
             <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-            Clear filters
+            Clear all
           </Button>
         </div>
 

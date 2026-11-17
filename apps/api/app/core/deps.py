@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session as SyncSession
 
 from app.cache.redis_keys import RedisCache, jwt_blacklist_key
+from app.core.config import settings
 from app.core.security import decode_access_token
 from app.db.session import get_db
 
@@ -74,6 +75,10 @@ class CurrentUser:
     platform_scope: str | None = None
     staff_features: frozenset[str] = field(default_factory=frozenset)
     force_reset: bool = field(default=False)
+    # CS-025: EMAIL_REQUIRED_ENFORCED is on and this account has no verified
+    # email. Read from the live account row on every request (not a token
+    # claim), so the gate lifts on the very next request after verification.
+    email_required: bool = field(default=False)
 
 
 async def get_redis(request: Request) -> aioredis.Redis:
@@ -232,22 +237,61 @@ async def get_current_user(
         platform_scope=claims.get("platform_scope"),
         staff_features=staff_features,
         force_reset=claims.get("force_reset", False),
+        email_required=email_required_for(user),
     )
 
 
-async def get_active_user(
+EMAIL_REQUIRED_DETAIL = "Add and verify your email address to continue."
+
+
+def email_required_for(user: object) -> bool:
+    """True when CS-025 enforcement is on and the account lacks a verified email."""
+    from app.models.user import UserStatus  # local import to avoid circular
+
+    return bool(
+        settings.EMAIL_REQUIRED_ENFORCED
+        and getattr(user, "status", None) == UserStatus.ACTIVE
+        and getattr(user, "email_verified_at", None) is None
+    )
+
+
+async def get_active_user_allow_email_pending(
     current_user: CurrentUser = Depends(get_current_user),
+) -> CurrentUser:
+    """Rejects a force-reset session but admits an account still owing an email.
+
+    Only the surfaces an account needs to clear the CS-025 email step use this:
+    GET /auth/me, adding or verifying an email, a staff contact-change request
+    (to correct an Admin-set address) and account deletion. Logout, refresh
+    and change-password never depended on get_active_user and stay reachable.
+    """
+    if current_user.force_reset:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Password reset required before continuing.",
+        )
+    return current_user
+
+
+async def get_active_user(
+    current_user: CurrentUser = Depends(get_active_user_allow_email_pending),
 ) -> CurrentUser:
     """Like get_current_user, but rejects a force-reset session.
 
     A user still owing a forced password reset carries a restricted access token
     (`force_reset`). That token may reach ONLY the change-password endpoint; every
     other authenticated surface must deny it so the reset cannot be skipped.
+
+    CS-025: with EMAIL_REQUIRED_ENFORCED on, an account without a verified email
+    is refused here too (403), so every business endpoint is closed until the
+    email step is done. The few endpoints that step needs depend on
+    get_active_user_allow_email_pending instead.
     """
-    if current_user.force_reset:
+    if current_user.email_required:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Password reset required before continuing.",
+            detail=EMAIL_REQUIRED_DETAIL,
+            headers={"X-Email-Required": "1"},
         )
     return current_user
 

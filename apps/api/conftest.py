@@ -56,6 +56,9 @@ def _force_mock_otp_channels() -> None:
     # rate-limit assertions of its own.
     settings.STAFF_INVITE_PREVIEW_RATE_LIMIT_PER_IP = 1_000_000
     settings.STAFF_INVITE_ACCEPT_RATE_LIMIT_PER_IP = 1_000_000
+    # CS-025 enforcement ships off by default; the suite pins that default and
+    # the email/contact-change modules switch it on per test (monkeypatch).
+    settings.EMAIL_REQUIRED_ENFORCED = False
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -351,13 +354,42 @@ async def full_registration(
     assert set_pw_resp.status_code == 201, set_pw_resp.text
     access_token = set_pw_resp.json()["access_token"]
     if email is not None:
-        profile_resp = await client.patch(
-            "/api/v1/auth/me",
-            headers={"Authorization": f"Bearer {access_token}"},
-            json={"first_name": "Test", "last_name": "User", "email": email},
-        )
-        assert profile_resp.status_code == 200, profile_resp.text
+        # CS-025: PATCH /auth/me no longer edits email. Tests that want an
+        # address on file but NOT yet verified (the legacy state the email
+        # verification and reset-resend tests exercise) get it written
+        # directly; add_verified_email() below uses the real add flow.
+        import app.db.session as _session_mod
+        from app.models.user import User
+
+        async with _session_mod.AsyncSessionLocal() as db:
+            await db.execute(update(User).where(User.mobile == mobile).values(email=email))
+            await db.commit()
     return access_token, mobile
+
+
+async def add_verified_email(
+    client: AsyncClient,
+    access_token: str,
+    email: str | None = None,
+    password: str = PASSWORD,
+) -> str:
+    """Add and verify an email through POST /auth/email/add (+ /verify)."""
+    email = email or unique_email()
+    headers = {"Authorization": f"Bearer {access_token}"}
+    started = await client.post(
+        "/api/v1/auth/email/add",
+        headers=headers,
+        json={"email": email, "current_password": password},
+    )
+    assert started.status_code == 200, started.text
+    body = started.json()
+    verified = await client.post(
+        "/api/v1/auth/email/add/verify",
+        headers=headers,
+        json={"change_id": body["change_id"], "otp": body["otp_hint"]},
+    )
+    assert verified.status_code == 200, verified.text
+    return email
 
 
 async def do_login(

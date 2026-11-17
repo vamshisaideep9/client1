@@ -11,7 +11,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import ENUM, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -46,6 +46,13 @@ interest_level_enum = ENUM(
 
 class LeadActivity(Base):
     __tablename__ = "lead_activities"
+    __table_args__ = (
+        CheckConstraint(
+            "num_nonnulls(loan_application_uuid, financial_service_enquiry_uuid, "
+            "enquiry_uuid, site_visit_uuid, property_deal_uuid) <= 1",
+            name="single_request_link",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     lead_uuid: Mapped[uuid.UUID] = mapped_column(
@@ -61,6 +68,27 @@ class LeadActivity(Base):
     interest_level: Mapped[InterestLevel | None] = mapped_column(interest_level_enum, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     follow_up_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # At most one request this call was about (ck_lead_activities_single_request_link,
+    # migration e7a9c1b3d5f8). All NULL means a general call on the lead.
+    loan_application_uuid: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("loan_applications.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    financial_service_enquiry_uuid: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("financial_service_enquiries.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    enquiry_uuid: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("enquiries.id", ondelete="SET NULL"), nullable=True
+    )
+    site_visit_uuid: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("site_visits.id", ondelete="SET NULL"), nullable=True
+    )
+    property_deal_uuid: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("property_deals.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
     )

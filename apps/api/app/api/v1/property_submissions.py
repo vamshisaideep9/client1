@@ -50,6 +50,7 @@ from app.services.property_submissions import (
     MediaStorageUnavailable,
     MediaUploadMissing,
     MediaUploadRateExceeded,
+    PanoramaInvalid,
     ReraReviewRequired,
     SubmissionAlreadyReviewed,
     SubmissionNotEditable,
@@ -143,10 +144,21 @@ async def submit_property(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="An uploaded media object is missing or exceeds the allowed size.",
         ) from exc
+    except PanoramaInvalid as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=(
+                "Each 360 image must be a 2:1 panorama of at least 1024 x 512 pixels "
+                "and no more than 25 megapixels."
+            ),
+        ) from exc
     except MediaContentMismatch as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Uploaded media content does not match its declared type.",
+            detail=(
+                "An uploaded file is not a valid JPEG, PNG, WebP or AVIF image (or PDF), "
+                "or it failed the safety scan."
+            ),
         ) from exc
     except MediaStorageUnavailable as exc:
         raise HTTPException(

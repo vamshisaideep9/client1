@@ -1,6 +1,6 @@
 import type { CalculatorDef, CalculatorFaq, CalculatorSlug } from "./types";
 
-// Single source of truth for all 18 calculators. Drives the hub, each route's
+// Single source of truth for all 19 calculators. Drives the hub, each route's
 // metadata + JSON-LD, internal links, the FAQ accordions, and the lead CTA.
 // Copy rules (apps/web/CLAUDE.md): rupee only, no em/en dashes, short humanized
 // sentences. SEO copy (title/meta/intro/howItWorks/faq) is written to India
@@ -14,10 +14,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "loans",
     navLabel: "EMI Calculator",
     cardSummary: "Work out the monthly EMI, total interest, and full repayment schedule for any loan.",
-    h1: "EMI Calculator",
-    title: "EMI Calculator: Personal, Business, Property, Vehicle & Education Loan EMI",
+    h1: "Home loan EMI calculator",
+    title: "Home Loan EMI Calculator with Schedule",
     metaDescription:
-      "Free EMI calculator for personal, business, property, vehicle and education loans. See your monthly EMI, total interest, and a month by month repayment schedule in seconds.",
+      "Work out your home, personal, car or business loan EMI, total interest and month-by-month repayment schedule. Example: ₹30 lakh at 9% for 20 years.",
     keywords: ["emi calculator", "home loan emi calculator", "car loan emi calculator", "personal loan emi calculator", "business loan emi calculator", "education loan emi calculator", "loan emi calculator"],
     intro:
       "Use this EMI calculator to find your monthly EMI on any personal, business, property, vehicle, or education loan. Enter the loan amount, interest rate, and tenure to see the EMI, the total interest you will pay, and a full month by month repayment schedule.",
@@ -47,10 +47,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "loans",
     navLabel: "Loan Eligibility",
     cardSummary: "Find out how much loan you can get from your income, obligations, and tenure.",
-    h1: "Loan Eligibility Calculator",
-    title: "Loan Eligibility Calculator: How Much Loan Can I Get",
+    h1: "Home loan eligibility calculator",
+    title: "Home Loan Eligibility Calculator by Salary",
     metaDescription:
-      "Check how much home loan you are eligible for from your income, existing EMIs, rate, and tenure. Uses the FOIR and income multiplier method Indian banks apply.",
+      "Find the maximum home loan you can get from your monthly income, existing EMIs and tenure, using the FOIR limits Indian lenders apply.",
     keywords: ["loan eligibility calculator", "home loan eligibility calculator", "how much loan can i get", "foir calculator"],
     intro:
       "Use this loan eligibility calculator to see how much loan you can get from your monthly income, existing EMIs, interest rate, and tenure. It applies the same FOIR and income multiplier rules Indian banks use to decide your home loan eligibility.",
@@ -80,10 +80,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "loans",
     navLabel: "Prepayment",
     cardSummary: "See how a part-payment cuts your tenure or your EMI, and how much interest you save.",
-    h1: "Loan Prepayment Calculator",
-    title: "Loan Prepayment Calculator: Interest Saved",
+    h1: "Loan prepayment calculator",
+    title: "Home Loan Prepayment Calculator",
     metaDescription:
-      "See how a lump sum prepayment on your home loan cuts the tenure or the EMI, and exactly how much interest you save. Compare both options side by side.",
+      "See how a part-payment cuts your loan tenure or EMI, and how much interest you save. Compare a one-time prepayment with yearly top-ups.",
     keywords: ["prepayment calculator", "part payment calculator", "home loan prepayment calculator", "loan foreclosure calculator"],
     intro:
       "Use this loan prepayment calculator to see how a lump sum part-payment on your home loan reduces the tenure or the EMI, and how much interest you save. Compare keeping the EMI and finishing sooner against keeping the tenure and paying a lower EMI.",
@@ -113,10 +113,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "loans",
     navLabel: "Loan Comparison",
     cardSummary: "Compare up to three loan offers side by side on EMI, total interest, and cost.",
-    h1: "Loan Comparison Calculator",
-    title: "Loan Comparison Calculator: Compare Loan Offers",
+    h1: "Compare up to three loan offers",
+    title: "Loan Comparison Calculator: Compare 3 Offers",
     metaDescription:
-      "Compare up to three loan offers side by side to find which loan is cheaper. See the EMI, total interest, and all in cost for each, with the best highlighted.",
+      "Enter up to three loan offers with rate, tenure and fees, and compare EMI, total interest and total cost side by side before you choose.",
     keywords: ["loan comparison calculator", "compare loan offers", "which loan is cheaper", "compare home loan emi"],
     intro:
       "Use this loan comparison calculator to compare up to three loan offers side by side and find which loan is genuinely cheaper. See the EMI, total interest, and total cost for each, so you can look past the advertised rate and pick the offer that actually costs less.",
@@ -145,18 +145,18 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "loans",
     navLabel: "Loan Against Property",
     cardSummary: "See how much you can borrow against a property you own, and the EMI on it.",
-    h1: "Loan Against Property Calculator",
-    title: "Loan Against Property (LAP) Calculator",
+    h1: "Loan against property calculator",
+    title: "Loan Against Property Calculator: Amount & EMI",
     metaDescription:
-      "Calculate how much loan you can get against a property you own and the EMI on a loan against property, based on the property value, LTV, rate, and tenure.",
+      "Estimate how much you can borrow against your property's market value and what the EMI will be, using typical lender LTV limits in India.",
     keywords: ["loan against property calculator", "lap calculator", "lap emi calculator", "mortgage loan calculator"],
     intro:
-      "Use this loan against property calculator to see how much you can borrow against a property you own and the EMI on it. A loan against property (LAP) typically funds 50 to 70 percent of the market value at a lower rate than an unsecured loan.",
+      "Use this loan against property calculator to see how much you can borrow against a property you own and the EMI on it. A loan against property (LAP) typically funds 50 to 80 percent of the market value at a lower rate than an unsecured loan.",
     howItWorks:
       "The maximum loan is your loan-to-value (LTV) ratio times the property's market value.\n\n```\nMax loan = LTV x Property value\n```\n\n**Example:** a ₹1 crore property at a 60% LTV supports a loan of up to ₹60 lakh.\n\nThat amount, at your interest rate and tenure, gives the EMI on a reducing balance, exactly as any other loan. Lenders also check your income, so your final sanction is the lower of the LTV limit and your repayment capacity.",
     heroArt: `${ART}/loan-against-property.svg`,
     faq: [
-      { q: "How much loan can I get against my property?", a: "Usually 50 to 70 percent of the market value, depending on the lender, the property type, and your income and repayment capacity. Enter your property value above to see the amount and the EMI." },
+      { q: "How much loan can I get against my property?", a: "Usually 50 to 80 percent of the market value, depending on the lender, the property type, and your income and repayment capacity. Enter your property value above to see the amount and the EMI." },
       { q: "Is a loan against property a secured loan?", a: "Yes. It is secured by mortgaging a property you own, which is why the lender charges a lower rate than an unsecured personal loan. The property stays yours and you continue to use it while you repay." },
       { q: "Is LAP cheaper than a personal loan?", a: "Yes. Because it is secured against your property the interest rate is generally lower than an unsecured personal loan, though still a little above a pure home loan." },
       { q: "Can I get a loan against property with a low CIBIL score?", a: "It is possible because the property is collateral, but a low score usually means a lower sanctioned amount or a higher interest rate. A score above 750 gets you the best terms." },
@@ -178,10 +178,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "real_estate",
     navLabel: "Home Affordability",
     cardSummary: "Find the property price you can afford from your income and down payment.",
-    h1: "Home Affordability Calculator",
-    title: "Home Affordability Calculator: House You Can Afford",
+    h1: "How much home can you afford?",
+    title: "Home Affordability Calculator India",
     metaDescription:
-      "Find out how much house you can afford in India from your income, existing EMIs, and down payment. See the property price, loan, and EMI you can comfortably manage.",
+      "Find the property price you can afford from your income, savings and existing EMIs, including the down payment and a home loan your profile supports.",
     keywords: ["home affordability calculator", "how much house can i afford", "how much home loan can i afford", "property affordability calculator"],
     intro:
       "Use this home affordability calculator to find out how much house you can afford in India. Enter your income, existing EMIs, and the down payment you can make to see the property price you can comfortably manage, along with the loan and monthly EMI behind it.",
@@ -210,10 +210,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "real_estate",
     navLabel: "Stamp Duty",
     cardSummary: "Estimate stamp duty and registration charges for your state on a property purchase.",
-    h1: "Stamp Duty & Registration Calculator",
-    title: "Stamp Duty Calculator: State-wise Charges",
+    h1: "Stamp duty and registration charges calculator",
+    title: "Stamp Duty & Registration Charges Calculator",
     metaDescription:
-      "Estimate stamp duty and registration charges on a property purchase, state by state in India. Includes women buyer concessions where applicable.",
+      "Estimate stamp duty and registration charges by state on the higher of market value or sale price, including women buyer concessions where they apply.",
     keywords: ["stamp duty calculator", "registration charges calculator", "property registration cost", "stamp duty and registration"],
     intro:
       "Use this stamp duty calculator to estimate the stamp duty and registration charges you will pay on a property purchase in your state. Rates vary from state to state, and many states offer a lower rate for women buyers, which the calculator applies where it exists.",
@@ -243,10 +243,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "real_estate",
     navLabel: "GST on Property",
     cardSummary: "Work out the GST on an under-construction property purchase.",
-    h1: "GST on Property Calculator",
-    title: "GST on Property Calculator: Under-Construction",
+    h1: "GST on under-construction property calculator",
+    title: "GST on Flat Purchase Calculator",
     metaDescription:
-      "Calculate GST on an under-construction property in India. 1 percent for affordable homes, 5 percent otherwise, on two-thirds of the value. Ready homes are exempt.",
+      "Calculate GST on an under-construction flat or villa, affordable or regular, and see the total cost before you book. Ready homes carry no GST.",
     keywords: ["gst on property calculator", "gst on flat purchase", "gst on under construction property", "gst on real estate"],
     intro:
       "Use this GST on property calculator to work out the GST payable on an under-construction flat. Enter the property value and type to see the tax. Under-construction homes attract GST, while ready to move properties with a completion certificate are exempt.",
@@ -276,10 +276,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "real_estate",
     navLabel: "Property Appreciation",
     cardSummary: "Project the future value of a property and its annual growth rate.",
-    h1: "Property Appreciation Calculator",
-    title: "Property Appreciation Calculator: Future Value",
+    h1: "Property appreciation calculator",
+    title: "Property Appreciation Calculator",
     metaDescription:
-      "Project the future value of a property from an expected growth rate, or work out the CAGR between two values. See the total gain over your holding period.",
+      "Project your property's future value and annual growth rate from the purchase price, current value and years held. Useful for resale planning.",
     keywords: ["property appreciation calculator", "property future value calculator", "real estate cagr calculator", "property growth calculator"],
     intro:
       "Use this property appreciation calculator to project the future value of a property from an expected annual growth rate, or to work out the CAGR between two values. Enter a value, a growth rate, and a holding period to see the future value and the total gain.",
@@ -308,10 +308,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "real_estate",
     navLabel: "Rental Yield",
     cardSummary: "Calculate the gross and net rental yield on a property investment.",
-    h1: "Rental Yield Calculator",
-    title: "Rental Yield Calculator: Gross & Net Yield",
+    h1: "Rental yield calculator",
+    title: "Rental Yield Calculator India",
     metaDescription:
-      "Calculate the gross and net rental yield on a property in India from the rent, value, and expenses. See whether a property is a strong rental investment.",
+      "Work out the gross and net rental yield on a flat or commercial space after maintenance, property tax and vacancy, to compare it with other options.",
     keywords: ["rental yield calculator", "gross rental yield", "net rental yield", "rental yield in india"],
     intro:
       "Use this rental yield calculator to work out the gross and net rental yield on a property. Enter the property value, the monthly rent, and annual expenses to see your yield, the annual rental return as a percentage of the property's value.",
@@ -341,10 +341,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "real_estate",
     navLabel: "Down Payment Planner",
     cardSummary: "Plan the monthly saving needed to reach your property down payment.",
-    h1: "Down Payment Planner",
-    title: "Down Payment Calculator: Save for Your Home",
+    h1: "Down payment planner",
+    title: "Down Payment Calculator for a Home",
     metaDescription:
-      "Plan how much to save each month to reach your home down payment by your target date in India, allowing for returns on your savings.",
+      "Find how much to save each month to reach your home down payment by a target date, including stamp duty and registration on top of the price.",
     keywords: ["down payment calculator", "down payment planner", "save for home down payment", "home down payment"],
     intro:
       "Use this down payment planner to work out how much to save each month to reach your home down payment by your target date. Enter the property value, the down payment share, your timeline, and an expected return on savings to see your monthly target.",
@@ -373,10 +373,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "loans",
     navLabel: "Balance Transfer",
     cardSummary: "See what switching your loan to a lower rate saves after every fee.",
-    h1: "Balance Transfer Calculator",
-    title: "Balance Transfer Calculator: Home Loan Refinance Savings",
+    h1: "Loan balance transfer calculator",
+    title: "Home Loan Balance Transfer Calculator",
     metaDescription:
-      "Check what transferring your home loan to a lower rate really saves. Enter your outstanding, remaining tenure, and both rates to see the net saving after fees and the break even month.",
+      "See how much you save by moving your loan to a lower rate after processing fees and charges, and whether switching lenders is worth it.",
     keywords: ["balance transfer calculator", "home loan balance transfer calculator", "loan transfer calculator", "refinance calculator india", "home loan refinance savings"],
     intro:
       "Use this balance transfer calculator to see whether moving your loan to a lower rate is worth it. Enter the outstanding amount, the months left, your current rate, and the new offer to get the net saving after fees, the break even month, and both ways to take the benefit.",
@@ -406,10 +406,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "loans",
     navLabel: "Flat vs Reducing Rate",
     cardSummary: "Convert a flat rate quote to the reducing balance rate it really costs.",
-    h1: "Flat vs Reducing Rate Calculator",
+    h1: "Flat vs reducing rate calculator",
     title: "Flat vs Reducing Interest Rate Calculator",
     metaDescription:
-      "Convert a flat interest rate to its real reducing balance rate. A 10% flat car loan quote costs about 17.3% reducing. See the EMI, total interest, and the difference in seconds.",
+      "Convert a flat interest rate quote into its real reducing-balance rate, so you can compare dealer and NBFC offers with bank loans fairly.",
     keywords: ["flat vs reducing rate calculator", "flat interest rate calculator", "flat rate to reducing rate", "car loan flat rate", "reducing balance rate calculator"],
     intro:
       "Use this calculator to decode a flat rate quote. Car dealers and some lenders quote flat rates because they look small, but interest is charged on the full amount for the whole tenure. Enter the quote to see the honest reducing balance rate it equals and what the difference costs you.",
@@ -434,15 +434,46 @@ export const CALCULATORS: CalculatorDef[] = [
     },
   },
   {
+    slug: "compound-interest",
+    group: "loans",
+    businessLine: "loans",
+    navLabel: "Compound Interest",
+    cardSummary: "See how a lump sum and monthly additions grow with compound interest over time.",
+    h1: "Compound interest calculator",
+    title: "Compound Interest Calculator India",
+    metaDescription:
+      "Enter the principal, rate, period and compounding frequency, plus an optional monthly amount, to see the maturity value and growth year by year.",
+    keywords: ["compound interest calculator", "compound interest calculator india", "fd compound interest calculator", "quarterly compounding calculator", "monthly compound interest calculator"],
+    intro:
+      "Use this compound interest calculator to see how your money grows when interest is earned on interest. Enter the amount, the yearly rate, the time period and how often interest is added, plus an optional monthly addition, to see the maturity value, the interest earned and a year by year table.",
+    howItWorks:
+      "Compound interest adds each period's interest to the balance, so the next period earns interest on a bigger amount.\n\n```\nA = P x (1 + r / n)^(n x t)\n```\n\n- **P** is the principal you invest\n- **r** is the yearly interest rate as a decimal\n- **n** is how many times a year interest is added\n- **t** is the time in years\n\nMonthly additions are added at the end of each month and grow at the same effective rate.\n\n**Example:** ₹1 lakh at 8% compounded quarterly for 10 years grows to about ₹2.21 lakh.",
+    faq: [
+      { q: "What is compound interest?", a: "Compound interest is interest earned on both your original amount and the interest already added to it. Over long periods it grows much faster than simple interest, which is earned only on the original amount." },
+      { q: "How is compound interest calculated?", a: "A = P x (1 + r/n)^(n x t), where P is the principal, r the yearly rate as a decimal, n the number of times interest is added each year, and t the number of years. The interest earned is A minus P." },
+      { q: "Does compounding frequency matter?", a: "Yes, a little. At the same yearly rate, monthly compounding earns slightly more than quarterly, which earns more than yearly, because interest starts earning interest sooner." },
+      { q: "How often do Indian bank FDs compound?", a: "Most bank fixed deposits in India compound quarterly. Check your bank's terms, since some deposits pay out interest instead of adding it back, which removes the compounding effect." },
+      { q: "Is the result before or after tax?", a: "Before tax. Interest on fixed deposits and most savings products is taxable at your slab rate, so the amount you actually keep is lower." },
+    ],
+    relatedSlugs: ["emi", "prepayment", "down-payment-planner", "property-appreciation"],
+    leadOrigin: "calculator-compound-interest",
+    leadCta: {
+      heading: "Planning a bigger financial goal?",
+      text: "Leave your number and our team will call you back to talk through loans and options that fit your plan.",
+      triggerLabel: "Talk to our team",
+      submitLabel: "Request callback",
+    },
+  },
+  {
     slug: "rent-vs-buy",
     group: "real_estate",
     businessLine: "real_estate",
     navLabel: "Rent vs Buy",
     cardSummary: "Compare renting and buying by what you would actually be worth at the end.",
-    h1: "Rent vs Buy Calculator",
-    title: "Rent vs Buy Calculator: Should You Buy a House in India?",
+    h1: "Rent or buy a home?",
+    title: "Rent vs Buy Calculator India",
     metaDescription:
-      "Rent or buy? Compare both paths by terminal wealth: the buyer's home equity versus the renter's invested savings. See the break even year and a year by year table for your city and budget.",
+      "Compare renting with buying a home over your chosen years, including EMI, rent increases, appreciation and investment returns on the savings.",
     keywords: ["rent vs buy calculator", "rent vs buy calculator india", "should i rent or buy", "buying vs renting a house", "rent or buy home calculator"],
     intro:
       "Use this rent vs buy calculator to settle the question with numbers instead of opinions. It compares what you would be worth at the end of your stay on each path: the buyer ends with home equity, the renter ends with everything they saved and invested by not buying. Whoever holds more wins.",
@@ -472,10 +503,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "loans",
     navLabel: "Card Payoff",
     cardSummary: "See when your card balance hits zero, and what the minimum due trap costs.",
-    h1: "Credit Card Payoff Calculator",
-    title: "Credit Card Payoff Calculator: Interest, GST & Minimum Due",
+    h1: "Credit card payoff calculator",
+    title: "Credit Card Payoff Calculator",
     metaDescription:
-      "Find out when your credit card balance reaches zero at your monthly payment, including the 18% GST on card interest. Compare it with paying only the minimum due and see years of difference.",
+      "See how long it takes to clear your credit card balance and how much paying only the minimum due really costs you in interest.",
     keywords: ["credit card payoff calculator", "credit card interest calculator", "minimum due calculator", "credit card emi calculator", "credit card debt calculator india"],
     intro:
       "Use this credit card payoff calculator to see exactly when your balance reaches zero at the amount you pay every month, and what it costs in interest and GST along the way. It also runs the minimum due path beside it, because that difference is measured in years, not months.",
@@ -505,10 +536,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "loans",
     navLabel: "Card EMI",
     cardSummary: "The real cost of converting a purchase to card EMI, fee and GST included.",
-    h1: "Credit Card EMI Calculator",
-    title: "Credit Card EMI Calculator: Conversion Cost with Fee & GST",
+    h1: "Credit card EMI calculator",
+    title: "Credit Card EMI Calculator with GST",
     metaDescription:
-      "Convert a card purchase to EMI and see the real cost: EMI, processing fee, and the 18% GST on both the fee and every month's interest. Get the effective rate, not just the quoted one.",
+      "Find the true cost of converting a purchase to credit card EMI, including interest, processing fee and 18% GST on both, before you accept the offer.",
     keywords: ["credit card emi calculator", "card emi conversion calculator", "credit card emi interest rate", "no cost emi calculator", "convert credit card payment to emi"],
     intro:
       "Use this card EMI calculator to see what converting a purchase or an outstanding balance into EMIs really costs. Banks quote a monthly rate that sounds gentle, but the processing fee and the 18% GST on both the fee and every month's interest push the true cost higher. The effective rate here is the number to compare.",
@@ -538,10 +569,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "loans",
     navLabel: "Term Insurance Cover",
     cardSummary: "Work out how much term life cover your family actually needs.",
-    h1: "Term Insurance Cover Calculator",
-    title: "Term Insurance Calculator: How Much Life Cover Do You Need?",
+    h1: "Term insurance cover calculator",
+    title: "Term Insurance Calculator: How Much Cover?",
     metaDescription:
-      "Calculate how much term life insurance you need from your age, income, expenses, and loans, by the two methods insurers use. Get a recommended cover rounded to the next 25 lakh slab.",
+      "Work out how much term life cover your family needs from your income, loans, goals and existing savings, so you don't buy too little or too much.",
     keywords: ["term insurance calculator", "life insurance cover calculator", "how much term insurance do i need", "human life value calculator", "term plan calculator india"],
     intro:
       "Use this term insurance calculator to work out the cover your family would need if your income stopped. It runs the two methods insurers themselves use, income replacement and expense replacement, applies your loans, existing cover, and savings, and recommends the larger answer rounded up to the next 25 lakh slab.",
@@ -571,10 +602,10 @@ export const CALCULATORS: CalculatorDef[] = [
     businessLine: "loans",
     navLabel: "Health Insurance Cover",
     cardSummary: "Size the family floater that matches your city and family.",
-    h1: "Health Insurance Cover Calculator",
-    title: "Health Insurance Calculator: What Family Floater Size Do You Need?",
+    h1: "Health insurance cover calculator",
+    title: "Health Insurance Calculator: Cover Size",
     metaDescription:
-      "Find the right health insurance cover for your family: city tier, adults covered, and senior members turned into a suggested floater size and band. Built for Indian hospital costs.",
+      "Find the right family floater sum insured for your city, family size and ages, with a buffer for rising hospital costs.",
     keywords: ["health insurance calculator", "health insurance cover calculator", "family floater calculator", "how much health insurance do i need", "medical insurance calculator india"],
     intro:
       "Use this health insurance calculator to size the family floater you actually need. Hospital bills depend on where you live and who is covered, so the calculator starts from your city tier, adds for extra adults, loads for senior members, and suggests a cover band built for Indian hospitalisation costs.",

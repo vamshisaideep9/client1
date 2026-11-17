@@ -10,6 +10,9 @@ import {
   type StaffFeature,
   type UserRole,
 } from "@/lib/auth";
+import { rememberBookmarkedIds } from "@/lib/bookmark-cache";
+import { rememberOwnReferralCode } from "@/lib/referral-share";
+import { getMyReferral } from "@/lib/referrals-api";
 
 // The access token lives in memory only (never localStorage) so an XSS payload
 // can't read it. A hard reload loses it, then re-hydrates from the httponly
@@ -44,6 +47,20 @@ function shouldProbeSession(): boolean {
   }
 }
 
+// CS-025: a readable routing hint that this account still owes the "Add your
+// email" step, so middleware can send /dashboard straight to /add-email. Same
+// non-authoritative trust as session_hint: the API refuses every business
+// endpoint for such an account regardless of this cookie.
+const EMAIL_REQUIRED_COOKIE = "email_required";
+
+export function setEmailRequiredHint(on: boolean): void {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = on
+    ? `${EMAIL_REQUIRED_COOKIE}=1; Path=/; Max-Age=${60 * 60 * 24}; SameSite=Lax${secure}`
+    : `${EMAIL_REQUIRED_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+}
+
 function setSessionHintCookie(on: boolean): void {
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
   document.cookie = on
@@ -67,6 +84,7 @@ type Session = {
   role: UserRole;
   phoneVerified: boolean;
   emailVerified: boolean;
+  emailRequired: boolean;
   businessLine: StaffBusinessLine | null;
   staffFeatures: StaffFeature[];
 };
@@ -78,6 +96,8 @@ type AuthContextValue = {
   // this so they don't bounce a user who is actually logged in.
   isLoading: boolean;
   setSession: (tokens: AuthTokens) => void;
+  // CS-025: the email step was just completed (or found owed) in this tab.
+  setEmailRequired: (required: boolean) => void;
   clear: () => void;
 };
 
@@ -107,16 +127,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role: tokens.role,
       phoneVerified: tokens.phoneVerified,
       emailVerified: tokens.emailVerified,
+      emailRequired: tokens.emailRequired,
       businessLine: tokens.businessLine,
       staffFeatures: tokens.staffFeatures,
     });
     setSessionHint(true);
+    setEmailRequiredHint(tokens.emailRequired);
+  }, []);
+
+  const setEmailRequired = React.useCallback((required: boolean) => {
+    setSessionState((current) =>
+      current
+        ? { ...current, emailRequired: required, emailVerified: current.emailVerified || !required }
+        : current,
+    );
+    setEmailRequiredHint(required);
   }, []);
 
   const clear = React.useCallback(() => {
     setSessionState(null);
     setSessionHint(false);
+    setEmailRequiredHint(false);
+    rememberBookmarkedIds(null);
+    rememberOwnReferralCode(null);
   }, []);
+
+  // Cache a signed-in client's own referral code so public share buttons
+  // (which render outside this provider) can add ?ref= to loan and property
+  // links. Runs once per signed-in role, not on every token rotation.
+  const sessionRole = session?.role ?? null;
+  React.useEffect(() => {
+    if (sessionRole !== "client") {
+      if (sessionRole !== null) rememberOwnReferralCode(null);
+      return;
+    }
+    let active = true;
+    void getMyReferral().then((res) => {
+      if (!active) return;
+      rememberOwnReferralCode(res.ok && res.data.eligible ? res.data.code : null);
+    });
+    return () => {
+      active = false;
+    };
+  }, [sessionRole]);
 
   // Register the 401 refresher (once). When any authed call 401s, the client
   // wrapper calls this to rotate the token via the refresh cookie and retries.
@@ -180,9 +233,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: session !== null,
       isLoading,
       setSession,
+      setEmailRequired,
       clear,
     }),
-    [session, isLoading, setSession, clear],
+    [session, isLoading, setSession, setEmailRequired, clear],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

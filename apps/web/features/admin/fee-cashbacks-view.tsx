@@ -226,7 +226,7 @@ export function FeeCashbacksView() {
     line: (cashback) => cashback.business_line,
     date: (cashback) => cashback.created_at,
     statusOptions: STATUS_OPTIONS,
-    statusLabel: "cashback states",
+    statusLabel: "Cashback status",
     initialStatus: statusFilter,
     onStatusChange: setStatusFilter,
     searchLabel: "Search cashbacks",
