@@ -70,6 +70,10 @@ _ALL_PLATFORM_SCOPE_POLICIES = {
     ("notifications", "notifications_rls"),
     ("support_tickets", "support_tickets_rls"),
     ("mobile_change_requests", "mobile_change_requests_select"),
+    # CS-025 (d4f6a8c0e2b4): owner-or-platform-Admin requests; history is
+    # platform-Admin only. Both require role 'admin' with the scope.
+    ("contact_change_requests", "contact_change_requests_select"),
+    ("contact_change_history", "contact_change_history_select"),
     ("enquiries", "enquiries_rls"),
     ("site_visits", "site_visits_rls"),
     ("lead_activities", "lead_activities_rls"),
