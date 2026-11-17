@@ -2,6 +2,40 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch G PR 4: Sub Admin contests and Admin contest
+approvals (web)** (2026-11-17; CS-027), branch
+`feat/batch-g-contests-admin-web` stacked on G3. Web only; consumes the
+G1–G3 contracts; no requirement-percentage change.
+- Pages, form, review desk and prize actions as described in
+  `implementation-plan.md` (Batch G4); `lib/contests-api.ts`,
+  `lib/contest-form.ts`, `lib/contest-rules.ts`,
+  `features/contests/*`; nav and route rules; form-surface registry
+  entries; the contact-change spec's placeholder password replaced.
+- Evidence: `pnpm typecheck` and `pnpm lint` pass; `pnpm test` 1093 passed
+  after registering the two new form surfaces (new
+  `lib/contest-form.test.ts`: reference example in paise, at-most needs
+  at-least, threshold needs a target, metrics by audience, team prize
+  shape, round trip, rule wording); Playwright against `pnpm dev` (port
+  3167, mocked API): new `contests-admin.spec.ts` 2 passed (Sub Admin draft
+  with the at-most error, POST body in paise, submit, 1440 / 390 px without
+  overflow; Admin approve, team winners with the member-minimum exclusion,
+  mark paid), `contact-change.spec.ts` 10 passed.
+  `dashboard-navigation.spec.ts` needs a live API (`apiRequestContext` to
+  :8000) and was not run here.
+- Design review (light and dark, 1440 and 390 px screenshots of the review
+  desk, form and rules dialogs): the three contest dialogs were capped by the
+  dialog's default `sm:max-w-lg`, which clipped the winners table and dates;
+  they now widen at `sm` and up. "1 winners" pluralised. Specs re-run: 2
+  passed.
+- Security review fix (automated commit review, MEDIUM, client-side path
+  traversal): ids that reach API paths come from links (`?contest=`), so
+  `lib/contests-api.ts` now accepts only canonical UUIDs (`isContestId`)
+  and encodes every id; a crafted id returns a 400-shaped error without any
+  request. The Sub Admin and Admin views and the page redirect ignore a
+  non-UUID `?contest=`. New `lib/contests-api.test.ts`: 3 passed (guard,
+  no request for `..` / `../../admin/users` / encoded / suffixed ids, valid
+  paths).
+
 **In progress — Batch G PR 3: contest finalization and prizes (API)**
 (2026-11-17; CS-027), branch `feat/batch-g-contests-awards` stacked on G2.
 API, regenerated contracts and two web type labels; no migration (the

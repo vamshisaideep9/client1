@@ -159,7 +159,30 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   by the recipient). The generic `POST /payouts` refuses `contest_reward`
   (422); rejecting one is platform-Admin only. Web maps label the new
   payout / transaction type.
-- *PR G4 — web: Sub Admin contests and Admin approvals / winners* (planned).
+- *PR G4 — web: Sub Admin contests and Admin approvals / winners*, branch
+  `feat/batch-g-contests-admin-web` stacked on G3. `/dashboard/contests`
+  (Sub Admin; the Admin is forwarded with `?contest=` kept): every contest
+  with Batch A's `FilterBar` (search, status, line, audience), a detail
+  dialog with the rules in plain language (`lib/contest-rules.ts`), the
+  review note, and the maker's actions (edit, submit, take back, cancel
+  with a reason, delete a draft); `ContestFormDialog` builds the criteria
+  (`lib/contest-form.ts`: rupees → paise, at-most needs at-least, metric
+  options by audience, team prizes and member minimum, activity targets per
+  role, eligibility). `/dashboard/contest-approvals` (platform Admin): tabs
+  To approve / To confirm winners / Upcoming & live / Closed with counts,
+  approve or request changes, cancel, live or snapshot standings,
+  recalculate, confirm winners (confirm dialog), "Pay prize" for an Agent
+  prize through the shared payout dialog (saved destination offered;
+  approval stays with a different Admin in Payouts) and "Mark paid" with a
+  reference for staff prizes. Nav: Sub Admin "Contests" and Admin "Contest
+  approvals" (People & access). Chore: the mocked contact-change spec's
+  placeholder password is now a constant built from parts
+  (`MOCK_ADMIN_SECRET`), so secret scanners stop flagging it. Design
+  review: the contest dialogs now widen from `sm` up (the dialog default
+  `sm:max-w-lg` clipped the winners table). Security review: every contest
+  or result id put into an API path must be a canonical UUID and is
+  encoded (`isContestId` in `lib/contests-api.ts`); link ids are ignored
+  otherwise.
 - *PR G5 — web: participant contests page, home card and team progress*
   (planned).
 

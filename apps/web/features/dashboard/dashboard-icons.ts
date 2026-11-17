@@ -29,6 +29,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Telescope,
+  Trophy,
   UserPlus,
   UserRound,
 } from "lucide-react";
@@ -76,4 +77,5 @@ export const DASHBOARD_ICONS = {
   analytics: BarChart3,
   auditLog: ScrollText,
   operationalRecords: Database,
+  contests: Trophy,
 } as const;

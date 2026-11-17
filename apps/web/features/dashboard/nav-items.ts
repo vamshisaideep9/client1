@@ -297,6 +297,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
     capability: "teamManager",
     section: "people",
   },
+  // CS-027: Sub Admins author contests; a platform Admin approves them.
+  {
+    key: "sub-admin-contests",
+    label: "Contests",
+    href: "/dashboard/contests",
+    icon: DASHBOARD_ICONS.contests,
+    capability: "subAdmin",
+    section: "people",
+  },
   {
     key: "sub-admin-finance",
     label: "Finance overview",
@@ -454,6 +463,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
     capability: "admin",
     section: "people",
   },
+  // CS-027: approve Sub Admin contests, confirm winners, pay prizes.
+  {
+    key: "admin-contests",
+    label: "Contest approvals",
+    href: "/dashboard/contest-approvals",
+    icon: DASHBOARD_ICONS.contests,
+    capability: "admin",
+    section: "people",
+  },
   {
     key: "admin-agents",
     label: "Agent applications",
@@ -557,6 +575,10 @@ export const DASHBOARD_ROUTE_RULES: readonly DashboardRouteRule[] = [
   { path: "/dashboard/broadcast", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/calculators", capabilities: ["calculators"] },
   { path: "/dashboard/commissions", exact: true, capabilities: ["admin"] },
+  // CS-027: one page, a view per role (Sub Admin authoring; the Admin is sent
+  // on to Contest approvals).
+  { path: "/dashboard/contests", exact: true, capabilities: ["subAdmin", "admin"] },
+  { path: "/dashboard/contest-approvals", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/compare", exact: true, capabilities: ["clientRealEstate"] },
   { path: "/dashboard/documents", exact: true, capabilities: ["clientLoans"] },
   {
