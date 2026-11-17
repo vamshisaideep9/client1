@@ -10001,6 +10001,53 @@
         "title": "ContestMetric",
         "type": "string"
       },
+      "ContestPrizeMarkPaid": {
+        "description": "How a staff prize was paid (for example \"November payroll\"). No\npersonal or bank details.",
+        "properties": {
+          "reference": {
+            "maxLength": 80,
+            "minLength": 3,
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference"
+        ],
+        "title": "ContestPrizeMarkPaid",
+        "type": "object"
+      },
+      "ContestPrizePayoutRequest": {
+        "description": "Only the destination is caller-supplied; amount, recipient, line and the\nidempotency key come from the contest result (services/contest_awards.py).",
+        "properties": {
+          "destination": {
+            "$ref": "#/components/schemas/PayoutDestinationInput"
+          },
+          "destination_type": {
+            "$ref": "#/components/schemas/PayoutDestination"
+          }
+        },
+        "required": [
+          "destination_type",
+          "destination"
+        ],
+        "title": "ContestPrizePayoutRequest",
+        "type": "object"
+      },
+      "ContestPrizePayoutResponse": {
+        "properties": {
+          "payout_id": {
+            "format": "uuid",
+            "title": "Payout Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payout_id"
+        ],
+        "title": "ContestPrizePayoutResponse",
+        "type": "object"
+      },
       "ContestProgress": {
         "description": "Achieved numbers for the populated targets (absent ones are null).",
         "properties": {
@@ -10430,6 +10477,50 @@
           "note"
         ],
         "title": "ContestReject",
+        "type": "object"
+      },
+      "ContestResultPayment": {
+        "properties": {
+          "paid_marked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Marked At"
+          },
+          "paid_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Reference"
+          },
+          "payment_status": {
+            "title": "Payment Status",
+            "type": "string"
+          },
+          "result_id": {
+            "format": "uuid",
+            "title": "Result Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_id",
+          "payment_status",
+          "paid_marked_at",
+          "paid_reference"
+        ],
+        "title": "ContestResultPayment",
         "type": "object"
       },
       "ContestStandingsResponse": {
@@ -17256,7 +17347,8 @@
         "enum": [
           "cashback",
           "referral_bonus",
-          "commission"
+          "commission",
+          "contest_reward"
         ],
         "title": "PayoutType",
         "type": "string"
@@ -22152,6 +22244,18 @@
             "title": "Achieved Count",
             "type": "integer"
           },
+          "agent_profile_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Profile Uuid"
+          },
           "excluded_reason": {
             "anyOf": [
               {
@@ -26126,7 +26230,8 @@
         "enum": [
           "cashback",
           "referral_bonus",
-          "commission"
+          "commission",
+          "contest_reward"
         ],
         "title": "TransactionType",
         "type": "string"
@@ -39886,7 +39991,7 @@
     },
     "/api/v1/contests/{contest_id}/cancel": {
       "post": {
-        "description": "The maker cancels a contest that has not been approved.",
+        "description": "The maker (Sub Admin) cancels a contest that has not been approved; a\nplatform Admin who is not the maker cancels an approved, live or ended\none. A finalized contest cannot be cancelled.",
         "operationId": "cancel_contest_api_v1_contests__contest_id__cancel_post",
         "parameters": [
           {
@@ -39938,6 +40043,104 @@
           }
         ],
         "summary": "Cancel Contest",
+        "tags": [
+          "contests"
+        ]
+      }
+    },
+    "/api/v1/contests/{contest_id}/finalize": {
+      "post": {
+        "description": "Confirm the winners of an ended contest; prizes become owed.",
+        "operationId": "finalize_contest_api_v1_contests__contest_id__finalize_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Finalize Contest",
+        "tags": [
+          "contests"
+        ]
+      }
+    },
+    "/api/v1/contests/{contest_id}/recalculate": {
+      "post": {
+        "description": "Re-snapshot an ended contest's standings from live data.",
+        "operationId": "recalculate_contest_api_v1_contests__contest_id__recalculate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Recalculate Contest",
         "tags": [
           "contests"
         ]
@@ -39996,6 +40199,144 @@
           }
         ],
         "summary": "Reject Contest",
+        "tags": [
+          "contests"
+        ]
+      }
+    },
+    "/api/v1/contests/{contest_id}/results/{result_id}/mark-paid": {
+      "post": {
+        "description": "Record a staff prize as paid outside Payouts (audited).",
+        "operationId": "mark_prize_paid_api_v1_contests__contest_id__results__result_id__mark_paid_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "result_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Result Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContestPrizeMarkPaid"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestResultPayment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Mark Prize Paid",
+        "tags": [
+          "contests"
+        ]
+      }
+    },
+    "/api/v1/contests/{contest_id}/results/{result_id}/payout": {
+      "post": {
+        "description": "Maker step for an Agent prize: one contest_reward payout, always\napproved at POST /payouts/{id}/approve by a different Admin.",
+        "operationId": "request_prize_payout_api_v1_contests__contest_id__results__result_id__payout_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "result_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Result Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContestPrizePayoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestPrizePayoutResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Request Prize Payout",
         "tags": [
           "contests"
         ]

@@ -265,6 +265,10 @@ async def reject_payout(
         # the looser _require_platform_admin check would let a Sub Admin
         # indirectly write to a table they have no direct RLS access to.
         _require_admin(current_user, action="Rejecting a commission payout")
+    elif payout.type == PayoutType.CONTEST_REWARD:
+        # CS-027: same shape; the release hook writes contest_results on the
+        # bypass session, which api_user cannot write at all.
+        _require_admin(current_user, action="Rejecting a contest prize payout")
     try:
         await payments_service.reject_payout(
             payout_id=payout_id,

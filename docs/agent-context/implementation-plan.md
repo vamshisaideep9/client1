@@ -141,7 +141,24 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   dates later (audited) but cannot complete tasks; the due-date residual
   for on-time contests is documented for the Admin's review.
 - *PR G3 — API: finalize, Agent prize payouts, staff mark-paid, Admin
-  cancel* (planned).
+  cancel*, branch `feat/batch-g-contests-awards` stacked on G2.
+  `services/contest_awards.py` (platform Admin, never the contest maker,
+  bypass session under a contest row lock): cancel an approved / live /
+  ended contest with a reason; recalculate an ended contest's snapshot;
+  finalize (ended → finalized; `decide_winners` on the snapshot, prize rows
+  `unpaid`, refuses anything over the budget cap, "You won" notifications in
+  the same transaction); `POST /contests/{id}/results/{result_id}/payout`
+  creates the one `contest_reward` payout for an Agent prize (amount,
+  recipient, line from the result; idempotency key `ctr-<result>`;
+  `payments.create_payout(..., allow_standalone=False)` so even the Main
+  Admin needs a second Admin; budget cap re-checked; CAS attach, orphan
+  payout rejected on a lost race); payout paid / released hooks and the
+  link-reconciliation sweep cover `contest_results`
+  (`services/contest_payouts.py`); `POST …/mark-paid` records a staff prize
+  paid with a PII-free reference (seven or more digits in a row refused; audited, never for an Agent prize, never
+  by the recipient). The generic `POST /payouts` refuses `contest_reward`
+  (422); rejecting one is platform-Admin only. Web maps label the new
+  payout / transaction type.
 - *PR G4 — web: Sub Admin contests and Admin approvals / winners* (planned).
 - *PR G5 — web: participant contests page, home card and team progress*
   (planned).

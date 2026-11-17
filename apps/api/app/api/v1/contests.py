@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import (
     CurrentUser,
+    is_platform_admin,
     require_platform_admin,
     require_sub_admin,
     require_sub_admin_or_platform_admin,
@@ -26,12 +27,17 @@ from app.schemas.contests import (
     ContestCancel,
     ContestDefinition,
     ContestListResponse,
+    ContestPrizeMarkPaid,
+    ContestPrizePayoutResponse,
     ContestRead,
     ContestReject,
+    ContestResultPayment,
     ContestStandingsResponse,
 )
-from app.services import contest_views
+from app.schemas.payments import ContestPrizePayoutRequest
+from app.services import contest_awards, contest_views
 from app.services import contests as contest_service
+from app.services import payments as payments_service
 
 router = APIRouter()
 
@@ -44,9 +50,30 @@ _ERROR_STATUS = {
 }
 
 
+_PAYOUT_ERROR_STATUS = {
+    payments_service.RecipientNotFound: status.HTTP_404_NOT_FOUND,
+    payments_service.RecipientInactive: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    payments_service.RecipientLineMismatch: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    payments_service.PayoutAmountExceeded: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    payments_service.PayoutDailyCapExceeded: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    payments_service.PayoutCapNotConfigured: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    payments_service.DuplicatePayout: status.HTTP_409_CONFLICT,
+    payments_service.SelfPayoutForbidden: status.HTTP_403_FORBIDDEN,
+    payments_service.GatewayError: status.HTTP_502_BAD_GATEWAY,
+}
+
+
 def map_contest_error(exc: contest_service.ContestError) -> HTTPException:
-    code = _ERROR_STATUS.get(type(exc), status.HTTP_400_BAD_REQUEST)
+    code = next(
+        (_ERROR_STATUS[kind] for kind in type(exc).__mro__ if kind in _ERROR_STATUS),
+        status.HTTP_400_BAD_REQUEST,
+    )
     return HTTPException(status_code=code, detail=str(exc) or "Contest request failed.")
+
+
+def _map_payout_error(exc: payments_service.PayoutError) -> HTTPException:
+    code = _PAYOUT_ERROR_STATUS.get(type(exc), status.HTTP_400_BAD_REQUEST)
+    return HTTPException(status_code=code, detail=str(exc))
 
 
 async def _read(contest, viewer: CurrentUser) -> ContestRead:
@@ -185,21 +212,116 @@ async def withdraw_contest(
 async def cancel_contest(
     contest_id: UUID,
     payload: ContestCancel,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(require_sub_admin_or_platform_admin),
     db: AsyncSession = Depends(get_db),
 ) -> ContestRead:
-    """The maker cancels a contest that has not been approved."""
+    """The maker (Sub Admin) cancels a contest that has not been approved; a
+    platform Admin who is not the maker cancels an approved, live or ended
+    one. A finalized contest cannot be cancelled."""
     try:
-        contest = await contest_service.cancel_by_maker(
-            db,
+        if is_platform_admin(current_user):
+            contest = await contest_awards.admin_cancel(
+                contest_id,
+                reason=payload.reason,
+                actor_uuid=current_user.id,
+                actor_role=current_user.role,
+            )
+        else:
+            contest = await contest_service.cancel_by_maker(
+                db,
+                contest_id,
+                reason=payload.reason,
+                actor_uuid=current_user.id,
+                actor_role=current_user.role,
+            )
+    except contest_service.ContestError as exc:
+        raise map_contest_error(exc) from exc
+    return await _read(contest, current_user)
+
+
+@router.post("/{contest_id}/recalculate", response_model=ContestRead)
+async def recalculate_contest(
+    contest_id: UUID,
+    current_user: CurrentUser = Depends(require_platform_admin),
+) -> ContestRead:
+    """Re-snapshot an ended contest's standings from live data."""
+    try:
+        contest = await contest_awards.recalculate(
+            contest_id, actor_uuid=current_user.id, actor_role=current_user.role
+        )
+    except contest_service.ContestError as exc:
+        raise map_contest_error(exc) from exc
+    return await _read(contest, current_user)
+
+
+@router.post("/{contest_id}/finalize", response_model=ContestRead)
+async def finalize_contest(
+    contest_id: UUID,
+    current_user: CurrentUser = Depends(require_platform_admin),
+) -> ContestRead:
+    """Confirm the winners of an ended contest; prizes become owed."""
+    try:
+        contest = await contest_awards.finalize(
+            contest_id, actor_uuid=current_user.id, actor_role=current_user.role
+        )
+    except contest_service.ContestError as exc:
+        raise map_contest_error(exc) from exc
+    return await _read(contest, current_user)
+
+
+@router.post(
+    "/{contest_id}/results/{result_id}/payout",
+    response_model=ContestPrizePayoutResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def request_prize_payout(
+    contest_id: UUID,
+    result_id: UUID,
+    req: ContestPrizePayoutRequest,
+    current_user: CurrentUser = Depends(require_platform_admin),
+) -> ContestPrizePayoutResponse:
+    """Maker step for an Agent prize: one contest_reward payout, always
+    approved at POST /payouts/{id}/approve by a different Admin."""
+    try:
+        payout_id = await contest_awards.request_agent_prize_payout(
             contest_id,
-            reason=payload.reason,
+            result_id,
+            destination_type=req.destination_type,
+            destination=req.destination.model_dump(),
             actor_uuid=current_user.id,
             actor_role=current_user.role,
         )
     except contest_service.ContestError as exc:
         raise map_contest_error(exc) from exc
-    return await _read(contest, current_user)
+    except payments_service.PayoutError as exc:
+        raise _map_payout_error(exc) from None
+    return ContestPrizePayoutResponse(payout_id=payout_id)
+
+
+@router.post("/{contest_id}/results/{result_id}/mark-paid", response_model=ContestResultPayment)
+async def mark_prize_paid(
+    contest_id: UUID,
+    result_id: UUID,
+    payload: ContestPrizeMarkPaid,
+    current_user: CurrentUser = Depends(require_platform_admin),
+) -> ContestResultPayment:
+    """Record a staff prize as paid outside Payouts (audited)."""
+    try:
+        row = await contest_awards.mark_staff_prize_paid(
+            contest_id,
+            result_id,
+            reference=payload.reference,
+            actor_uuid=current_user.id,
+            actor_role=current_user.role,
+        )
+    except contest_service.ContestError as exc:
+        raise map_contest_error(exc) from exc
+    return ContestResultPayment(
+        result_id=row.id,
+        payment_status=row.payment_status,
+        paid_marked_at=row.paid_marked_at,
+        paid_reference=row.paid_reference,
+    )
 
 
 @router.post("/{contest_id}/approve", response_model=ContestRead)

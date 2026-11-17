@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDownLeft, Coins, Gift, Undo2, Wallet } from "lucide-react";
+import { ArrowDownLeft, Coins, Gift, Trophy, Undo2, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { useAuth } from "@/components/auth/session-provider";
@@ -24,6 +24,7 @@ const TYPE_ICON: Record<TransactionType, LucideIcon> = {
   cashback: ArrowDownLeft,
   referral_bonus: Gift,
   commission: Coins,
+  contest_reward: Trophy,
 };
 
 const STATUS_STYLE: Record<TransactionStatus, string> = {

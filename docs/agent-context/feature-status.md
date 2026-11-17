@@ -2,6 +2,28 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch G PR 3: contest finalization and prizes (API)**
+(2026-11-17; CS-027), branch `feat/batch-g-contests-awards` stacked on G2.
+API, regenerated contracts and two web type labels; no migration (the
+`contest_reward` labels came with G1); no requirement-percentage change.
+- Admin cancel / recalculate / finalize, Agent prize payouts through the
+  Payouts maker-checker (`contest_reward`, never approval-free, one per
+  result, budget cap), payout hooks and reconciliation, staff mark-paid, and
+  the generic payout create refusing contest prizes — see
+  `implementation-plan.md` (Batch G3).
+- Evidence (same container and scratch database): `ruff` passes; new
+  `test_contest_awards_api.py` (top N with a tie at the cut-off, maker and
+  Sub Admin refused, recalculate then finalize, winner notifications,
+  finalized is terminal; Agent payout created pending approval with the
+  result's amount / recipient / key, second request 409, maker cannot
+  approve, second Admin approves and the mock settle marks the result paid
+  with a `contest_reward` ledger row; rejected payout frees the prize,
+  reconciliation idempotent, generic create of `contest_reward` 422; team
+  manager / member prizes with the member minimum, staff prize refused for
+  Payouts, mark-paid refused for the recipient, audited, second mark 409;
+  budget cap drops a crossing tie group; Admin cancels a live contest the
+  maker cannot; batch security review: the retention purge of a de-linked paid contest prize payout and its ledger row succeeds and the result keeps its prize; a reference with an account number is 422): 7 passed after the review. Web `pnpm typecheck` passes.
+
 **In progress — Batch G PR 2: contest scoring, lifecycle job and standings
 (API)** (2026-11-17; CS-027), branch `feat/batch-g-contests-scoring`
 stacked on G1. API, migration `b9e1a3c5d7f0` (security fix) and

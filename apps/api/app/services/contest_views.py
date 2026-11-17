@@ -513,6 +513,7 @@ def _standing_row(row: Row) -> StandingRow:
         result_id=row.result_id,
         kind=row.kind,
         participant_type=participant_type,
+        agent_profile_uuid=row.agent_profile_uuid,
         name=row.full_name,
         team_name=row.team_name,
         rank=row.rank,
