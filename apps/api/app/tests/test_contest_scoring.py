@@ -25,6 +25,7 @@ from app.models.task import Task, TaskStatus, TaskType
 from app.services.contest_scoring import Participant, compute_standings
 from app.services.contests import parse_criteria, today_ist
 from app.tests.contest_support import (
+    as_role,
     seed_agent,
     seed_contest,
     seed_deal,
@@ -312,43 +313,84 @@ async def test_telecaller_business_follows_current_assignee_and_activity(client)
     assert not two.qualified
 
 
-async def test_employee_tasks_and_site_visits(client) -> None:
+async def _task(
+    employee,
+    raiser,
+    lead: Lead,
+    *,
+    task_type: TaskType = TaskType.DOCUMENT_COLLECTION,
+    status: TaskStatus = TaskStatus.COMPLETED,
+    created_at: datetime,
+    completed_at: datetime | None = None,
+    due_at: datetime | None = None,
+    updated_at: datetime | None = None,
+) -> Task:
+    async with db_session.AsyncSessionLocal() as db:
+        task = Task(
+            assigned_employee_profile_uuid=employee.id,
+            raised_by_staff_profile_uuid=raiser.id,
+            business_line=lead.business_line,
+            task_type=task_type,
+            lead_uuid=lead.id,
+            status=status,
+            due_at=due_at,
+            created_at=created_at,
+            completed_at=completed_at,
+            updated_at=updated_at or completed_at or created_at,
+        )
+        db.add(task)
+        await db.commit()
+        return task
+
+
+async def test_employee_activity_uses_completion_time(client) -> None:
     maker = await seed_user("Maker", "Sub")
     _, employee = await seed_staff(StaffRole.EMPLOYEE, business_line="real_estate")
-    raiser_user, raiser = await seed_staff(StaffRole.TELECALLER, business_line="real_estate")
+    _, raiser = await seed_staff(StaffRole.TELECALLER, business_line="real_estate")
     lead = await seed_lead("real_estate", telecaller=raiser)
-    async with db_session.AsyncSessionLocal() as db:
-        for task_type, due in (
-            (TaskType.PROPERTY_VISIT, NOW + timedelta(hours=5)),
-            (TaskType.DOCUMENT_COLLECTION, NOW - timedelta(hours=5)),
-            (TaskType.BACKGROUND_CHECK, None),
-        ):
-            db.add(
-                Task(
-                    assigned_employee_profile_uuid=employee.id,
-                    raised_by_staff_profile_uuid=raiser.id,
-                    business_line="real_estate",
-                    task_type=task_type,
-                    lead_uuid=lead.id,
-                    status=TaskStatus.COMPLETED,
-                    due_at=due,
-                    updated_at=NOW - timedelta(hours=1),
-                )
-            )
-        db.add(
-            Task(
-                assigned_employee_profile_uuid=employee.id,
-                raised_by_staff_profile_uuid=raiser.id,
-                business_line="real_estate",
-                task_type=TaskType.PROPERTY_VISIT,
-                lead_uuid=lead.id,
-                status=TaskStatus.IN_PROGRESS,
-            )
-        )
-        await db.commit()
-    prop = await seed_property(city=f"Task City {uuid.uuid4().hex[:6]}")
-    await seed_deal(lead, prop, status=PropertyDealStatus.BOOKED, price_quoted=60_00_000)
-
+    noon = datetime.combine(today_ist() - timedelta(days=1), time(12), tzinfo=IST)
+    # Completed before its due time, though edited (updated_at) after it.
+    await _task(
+        employee,
+        raiser,
+        lead,
+        task_type=TaskType.PROPERTY_VISIT,
+        created_at=noon - timedelta(hours=4),
+        completed_at=noon,
+        due_at=noon + timedelta(hours=1),
+        updated_at=noon + timedelta(hours=3),
+    )
+    await _task(  # late
+        employee,
+        raiser,
+        lead,
+        created_at=noon - timedelta(hours=4),
+        completed_at=noon,
+        due_at=noon - timedelta(hours=1),
+    )
+    await _task(  # no due time
+        employee,
+        raiser,
+        lead,
+        task_type=TaskType.BACKGROUND_CHECK,
+        created_at=noon - timedelta(hours=4),
+        completed_at=noon,
+    )
+    await _task(  # completed before the contest window
+        employee,
+        raiser,
+        lead,
+        created_at=noon - timedelta(days=30),
+        completed_at=noon - timedelta(days=20),
+    )
+    await _task(  # still open
+        employee,
+        raiser,
+        lead,
+        task_type=TaskType.PROPERTY_VISIT,
+        status=TaskStatus.IN_PROGRESS,
+        created_at=noon,
+    )
     contest = await seed_contest(
         created_by=maker,
         business_line="real_estate",
@@ -356,7 +398,6 @@ async def test_employee_tasks_and_site_visits(client) -> None:
         metric="tasks_completed",
         criteria={
             "version": 1,
-            "real_estate": {"counted_stage": "booked", "cities": [prop.city]},
             "activity": {
                 "tasks_completed_at_least": 3,
                 "tasks_on_time_at_least": 1,
@@ -367,14 +408,96 @@ async def test_employee_tasks_and_site_visits(client) -> None:
     mine = _by(await _standings(contest), employee.id)
     assert (mine.tally.tasks_completed, mine.tally.tasks_on_time) == (3, 1)
     assert mine.tally.site_visits_completed == 1
-    assert mine.tally.count == 1  # the booked deal on a lead they hold a task for
     assert mine.qualified and mine.metric_value == 3
+
+
+async def test_employee_case_credit_needs_work_completed_before_the_stage(client) -> None:
+    """Security review: open work, or work created or completed after the case
+    reached its stage, earns no business credit."""
+    maker = await seed_user("Maker", "Sub")
+    _, before = await seed_staff(StaffRole.EMPLOYEE, business_line="real_estate")
+    _, late = await seed_staff(StaffRole.EMPLOYEE, business_line="real_estate")
+    _, opened = await seed_staff(StaffRole.EMPLOYEE, business_line="real_estate")
+    _, raiser = await seed_staff(StaffRole.TELECALLER, business_line="real_estate")
+    noon = datetime.combine(today_ist() - timedelta(days=1), time(12), tzinfo=IST)
+    lead = await seed_lead("real_estate", telecaller=raiser)
+    prop = await seed_property(city=f"Credit City {uuid.uuid4().hex[:6]}")
+    await seed_deal(lead, prop, status=PropertyDealStatus.BOOKED, price_quoted=60_00_000, at=noon)
+    await _task(
+        before,
+        raiser,
+        lead,
+        created_at=noon - timedelta(hours=5),
+        completed_at=noon - timedelta(hours=1),
+    )
+    await _task(  # created after the deal was booked
+        late,
+        raiser,
+        lead,
+        created_at=noon + timedelta(hours=1),
+        completed_at=noon + timedelta(hours=2),
+    )
+    await _task(  # created before but still open
+        opened,
+        raiser,
+        lead,
+        status=TaskStatus.IN_PROGRESS,
+        created_at=noon - timedelta(hours=5),
+    )
+    contest = await seed_contest(
+        created_by=maker,
+        business_line="real_estate",
+        audience="employee",
+        metric="cases",
+        criteria={
+            "version": 1,
+            "real_estate": {"counted_stage": "booked", "cities": [prop.city], "count_at_least": 1},
+        },
+    )
+    standings = await _standings(contest)
+    assert _by(standings, before.id).tally.count == 1
+    assert _by(standings, late.id).tally.count == 0
+    assert _by(standings, opened.id).tally.count == 0
+
+
+async def test_completion_time_is_stamped_by_the_database(client) -> None:
+    _, employee = await seed_staff(StaffRole.EMPLOYEE, business_line="loans")
+    employee_user_id = employee.auth_user_uuid
+    _, raiser = await seed_staff(StaffRole.TELECALLER, business_line="loans")
+    lead = await seed_lead("loans", telecaller=raiser)
+    task = await _task(
+        employee, raiser, lead, status=TaskStatus.IN_PROGRESS, created_at=NOW - timedelta(days=1)
+    )
+    context = {
+        "user_uuid": employee_user_id,
+        "role": "employee",
+        "business_line": "loans",
+        "staff_profile_uuid": employee.id,
+    }
+    # A request session cannot backdate a completion.
+    await as_role(
+        "UPDATE tasks SET status = 'completed', completed_at = '2020-01-01T00:00:00Z' "
+        "WHERE id = :id",
+        params={"id": task.id},
+        **context,
+    )
+    async with db_session.AsyncSessionLocal() as db:
+        stamped = (await db.get(Task, task.id)).completed_at
+    assert stamped is not None and stamped > NOW - timedelta(minutes=5)
+    # Once completed, the time never moves.
+    await as_role(
+        "UPDATE tasks SET completed_at = now() + interval '3 days', notes = 'x' WHERE id = :id",
+        params={"id": task.id},
+        **context,
+    )
+    async with db_session.AsyncSessionLocal() as db:
+        assert (await db.get(Task, task.id)).completed_at == stamped
 
 
 async def test_team_sums_current_members_and_counts_shared_cases_once(client) -> None:
     maker = await seed_user("Maker", "Sub")
     loan_type = await seed_loan_type("Team loan")
-    _, manager = await seed_staff(StaffRole.SUB_ADMIN)
+    manager_user, manager = await seed_staff(StaffRole.SUB_ADMIN)
     _, ravi = await seed_staff(StaffRole.TELECALLER, business_line="loans", first_name="Ravi")
     _, sam = await seed_staff(StaffRole.TELECALLER, business_line="loans", first_name="Sam")
     _, outsider = await seed_staff(StaffRole.TELECALLER, business_line="loans")
@@ -409,3 +532,16 @@ async def test_team_sums_current_members_and_counts_shared_cases_once(client) ->
     assert members[ravi.id].metric_value == 2 and members[sam.id].metric_value == 1
     assert members[manager.id].kind == "team_manager"
     assert outsider.id not in members
+
+    # A Sub Admin cannot win their own contest: their team takes no part.
+    own = await seed_contest(
+        created_by=manager_user,
+        audience="team",
+        team_member_role="telecaller",
+        metric="cases",
+        criteria={"version": 1, "loans": {"counted_stage": "sanctioned", "count_at_least": 1}},
+        prize_paise=None,
+        manager_prize_paise=5_000_00,
+        member_prize_paise=0,
+    )
+    assert team.id not in {p.team_uuid for p in (await _standings(own)).ranked}

@@ -107,7 +107,9 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   business credit (Agents: introduced leads, sharing
   `loan_commission_eligible` / `deal_commission_eligible` now extracted in
   `services/commissions.py`; Telecallers: leads they hold now; Employees:
-  leads with their non-cancelled tasks; teams: members' union), stage time
+  leads where they completed a task at or before the moment the case reached
+  its counted stage; teams: members' union, a team managed by the contest's
+  maker left out), stage time
   inside the IST window, true amount read live, per-case bounds, activity
   (calls, connect rate, follow-ups kept by the end of the due IST day,
   tasks completed / on time, site visits), targets, metric and competition
@@ -124,6 +126,20 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   entries `contest_leaderboard.names` / `.amounts` per role), team standing
   (members see only their own contribution, managers every member); Admin
   `GET /api/v1/contests/{id}/standings` with full names.
+  Security review fix (automated commit review, MEDIUM, prize
+  manipulation): Employee credit had joined any non-cancelled task on the
+  lead, so work created, assigned or still open after the case reached its
+  stage earned credit, and task activity used `updated_at`. Migration
+  `b9e1a3c5d7f0` (revises `a8d0f2b4c6e9`, single head; up/down/up
+  verified) adds `tasks.completed_at`, backfilled from `updated_at` for
+  completed tasks, and the trigger `trg_tasks_completed_at` (entering
+  completed stamps `now()`, a request session cannot backdate it, a
+  completed task keeps its first time, any other status clears it).
+  Credit now needs a task completed (created and completed) at or before
+  the stage time; tasks completed / on time / site visits use
+  `completed_at`. Sub Admin managers can reassign open tasks and move due
+  dates later (audited) but cannot complete tasks; the due-date residual
+  for on-time contests is documented for the Admin's review.
 - *PR G3 — API: finalize, Agent prize payouts, staff mark-paid, Admin
   cancel* (planned).
 - *PR G4 — web: Sub Admin contests and Admin approvals / winners* (planned).

@@ -19,10 +19,20 @@ Business credit, by audience:
 - Telecallers: cases and deals on leads they hold now
   (``leads.assigned_telecaller_profile_uuid``). Only the current assignee is
   stored, so a reassigned lead counts for whoever holds it when scored.
-- Employees: cases and deals on leads where they hold a task that is not
-  cancelled.
+- Employees: a case or deal on a lead where they completed a task at or
+  before the moment the case reached the counted stage (``tasks.completed_at``,
+  stamped by the database). A task created, reassigned or still open at that
+  moment earns nothing, so moving open work near the end cannot steer credit
+  (security review). Activity counts tasks by ``completed_at`` too.
 - Teams: the union of the current members' cases (a case shared by two
-  members counts once) and the sum of their activity.
+  members counts once) and the sum of their activity. A team managed by the
+  contest's maker takes no part (a maker cannot win their own contest).
+
+Sub Admin managers can reassign a member's open task inside their team and
+move its due date later (both audited as team edits); they cannot complete a
+task. A later due date can turn a late completion into an on-time one, so
+the Admin should check ``team_task_updated`` audit entries before finalizing
+an on-time contest.
 
 A case counts when it reached the counted stage inside the window (the stage
 markers on ``loan_applications`` / ``property_deals``). Before disbursal or
@@ -242,13 +252,18 @@ async def _teams(
     db: AsyncSession, contest: Contest, criteria: ContestCriteria, window: ContestWindow
 ) -> tuple[list[Participant], list[Participant], dict[uuid.UUID, list[Participant]]]:
     """Live teams on the line for the member role: the team rows, the manager
-    rows (an active managing Sub Admin) and each team's eligible members."""
+    rows (an active managing Sub Admin) and each team's eligible members.
+    Teams managed by the contest's maker are left out (conflict of interest)."""
+    maker_profiles = select(StaffProfile.id).where(
+        StaffProfile.auth_user_uuid == contest.created_by_uuid
+    )
     teams = list(
         await db.execute(
             select(StaffTeam.id, StaffTeam.name, StaffTeam.manager_staff_profile_uuid).where(
                 StaffTeam.business_line == contest.business_line,
                 StaffTeam.member_role == contest.team_member_role,
                 StaffTeam.archived_at.is_(None),
+                StaffTeam.manager_staff_profile_uuid.not_in(maker_profiles),
             )
         )
     )
@@ -341,7 +356,10 @@ def _credit_column(role: str):
     return None
 
 
-def _with_credit(stmt: Select, role: str, line: str, ids: list[uuid.UUID]) -> Select:
+def _with_credit(stmt: Select, role: str, line: str, ids: list[uuid.UUID], reached_at) -> Select:
+    """Who gets credit for each case. Employees: only for a task on the lead
+    they completed at or before the moment the case reached its stage
+    (``reached_at``), so open, later or reassigned-later work earns nothing."""
     column = _credit_column(role)
     if column is not None:
         return stmt.add_columns(column.label("who")).where(column.in_(ids))
@@ -351,7 +369,10 @@ def _with_credit(stmt: Select, role: str, line: str, ids: list[uuid.UUID]) -> Se
         .join(task, task.lead_uuid == Lead.id)
         .where(
             task.assigned_employee_profile_uuid.in_(ids),
-            task.status != TaskStatus.CANCELLED,
+            task.status == TaskStatus.COMPLETED,
+            task.completed_at.is_not(None),
+            task.created_at <= reached_at,
+            task.completed_at <= reached_at,
             task.business_line == line,
         )
         .distinct()
@@ -398,7 +419,7 @@ async def _loan_cases(
         stmt = stmt.where(LoanApplication.loan_type_id.in_(rules.loan_type_ids))
     if rules.bank_ids:
         stmt = stmt.where(LoanApplication.bank_id.in_(rules.bank_ids))
-    stmt = _with_credit(stmt, role, line, ids)
+    stmt = _with_credit(stmt, role, line, ids, stage)
     credited: dict[uuid.UUID, dict[uuid.UUID, int]] = {}
     for row in await db.execute(stmt):
         paise = _paise(row.amount)
@@ -446,7 +467,7 @@ async def _deal_cases(
         stmt = stmt.where(
             func.lower(func.btrim(Property.city)).in_([city.casefold() for city in rules.cities])
         )
-    stmt = _with_credit(stmt, role, line, ids)
+    stmt = _with_credit(stmt, role, line, ids, stage)
     credited: dict[uuid.UUID, dict[uuid.UUID, int]] = {}
     for row in await db.execute(stmt):
         paise = int(row.value) if row.value is not None else None
@@ -548,14 +569,14 @@ async def _employee_activity(
     window: ContestWindow,
     tallies: dict[uuid.UUID, Tally],
 ) -> None:
-    # Tasks have no completion timestamp; a completed task's last update is
-    # its completion (the staff analytics convention).
+    # completed_at is stamped by the database when a task is completed and
+    # never moves afterwards (updated_at would move with any later edit).
     rows = await db.execute(
         select(
             Task.assigned_employee_profile_uuid.label("who"),
             func.count().label("completed"),
             func.count()
-            .filter(and_(Task.due_at.is_not(None), Task.updated_at <= Task.due_at))
+            .filter(and_(Task.due_at.is_not(None), Task.completed_at <= Task.due_at))
             .label("on_time"),
             func.count().filter(Task.task_type == TaskType.PROPERTY_VISIT).label("visits"),
         )
@@ -563,8 +584,8 @@ async def _employee_activity(
             Task.business_line == line,
             Task.assigned_employee_profile_uuid.in_(ids),
             Task.status == TaskStatus.COMPLETED,
-            Task.updated_at >= window.start,
-            Task.updated_at < window.end,
+            Task.completed_at >= window.start,
+            Task.completed_at < window.end,
         )
         .group_by(Task.assigned_employee_profile_uuid)
     )
