@@ -14,6 +14,7 @@ import {
   PhoneCall,
   ShieldAlert,
   Smartphone,
+  Trophy,
   Undo2,
   Wallet,
   type LucideIcon,
@@ -49,6 +50,10 @@ export const NOTIFICATION_TYPE_ICON: Record<NotificationType, LucideIcon> = {
   campaign_approved: Megaphone,
   campaign_changes_requested: ClipboardList,
   campaign_removed: Eraser,
+  contest_submitted: Trophy,
+  contest_reviewed: Trophy,
+  contest_live: Trophy,
+  contest_won: Trophy,
 };
 
 export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
@@ -79,6 +84,10 @@ export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
   campaign_approved: "Campaign approved",
   campaign_changes_requested: "Campaign changes requested",
   campaign_removed: "Campaign removed",
+  contest_submitted: "Contest awaiting approval",
+  contest_reviewed: "Contest reviewed",
+  contest_live: "Contest is live",
+  contest_won: "Contest won",
 };
 
 export function formatNotificationTime(iso: string): string {

@@ -165,6 +165,21 @@ class AuditAction(enum.StrEnum):
     # label is added by migration a7c9e1b3d5f6 (ALTER TYPE audit_action), which
     # must land and the api/scheduler restart (ADR-0004) BEFORE this code ships.
     CLIENT_EXPORT_DOWNLOADED = "client_export_downloaded"
+    # CS-027 contests (migration a8d0f2b4c6e9), written by services/contests.py
+    # and jobs/contest_lifecycle.py: ids, statuses, counts and paise only.
+    CONTEST_CREATED = "contest_created"
+    CONTEST_UPDATED = "contest_updated"
+    CONTEST_SUBMITTED = "contest_submitted"
+    CONTEST_DELETED = "contest_deleted"
+    CONTEST_APPROVED = "contest_approved"
+    CONTEST_REJECTED = "contest_rejected"
+    CONTEST_CANCELLED = "contest_cancelled"
+    CONTEST_WENT_LIVE = "contest_went_live"
+    CONTEST_ENDED = "contest_ended"
+    CONTEST_RECALCULATED = "contest_recalculated"
+    CONTEST_FINALIZED = "contest_finalized"
+    CONTEST_PRIZE_PAYOUT_REQUESTED = "contest_prize_payout_requested"
+    CONTEST_PRIZE_MARKED_PAID = "contest_prize_marked_paid"
 
 
 _ev = lambda x: [e.value for e in x]  # noqa: E731

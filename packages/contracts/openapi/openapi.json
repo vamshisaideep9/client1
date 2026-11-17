@@ -36,6 +36,105 @@
         "title": "ActiveContactChangeResponse",
         "type": "object"
       },
+      "ActivityCriteria": {
+        "additionalProperties": false,
+        "description": "Staff activity targets inside the contest window.\n\nTelecallers: calls logged, connect rate (with a minimum number of calls),\nfollow-ups kept on time, site visits completed on leads they hold.\nEmployees: tasks completed, tasks completed on time, site visits completed\n(property-visit tasks). Site visits exist on the real-estate line only.",
+        "properties": {
+          "calls_logged_at_least": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calls Logged At Least"
+          },
+          "connect_rate_at_least_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connect Rate At Least Percent"
+          },
+          "connect_rate_min_calls": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connect Rate Min Calls"
+          },
+          "follow_ups_on_time_at_least": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Ups On Time At Least"
+          },
+          "site_visits_completed_at_least": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Visits Completed At Least"
+          },
+          "tasks_completed_at_least": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tasks Completed At Least"
+          },
+          "tasks_on_time_at_least": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tasks On Time At Least"
+          }
+        },
+        "title": "ActivityCriteria",
+        "type": "object"
+      },
       "AdminAccountDeleteRequest": {
         "description": "FR-17.4 \u2014 Admin removal of a suspicious account. Unlike AgentRejectRequest.note\nabove, this reason IS persisted (AuthEvent.detail.reason).",
         "properties": {
@@ -6135,7 +6234,20 @@
           "team_task_updated",
           "team_note_added",
           "team_task_viewed",
-          "client_export_downloaded"
+          "client_export_downloaded",
+          "contest_created",
+          "contest_updated",
+          "contest_submitted",
+          "contest_deleted",
+          "contest_approved",
+          "contest_rejected",
+          "contest_cancelled",
+          "contest_went_live",
+          "contest_ended",
+          "contest_recalculated",
+          "contest_finalized",
+          "contest_prize_payout_requested",
+          "contest_prize_marked_paid"
         ],
         "title": "AuditAction",
         "type": "string"
@@ -9616,6 +9728,645 @@
         "title": "ContentStatus",
         "type": "string"
       },
+      "ContestAudience": {
+        "enum": [
+          "agent",
+          "telecaller",
+          "employee",
+          "team"
+        ],
+        "title": "ContestAudience",
+        "type": "string"
+      },
+      "ContestCancel": {
+        "properties": {
+          "reason": {
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ContestCancel",
+        "type": "object"
+      },
+      "ContestCriteria": {
+        "additionalProperties": false,
+        "description": "Version 1 of the contest criteria grammar.",
+        "properties": {
+          "activity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActivityCriteria"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eligibility": {
+            "$ref": "#/components/schemas/EligibilityCriteria"
+          },
+          "loans": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LoanCriteria"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "real_estate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RealEstateCriteria"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "title": "ContestCriteria",
+        "type": "object"
+      },
+      "ContestDefinition": {
+        "additionalProperties": false,
+        "description": "What a Sub Admin authors. Shared by create and full update.",
+        "properties": {
+          "audience": {
+            "$ref": "#/components/schemas/ContestAudience"
+          },
+          "budget_cap_paise": {
+            "anyOf": [
+              {
+                "maximum": 100000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Cap Paise"
+          },
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "criteria": {
+            "$ref": "#/components/schemas/ContestCriteria"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "ends_on": {
+            "format": "date",
+            "title": "Ends On",
+            "type": "string"
+          },
+          "manager_prize_paise": {
+            "anyOf": [
+              {
+                "maximum": 1000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Prize Paise"
+          },
+          "member_min_contribution": {
+            "anyOf": [
+              {
+                "maximum": 10000000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Min Contribution"
+          },
+          "member_prize_paise": {
+            "anyOf": [
+              {
+                "maximum": 1000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Prize Paise"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/ContestMetric"
+          },
+          "prize_paise": {
+            "anyOf": [
+              {
+                "maximum": 1000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prize Paise"
+          },
+          "starts_on": {
+            "format": "date",
+            "title": "Starts On",
+            "type": "string"
+          },
+          "team_member_role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestTeamMemberRole"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terms": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terms"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Title",
+            "type": "string"
+          },
+          "top_n": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top N"
+          },
+          "win_mode": {
+            "$ref": "#/components/schemas/ContestWinMode"
+          }
+        },
+        "required": [
+          "title",
+          "business_line",
+          "audience",
+          "metric",
+          "criteria",
+          "win_mode",
+          "starts_on",
+          "ends_on"
+        ],
+        "title": "ContestDefinition",
+        "type": "object"
+      },
+      "ContestListResponse": {
+        "properties": {
+          "contests": {
+            "items": {
+              "$ref": "#/components/schemas/ContestRead"
+            },
+            "title": "Contests",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "contests",
+          "total"
+        ],
+        "title": "ContestListResponse",
+        "type": "object"
+      },
+      "ContestMetric": {
+        "description": "What a contest ranks and reports as \"achieved\".",
+        "enum": [
+          "cases",
+          "amount",
+          "calls_logged",
+          "follow_ups_on_time",
+          "tasks_completed",
+          "tasks_on_time",
+          "site_visits_completed"
+        ],
+        "title": "ContestMetric",
+        "type": "string"
+      },
+      "ContestRead": {
+        "properties": {
+          "audience": {
+            "$ref": "#/components/schemas/ContestAudience"
+          },
+          "budget_cap_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Cap Paise"
+          },
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "cancel_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Reason"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "checker_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checker Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Name"
+          },
+          "created_by_uuid": {
+            "format": "uuid",
+            "title": "Created By Uuid",
+            "type": "string"
+          },
+          "criteria": {
+            "$ref": "#/components/schemas/ContestCriteria"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "ends_on": {
+            "format": "date",
+            "title": "Ends On",
+            "type": "string"
+          },
+          "finalized_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalized At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_mine": {
+            "title": "Is Mine",
+            "type": "boolean"
+          },
+          "live_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live At"
+          },
+          "manager_prize_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Prize Paise"
+          },
+          "member_min_contribution": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Min Contribution"
+          },
+          "member_prize_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Prize Paise"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/ContestMetric"
+          },
+          "prize_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prize Paise"
+          },
+          "review_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Note"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "starts_on": {
+            "format": "date",
+            "title": "Starts On",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ContestStatus"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "team_member_role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestTeamMemberRole"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terms": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terms"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "top_n": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top N"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "win_mode": {
+            "$ref": "#/components/schemas/ContestWinMode"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "terms",
+          "business_line",
+          "audience",
+          "team_member_role",
+          "metric",
+          "criteria",
+          "win_mode",
+          "top_n",
+          "prize_paise",
+          "manager_prize_paise",
+          "member_prize_paise",
+          "member_min_contribution",
+          "budget_cap_paise",
+          "starts_on",
+          "ends_on",
+          "status",
+          "created_by_uuid",
+          "created_by_name",
+          "is_mine",
+          "submitted_at",
+          "checker_name",
+          "reviewed_at",
+          "review_note",
+          "live_at",
+          "ended_at",
+          "finalized_at",
+          "cancelled_at",
+          "cancel_reason",
+          "version",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ContestRead",
+        "type": "object"
+      },
+      "ContestReject": {
+        "properties": {
+          "note": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "ContestReject",
+        "type": "object"
+      },
+      "ContestStatus": {
+        "enum": [
+          "draft",
+          "pending_approval",
+          "approved",
+          "live",
+          "ended",
+          "finalized",
+          "rejected",
+          "cancelled"
+        ],
+        "title": "ContestStatus",
+        "type": "string"
+      },
+      "ContestTeamMemberRole": {
+        "enum": [
+          "telecaller",
+          "employee"
+        ],
+        "title": "ContestTeamMemberRole",
+        "type": "string"
+      },
+      "ContestWinMode": {
+        "enum": [
+          "threshold",
+          "top_n"
+        ],
+        "title": "ContestWinMode",
+        "type": "string"
+      },
       "DealPropertySummary": {
         "properties": {
           "id": {
@@ -9810,6 +10561,26 @@
           "verified"
         ],
         "title": "DocumentVerifyRequest",
+        "type": "object"
+      },
+      "EligibilityCriteria": {
+        "additionalProperties": false,
+        "description": "Who may take part, beyond the always-on active-profile and line rule.",
+        "properties": {
+          "kyc_verified": {
+            "default": false,
+            "title": "Kyc Verified",
+            "type": "boolean"
+          },
+          "min_tenure_days": {
+            "default": 0,
+            "maximum": 3650.0,
+            "minimum": 0.0,
+            "title": "Min Tenure Days",
+            "type": "integer"
+          }
+        },
+        "title": "EligibilityCriteria",
         "type": "object"
       },
       "EligibilitySummary": {
@@ -12546,6 +13317,109 @@
         "title": "LoanApplicationRead",
         "type": "object"
       },
+      "LoanCriteria": {
+        "additionalProperties": false,
+        "description": "Which loan cases count, at which stage, and the case targets.\n\nA case's true amount is read live at the counted stage: the requested\namount when submitted, the sanctioned amount once sanctioned or disbursed.",
+        "properties": {
+          "amount_at_least_paise": {
+            "anyOf": [
+              {
+                "maximum": 10000000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount At Least Paise"
+          },
+          "bank_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Bank Ids",
+            "type": "array"
+          },
+          "case_amount_max_paise": {
+            "anyOf": [
+              {
+                "maximum": 10000000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Amount Max Paise"
+          },
+          "case_amount_min_paise": {
+            "anyOf": [
+              {
+                "maximum": 10000000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Amount Min Paise"
+          },
+          "count_at_least": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count At Least"
+          },
+          "count_at_most": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count At Most"
+          },
+          "counted_stage": {
+            "enum": [
+              "submitted",
+              "sanctioned",
+              "disbursed"
+            ],
+            "title": "Counted Stage",
+            "type": "string"
+          },
+          "loan_type_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Loan Type Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "counted_stage"
+        ],
+        "title": "LoanCriteria",
+        "type": "object"
+      },
       "LoanDocumentCreate": {
         "properties": {
           "content_type": {
@@ -14333,7 +15207,11 @@
           "vehicle_arrangement_updated",
           "campaign_approved",
           "campaign_changes_requested",
-          "campaign_removed"
+          "campaign_removed",
+          "contest_submitted",
+          "contest_reviewed",
+          "contest_live",
+          "contest_won"
         ],
         "title": "NotificationType",
         "type": "string"
@@ -18530,6 +19408,148 @@
           "endpoint"
         ],
         "title": "PushUnsubscribeRequest",
+        "type": "object"
+      },
+      "RealEstateCriteria": {
+        "additionalProperties": false,
+        "description": "Which property deals count, at which stage, and the deal targets.\n\nA deal's true value is its quoted price, or the listing price until a\nprice is quoted (quotes start at booking).",
+        "properties": {
+          "cities": {
+            "items": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Cities",
+            "type": "array"
+          },
+          "count_at_least": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count At Least"
+          },
+          "count_at_most": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count At Most"
+          },
+          "counted_stage": {
+            "enum": [
+              "site_visit_done",
+              "booked",
+              "agreement_signed",
+              "closed"
+            ],
+            "title": "Counted Stage",
+            "type": "string"
+          },
+          "deal_value_max_paise": {
+            "anyOf": [
+              {
+                "maximum": 10000000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deal Value Max Paise"
+          },
+          "deal_value_min_paise": {
+            "anyOf": [
+              {
+                "maximum": 10000000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deal Value Min Paise"
+          },
+          "listing_intents": {
+            "items": {
+              "enum": [
+                "sale",
+                "rent"
+              ],
+              "type": "string"
+            },
+            "maxItems": 2,
+            "title": "Listing Intents",
+            "type": "array"
+          },
+          "property_categories": {
+            "items": {
+              "enum": [
+                "houses",
+                "apartments",
+                "villas",
+                "plots",
+                "commercial"
+              ],
+              "type": "string"
+            },
+            "maxItems": 5,
+            "title": "Property Categories",
+            "type": "array"
+          },
+          "property_subtypes": {
+            "items": {
+              "enum": [
+                "individual_house",
+                "standalone_apartment",
+                "gated_community_apartment",
+                "villa",
+                "locked_space",
+                "unlocked_space",
+                "plot",
+                "farmland",
+                "agriland"
+              ],
+              "type": "string"
+            },
+            "maxItems": 9,
+            "title": "Property Subtypes",
+            "type": "array"
+          },
+          "value_at_least_paise": {
+            "anyOf": [
+              {
+                "maximum": 10000000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value At Least Paise"
+          }
+        },
+        "required": [
+          "counted_stage"
+        ],
+        "title": "RealEstateCriteria",
         "type": "object"
       },
       "ReferralBonusConfigCreate": {
@@ -37485,6 +38505,597 @@
         "summary": "Publish",
         "tags": [
           "content-blocks"
+        ]
+      }
+    },
+    "/api/v1/contests": {
+      "get": {
+        "operationId": "list_contests_api_v1_contests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/ContestStatus"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "audience",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ContestAudience"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Audience"
+            }
+          },
+          {
+            "in": "query",
+            "name": "business_line",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "loans",
+                    "real_estate"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Business Line"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mine",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Mine",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Contests",
+        "tags": [
+          "contests"
+        ]
+      },
+      "post": {
+        "operationId": "create_contest_api_v1_contests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContestDefinition"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Contest",
+        "tags": [
+          "contests"
+        ]
+      }
+    },
+    "/api/v1/contests/{contest_id}": {
+      "delete": {
+        "operationId": "delete_contest_api_v1_contests__contest_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Contest",
+        "tags": [
+          "contests"
+        ]
+      },
+      "get": {
+        "operationId": "get_contest_api_v1_contests__contest_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Contest",
+        "tags": [
+          "contests"
+        ]
+      },
+      "put": {
+        "operationId": "update_contest_api_v1_contests__contest_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContestDefinition"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Contest",
+        "tags": [
+          "contests"
+        ]
+      }
+    },
+    "/api/v1/contests/{contest_id}/approve": {
+      "post": {
+        "operationId": "approve_contest_api_v1_contests__contest_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Approve Contest",
+        "tags": [
+          "contests"
+        ]
+      }
+    },
+    "/api/v1/contests/{contest_id}/cancel": {
+      "post": {
+        "description": "The maker cancels a contest that has not been approved.",
+        "operationId": "cancel_contest_api_v1_contests__contest_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContestCancel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Cancel Contest",
+        "tags": [
+          "contests"
+        ]
+      }
+    },
+    "/api/v1/contests/{contest_id}/reject": {
+      "post": {
+        "operationId": "reject_contest_api_v1_contests__contest_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContestReject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Reject Contest",
+        "tags": [
+          "contests"
+        ]
+      }
+    },
+    "/api/v1/contests/{contest_id}/submit": {
+      "post": {
+        "operationId": "submit_contest_api_v1_contests__contest_id__submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Submit Contest",
+        "tags": [
+          "contests"
+        ]
+      }
+    },
+    "/api/v1/contests/{contest_id}/withdraw": {
+      "post": {
+        "operationId": "withdraw_contest_api_v1_contests__contest_id__withdraw_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Withdraw Contest",
+        "tags": [
+          "contests"
         ]
       }
     },

@@ -56,6 +56,12 @@ class NotificationType(enum.StrEnum):
     CAMPAIGN_APPROVED = "campaign_approved"
     CAMPAIGN_CHANGES_REQUESTED = "campaign_changes_requested"
     CAMPAIGN_REMOVED = "campaign_removed"
+    # CS-027 contests: a contest awaits review (Admins), was approved or
+    # rejected (the maker), went live (participants), or was won (winners).
+    CONTEST_SUBMITTED = "contest_submitted"
+    CONTEST_REVIEWED = "contest_reviewed"
+    CONTEST_LIVE = "contest_live"
+    CONTEST_WON = "contest_won"
 
 
 _ev = lambda x: [e.value for e in x]  # noqa: E731

@@ -121,6 +121,24 @@ def _effective_index(status: LoanStatus) -> int:
     return _ORDER_INDEX.get(status, _ORDER_INDEX[LoanStatus.NEW])
 
 
+_DISBURSED_INDEX = _ORDER_INDEX[LoanStatus.DISBURSED]
+
+
+def _stamp_stages(application: LoanApplication) -> None:
+    """CS-027: record when the application first reached submission and
+    approval. A forward jump stamps every stage it passed; CLOSED (which can
+    end a never-disbursed application) and the side branches stamp nothing,
+    matching `disbursed_at`. Set once, never moved."""
+    index = _ORDER_INDEX.get(application.status)
+    if index is None or index > _DISBURSED_INDEX:
+        return
+    now = datetime.now(UTC)
+    if index >= _SUBMITTED_INDEX and application.submitted_at is None:
+        application.submitted_at = now
+    if index >= _SANCTIONED_INDEX and application.sanctioned_at is None:
+        application.sanctioned_at = now
+
+
 def validate_transition(current: LoanStatus, target: LoanStatus) -> None:
     if current in TERMINAL_STATUSES:
         raise TerminalApplication
@@ -176,6 +194,7 @@ async def apply_progress_update(
             application.closed_at = datetime.now(UTC)
         if payload.status == LoanStatus.DISBURSED and application.disbursed_at is None:
             application.disbursed_at = datetime.now(UTC)
+        _stamp_stages(application)
         status_changed = True
     elif payload.status_reason is not None:
         application.status_reason = payload.status_reason

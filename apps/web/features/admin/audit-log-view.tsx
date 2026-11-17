@@ -22,6 +22,7 @@ import {
   ScrollText,
   ShieldCheck,
   SlidersHorizontal,
+  Trophy,
   UserMinus,
   UserPlus,
   Undo2,
@@ -407,6 +408,20 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   team_task_viewed: { label: "Manager viewed a task", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
   // Bulk client-PII download (#364); same warning tone as other sensitive reads.
   client_export_downloaded: { label: "Client list exported", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
+  // CS-027 contests.
+  contest_created: { label: "Contest created", icon: Trophy, tone: "bg-loans-soft text-brand-link" },
+  contest_updated: { label: "Contest updated", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  contest_submitted: { label: "Contest submitted", icon: Trophy, tone: "bg-loans-soft text-brand-link" },
+  contest_deleted: { label: "Contest deleted", icon: Eraser, tone: "bg-muted text-text-secondary" },
+  contest_approved: { label: "Contest approved", icon: BadgeCheck, tone: "bg-success/10 text-success" },
+  contest_rejected: { label: "Contest changes requested", icon: Ban, tone: "bg-error/10 text-error" },
+  contest_cancelled: { label: "Contest cancelled", icon: CircleSlash, tone: "bg-muted text-text-secondary" },
+  contest_went_live: { label: "Contest went live", icon: Megaphone, tone: "bg-success/10 text-success" },
+  contest_ended: { label: "Contest ended", icon: Archive, tone: "bg-muted text-text-secondary" },
+  contest_recalculated: { label: "Contest standings recalculated", icon: RefreshCw, tone: "bg-loans-soft text-brand-link" },
+  contest_finalized: { label: "Contest winners confirmed", icon: Trophy, tone: "bg-success/10 text-success" },
+  contest_prize_payout_requested: { label: "Contest prize payout requested", icon: Wallet, tone: "bg-loans-soft text-brand-link" },
+  contest_prize_marked_paid: { label: "Contest prize marked paid", icon: IndianRupee, tone: "bg-success/10 text-success" },
   vehicle_arrangement_updated: {
     label: "Vehicle arrangement updated",
     icon: CarFront,

@@ -68,8 +68,51 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — Batch F: profile pincode, place names and location-based
-campaigns (CS-026)** (2026-11-17; user-approved stakeholder feedback, batch F
+**In progress — Batch G: contests (CS-027)** (2026-11-17; user-approved
+stakeholder feedback, batch G of A–G, the last batch; new module, both
+lines; no requirement or completion-percentage change). Stacked PRs, each
+opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
+
+- *PR G1 — API: contest model, migration, criteria grammar, authoring and
+  maker-checker review*, branch `feat/batch-g-contests-model` from
+  `upstream/main` `9f2c479f`. Migration `a8d0f2b4c6e9` (revises
+  `f6b8d0a2c4e7`, single head; up/down/up verified) creates `contests`
+  (one immutable operational line; audience, team member role, metric,
+  version-1 `criteria` JSONB, win mode + N, prize shapes by CHECK, budget
+  cap, inclusive IST dates, status; CHECK `checker_uuid <> created_by_uuid`
+  and reviewed statuses need a checker) and `contest_results` (individual /
+  team / team manager / team member rows, achieved count, amount and metric,
+  progress numbers, qualified, rank, won, prize, exclusion, payment status,
+  one payout per result, staff mark-paid fields; consistency CHECKs). RLS
+  enabled and forced: contests SELECT for platform Admin, any Sub Admin, and
+  participants only at approved-or-later for their role and request line;
+  INSERT / UPDATE / DELETE only by the maker Sub Admin while draft (UPDATE
+  also pending / rejected, into draft / pending / cancelled, never with a
+  checker); contest_results SELECT only (platform Admin, own row, managing
+  Sub Admin's team rows). Adds `loan_applications.submitted_at` /
+  `sanctioned_at` and `property_deals.site_visit_done_at` / `booked_at` /
+  `agreement_signed_at` (set once by the progress services, column UPDATE
+  grants), `contest_reward` payout / transaction types and the contest
+  audit and notification labels. `schemas/contests.py` holds the grammar and
+  definition rules; `/api/v1/contests` lets Sub Admins create, edit, submit,
+  withdraw, cancel and delete their own contests and platform Admins
+  approve or reject (never their own). Ledgers: business-line
+  classification, Admin coverage and the platform-scope policy ledger list
+  both tables; `pincodes` (missed by CS-026) is added to the first two.
+- *PR G2 — API: scoring, lifecycle job, participant and Admin standings*
+  (planned).
+- *PR G3 — API: finalize, Agent prize payouts, staff mark-paid, Admin
+  cancel* (planned).
+- *PR G4 — web: Sub Admin contests and Admin approvals / winners* (planned).
+- *PR G5 — web: participant contests page, home card and team progress*
+  (planned).
+
+Recommended: Opus 5.5 / extra-high (migration, RLS, money); high for the
+web slices.
+
+**Done — Batch F: profile pincode, place names and location-based
+campaigns (CS-026)** (merged to `main` as `9f2c479f`, PRs #379–#381;
+2026-11-17; user-approved stakeholder feedback, batch F
 of A–G; identity-wide profile field plus Client-only targeting, both lines;
 no requirement or completion-percentage change). Stacked PRs, each opened
 against `main`, stacked on Batch E PR 4:
