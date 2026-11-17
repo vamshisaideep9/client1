@@ -39,7 +39,8 @@ slice of the last batch; no requirement-percentage change.
   later API review fixes, every contest suite plus ledgers, retention purge
   and payout-link reconcile: 111 passed; migrations `f6b8d0a2c4e7` ↔ head
   round-tripped twice. PRs: upstream #382–#386, mirrors
-  vamshisaideep9/client1#83–#87.
+  vamshisaideep9/client1#83–#87; #382–#385 merged to `main` (`12a1f2cf`),
+  which is merged into this branch.
 
 **In progress — Batch G PR 4: Sub Admin contests and Admin contest
 approvals (web)** (2026-11-17; CS-027), branch

@@ -211,7 +211,8 @@ PRs: G1 [#382](https://github.com/brollysolutions/client1/pull/382)
 `main`). Before release: the accountant confirms the tax treatment of
 contest prizes; staff prizes are paid outside Payouts and only recorded.
 
-Next: the user merges G1 … G5 in order. Recommended: Opus 5.5 /
+G1–G4 are merged to `main` (`12a1f2cf`, PRs #382–#385); G5 (#386) has
+`main` merged in. Next: the user merges G5. Recommended: Opus 5.5 /
 extra-high (migration, RLS, money); high for the web slices.
 
 **Done — Batch F: profile pincode, place names and location-based
