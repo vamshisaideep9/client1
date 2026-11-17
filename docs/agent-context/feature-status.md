@@ -142,7 +142,10 @@ requirement-percentage change.
   eligibility modules: 489 passed, 1 failed (`test_email_verify` changed the
   address through PATCH; it now changes it directly) and the three email
   modules rerun 55 passed. Ruff check/format clean; one Alembic head; web
-  `pnpm typecheck` and `pnpm lint` pass on the regenerated types.
+  `pnpm typecheck` and `pnpm lint` pass on the regenerated types. The full
+  API suite (run on the stack before the web slice) found the platform-scope
+  policy ledger in `test_platform_scope_rls.py` missing the two new
+  admin-gated policies; they are now listed (4 passed).
 
 **In progress — Batch D PR 2: lead and referral eligibility (web)**
 (2026-11-17; CS-024; PR
