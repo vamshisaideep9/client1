@@ -2,6 +2,54 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch E PR 2: self-service phone/email change and contact
+history (API)** (2026-11-17; CS-025; PR
+[#376](https://github.com/brollysolutions/client1/pull/376), mirror
+vamshisaideep9/client1#77), branch `feat/batch-e-contact-change-api`
+stacked on Batch E PR 1. API and regenerated contracts; no migration (E1's
+schema); no requirement-percentage change.
+- Journey (Client, Agent, Admin; Telecaller / Employee / Sub Admin 403):
+  `POST /auth/contact-change/start` (field + password; shares the login
+  failure lock; per-account hourly and per-IP budgets; 409 while any change
+  or an open lost-number request exists; an email change needs a verified
+  email) sends a code to the CURRENT value; `verify-current`; `new-value`
+  (E.164 or email, normalized; same value or a number registered elsewhere
+  refused before any code; per-target daily cap; resubmission rebinds the
+  code); `verify-new` applies in one transaction under the account row lock:
+  number/email replaced and marked verified, lead/referral/enquiry/visit/
+  application numbers carried over (shared `contact_identity` helpers), an
+  unverified copy of the address elsewhere released, session version bumped,
+  every refresh token revoked, push subscriptions removed, history row,
+  `contact_changed` audit (ids, field, method), auth event and in-app
+  notification; after the commit the number caches are cleared and notices
+  go to the old and new address (email) or the verified email (phone).
+  `resend` (whichever stage is pending), `cancel`, `GET active` (masked).
+  Every step re-checks the row's step, expiry and that the current value is
+  still the one it started from (otherwise the change is cancelled).
+- Lost number: `/change-mobile` (two Admins, proof category) unchanged; its
+  completion now writes history with the proof category, PII-free reference
+  and checker; the request row still clears both numbers.
+- History read: `GET /admin/users/{id}/contact-history` (platform Admin; RLS
+  session, so the table policy also applies; `contact_history_viewed` audit
+  on every read; `Cache-Control: private, no-store`).
+- Evidence (python 3.13 container, scratch database at `d4f6a8c0e2b4`): new
+  `test_contact_change_self_service.py` (23: phone change ends every session
+  (old access token, refresh cookie and login number dead, live refresh
+  tokens 0, version 2), history/audit/auth event hold no values in audit,
+  email change notices to old and new, phone notice to the verified email,
+  Admin may self-serve, staff 403 ×3, wrong passwords lock login, start
+  budget, steps cannot be skipped, current-stage code never verifies the new
+  value, another account's change 404 and its code 400, resubmission
+  rebinds, expiry, phone and email never together, open lost-number request
+  409, email change needs a verified email, same/taken/invalid values,
+  verified address elsewhere refused after the code, current value changed
+  mid-flow, target cap, history Admin-only and audited, lost-number recovery
+  still two Admins and now recorded) passed; with the mobile-change (+ RLS),
+  all auth, route-authorization, RLS-coverage, ledger, Admin users/deletion,
+  audit, lead RLS and referral-attribution modules: 426 passed, exit 0.
+  Ruff clean; one Alembic head; contracts regenerated (additions only); web
+  `pnpm typecheck` passes.
+
 **In progress — Batch E PR 1: mandatory email behind a server gate (API)**
 (2026-11-17; CS-025; PR
 [#375](https://github.com/brollysolutions/client1/pull/375), mirror

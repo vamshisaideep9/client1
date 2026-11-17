@@ -1411,6 +1411,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/users/{auth_user_uuid}/contact-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Contact History
+         * @description CS-025 permanent phone/email history, old values included.
+         *
+         *     Platform Admin only (the dependency and the table's RLS policy both say
+         *     so; the account holder cannot read it). Every read is audited.
+         */
+        get: operations["contact_history_api_v1_admin_users__auth_user_uuid__contact_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/users/{auth_user_uuid}/delete": {
         parameters: {
             query?: never;
@@ -1890,6 +1913,137 @@ export interface paths {
         put?: never;
         /** Change Password */
         post: operations["change_password_api_v1_auth_change_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/contact-change/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Active
+         * @description The caller's own change in flight, if any (to resume or cancel it).
+         */
+        get: operations["active_api_v1_auth_contact_change_active_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/contact-change/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel
+         * @description Withdraw the caller's own change (any kind) while it is still active.
+         */
+        post: operations["cancel_api_v1_auth_contact_change_cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/contact-change/new-value": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** New Value */
+        post: operations["new_value_api_v1_auth_contact_change_new_value_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/contact-change/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend */
+        post: operations["resend_api_v1_auth_contact_change_resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/contact-change/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start
+         * @description Client, Agent or Admin: password, then a code to the current value.
+         */
+        post: operations["start_api_v1_auth_contact_change_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/contact-change/verify-current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Current */
+        post: operations["verify_current_api_v1_auth_contact_change_verify_current_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/contact-change/verify-new": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify New
+         * @description Verify the new-value code; the change applies and every session ends.
+         */
+        post: operations["verify_new_api_v1_auth_contact_change_verify_new_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4967,6 +5121,10 @@ export interface components {
             /** Current Password */
             current_password: string;
         };
+        /** ActiveContactChangeResponse */
+        ActiveContactChangeResponse: {
+            change: components["schemas"]["ContactChangeRead"] | null;
+        };
         /**
          * AdminAccountDeleteRequest
          * @description FR-17.4 — Admin removal of a suspicious account. Unlike AgentRejectRequest.note
@@ -8011,6 +8169,16 @@ export interface components {
              */
             status: "awaiting_current_otp" | "awaiting_new_value" | "awaiting_new_otp" | "pending_approval" | "completed" | "rejected" | "cancelled" | "expired";
         };
+        /** ContactChangeCompletedResponse */
+        ContactChangeCompletedResponse: {
+            /** Message */
+            message: string;
+            /**
+             * Signed Out
+             * @default true
+             */
+            signed_out: boolean;
+        };
         /** ContactChangeIdRequest */
         ContactChangeIdRequest: {
             /**
@@ -8018,6 +8186,16 @@ export interface components {
              * Format: uuid
              */
             change_id: string;
+        };
+        /** ContactChangeNewValueRequest */
+        ContactChangeNewValueRequest: {
+            /**
+             * Change Id
+             * Format: uuid
+             */
+            change_id: string;
+            /** Value */
+            value: string;
         };
         /** ContactChangeOtpRequest */
         ContactChangeOtpRequest: {
@@ -8028,6 +8206,95 @@ export interface components {
             change_id: string;
             /** Otp */
             otp: string;
+        };
+        /**
+         * ContactChangeRead
+         * @description The caller's own change in flight (to resume or cancel it).
+         */
+        ContactChangeRead: {
+            /**
+             * Change Id
+             * Format: uuid
+             */
+            change_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "mobile" | "email";
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "self_service" | "email_add" | "staff_request";
+            /** New Value Hint */
+            new_value_hint: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "awaiting_current_otp" | "awaiting_new_value" | "awaiting_new_otp" | "pending_approval" | "completed" | "rejected" | "cancelled" | "expired";
+        };
+        /** ContactChangeStartRequest */
+        ContactChangeStartRequest: {
+            /** Current Password */
+            current_password: string;
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "mobile" | "email";
+        };
+        /**
+         * ContactHistoryEntry
+         * @description One completed change, old value included (platform Admin only).
+         */
+        ContactHistoryEntry: {
+            /** Approved By Name */
+            approved_by_name: string | null;
+            /**
+             * Changed At
+             * Format: date-time
+             */
+            changed_at: string;
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "mobile" | "email";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "self_service" | "email_added" | "admin_approved" | "lost_number_recovery";
+            /** New Value */
+            new_value: string;
+            /** Old Value */
+            old_value: string | null;
+            /** Proof Category */
+            proof_category: string | null;
+            /** Proof Reference */
+            proof_reference: string | null;
+        };
+        /** ContactHistoryResponse */
+        ContactHistoryResponse: {
+            /** Entries */
+            entries: components["schemas"]["ContactHistoryEntry"][];
         };
         /** ContactInvitationRead */
         ContactInvitationRead: {
@@ -16184,6 +16451,37 @@ export interface operations {
             };
         };
     };
+    contact_history_api_v1_admin_users__auth_user_uuid__contact_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auth_user_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     delete_user_api_v1_admin_users__auth_user_uuid__delete_post: {
         parameters: {
             query?: never;
@@ -17092,6 +17390,224 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    active_api_v1_auth_contact_change_active_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveContactChangeResponse"];
+                };
+            };
+        };
+    };
+    cancel_api_v1_auth_contact_change_cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactChangeIdRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    new_value_api_v1_auth_contact_change_new_value_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactChangeNewValueRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeChallengeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_api_v1_auth_contact_change_resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactChangeIdRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeChallengeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_api_v1_auth_contact_change_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactChangeStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeChallengeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_current_api_v1_auth_contact_change_verify_current_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactChangeOtpRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeChallengeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_new_api_v1_auth_contact_change_verify_new_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactChangeOtpRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactChangeCompletedResponse"];
                 };
             };
             /** @description Validation Error */

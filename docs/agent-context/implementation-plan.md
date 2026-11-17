@@ -90,9 +90,23 @@ stacked on Batch D PR 2:
   (password first); `PATCH /auth/me` no longer edits or clears email;
   `/auth/me`, login and refresh carry `email_required`. The platform-scope
   policy ledger test lists the two new admin-gated policies.
-- *PR E2 — API: self-service phone/email change and history* (Client, Agent,
-  Admin), lost-number completion records history, Admin history read
-  (audited).
+- *PR E2 — API: self-service phone/email change and history*, branch
+  `feat/batch-e-contact-change-api` stacked on E1 (PR
+  [#376](https://github.com/brollysolutions/client1/pull/376), mirror
+  vamshisaideep9/client1#77). Client, Agent and Admin:
+  `/auth/contact-change/start` (password) → `verify-current` (code to the
+  current value) → `new-value` (resubmittable; a number registered elsewhere
+  refused up front, nothing else revealed before the code) → `verify-new` →
+  one transaction: value replaced, session version bumped, refresh tokens
+  revoked, push subscriptions removed, history (`self_service`), audit,
+  in-app notice; then email notices (old + new address, or the verified email
+  for a phone change; no SMS channel). `resend`, `cancel`, `active`.
+  Staff get 403 (they request instead). Lost-number completion now writes
+  history (`lost_number_recovery`, proof category + reference, checker) while
+  its request row still clears both numbers. `GET
+  /admin/users/{id}/contact-history` (platform Admin, RLS session, every read
+  audited as `contact_history_viewed`). Number rules shared with the
+  lost-number flow moved to `services/contact_identity.py`.
 - *PR E3 — API: staff contact-change requests and one-Admin approval.*
 - *PR E4 — web.*
 

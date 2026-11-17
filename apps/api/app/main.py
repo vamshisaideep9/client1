@@ -30,6 +30,7 @@ from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.campaign_media import router as campaign_media_router
 from app.api.v1.client_lead_details import router as client_lead_details_router
 from app.api.v1.commissions import router as commissions_router
+from app.api.v1.contact_change import router as contact_change_router
 from app.api.v1.content import router as content_router
 from app.api.v1.document_verification import router as document_verification_router
 from app.api.v1.employee import router as employee_router
@@ -113,6 +114,9 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(
+    contact_change_router, prefix="/api/v1/auth/contact-change", tags=["contact-change"]
+)
 app.include_router(mobile_change_router, prefix="/api/v1/mobile-change", tags=["mobile-change"])
 app.include_router(
     mobile_change_admin_router,
