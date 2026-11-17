@@ -14,6 +14,7 @@ import {
   MetricCard,
   MetricGrid,
 } from "@/features/dashboard/dashboard-ui";
+import { ContestHomeCard } from "@/features/contests/contest-home-card";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { useMe } from "@/features/dashboard/me-provider";
 import { formatPaise } from "@/lib/format";
@@ -188,6 +189,7 @@ export function AgentHome() {
           )}
         </DashboardPanel>
       </div>
+      <ContestHomeCard />
     </DashboardPage>
   );
 }

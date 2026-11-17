@@ -264,3 +264,89 @@ export function describeWinning(contest: {
     );
   return lines;
 }
+
+export type ProgressRow = {
+  key: string;
+  label: string;
+  achieved: string;
+  target: string;
+  /** 0..1 share of the target reached (1 when met). */
+  share: number;
+  met: boolean;
+};
+
+/**
+ * One row per populated target: what the participant (or team) has achieved
+ * against it. The "at most" bound is its own row; it is met while the count
+ * stays at or under it.
+ */
+export function progressRows(
+  criteria: Criteria,
+  progress: Partial<Record<keyof Schemas["ContestProgress"], number | null>>,
+): ProgressRow[] {
+  const rows: ProgressRow[] = [];
+  const atLeast = (key: string, label: string, achieved: number, target: number, money = false) => {
+    const fmt = (value: number) => (money ? formatPaise(value) : value.toLocaleString("en-IN"));
+    rows.push({
+      key,
+      label,
+      achieved: fmt(achieved),
+      target: `at least ${fmt(target)}`,
+      share: Math.min(1, target > 0 ? achieved / target : 1),
+      met: achieved >= target,
+    });
+  };
+  const business = criteria.loans ?? criteria.real_estate;
+  const noun = criteria.loans ? "Cases" : "Deals";
+  const count = progress.count ?? 0;
+  const amount = progress.amount_paise ?? 0;
+  if (business?.count_at_least) atLeast("count", noun, count, business.count_at_least);
+  if (business?.count_at_most) {
+    rows.push({
+      key: "count_at_most",
+      label: `${noun} (upper limit)`,
+      achieved: count.toLocaleString("en-IN"),
+      target: `at most ${business.count_at_most.toLocaleString("en-IN")}`,
+      share: count <= business.count_at_most ? 1 : 0,
+      met: count <= business.count_at_most,
+    });
+  }
+  const total = criteria.loans?.amount_at_least_paise ?? criteria.real_estate?.value_at_least_paise;
+  if (total) atLeast("amount", criteria.loans ? "Total amount" : "Total value", amount, total, true);
+  const activity = criteria.activity;
+  if (activity?.calls_logged_at_least)
+    atLeast("calls", "Calls logged", progress.calls_logged ?? 0, activity.calls_logged_at_least);
+  if (activity?.connect_rate_at_least_percent) {
+    const rate = progress.connect_rate_percent ?? 0;
+    const calls = progress.calls_logged ?? 0;
+    const minCalls = activity.connect_rate_min_calls ?? 0;
+    const callShare = calls >= minCalls ? 1 : calls / Math.max(minCalls, 1);
+    rows.push({
+      key: "connect_rate",
+      label: `Connect rate (over ${minCalls}+ calls)`,
+      achieved: `${rate}%`,
+      target: `at least ${activity.connect_rate_at_least_percent}%`,
+      share: Math.min(1, rate / activity.connect_rate_at_least_percent) * callShare,
+      met: rate >= activity.connect_rate_at_least_percent && calls >= minCalls,
+    });
+  }
+  if (activity?.follow_ups_on_time_at_least)
+    atLeast(
+      "follow_ups",
+      "Follow-ups on time",
+      progress.follow_ups_on_time ?? 0,
+      activity.follow_ups_on_time_at_least,
+    );
+  if (activity?.tasks_completed_at_least)
+    atLeast("tasks", "Tasks completed", progress.tasks_completed ?? 0, activity.tasks_completed_at_least);
+  if (activity?.tasks_on_time_at_least)
+    atLeast("tasks_on_time", "Tasks on time", progress.tasks_on_time ?? 0, activity.tasks_on_time_at_least);
+  if (activity?.site_visits_completed_at_least)
+    atLeast(
+      "site_visits",
+      "Site visits completed",
+      progress.site_visits_completed ?? 0,
+      activity.site_visits_completed_at_least,
+    );
+  return rows;
+}

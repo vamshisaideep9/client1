@@ -2,6 +2,26 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch G PR 5: participant contests, home card and team
+progress (web)** (2026-11-17; CS-027), branch
+`feat/batch-g-contests-participant-web` stacked on G4. Web only; the last
+slice of the last batch; no requirement-percentage change.
+- Participant page, home card, My team panel and navigation as described in
+  `implementation-plan.md` (Batch G5).
+- Evidence: `pnpm typecheck` and `pnpm lint` pass; `pnpm test` 1095 passed
+  (new `lib/contest-rules.test.ts`: progress rows with the at-most limit
+  and money totals, connect rate needing the minimum calls; navigation
+  lists updated); Playwright against `pnpm dev` (port 3167, mocked API):
+  new `contests-participant.spec.ts` 3 passed (Agent home card, grouped
+  list, contest page with progress bars, at-most row, leaderboard with
+  hidden names / amounts, 390 px without overflow; team member sees only
+  their contribution; managing Sub Admin's team contests with member
+  contributions, 390 px without overflow) and `contests-admin.spec.ts` 2
+  passed. Design review (light / dark, 1440 / 390 px): unmet progress bars
+  were navy on the dark surface (now the link token), the contest page now
+  carries the contest's title and dates, and phones show the leaderboard
+  before the rules.
+
 **In progress — Batch G PR 4: Sub Admin contests and Admin contest
 approvals (web)** (2026-11-17; CS-027), branch
 `feat/batch-g-contests-admin-web` stacked on G3. Web only; consumes the

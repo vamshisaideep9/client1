@@ -180,8 +180,22 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   (`MOCK_ADMIN_SECRET`), so secret scanners stop flagging it. Design
   review: the contest dialogs now widen from `sm` up (the dialog default
   `sm:max-w-lg` clipped the winners table).
-- *PR G5 — web: participant contests page, home card and team progress*
-  (planned).
+- *PR G5 — web: participant contests page, home card and team progress*,
+  branch `feat/batch-g-contests-participant-web` stacked on G4.
+  `/dashboard/contests` for Agents, Telecallers and Employees
+  (`MyContestsView`): contests grouped Live now / Starting soon / Ended with
+  the caller's standing; a contest page titled with the contest, its
+  progress against every target (bars, the at-most limit as its own row,
+  `progressRows` in `lib/contest-rules.ts`), the leaderboard (display name,
+  rank, achieved; "You" for the caller; hidden names and amounts shown as
+  "Participant" / "Hidden"), the result and prize once winners are
+  confirmed, and the rules; phones read progress, leaderboard, rules.
+  Team members see their team's progress and only their own contribution.
+  `ContestHomeCard` on the Agent, Telecaller and Employee homes (hidden
+  when nothing is open). My team (`TeamContestsPanel`): the managing Sub
+  Admin's team contests with the team's standing and, on request, its
+  progress and each member against the member minimum. Nav: "Contests" for
+  the three participant roles (Insights).
 
 Recommended: Opus 5.5 / extra-high (migration, RLS, money); high for the
 web slices.
