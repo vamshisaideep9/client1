@@ -2871,6 +2871,131 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Contests */
+        get: operations["list_contests_api_v1_contests_get"];
+        put?: never;
+        /** Create Contest */
+        post: operations["create_contest_api_v1_contests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contests/{contest_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Contest */
+        get: operations["get_contest_api_v1_contests__contest_id__get"];
+        /** Update Contest */
+        put: operations["update_contest_api_v1_contests__contest_id__put"];
+        post?: never;
+        /** Delete Contest */
+        delete: operations["delete_contest_api_v1_contests__contest_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contests/{contest_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Contest */
+        post: operations["approve_contest_api_v1_contests__contest_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contests/{contest_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Contest
+         * @description The maker cancels a contest that has not been approved.
+         */
+        post: operations["cancel_contest_api_v1_contests__contest_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contests/{contest_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Contest */
+        post: operations["reject_contest_api_v1_contests__contest_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contests/{contest_id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Contest */
+        post: operations["submit_contest_api_v1_contests__contest_id__submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contests/{contest_id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw Contest */
+        post: operations["withdraw_contest_api_v1_contests__contest_id__withdraw_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/employee/contact-share-links/{link_id}": {
         parameters: {
             query?: never;
@@ -5322,6 +5447,31 @@ export interface components {
             change: components["schemas"]["ContactChangeRead"] | null;
         };
         /**
+         * ActivityCriteria
+         * @description Staff activity targets inside the contest window.
+         *
+         *     Telecallers: calls logged, connect rate (with a minimum number of calls),
+         *     follow-ups kept on time, site visits completed on leads they hold.
+         *     Employees: tasks completed, tasks completed on time, site visits completed
+         *     (property-visit tasks). Site visits exist on the real-estate line only.
+         */
+        ActivityCriteria: {
+            /** Calls Logged At Least */
+            calls_logged_at_least?: number | null;
+            /** Connect Rate At Least Percent */
+            connect_rate_at_least_percent?: number | null;
+            /** Connect Rate Min Calls */
+            connect_rate_min_calls?: number | null;
+            /** Follow Ups On Time At Least */
+            follow_ups_on_time_at_least?: number | null;
+            /** Site Visits Completed At Least */
+            site_visits_completed_at_least?: number | null;
+            /** Tasks Completed At Least */
+            tasks_completed_at_least?: number | null;
+            /** Tasks On Time At Least */
+            tasks_on_time_at_least?: number | null;
+        };
+        /**
          * AdminAccountDeleteRequest
          * @description FR-17.4 — Admin removal of a suspicious account. Unlike AgentRejectRequest.note
          *     above, this reason IS persisted (AuthEvent.detail.reason).
@@ -7451,7 +7601,7 @@ export interface components {
          *     `services/fee_cashbacks.py` (FR-6.6 processing-fee cashback).
          * @enum {string}
          */
-        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "contact_history_viewed" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded";
+        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "contact_history_viewed" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded" | "contest_created" | "contest_updated" | "contest_submitted" | "contest_deleted" | "contest_approved" | "contest_rejected" | "contest_cancelled" | "contest_went_live" | "contest_ended" | "contest_recalculated" | "contest_finalized" | "contest_prize_payout_requested" | "contest_prize_marked_paid";
         /** AuditLogListResponse */
         AuditLogListResponse: {
             /** Entries */
@@ -8655,6 +8805,195 @@ export interface components {
          * @enum {string}
          */
         ContentStatus: "draft" | "published" | "archived";
+        /**
+         * ContestAudience
+         * @enum {string}
+         */
+        ContestAudience: "agent" | "telecaller" | "employee" | "team";
+        /** ContestCancel */
+        ContestCancel: {
+            /** Reason */
+            reason: string;
+        };
+        /**
+         * ContestCriteria
+         * @description Version 1 of the contest criteria grammar.
+         */
+        ContestCriteria: {
+            activity?: components["schemas"]["ActivityCriteria"] | null;
+            eligibility?: components["schemas"]["EligibilityCriteria"];
+            loans?: components["schemas"]["LoanCriteria"] | null;
+            real_estate?: components["schemas"]["RealEstateCriteria"] | null;
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /**
+         * ContestDefinition
+         * @description What a Sub Admin authors. Shared by create and full update.
+         */
+        ContestDefinition: {
+            audience: components["schemas"]["ContestAudience"];
+            /** Budget Cap Paise */
+            budget_cap_paise?: number | null;
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            criteria: components["schemas"]["ContestCriteria"];
+            /** Description */
+            description?: string | null;
+            /**
+             * Ends On
+             * Format: date
+             */
+            ends_on: string;
+            /** Manager Prize Paise */
+            manager_prize_paise?: number | null;
+            /** Member Min Contribution */
+            member_min_contribution?: number | null;
+            /** Member Prize Paise */
+            member_prize_paise?: number | null;
+            metric: components["schemas"]["ContestMetric"];
+            /** Prize Paise */
+            prize_paise?: number | null;
+            /**
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+            team_member_role?: components["schemas"]["ContestTeamMemberRole"] | null;
+            /** Terms */
+            terms?: string | null;
+            /** Title */
+            title: string;
+            /** Top N */
+            top_n?: number | null;
+            win_mode: components["schemas"]["ContestWinMode"];
+        };
+        /** ContestListResponse */
+        ContestListResponse: {
+            /** Contests */
+            contests: components["schemas"]["ContestRead"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * ContestMetric
+         * @description What a contest ranks and reports as "achieved".
+         * @enum {string}
+         */
+        ContestMetric: "cases" | "amount" | "calls_logged" | "follow_ups_on_time" | "tasks_completed" | "tasks_on_time" | "site_visits_completed";
+        /** ContestRead */
+        ContestRead: {
+            audience: components["schemas"]["ContestAudience"];
+            /** Budget Cap Paise */
+            budget_cap_paise: number | null;
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** Cancel Reason */
+            cancel_reason: string | null;
+            /** Cancelled At */
+            cancelled_at: string | null;
+            /** Checker Name */
+            checker_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Name */
+            created_by_name: string | null;
+            /**
+             * Created By Uuid
+             * Format: uuid
+             */
+            created_by_uuid: string;
+            criteria: components["schemas"]["ContestCriteria"];
+            /** Description */
+            description: string | null;
+            /** Ended At */
+            ended_at: string | null;
+            /**
+             * Ends On
+             * Format: date
+             */
+            ends_on: string;
+            /** Finalized At */
+            finalized_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Mine */
+            is_mine: boolean;
+            /** Live At */
+            live_at: string | null;
+            /** Manager Prize Paise */
+            manager_prize_paise: number | null;
+            /** Member Min Contribution */
+            member_min_contribution: number | null;
+            /** Member Prize Paise */
+            member_prize_paise: number | null;
+            metric: components["schemas"]["ContestMetric"];
+            /** Prize Paise */
+            prize_paise: number | null;
+            /** Review Note */
+            review_note: string | null;
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /**
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+            status: components["schemas"]["ContestStatus"];
+            /** Submitted At */
+            submitted_at: string | null;
+            team_member_role: components["schemas"]["ContestTeamMemberRole"] | null;
+            /** Terms */
+            terms: string | null;
+            /** Title */
+            title: string;
+            /** Top N */
+            top_n: number | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+            win_mode: components["schemas"]["ContestWinMode"];
+        };
+        /** ContestReject */
+        ContestReject: {
+            /** Note */
+            note: string;
+        };
+        /**
+         * ContestStatus
+         * @enum {string}
+         */
+        ContestStatus: "draft" | "pending_approval" | "approved" | "live" | "ended" | "finalized" | "rejected" | "cancelled";
+        /**
+         * ContestTeamMemberRole
+         * @enum {string}
+         */
+        ContestTeamMemberRole: "telecaller" | "employee";
+        /**
+         * ContestWinMode
+         * @enum {string}
+         */
+        ContestWinMode: "threshold" | "top_n";
         /** DealPropertySummary */
         DealPropertySummary: {
             /**
@@ -8737,6 +9076,22 @@ export interface components {
             review_note?: string | null;
             /** Verified */
             verified: boolean;
+        };
+        /**
+         * EligibilityCriteria
+         * @description Who may take part, beyond the always-on active-profile and line rule.
+         */
+        EligibilityCriteria: {
+            /**
+             * Kyc Verified
+             * @default false
+             */
+            kyc_verified: boolean;
+            /**
+             * Min Tenure Days
+             * @default 0
+             */
+            min_tenure_days: number;
         };
         /**
          * EligibilitySummary
@@ -9694,6 +10049,34 @@ export interface components {
             /** Status Reason */
             status_reason: string | null;
         };
+        /**
+         * LoanCriteria
+         * @description Which loan cases count, at which stage, and the case targets.
+         *
+         *     A case's true amount is read live at the counted stage: the requested
+         *     amount when submitted, the sanctioned amount once sanctioned or disbursed.
+         */
+        LoanCriteria: {
+            /** Amount At Least Paise */
+            amount_at_least_paise?: number | null;
+            /** Bank Ids */
+            bank_ids?: string[];
+            /** Case Amount Max Paise */
+            case_amount_max_paise?: number | null;
+            /** Case Amount Min Paise */
+            case_amount_min_paise?: number | null;
+            /** Count At Least */
+            count_at_least?: number | null;
+            /** Count At Most */
+            count_at_most?: number | null;
+            /**
+             * Counted Stage
+             * @enum {string}
+             */
+            counted_stage: "submitted" | "sanctioned" | "disbursed";
+            /** Loan Type Ids */
+            loan_type_ids?: string[];
+        };
         /** LoanDocumentCreate */
         LoanDocumentCreate: {
             /**
@@ -10253,7 +10636,7 @@ export interface components {
          * NotificationType
          * @enum {string}
          */
-        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "agent_lead_expiry_reminder" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed";
+        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "agent_lead_expiry_reminder" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed" | "contest_submitted" | "contest_reviewed" | "contest_live" | "contest_won";
         /** OfferCreate */
         OfferCreate: {
             audience_rules?: components["schemas"]["AudienceRules"];
@@ -11515,6 +11898,38 @@ export interface components {
         PushUnsubscribeRequest: {
             /** Endpoint */
             endpoint: string;
+        };
+        /**
+         * RealEstateCriteria
+         * @description Which property deals count, at which stage, and the deal targets.
+         *
+         *     A deal's true value is its quoted price, or the listing price until a
+         *     price is quoted (quotes start at booking).
+         */
+        RealEstateCriteria: {
+            /** Cities */
+            cities?: string[];
+            /** Count At Least */
+            count_at_least?: number | null;
+            /** Count At Most */
+            count_at_most?: number | null;
+            /**
+             * Counted Stage
+             * @enum {string}
+             */
+            counted_stage: "site_visit_done" | "booked" | "agreement_signed" | "closed";
+            /** Deal Value Max Paise */
+            deal_value_max_paise?: number | null;
+            /** Deal Value Min Paise */
+            deal_value_min_paise?: number | null;
+            /** Listing Intents */
+            listing_intents?: ("sale" | "rent")[];
+            /** Property Categories */
+            property_categories?: ("houses" | "apartments" | "villas" | "plots" | "commercial")[];
+            /** Property Subtypes */
+            property_subtypes?: ("individual_house" | "standalone_apartment" | "gated_community_apartment" | "villa" | "locked_space" | "unlocked_space" | "plot" | "farmland" | "agriland")[];
+            /** Value At Least Paise */
+            value_at_least_paise?: number | null;
         };
         /** ReferralBonusConfigCreate */
         ReferralBonusConfigCreate: {
@@ -19791,6 +20206,334 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContentBlockRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_contests_api_v1_contests_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["ContestStatus"][] | null;
+                audience?: components["schemas"]["ContestAudience"] | null;
+                business_line?: ("loans" | "real_estate") | null;
+                q?: string | null;
+                mine?: boolean;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_contest_api_v1_contests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContestDefinition"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_contest_api_v1_contests__contest_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_contest_api_v1_contests__contest_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContestDefinition"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_contest_api_v1_contests__contest_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_contest_api_v1_contests__contest_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_contest_api_v1_contests__contest_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContestCancel"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_contest_api_v1_contests__contest_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContestReject"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_contest_api_v1_contests__contest_id__submit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_contest_api_v1_contests__contest_id__withdraw_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestRead"];
                 };
             };
             /** @description Validation Error */

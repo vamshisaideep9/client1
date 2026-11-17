@@ -2,7 +2,42 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — Batch F PR 3: profile pincode, "Use my location" and
+**In progress — Batch G PR 1: contest model, migration, criteria grammar,
+authoring and review (API)** (2026-11-17; CS-027), branch
+`feat/batch-g-contests-model` from `upstream/main` `9f2c479f` (Batches A–F
+merged). API, migration `a8d0f2b4c6e9` and regenerated contracts; no
+requirement-percentage change.
+- Model and migration as described in `implementation-plan.md` (Batch G1):
+  `contests`, `contest_results` (RLS enabled and forced, business-line
+  immutability triggers, consistency CHECKs incl. maker ≠ checker; payout links `ON DELETE SET NULL` after the batch security review found that `RESTRICT` would block the 7-year retention purge), five
+  loan / deal stage markers stamped once by
+  `services/loan_applications.py` / `services/property_deals.py`, enum
+  labels for `contest_reward` and the contest audit / notification values.
+- `schemas/contests.py`: version-1 grammar (`loans` | `real_estate`,
+  `activity`, `eligibility`), definition rules (line- and
+  audience-mismatched dimensions refused, at-most needs at-least, connect
+  rate needs minimum calls, metric fits audience and criteria, threshold
+  needs a target, team prize shape, budget cap ≥ one prize, ≤ 366 days).
+- `/api/v1/contests`: Sub Admin create / edit (draft or rejected → draft) /
+  submit (start date not passed) / withdraw / cancel / delete (draft);
+  Sub Admin and platform Admin list (status, audience, line, search, mine)
+  and read; platform Admin approve / reject, refused for the maker's own
+  account (403) and for line-scoped Admins.
+- Ledgers: classification and Admin coverage add `contests`,
+  `contest_results` and `pincodes` (missing since CS-026, which made the
+  two "every mapped table" tests fail on `main`); platform-scope policy
+  ledger adds both select policies as documented Sub Admin exceptions.
+- Evidence (python:3.13.14-slim-trixie on `client1_default`, scratch
+  database `app_gcontests` migrated to head, Redis index 13): migration
+  downgrade to `f6b8d0a2c4e7` and upgrade to head pass, single head;
+  `ruff check` and `ruff format --check` pass; new
+  `test_contest_criteria.py`, `test_contest_stage_markers.py`,
+  `test_contests_api.py`, `test_contests_rls.py` plus the platform-scope,
+  classification, Admin coverage, route-authorization and RLS-coverage
+  ledgers: 63 passed; loan / deal progress, loans / deals RLS and
+  business-line contract regressions: 88 passed.
+
+**Done — Batch F PR 3 (merged as part of `9f2c479f`): profile pincode, "Use my location" and
 campaign place targets (web)** (2026-11-17; CS-026; PR
 [#381](https://github.com/brollysolutions/client1/pull/381), mirror
 vamshisaideep9/client1#82),

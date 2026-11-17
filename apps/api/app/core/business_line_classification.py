@@ -77,6 +77,12 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     # (one account, both lines), like mobile_change_requests.
     "contact_change_requests": ClassificationMode.IDENTITY,
     "contact_change_history": ClassificationMode.IDENTITY,
+    # CS-027 contests: one operational line per contest, copied onto every
+    # result row, immutable by trigger.
+    "contests": ClassificationMode.OPERATIONAL,
+    "contest_results": ClassificationMode.OPERATIONAL,
+    # CS-026 India pincode reference list: line-neutral lookup data.
+    "pincodes": ClassificationMode.PLATFORM_CONFIG,
     "notifications": ClassificationMode.IDENTITY,
     "offers": ClassificationMode.GLOBAL_CONTENT,
     "payouts": ClassificationMode.OPERATIONAL,

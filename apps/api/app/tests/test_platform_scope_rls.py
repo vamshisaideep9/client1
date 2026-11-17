@@ -54,6 +54,11 @@ _DOCUMENTED_SUB_ADMIN_EXCEPTIONS = {
     # staff profile), never through the platform bypass.
     ("staff_teams", "staff_teams_select"),
     ("staff_team_members", "staff_team_members_select"),
+    # a8d0f2b4c6e9 (CS-027): a platform-Admin disjunct beside a Sub Admin read
+    # of every contest (authoring surface) and of the result rows of the teams
+    # the Sub Admin manages, never through the platform bypass.
+    ("contests", "contests_select"),
+    ("contest_results", "contest_results_select"),
 }
 
 # Every current policy carrying a platform_scope branch. The original
@@ -150,6 +155,9 @@ _ALL_PLATFORM_SCOPE_POLICIES = {
     ("staff_team_members", "staff_team_members_select"),
     # b2d4f6a8c0e1 (CS-020): platform Admin, reaching manager, assigned member.
     ("team_work_notes", "team_work_notes_select"),
+    # a8d0f2b4c6e9 (CS-027): both require role 'admin' with the scope.
+    ("contests", "contests_select"),
+    ("contest_results", "contest_results_select"),
 }
 
 

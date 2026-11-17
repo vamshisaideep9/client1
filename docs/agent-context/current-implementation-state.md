@@ -910,6 +910,68 @@ CS-008's compatibility requirement still holds: no clickstream, raw or
 historical location, IP geolocation or inferred demographic is introduced.
 Evidence is listed in `feature-status.md` under Batch F.
 
+### CS-027 — Contests: Sub Admin-authored, Admin-approved incentive contests
+
+**Decision (2026-11-17, user-approved stakeholder feedback, batch G; new
+module; "Does not fit" items 6, 11, 12 and 13 of the batch plan):**
+
+- *Who.* A Sub Admin creates a contest for one line and one audience:
+  Agents, Telecallers, Employees, or the Telecaller or Employee teams that
+  Sub Admins manage (a "manager" is a Sub Admin who manages a team; there is
+  no manager role). A platform Admin who is not the maker approves or
+  rejects it (maker ≠ checker in the service and by database CHECK);
+  rejected contests are edited and resubmitted. A contest cannot be
+  submitted or approved once its start date has passed.
+- *Rules.* A versioned, closed criteria grammar (`schemas/contests.py`):
+  loan cases (products, banks, per-case amount range, counted stage
+  submitted / sanctioned / disbursed, case count at least / at most, total
+  amount at least) or property deals (categories, types, sale / rent,
+  cities, per-deal value range, counted stage site visit done / booked /
+  agreement signed / closed, deal count, total value), staff activity
+  (Telecallers: calls, connect rate with a minimum number of calls,
+  follow-ups kept on time, site visits completed on held leads; Employees:
+  tasks completed, tasks completed on time, site visits completed), and
+  eligibility (minimum tenure; KYC verified for Agents; an active profile
+  on the contest's line always). Dimensions from the other line or for the
+  wrong audience are refused. "5 cases or fewer" is an optional at-most
+  count that is only accepted beside an at-least count, since an at-most
+  rule alone rewards doing less.
+- *Win mode and prize.* Per contest: `threshold` (everyone who meets every
+  target) or `top_n` (the N best qualifying participants with a result
+  above zero; a tie at the cut-off is kept whole). Fixed prize per winner;
+  team contests have a combined team target and pay the managing Sub Admin
+  a manager prize and each member whose own contribution reaches the member
+  minimum a member prize. An optional budget cap pays winners in rank order
+  and leaves out the first group of equal achievers that would cross it
+  (and everyone below).
+- *Credit.* Agents: leads they introduced (at disbursed / closed this is the
+  commission-eligibility predicate). Telecallers: leads they hold when
+  scored — only the current assignee is stored, so a reassigned lead counts
+  for whoever holds it. Employees: leads where they hold a task. Teams:
+  their current members, a shared case counted once. A case counts when it
+  reached the counted stage inside the contest dates (new stage markers on
+  loan applications and property deals); its "true amount" is read live at
+  that stage (requested when submitted, sanctioned once sanctioned or
+  disbursed, a deal's quoted price or its listing price before a quote).
+- *Lifecycle.* Standings are computed on read while a contest runs; a
+  scheduler job takes approved contests live on their start date and ends
+  them after their end date, snapshotting the standings. After the end the
+  Admin reviews (and may recalculate) the standings and confirms winners.
+- *Paying prizes.* Agent prizes go through the existing Payouts
+  maker-checker as a `contest_reward` payout — one per result, never
+  approval-free (the Main Admin standalone exception does not apply), and
+  within the budget cap. Staff have no saved payout destination and staff
+  incentives normally run through payroll, so staff prizes are recorded and
+  marked paid by an Admin with an audit entry. Tax treatment of prizes needs
+  the accountant's confirmation before release.
+- *Visibility.* Participants see only the contests for their role and line,
+  their own result, and a leaderboard of display name (first name and last
+  initial), rank and achieved value; the Admin can hide other participants'
+  names or amounts per role through field visibility. Managers see their
+  team's progress and members.
+
+Evidence is listed in `feature-status.md` under Batch G.
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in

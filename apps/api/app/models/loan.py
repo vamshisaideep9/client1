@@ -244,6 +244,13 @@ class LoanApplication(Base):
     # later closed doesn't silently and permanently lose commission
     # eligibility (found in review, 2026-07-29 — see docs/specs/agent-commission.md).
     disbursed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # CS-027 stage markers, set once when `status` first reaches the stage or a
+    # later one before disbursal (a forward jump past a stage still reaches it;
+    # CLOSED and the side branches never stamp). Contest scoring counts a case
+    # by the moment it reached its counted stage. NULL on rows that passed the
+    # stage before this column existed.
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sanctioned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     loan_type: Mapped["LoanType"] = relationship("LoanType")
     bank: Mapped[Optional["Bank"]] = relationship("Bank")

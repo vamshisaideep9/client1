@@ -33,6 +33,7 @@ from app.api.v1.commissions import router as commissions_router
 from app.api.v1.contact_change import admin_router as contact_change_admin_router
 from app.api.v1.contact_change import router as contact_change_router
 from app.api.v1.content import router as content_router
+from app.api.v1.contests import router as contests_router
 from app.api.v1.document_verification import router as document_verification_router
 from app.api.v1.employee import router as employee_router
 from app.api.v1.employee_vehicle_arrangements import router as employee_vehicle_arrangements_router
@@ -199,6 +200,7 @@ app.include_router(reporting_router, prefix="/api/v1/admin/reports", tags=["repo
 app.include_router(admin_teams_router, prefix="/api/v1/admin/teams", tags=["teams"])
 app.include_router(manager_router, prefix="/api/v1/manager", tags=["manager"])
 app.include_router(commissions_router, prefix="/api/v1/admin/commissions", tags=["commissions"])
+app.include_router(contests_router, prefix="/api/v1/contests", tags=["contests"])
 app.include_router(
     fee_cashbacks_router, prefix="/api/v1/admin/fee-cashbacks", tags=["fee-cashbacks"]
 )
