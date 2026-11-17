@@ -128,6 +128,31 @@ test("an Agent follows a live contest: progress, the at-most limit and a minimal
   await expectNoHorizontalOverflow(page);
 });
 
+test("a crafted ?contest= value shows the list and never leaves /api/v1/my-contests", async ({ page, baseURL }) => {
+  // Security review: the id from the link must never become another API path.
+  await signIn(page, baseURL, "agent");
+  const apiPaths: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path.startsWith("/api/v1/")) apiPaths.push(path);
+  });
+  await page.route("**/api/v1/my-contests**", (route) =>
+    route.fulfill({ json: { contests: [summary(LIVE, "live")] } }),
+  );
+
+  for (const crafted of ["..", "../../admin/users", "..%2F..%2Fauth%2Fme", `${LIVE}/../../admin/users`]) {
+    apiPaths.length = 0;
+    await page.goto(`/dashboard/contests?contest=${encodeURIComponent(crafted)}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.getByRole("heading", { name: "Live now" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Your progress" })).toHaveCount(0);
+    expect(apiPaths).toContain("/api/v1/my-contests");
+    expect(apiPaths.filter((path) => path.startsWith("/api/v1/my-contests/"))).toEqual([]);
+    expect(apiPaths.filter((path) => path.startsWith("/api/v1/admin"))).toEqual([]);
+  }
+});
+
 test("a team member sees the team standing and only their own contribution", async ({ page, baseURL }) => {
   await signIn(page, baseURL, "telecaller");
   const teamDetail = detail(TEAM, {

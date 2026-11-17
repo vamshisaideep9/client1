@@ -27,6 +27,7 @@ import {
 } from "@/lib/contest-rules";
 import {
   getMyContest,
+  isContestId,
   listMyContests,
   type ContestCriteria,
   type ContestProgress,
@@ -112,7 +113,7 @@ export function ProgressBars({
 function ContestCard({ contest }: { contest: MyContestSummary }) {
   return (
     <Link
-      href={`/dashboard/contests?contest=${contest.id}`}
+      href={`/dashboard/contests?contest=${encodeURIComponent(contest.id)}`}
       className="group flex items-start justify-between gap-3 rounded-xl border border-border bg-card p-4 shadow-sm outline-none transition-colors hover:border-brand-blue/50 focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span className="min-w-0 space-y-1">
@@ -346,7 +347,10 @@ function ContestDetailView({ id }: { id: string }) {
 
 export function MyContestsView() {
   const params = useSearchParams();
-  const id = params.get("contest");
+  const linked = params.get("contest");
+  // Security review: only a canonical UUID may reach the API path; anything
+  // else (`..`, slashes, query text) shows the list instead.
+  const id = isContestId(linked) ? linked : null;
   return (
     <DashboardPage>
       {id ? (

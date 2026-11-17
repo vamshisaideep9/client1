@@ -21,6 +21,11 @@ slice of the last batch; no requirement-percentage change.
   were navy on the dark surface (now the link token), the contest page now
   carries the contest's title and dates, and phones show the leaderboard
   before the rules.
+- Security review fix (MEDIUM, client-side path traversal): the participant
+  page uses `?contest=` only when it is a canonical UUID and otherwise shows
+  the list; links encode the id. New Playwright case: `..`,
+  `../../admin/users`, an encoded and a suffixed value each show the list
+  and request nothing under `/api/v1/my-contests/` or `/api/v1/admin`.
 
 **In progress — Batch G PR 4: Sub Admin contests and Admin contest
 approvals (web)** (2026-11-17; CS-027), branch

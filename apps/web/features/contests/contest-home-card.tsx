@@ -41,7 +41,7 @@ export function ContestHomeCard() {
         {rows.slice(0, SHOWN).map((contest) => (
           <li key={contest.id}>
             <Link
-              href={`/dashboard/contests?contest=${contest.id}`}
+              href={`/dashboard/contests?contest=${encodeURIComponent(contest.id)}`}
               className="flex items-center justify-between gap-3 rounded-lg py-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="min-w-0">

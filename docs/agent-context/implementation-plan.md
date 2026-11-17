@@ -199,7 +199,8 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   Admin's team contests with the team's standing and, on request, its
   progress and each member against the member minimum. Nav: "Contests" for
   the three participant roles (Insights). Security review: a `?contest=`
-  value that is not a UUID shows the list and sends no request.
+  value that is not a UUID shows the list and sends no request (covered by
+  `contests-participant.spec.ts`); contest links encode the id.
 
 Recommended: Opus 5.5 / extra-high (migration, RLS, money); high for the
 web slices.
