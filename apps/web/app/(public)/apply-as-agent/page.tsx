@@ -8,9 +8,9 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 import type { LeadBusinessLine } from "@/lib/leads";
 
 export const metadata: Metadata = {
-  title: "Apply to Become a Partner: Loans or Real Estate",
+  title: "Apply as a Loan DSA or Real Estate Partner | Dhanadhara",
   description:
-    "Apply to become a loan or real estate partner and earn commission on the deals you bring. Free to apply, single-line accounts, KYC verified after you apply.",
+    "Apply online as a loan DSA or real estate partner. Upload Aadhaar, PAN and photo (RERA agent code for property). Free to apply, KYC checked.",
   keywords: [
     "become an agent",
     "loan agent",
@@ -21,9 +21,9 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/apply-as-agent" },
   openGraph: {
-    title: "Apply to Become a Partner: Loans or Real Estate",
+    title: "Apply as a Loan DSA or Real Estate Partner | Dhanadhara",
     description:
-      "Apply to become a loan or real estate partner and earn commission on the deals you bring. Free to apply.",
+      "Apply online as a loan DSA or real estate partner. Upload Aadhaar, PAN and photo (RERA agent code for property). Free to apply, KYC checked.",
     type: "website",
     url: "/apply-as-agent",
   },
@@ -81,7 +81,7 @@ export default async function ApplyAsAgentPage({
             <div>
               <h1 className="max-w-2xl font-heading text-4xl font-semibold text-[var(--nav-text)] sm:text-5xl lg:text-6xl">
                 <span className="block">Apply to become</span>
-                <span className="block">a partner</span>
+                <span className="block">a Dhanadhara partner</span>
               </h1>
               <p className="mt-5 max-w-2xl text-lg text-[var(--nav-text)] sm:text-xl">
                 Earn commission on the deals you bring. Applying is free, every

@@ -69,8 +69,10 @@ test("the homepage shares one sky section colour and all page families share nav
       return Object.fromEntries(["--background", "--nav-bg", "--nav-tint", "--color-brand-cta-tint", "--muted", "--primary", "--nav-primary", "--color-brand-cta", "--color-dash-rail"].map((name) => [name, style.getPropertyValue(name).trim().toLowerCase()]));
     });
     for (const [name, value] of Object.entries(palette)) {
-      const action = ["--primary", "--nav-primary", "--color-brand-cta", "--color-dash-rail"].includes(name);
-      expect(value, `${route}: ${name}`).toBe(action ? "#293681" : "#f0f7fc");
+      const action = ["--primary", "--nav-primary", "--color-brand-cta"].includes(name);
+      // The dashboard rail is white in the light theme; actions stay navy.
+      if (name === "--color-dash-rail") expect(value, `${route}: ${name}`).toBe("#ffffff");
+      else expect(value, `${route}: ${name}`).toBe(action ? "#293681" : "#f0f7fc");
     }
   }
 });
@@ -480,7 +482,7 @@ for (const width of [320, 390, 768]) {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/calculators\/emi$/);
     await expect(drawer).toHaveCount(0);
-    await expect(page.getByRole("heading", { level: 1, name: "EMI Calculator", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Home loan EMI calculator", exact: true })).toBeVisible();
     await page.locator("header").getByRole("button", { name: "Open menu", exact: true }).click();
     await expect(page.getByRole("dialog").locator("summary").filter({ hasText: "Calculators" })).toHaveAttribute("aria-current", "page");
     await expect(page.getByRole("dialog").getByRole("link", { name: "Health Insurance Cover", exact: true })).toBeVisible();

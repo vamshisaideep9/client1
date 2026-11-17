@@ -16,10 +16,12 @@ import {
   buildSubmissionUpdatePayload,
   validateForm,
   EMPTY_FORM,
+  submissionIssuesToFieldErrors,
   submissionToFormState,
   type PropertyDetailForm,
   type SubmitFormState,
 } from "@/lib/property-submit";
+import { firstPanoramaError } from "@/lib/panorama-check";
 
 export function useSubmitProperty(
   submission?: Submission,
@@ -65,9 +67,22 @@ export function useSubmitProperty(
   const setDocuments = React.useCallback((documents: File[]) => {
     setForm((prev) => ({ ...prev, documents }));
   }, []);
-  const setPanorama = React.useCallback((panorama: File | null) => {
-    setForm((prev) => ({ ...prev, panorama }));
+  const setPanoramas = React.useCallback((panoramas: File[]) => {
+    setForm((prev) => ({ ...prev, panoramas }));
   }, []);
+
+  // A 422 the client checks missed is shown on the field it belongs to, not as
+  // a bare "Input should be greater than 0" toast with no field named.
+  const showFieldIssues = React.useCallback(
+    (res: { ok: false; issues?: { field: string; message: string }[] }): boolean => {
+      const fieldErrors = submissionIssuesToFieldErrors(res.issues);
+      if (Object.keys(fieldErrors).length === 0) return false;
+      setErrors(fieldErrors);
+      toast.error("Please fix the highlighted fields.");
+      return true;
+    },
+    [],
+  );
 
   const submit = React.useCallback(async () => {
     const found = validateForm(form, { requireImages: submission == null });
@@ -103,17 +118,25 @@ export function useSubmitProperty(
           );
           router.push("/dashboard/my-submissions");
         }
-      } else {
+      } else if (!showFieldIssues(res)) {
         toast.error(res.error || "Could not update the listing.");
       }
       return;
     }
-    const totalUploads = form.images.length + form.documents.length + (form.panorama ? 1 : 0);
+    // Catch a wrongly shaped 360 image before any upload starts.
+    const panoramaError = await firstPanoramaError(form.panoramas);
+    if (panoramaError) {
+      setSubmitting(false);
+      setErrors({ panoramas: panoramaError });
+      toast.error("Please fix the highlighted fields.");
+      return;
+    }
+    const totalUploads = form.images.length + form.documents.length + form.panoramas.length;
     setUploadProgress(`Uploading 0 of ${totalUploads}`);
     const uploaded = await uploadPropertyMedia(
       form.images,
       form.documents,
-      form.panorama,
+      form.panoramas,
       (done, total) => setUploadProgress(`Uploading ${done} of ${total}`),
     );
     if (!uploaded.ok) {
@@ -129,10 +152,10 @@ export function useSubmitProperty(
     if (res.ok) {
       toast.success("Listing submitted for review.");
       router.push("/dashboard/my-submissions");
-    } else {
+    } else if (!showFieldIssues(res)) {
       toast.error(res.error || "Could not submit the listing.");
     }
-  }, [adminCorrection, correctionReason, form, router, submission]);
+  }, [adminCorrection, correctionReason, form, router, showFieldIssues, submission]);
 
   return {
     form,
@@ -142,7 +165,7 @@ export function useSubmitProperty(
     removeAmenity,
     setImages,
     setDocuments,
-    setPanorama,
+    setPanoramas,
     adminCorrection,
     correctionReason,
     setCorrectionReason,

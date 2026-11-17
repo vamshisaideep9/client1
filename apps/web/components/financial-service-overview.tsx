@@ -3,6 +3,7 @@ import Link from "next/link";
 import * as React from "react";
 
 import { LeadDialog } from "@/components/lead-dialog";
+import { ShareActions } from "@/components/share-actions";
 import { FinancialProviderOptions } from "@/components/financial-provider-options";
 import { ServiceArtwork } from "@/components/service-artwork";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ export function FinancialServiceOverview({ service, providerQuery }: { service: 
               <p className="mt-4 max-w-3xl text-base leading-7 text-text-secondary">{guide.introduction}</p>
               <div className="mt-8 max-w-xs">
                 <LeadDialog businessLine="loans" product={service.label} triggerLabel="Enquire now" size="lg" origin="financial-service-detail" href={contactHref({ line: "loans", product: service.label })} />
+                <ShareActions className="mt-3" path={href} title={service.label} />
               </div>
             </div>
             <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
