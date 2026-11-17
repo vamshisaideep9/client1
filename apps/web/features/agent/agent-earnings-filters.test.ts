@@ -110,8 +110,21 @@ describe("helpers", () => {
       { value: "p-car", label: "Car Loan" },
       { value: "p-home", label: "Home Loan" },
     ]);
-    expect(options.categories).toEqual([{ value: "apartments", label: "Apartments" }]);
+    // The fixed category vocabulary, like every other property filter.
+    expect(options.categories.map((o) => o.value)).toEqual(["apartments", "commercial", "houses", "plots", "villas"]);
     expect(options.leadStatuses.map((o) => o.label)).toEqual(["Converted", "Expired"]);
+  });
+
+  it("offers the catalogue's products and banks plus those in the history (CS-023)", () => {
+    const options = earningsFilterOptions(rows, {
+      loanTypes: [
+        { value: "p-home", label: "Home Loan" },
+        { value: "p-gold", label: "Gold Loan" },
+      ],
+      banks: [{ value: "b-axis", label: "Axis Bank" }],
+    });
+    expect(options.products.map((o) => o.value)).toEqual(["p-car", "p-gold", "p-home"]);
+    expect(options.banks[0]).toEqual({ value: "b-axis", label: "Axis Bank" });
   });
 
   it("counts only the filters behind More filters", () => {

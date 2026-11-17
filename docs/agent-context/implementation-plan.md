@@ -100,7 +100,28 @@ stacked PRs, both opened against `main`, stacked on Batch B PR 2:
   `property_subtype`. Logic fixes: team analytics lead source (managers read
   `team_lead_signals`), Agent lead status now narrows commissions, and the
   Admin "Referred by client" matches the staff lists.
-- *PR C2 — web*, branch `feat/batch-c-filters-web` stacked on C1 (follows).
+- *PR C2 — web*, branch `feat/batch-c-filters-web` stacked on C1 (PR
+  [#372](https://github.com/brollysolutions/client1/pull/372), mirror
+  vamshisaideep9/client1#73). One set
+  of option sources everywhere (`product-filter-options.ts`,
+  `use-product-catalogue.ts`): the catalogue's lending products and banks
+  plus whatever the loaded rows carry, fixed category / type / status
+  vocabularies. Telecaller leads, Employee tasks and team work: "More
+  filters" Product (product, bank, loan status) or Property (category,
+  type, deal status), and for Telecaller leads and Telecaller-team work a
+  Money group (transactions has / none, date From / To, bank, amount range,
+  one transaction matching all; parts the Admin hides are left out).
+  `scopedLeadSignalFilters` keeps a hidden or other-line control from
+  filtering. My analytics and team analytics: Product / Property groups,
+  Telecaller amount (left out when the API reports it hidden), Agent
+  commission status and amount; only offered filters are sent, amounts
+  normalised and debounced, an inverted range not applied. Admin reports:
+  leads report Product and Property groups, Money amount on leads / loans /
+  deals, property type on deals; switching line drops the other line's
+  filters. Admin loan applications: Product, Bank, requested amount; Admin
+  property deals: quoted price. Agent earnings options use the same
+  sources. Fixes: team work kept a closed status under "Open"; My analytics
+  could send a previous line's filter after a switch.
 
 Next: the user merges B1, B2, then C1 and C2. Recommended: Opus 5.5 / high
 (extra-high for the definer-function migration).

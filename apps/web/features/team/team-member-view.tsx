@@ -25,7 +25,7 @@ import {
   type TeamAnalyticsFilters,
 } from "@/lib/staff-teams-api";
 
-import { TeamAnalyticsFilterBar } from "./team-analytics-filter-bar";
+import { TeamAnalyticsFilterBar, useHiddenFilters, useTeamAnalyticsRequest } from "./team-analytics-filter-bar";
 import { TeamWorkList } from "./team-work-list";
 import { useLoad } from "./use-load";
 
@@ -34,10 +34,14 @@ function MemberAnalytics({ team, memberId }: { team: StaffTeam; memberId: string
     resolveRangePreset("last_month", new Date()),
   );
   const [filters, setFilters] = React.useState<TeamAnalyticsFilters>({});
+  const [hidden, reportHidden] = useHiddenFilters();
+  const { context, sent } = useTeamAnalyticsRequest(team, filters, hidden);
   const { state, retry } = useLoad(
-    () => getMemberAnalytics(team.id, memberId, range, filters),
-    [team.id, memberId, range, filters],
+    () => getMemberAnalytics(team.id, memberId, range, sent),
+    [team.id, memberId, range, sent],
   );
+  const data = state.status === "ready" ? state.data : null;
+  React.useEffect(() => reportHidden(data?.hidden_filters), [data, reportHidden]);
   return (
     <section aria-label="Analytics" className="space-y-4">
       <h2 className="font-heading text-lg font-semibold text-brand-heading">Analytics</h2>
@@ -48,6 +52,7 @@ function MemberAnalytics({ team, memberId }: { team: StaffTeam; memberId: string
         filters={filters}
         onFiltersChange={setFilters}
         withMembers={false}
+        context={context}
       />
       {state.status === "error" ? (
         <FetchError status={state.code} message={state.error} onRetry={retry} />

@@ -5,7 +5,8 @@
 import type { AgentEarnings, AgentEarningsRow } from "@/lib/agent-api";
 import { formatPeriodLabel } from "@/lib/analytics-range";
 import { toIsoDateIST } from "@/lib/reports";
-import { ALL_FILTER, type FilterOption } from "@/features/dashboard/filter-options";
+import { ALL_FILTER, optionsFromLabels, type FilterOption } from "@/features/dashboard/filter-options";
+import { PROPERTY_CATEGORY_LABEL, mergeOptions } from "@/features/dashboard/product-filter-options";
 
 export type AgentEarningsFilterState = {
   search: string;
@@ -84,18 +85,30 @@ function uniqueOptions(entries: readonly (readonly [string | null, string | null
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
-/** Products, banks and property categories that appear in the Agent's history. */
-export function earningsFilterOptions(rows: readonly AgentEarningsRow[]): {
+/**
+ * Products, banks and property categories: the same sources as every other
+ * dashboard filter (CS-023) — the active catalogue and the fixed category
+ * vocabulary — plus anything already in the Agent's history (an inactive
+ * product, say), so a row is never left without its option.
+ */
+export function earningsFilterOptions(
+  rows: readonly AgentEarningsRow[],
+  catalogue: { loanTypes: readonly FilterOption[]; banks: readonly FilterOption[] } = { loanTypes: [], banks: [] },
+): {
   products: FilterOption[];
   banks: FilterOption[];
   categories: FilterOption[];
   leadStatuses: FilterOption[];
 } {
   return {
-    products: uniqueOptions(rows.map((row) => [row.product_uuid, row.product_label] as const)),
-    banks: uniqueOptions(rows.map((row) => [row.bank_uuid, row.bank_name] as const)),
-    categories: uniqueOptions(
-      rows.map((row) => [row.property_category, humanizeStatus(row.property_category)] as const),
+    products: mergeOptions(
+      catalogue.loanTypes,
+      uniqueOptions(rows.map((row) => [row.product_uuid, row.product_label] as const)),
+    ),
+    banks: mergeOptions(catalogue.banks, uniqueOptions(rows.map((row) => [row.bank_uuid, row.bank_name] as const))),
+    categories: mergeOptions(
+      optionsFromLabels(PROPERTY_CATEGORY_LABEL),
+      uniqueOptions(rows.map((row) => [row.property_category, humanizeStatus(row.property_category)] as const)),
     ),
     leadStatuses: uniqueOptions(
       rows.map(

@@ -41,7 +41,7 @@ import {
   type TeamOverview,
 } from "@/lib/staff-teams-api";
 
-import { TeamAnalyticsFilterBar } from "./team-analytics-filter-bar";
+import { TeamAnalyticsFilterBar, useHiddenFilters, useTeamAnalyticsRequest } from "./team-analytics-filter-bar";
 import { TeamWorkList } from "./team-work-list";
 import { useLoad } from "./use-load";
 
@@ -149,11 +149,14 @@ function TeamOverviewPanel({ team }: { team: StaffTeam }) {
     resolveRangePreset("last_month", new Date()),
   );
   const [filters, setFilters] = React.useState<TeamAnalyticsFilters>({});
+  const [hidden, reportHidden] = useHiddenFilters();
+  const { context, sent } = useTeamAnalyticsRequest(team, filters, hidden);
   const { state, retry } = useLoad(
-    () => getTeamOverview(team.id, range, filters),
-    [team.id, range, filters],
+    () => getTeamOverview(team.id, range, sent),
+    [team.id, range, sent],
   );
   const data = state.status === "ready" ? state.data : null;
+  React.useEffect(() => reportHidden(data?.hidden_filters), [data, reportHidden]);
 
   return (
     <div className="space-y-5">
@@ -164,6 +167,7 @@ function TeamOverviewPanel({ team }: { team: StaffTeam }) {
         filters={filters}
         onFiltersChange={setFilters}
         withMembers
+        context={context}
       />
       {state.status === "error" ? (
         <FetchError status={state.code} message={state.error} onRetry={retry} />

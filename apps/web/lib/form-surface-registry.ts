@@ -84,6 +84,7 @@ export const FORM_SURFACE_REGISTRY = {
   "features/agent/agent-introduce-lead-form.tsx": "mutation",
   "features/agent/agent-lead-detail-view.tsx": "mutation",
   "features/agent/lead-interest-picker.tsx": "mutation",
+  "features/dashboard/amount-range-fields.tsx": "filter",
   "features/dashboard/documents-view.tsx": "mutation",
   "features/dashboard/filter-bar.tsx": "filter",
   "features/dashboard/filter-select.tsx": "filter",

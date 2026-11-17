@@ -19,7 +19,9 @@ import { buildMyAnalyticsQuery } from "@/lib/staff-analytics-api";
 import {
   filtersForRole,
   moreFilterSpecGroups,
+  requestFilters,
   withFilter,
+  withFilters,
 } from "@/features/analytics/staff-analytics-filter-bar";
 
 // 2026-11-15 20:00 UTC is 2026-11-16 01:30 IST: the IST date must win.
@@ -102,11 +104,36 @@ describe("analytics request parameters", () => {
 
   it("offers each role only the filters its analytics accept", () => {
     const keys = (role: string, line = "loans") => filtersForRole(role, line).map((spec) => spec.key);
-    expect(keys("telecaller")).toEqual(["call_status", "interest", "loan_status", "lead_source"]);
-    expect(keys("telecaller", "real_estate")).toEqual(["call_status", "interest", "lead_source"]);
-    expect(keys("employee")).toEqual(["task_type"]);
-    expect(keys("agent")).toEqual(["lead_status"]);
+    // CS-023: product filters on Loans, property filters on Real Estate,
+    // Telecaller amount, Agent commission status and amount.
+    expect(keys("telecaller")).toEqual([
+      "call_status",
+      "interest",
+      "lead_source",
+      "loan_type_id",
+      "bank_id",
+      "loan_status",
+      "amount",
+    ]);
+    expect(keys("telecaller", "real_estate")).toEqual([
+      "call_status",
+      "interest",
+      "lead_source",
+      "property_category",
+      "property_subtype",
+      "deal_status",
+      "amount",
+    ]);
+    expect(keys("employee")).toEqual(["task_type", "loan_type_id", "bank_id", "loan_status"]);
+    expect(keys("employee", "real_estate")).toEqual(["task_type", "property_category", "property_subtype", "deal_status"]);
+    expect(keys("agent")).toEqual(["lead_status", "loan_type_id", "bank_id", "loan_status", "commission_status", "amount"]);
     expect(keys("sub_admin")).toEqual(["content_type", "content_status", "placement", "banner_type", "discount_type"]);
+    // The Admin hides the amount from Telecallers: no amount filter.
+    expect(
+      filtersForRole("telecaller", "loans", {}, { hiddenFilters: ["amount_max", "amount_min"] }).some(
+        (spec) => spec.key === "amount",
+      ),
+    ).toBe(false);
   });
 
   it("hides Sub Admin filters that cannot match the chosen content type", () => {
@@ -127,8 +154,11 @@ describe("analytics request parameters", () => {
       "discount_type",
     ]);
     // Other roles ignore the current filters.
-    expect(filtersForRole("employee", "loans", { content_type: "offers" }).map((spec) => spec.key)).toEqual([
+    expect(filtersForRole("employee", "real_estate", { content_type: "offers" }).map((spec) => spec.key)).toEqual([
       "task_type",
+      "property_category",
+      "property_subtype",
+      "deal_status",
     ]);
   });
 
@@ -169,10 +199,60 @@ describe("analytics request parameters", () => {
       ]),
     ).toEqual([
       ["Lead", ["Call status", "Lead interest", "Lead source"]],
-      ["Loan", ["Loan status"]],
+      ["Product", ["Product", "Bank", "Loan status"]],
+      ["Money", ["Loan amount"]],
     ]);
-    expect(filtersForRole("agent", "loans").every((spec) => spec.group === null)).toBe(true);
+    expect(
+      moreFilterSpecGroups(filtersForRole("agent", "real_estate")).map((group) => [
+        group.title,
+        group.specs.map((spec) => spec.label),
+      ]),
+    ).toEqual([
+      ["Property", ["Property category", "Property type", "Deal status"]],
+      ["Money", ["Commission status", "Commission"]],
+    ]);
+    expect(filtersForRole("agent", "loans").filter((spec) => spec.group === null).map((spec) => spec.key)).toEqual([
+      "lead_status",
+    ]);
     expect(filtersForRole("sub_admin", "loans").find((spec) => spec.key === "content_status")?.group).toBeNull();
+  });
+
+  it("sends only the filters the role offers on the current line, amounts as plain rupees", () => {
+    const filters = {
+      loan_type_id: "lt-1",
+      property_category: "villas",
+      call_status: "busy",
+      amount_min: "1,50,000",
+      amount_max: "",
+    } as const;
+    expect(requestFilters("telecaller", "loans", filters)).toEqual({
+      loan_type_id: "lt-1",
+      call_status: "busy",
+      amount_min: "150000",
+    });
+    expect(requestFilters("telecaller", "real_estate", filters)).toEqual({
+      property_category: "villas",
+      call_status: "busy",
+      amount_min: "150000",
+    });
+    // Employees have no amount and no call status.
+    expect(requestFilters("employee", "loans", filters)).toEqual({ loan_type_id: "lt-1" });
+    // A hidden amount, or an inverted range, is never sent.
+    expect(requestFilters("telecaller", "loans", filters, { hiddenFilters: ["amount_min", "amount_max"] })).toEqual({
+      loan_type_id: "lt-1",
+      call_status: "busy",
+    });
+    expect(requestFilters("agent", "loans", { amount_min: "500", amount_max: "100" })).toEqual({});
+    expect(requestFilters("agent", "loans", { amount_min: "abc", amount_max: "100" })).toEqual({ amount_max: "100" });
+  });
+
+  it("drops filters of the other line when the line changes", () => {
+    const loans = { loan_type_id: "lt-1", bank_id: "b-1", lead_status: "working" } as const;
+    expect(withFilters("agent", "real_estate", loans, {})).toEqual({ lead_status: "working" });
+    expect(withFilters("agent", "loans", loans, { amount_min: "10", amount_max: undefined })).toEqual({
+      ...loans,
+      amount_min: "10",
+    });
   });
 });
 

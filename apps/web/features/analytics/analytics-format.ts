@@ -65,3 +65,8 @@ export function formatDay(isoDate: string): string {
 export function shareLabel(value: number, total: number): string {
   return total > 0 ? `${Math.round((value / total) * 100)}%` : "0%";
 }
+
+/** Same strings in the same order (keeps a state value stable across reloads). */
+export function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}

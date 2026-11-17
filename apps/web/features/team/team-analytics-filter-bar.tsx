@@ -1,16 +1,26 @@
 "use client";
 
+import * as React from "react";
 import { ChevronDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { sameList } from "@/features/analytics/analytics-format";
 import { DateRangePicker } from "@/features/analytics/date-range-picker";
-import { filtersForRole, roleFilterControls } from "@/features/analytics/staff-analytics-filter-bar";
+import {
+  filtersForRole,
+  requestFilters,
+  roleFilterControls,
+  withFilters,
+  type RoleFilterContext,
+} from "@/features/analytics/staff-analytics-filter-bar";
 import { EMPTY_FILTERS, FilterBar } from "@/features/dashboard/filter-bar";
+import { useProductCatalogue } from "@/features/dashboard/use-product-catalogue";
 import type { DateRangeValue } from "@/lib/analytics-range";
 import { personName, type StaffTeam, type TeamAnalyticsFilters } from "@/lib/staff-teams-api";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 function MemberPicker({
   team,
@@ -72,10 +82,50 @@ function MemberPicker({
 }
 
 /**
+ * The catalogue options, Admin-hidden filters and the settled request for a
+ * team's analytics: only filters the member role offers on the team's line,
+ * typed amounts debounced and normalised (CS-023).
+ */
+export function useTeamAnalyticsRequest(
+  team: StaffTeam,
+  filters: TeamAnalyticsFilters,
+  hiddenFilters: readonly string[],
+): { context: RoleFilterContext; sent: TeamAnalyticsFilters } {
+  const catalogue = useProductCatalogue(team.business_line === "loans");
+  const context = React.useMemo(
+    () => ({ loanTypes: catalogue.loanTypes, banks: catalogue.banks, hiddenFilters }),
+    [catalogue, hiddenFilters],
+  );
+  const settled = useDebouncedValue(filters);
+  const sent = React.useMemo(() => {
+    const { members, ...roleFilters } = settled;
+    return {
+      ...requestFilters(team.member_role, team.business_line, roleFilters, context),
+      ...(members?.length ? { members } : {}),
+    };
+  }, [settled, team.member_role, team.business_line, context]);
+  return { context, sent };
+}
+
+/**
+ * The Admin-hidden filters the last analytics response reported, and the
+ * setter to report a response's list (an equal list keeps the same value, so
+ * the request does not change).
+ */
+export function useHiddenFilters(): [readonly string[], (reported: readonly string[] | undefined) => void] {
+  const [hidden, setHidden] = React.useState<readonly string[]>([]);
+  const report = React.useCallback((reported: readonly string[] | undefined) => {
+    if (reported) setHidden((current) => (sameList(current, reported) ? current : reported));
+  }, []);
+  return [hidden, report];
+}
+
+/**
  * Period, members and role filters for a manager's team or member analytics.
  * The role filters are the same ones the member's own "My analytics" offers
- * (Telecaller: call status, interest, loan status on Loans, lead source;
- * Employee: task type), and the API rejects any the team's role lacks.
+ * (Telecaller: call status, interest, lead source, product or property and
+ * amount; Employee: task type, product or property), and the API rejects any
+ * the team's role or line lacks.
  */
 export function TeamAnalyticsFilterBar({
   team,
@@ -84,6 +134,7 @@ export function TeamAnalyticsFilterBar({
   filters,
   onFiltersChange,
   withMembers,
+  context,
 }: {
   team: StaffTeam;
   range: DateRangeValue;
@@ -91,10 +142,15 @@ export function TeamAnalyticsFilterBar({
   filters: TeamAnalyticsFilters;
   onFiltersChange: (filters: TeamAnalyticsFilters) => void;
   withMembers: boolean;
+  context?: RoleFilterContext;
 }) {
-  const specs = filtersForRole(team.member_role, team.business_line);
-  const controls = roleFilterControls(specs, filters, (key, value) =>
-    onFiltersChange({ ...filters, [key]: value }),
+  const specs = filtersForRole(team.member_role, team.business_line, {}, context);
+  const { members, ...roleFilters } = filters;
+  const controls = roleFilterControls(specs, roleFilters, (patch) =>
+    onFiltersChange({
+      ...withFilters(team.member_role, team.business_line, roleFilters, patch, context),
+      ...(members ? { members } : {}),
+    }),
   );
   const active = Object.entries(filters).some(([, value]) =>
     Array.isArray(value) ? value.length > 0 : Boolean(value),
@@ -127,6 +183,13 @@ export function TeamAnalyticsFilterBar({
         chips={controls.chips}
         hasExternalFilters={active}
         onClear={() => onFiltersChange({})}
+        onClearMore={() => {
+          const firstRow = new Set<string>(specs.filter((spec) => !spec.group).map((spec) => spec.key));
+          onFiltersChange({
+            ...Object.fromEntries(Object.entries(roleFilters).filter(([name]) => firstRow.has(name))),
+            ...(members ? { members } : {}),
+          });
+        }}
       />
     </div>
   );

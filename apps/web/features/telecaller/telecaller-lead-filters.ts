@@ -11,6 +11,7 @@ import {
   leadSignalFiltersActive,
   matchesLeadSignals,
   type LeadSignalFilters,
+  type LeadSignalValues,
 } from "./lead-signal-filters";
 import { DISPOSITION_LABEL } from "./telecaller-lead-status";
 
@@ -56,6 +57,22 @@ export function telecallerLeadFiltersActive(filters: TelecallerLeadFilters): boo
   );
 }
 
+/** The lead facts the shared lead-signal filters read. */
+export function telecallerSignalValues(lead: TelecallerLead): LeadSignalValues {
+  return {
+    loanStatuses: lead.loan_statuses,
+    lastDisposition: lead.last_disposition,
+    lastInterestLevel: lead.last_interest_level,
+    referrer: lead.referrer,
+    facets: lead.facets,
+    transactions: lead.transactions,
+  };
+}
+
+/**
+ * Pass filters already narrowed to the list's scope
+ * (`scopedLeadSignalFilters`), so a hidden control never filters.
+ */
 export function filterTelecallerLeads(
   leads: TelecallerLead[],
   filters: TelecallerLeadFilters,
@@ -66,19 +83,7 @@ export function filterTelecallerLeads(
     if (filters.status !== "all" && lead.status !== filters.status) return false;
     if (filters.followUpDue && !isFollowUpDue(lead, now)) return false;
     if (!isInDateRange(lead.next_follow_up_at, filters.followUpFrom, filters.followUpTo)) return false;
-    if (
-      !matchesLeadSignals(
-        {
-          loanStatuses: lead.loan_statuses,
-          lastDisposition: lead.last_disposition,
-          lastInterestLevel: lead.last_interest_level,
-          referrer: lead.referrer,
-        },
-        filters,
-      )
-    ) {
-      return false;
-    }
+    if (!matchesLeadSignals(telecallerSignalValues(lead), filters)) return false;
     if (!query) return true;
     return `${lead.name ?? ""} ${lead.mobile}`.toLocaleLowerCase().includes(query);
   });
