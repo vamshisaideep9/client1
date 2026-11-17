@@ -26,6 +26,20 @@ slice of the last batch; no requirement-percentage change.
   the list; links encode the id. New Playwright case: `..`,
   `../../admin/users`, an encoded and a suffixed value each show the list
   and request nothing under `/api/v1/my-contests/` or `/api/v1/admin`.
+- Final stack evidence (2026-11-17): `pnpm test` 1098 passed (148 files);
+  Playwright `contests-participant.spec.ts` 4 passed and
+  `contests-admin.spec.ts` 2 passed against `pnpm dev`; `pnpm build` in
+  `node:22-alpine` (clean `--frozen-lockfile` install, retried after
+  registry network errors) passed, exit 0, 116 static pages. Full API suite
+  (python:3.13.14-slim-trixie, fresh database migrated to head, 1 h 21 min,
+  API as of `b9d9d892`): 2778 passed, 3 failed — the three failures already
+  known on `main` (`test_client_loan_copy_migration::test_single_alembic_head_includes_this_revision`,
+  `test_public_banners` / `test_public_properties`
+  `::test_response_omits_internal_fields`); no new failure. After the three
+  later API review fixes, every contest suite plus ledgers, retention purge
+  and payout-link reconcile: 111 passed; migrations `f6b8d0a2c4e7` ↔ head
+  round-tripped twice. PRs: upstream #382–#386, mirrors
+  vamshisaideep9/client1#83–#87.
 
 **In progress — Batch G PR 4: Sub Admin contests and Admin contest
 approvals (web)** (2026-11-17; CS-027), branch
