@@ -105,6 +105,26 @@ class Settings(BaseSettings):
     MOBILE_CHANGE_OTP_DAILY_LIMIT: int = 3
     MOBILE_CHANGE_REQUEST_EXPIRE_DAYS: int = 7
 
+    # CS-025 mandatory email. When on, registration requires an OTP-verified
+    # email and every signed-in account without a verified email is limited to
+    # the "Add your email" step (plus /auth/me, logout, refresh, password
+    # change and account deletion) until one is added and verified. OFF by
+    # default: switch it on in an environment only after a real email has been
+    # delivered there end to end (SMTP configured, EMAIL_ENABLED=true, a code
+    # received and verified), or every unverified account is locked out.
+    EMAIL_REQUIRED_ENFORCED: bool = False
+    # CS-025 phone/email changes, added emails and staff contact-change
+    # requests. A code journey (password -> code to the current value -> new
+    # value -> code to the new value) must finish within the flow window; a
+    # staff request then waits for an Admin for the request window. The start
+    # budget counts every start, resend and wrong password per account per
+    # hour; the target budget caps codes sent to one new number or address per
+    # day, on top of the shared per-number OTP and per-IP caps.
+    CONTACT_CHANGE_FLOW_EXPIRE_MINUTES: int = 15
+    CONTACT_CHANGE_REQUEST_EXPIRE_DAYS: int = 7
+    CONTACT_CHANGE_START_LIMIT_PER_ACCOUNT: int = 6
+    CONTACT_CHANGE_TARGET_DAILY_LIMIT: int = 3
+
     # Staff first-login invite links. The two budgets are separate on purpose:
     # opening the page must never consume the budget for actually setting a
     # password, or a handful of page loads would lock a legitimate invitee out.

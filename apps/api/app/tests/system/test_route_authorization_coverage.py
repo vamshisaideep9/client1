@@ -44,6 +44,11 @@ PUBLIC_ROUTES = frozenset(
         "POST /api/v1/auth/register/initiate",
         "POST /api/v1/auth/register/verify-otp",
         "POST /api/v1/auth/register/set-password",
+        # CS-025 registration email code: needs a registration token (mobile
+        # already proven), binds the code to that mobile and the address's
+        # fingerprint, and never looks the address up.
+        "POST /api/v1/auth/register/email/initiate",
+        "POST /api/v1/auth/register/email/verify",
         "POST /api/v1/auth/forgot/initiate",
         "POST /api/v1/auth/forgot/verify",
         "POST /api/v1/auth/forgot/reset",

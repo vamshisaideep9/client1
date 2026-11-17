@@ -289,6 +289,26 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
     icon: Ban,
     tone: "bg-error/10 text-error",
   },
+  contact_changed: {
+    label: "Contact details changed",
+    icon: ShieldCheck,
+    tone: "bg-success/10 text-success",
+  },
+  contact_change_requested: {
+    label: "Contact change requested",
+    icon: BadgeCheck,
+    tone: "bg-warning/10 text-warning",
+  },
+  contact_change_rejected: {
+    label: "Contact change rejected",
+    icon: Ban,
+    tone: "bg-error/10 text-error",
+  },
+  contact_history_viewed: {
+    label: "Contact history viewed",
+    icon: ScrollText,
+    tone: "bg-loans-soft text-brand-link",
+  },
   banner_created: {
     label: "Banner created",
     icon: Megaphone,

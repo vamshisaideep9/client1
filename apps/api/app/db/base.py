@@ -70,3 +70,4 @@ from app.models.personalization import PersonalizationPreference  # noqa
 from app.models.agent_payout_details import AgentPayoutDetails  # noqa
 from app.models.staff_team import StaffTeam, StaffTeamMember, TeamWorkNote  # noqa
 from app.models.lead_intake_attempt import LeadIntakeAttempt  # noqa
+from app.models.contact_change import ContactChangeHistory, ContactChangeRequest  # noqa

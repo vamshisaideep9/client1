@@ -16,7 +16,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cache.redis_keys import RedisCache
 from app.core.client_ip import get_client_ip
-from app.core.deps import CurrentUser, get_active_user, get_cache, get_current_user
+from app.core.deps import (
+    CurrentUser,
+    get_active_user,
+    get_active_user_allow_email_pending,
+    get_cache,
+    get_current_user,
+)
 from app.db.session import get_db
 from app.schemas.auth import (
     AccountDeleteRequest,
@@ -41,7 +47,16 @@ from app.schemas.auth import (
     ResetTokenResponse,
     SetPasswordRequest,
 )
-from app.services import auth_service
+from app.schemas.contact_change import (
+    ContactChangeChallengeResponse,
+    ContactChangeIdRequest,
+    ContactChangeOtpRequest,
+    EmailAddRequest,
+    RegisterEmailInitiateRequest,
+    RegisterEmailInitiateResponse,
+    RegisterEmailVerifyRequest,
+)
+from app.services import auth_service, contact_change
 from app.services.account_deletion import AccountAlreadyDeleted, PrimaryAdminDeletionForbidden
 
 router = APIRouter()
@@ -111,6 +126,40 @@ async def register_verify_otp(
     cache: RedisCache = Depends(get_cache),
 ) -> RegistrationTokenResponse:
     return await auth_service.register_verify_otp(db, cache, req)
+
+
+@router.post(
+    "/register/email/initiate",
+    response_model=RegisterEmailInitiateResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def register_email_initiate(
+    req: RegisterEmailInitiateRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    cache: RedisCache = Depends(get_cache),
+) -> RegisterEmailInitiateResponse:
+    """CS-025: after the mobile code, send a code to the registering email."""
+    return await auth_service.register_email_initiate(
+        db,
+        cache,
+        req,
+        ip=_get_client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+
+
+@router.post(
+    "/register/email/verify",
+    response_model=RegistrationTokenResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def register_email_verify(
+    req: RegisterEmailVerifyRequest,
+    cache: RedisCache = Depends(get_cache),
+) -> RegistrationTokenResponse:
+    """CS-025: verify the email code; the returned token carries the address."""
+    return await auth_service.register_email_verify(cache, req)
 
 
 @router.post(
@@ -262,7 +311,7 @@ async def delete_me(
     response: Response,
     db: AsyncSession = Depends(get_db),
     cache: RedisCache = Depends(get_cache),
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(get_active_user_allow_email_pending),
 ) -> MessageResponse:
     try:
         await auth_service.delete_own_account(
@@ -387,7 +436,7 @@ async def resend_otp(
 @router.get("/me", response_model=MeResponse, status_code=status.HTTP_200_OK)
 async def me(
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(get_active_user_allow_email_pending),
 ) -> MeResponse:
     return await auth_service.get_me(db, current_user.id)
 
@@ -418,7 +467,7 @@ async def email_verify_initiate(
     request: Request,
     db: AsyncSession = Depends(get_db),
     cache: RedisCache = Depends(get_cache),
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(get_active_user_allow_email_pending),
 ) -> EmailVerifyInitiateResponse:
     from app.models.user import User
 
@@ -446,7 +495,7 @@ async def email_verify_confirm(
     request: Request,
     db: AsyncSession = Depends(get_db),
     cache: RedisCache = Depends(get_cache),
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(get_active_user_allow_email_pending),
 ) -> MessageResponse:
     from app.models.user import User
 
@@ -464,3 +513,78 @@ async def email_verify_confirm(
         user_agent=request.headers.get("user-agent"),
     )
     return MessageResponse(message="Email verified successfully.")
+
+
+# ---------------------------------------------------------------------------
+# Add an email (CS-025) — reachable while the email step is still owed
+# ---------------------------------------------------------------------------
+
+
+def _actor(current_user: CurrentUser) -> contact_change.Actor:
+    return contact_change.Actor(user_uuid=current_user.id, role=current_user.role)
+
+
+@router.post(
+    "/email/add",
+    response_model=ContactChangeChallengeResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def email_add(
+    req: EmailAddRequest,
+    request: Request,
+    cache: RedisCache = Depends(get_cache),
+    current_user: CurrentUser = Depends(get_active_user_allow_email_pending),
+) -> ContactChangeChallengeResponse:
+    """Password, then a code to the new address. Only without a verified email."""
+    try:
+        return await contact_change.start_email_add(
+            cache,
+            actor=_actor(current_user),
+            email=req.email,
+            current_password=req.current_password,
+            ip=_get_client_ip(request),
+        )
+    except contact_change.ContactChangeError as exc:
+        raise contact_change.http_error(exc) from exc
+
+
+@router.post(
+    "/email/add/resend",
+    response_model=ContactChangeChallengeResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def email_add_resend(
+    req: ContactChangeIdRequest,
+    request: Request,
+    cache: RedisCache = Depends(get_cache),
+    current_user: CurrentUser = Depends(get_active_user_allow_email_pending),
+) -> ContactChangeChallengeResponse:
+    try:
+        return await contact_change.resend_email_add(
+            cache,
+            actor=_actor(current_user),
+            change_id=req.change_id,
+            ip=_get_client_ip(request),
+        )
+    except contact_change.ContactChangeError as exc:
+        raise contact_change.http_error(exc) from exc
+
+
+@router.post("/email/add/verify", response_model=MeResponse, status_code=status.HTTP_200_OK)
+async def email_add_verify(
+    req: ContactChangeOtpRequest,
+    db: AsyncSession = Depends(get_db),
+    cache: RedisCache = Depends(get_cache),
+    current_user: CurrentUser = Depends(get_active_user_allow_email_pending),
+) -> MeResponse:
+    """Verify the code; the address is stored verified and the email step clears."""
+    try:
+        await contact_change.verify_email_add(
+            cache,
+            actor=_actor(current_user),
+            change_id=req.change_id,
+            otp=req.otp,
+        )
+    except contact_change.ContactChangeError as exc:
+        raise contact_change.http_error(exc) from exc
+    return await auth_service.get_me(db, current_user.id)
