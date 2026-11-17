@@ -40,8 +40,18 @@ requirement-percentage change.
   dashboard): email collected and code-verified; contact change history
   recorded, kept for the life of the account, platform Admins only, erased
   with the account; how to change phone/email. Flagged for legal review.
-- Evidence: see the PR (lint, typecheck, vitest, Playwright desktop + 390 px,
-  build, full API suite).
+- Evidence: `pnpm lint` and `pnpm typecheck` pass; `pnpm test` 1076 passed
+  (144 files, incl. new `lib/contact-change.test.ts`, extended middleware,
+  settings-by-role and auth tests, four forms added to the form-surface
+  registry); Playwright against `pnpm dev` (port 3141, mocked API): new
+  `contact-change.spec.ts` 10 passed (client phone change 1440 / 390 px,
+  Add email without a verified one, staff request 1280 / 390 px, blocking
+  add-email step 1440 / 390 px, registration email step, Admin approval and
+  contact history 1365 / 390 px; no page overflow), with settings-by-role and
+  registration-profile passing; `dashboard-navigation` and `personalization`
+  need a live API on :8000 and three `dashboard-refinement` checks fail the
+  same way on the E3 base. `pnpm build` passes in `node:22-alpine`. Full API
+  suite on the stack: see Batch E PR 3 (no new failure after its two fixes).
 
 **In progress — Batch E PR 3: staff contact-change requests and one-Admin
 approval (API)** (2026-11-17; CS-025; PR
