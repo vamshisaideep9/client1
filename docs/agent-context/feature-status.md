@@ -56,7 +56,7 @@ API, regenerated contracts and two web type labels; no migration (the
   manager / member prizes with the member minimum, staff prize refused for
   Payouts, mark-paid refused for the recipient, audited, second mark 409;
   budget cap drops a crossing tie group; Admin cancels a live contest the
-  maker cannot): 6 passed. Web `pnpm typecheck` passes.
+  maker cannot; batch security review: the retention purge of a de-linked paid contest prize payout and its ledger row succeeds and the result keeps its prize; a reference with an account number is 422): 7 passed after the review. Web `pnpm typecheck` passes.
 
 **In progress — Batch G PR 2: contest scoring, lifecycle job and standings
 (API)** (2026-11-17; CS-027), branch `feat/batch-g-contests-scoring`
@@ -66,6 +66,10 @@ regenerated contracts; no requirement-percentage change.
   standings as described in `implementation-plan.md` (Batch G2);
   `services/commissions.py` exposes the commission-eligibility predicates
   it already used, shared with Agent contest credit.
+- Batch security review (MEDIUM, credit steering): Telecaller credit also
+  needs a call by the current holder on the lead at or before the stage
+  time, so a manager reassigning an already-counted lead near the end moves
+  no credit (tests: no call, a call after the stage, a call before it).
 - Security review fix (MEDIUM, prize manipulation; see the plan): Employee
   credit needs a task completed at or before the case's stage time, task
   activity uses the new database-stamped `tasks.completed_at`, and a team
@@ -101,7 +105,7 @@ merged). API, migration `a8d0f2b4c6e9` and regenerated contracts; no
 requirement-percentage change.
 - Model and migration as described in `implementation-plan.md` (Batch G1):
   `contests`, `contest_results` (RLS enabled and forced, business-line
-  immutability triggers, consistency CHECKs incl. maker ≠ checker), five
+  immutability triggers, consistency CHECKs incl. maker ≠ checker; payout links `ON DELETE SET NULL` after the batch security review found that `RESTRICT` would block the 7-year retention purge), five
   loan / deal stage markers stamped once by
   `services/loan_applications.py` / `services/property_deals.py`, enum
   labels for `contest_reward` and the contest audit / notification values.

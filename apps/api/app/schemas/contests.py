@@ -18,6 +18,7 @@ assigned to it or to both lines, or a team on it).
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime
 from typing import Annotated, Literal
 from uuid import UUID
@@ -431,6 +432,15 @@ class ContestPrizeMarkPaid(BaseModel):
     personal or bank details."""
 
     reference: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=80)]
+
+    @field_validator("reference")
+    @classmethod
+    def no_long_numbers(cls, value: str) -> str:
+        # Security review: keep account, phone and ID numbers out of a record
+        # Admins and auditors read; seven or more digits in a row is refused.
+        if re.search(r"\d{7,}", value):
+            raise ValueError("Leave out account, phone or ID numbers.")
+        return value
 
 
 class ContestPrizePayoutResponse(BaseModel):

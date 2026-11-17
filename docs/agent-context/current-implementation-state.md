@@ -947,7 +947,9 @@ module; "Does not fit" items 6, 11, 12 and 13 of the batch plan):**
 - *Credit.* Agents: leads they introduced (at disbursed / closed this is the
   commission-eligibility predicate). Telecallers: leads they hold when
   scored — only the current assignee is stored, so a reassigned lead counts
-  for whoever holds it. Employees: leads where they completed a task at or
+  for its current holder, and only if they logged a call on it before the
+  case reached the counted stage (a manager reassigning a counted lead moves
+  no credit). Employees: leads where they completed a task at or
   before the moment the case reached the counted stage (database-stamped
   completion time; open, later or reassigned-later work earns nothing).
   Teams: their current members, a shared case counted once; a team managed

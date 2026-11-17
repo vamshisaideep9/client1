@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 import app.db.session as db_session
 from app.models.audit_log import AuditAction, AuditLog
@@ -26,10 +26,12 @@ from app.models.transaction import Transaction, TransactionType
 from app.services import payout_links
 from app.services.contest_lifecycle import end_if_due
 from app.services.contests import today_ist
+from app.services.retention_purge import purge_delinked_financial_records
 from app.tests.contest_support import (
     admin_token,
     headers,
     seed_agent,
+    seed_call,
     seed_contest,
     seed_lead,
     seed_loan,
@@ -220,6 +222,57 @@ async def test_agent_prize_payout_is_idempotent_and_needs_a_second_admin(
         assert AuditAction.CONTEST_PRIZE_PAYOUT_REQUESTED in actions
 
 
+async def test_retention_purge_is_not_blocked_by_a_paid_contest_prize(
+    client: AsyncClient,
+) -> None:
+    """Security review: the 7-year purge of a de-linked contest_reward payout
+    and its ledger row must succeed; the result keeps its paid prize."""
+    _, maker_user, _ = await sub_admin_token()
+    admin, _ = await admin_token()
+    checker, _ = await admin_token()
+    loan_type = await seed_loan_type("Purge loan")
+    _, agent = await seed_agent("loans")
+    await _seed_cases(agent, loan_type, 1)
+    contest = await _ended_contest(
+        maker_user, loan_type, criteria=_loan_criteria(loan_type, count_at_least=1)
+    )
+    assert (
+        await client.post(f"/api/v1/contests/{contest.id}/finalize", headers=headers(admin))
+    ).status_code == 200
+    row = next(r for r in await _results(contest.id) if r.agent_profile_uuid == agent.id)
+    payout_id = (
+        await client.post(
+            f"/api/v1/contests/{contest.id}/results/{row.id}/payout",
+            json=_VPA,
+            headers=headers(admin),
+        )
+    ).json()["payout_id"]
+    assert (
+        await client.post(f"/api/v1/payouts/{payout_id}/approve", headers=headers(checker))
+    ).status_code == 200
+    async with db_session.AsyncSessionLocal() as db:
+        paid = await db.get(ContestResult, row.id)
+        assert paid.payment_status == "paid" and paid.payout_txn_uuid is not None
+        long_ago = datetime.now(UTC) - timedelta(days=365 * 8)
+        await db.execute(
+            update(Payout).where(Payout.id == uuid.UUID(payout_id)).values(delinked_at=long_ago)
+        )
+        await db.execute(
+            update(Transaction)
+            .where(Transaction.id == paid.payout_txn_uuid)
+            .values(delinked_at=long_ago)
+        )
+        await db.commit()
+
+    summary = await purge_delinked_financial_records()
+    assert summary["payouts_purged"] >= 1 and summary["transactions_purged"] >= 1
+
+    async with db_session.AsyncSessionLocal() as db:
+        kept = await db.get(ContestResult, row.id)
+        assert (kept.payout_uuid, kept.payout_txn_uuid) == (None, None)
+        assert (kept.payment_status, kept.prize_paise) == ("paid", 1_000_00)
+
+
 async def test_rejected_payout_frees_the_prize_and_generic_create_is_refused(
     client: AsyncClient,
 ) -> None:
@@ -271,8 +324,11 @@ async def test_budget_cap_and_staff_mark_paid_with_audit(client: AsyncClient) ->
     team = await seed_team(manager, "loans", "telecaller", [ravi, sam])
     loan_type = await seed_loan_type("Team award loan")
     for person in (ravi, ravi, sam):
+        lead = await seed_lead("loans", telecaller=person)
+        # Telecaller credit needs a call before the counted stage.
+        await seed_call(person, lead, at=_inside_window() - timedelta(hours=1))
         await seed_loan(
-            await seed_lead("loans", telecaller=person),
+            lead,
             loan_type=loan_type,
             status=LoanStatus.SANCTIONED,
             at=_inside_window(),
@@ -328,6 +384,12 @@ async def test_budget_cap_and_staff_mark_paid_with_audit(client: AsyncClient) ->
         headers=headers(manager_as_admin),
     )
     assert response.status_code == 403
+    response = await client.post(
+        f"/api/v1/contests/{contest.id}/results/{manager_row.id}/mark-paid",
+        json={"reference": "NEFT to account 123456789012"},
+        headers=headers(admin),
+    )
+    assert response.status_code == 422  # no account / phone numbers in the record
     response = await client.post(
         f"/api/v1/contests/{contest.id}/results/{manager_row.id}/mark-paid",
         json={"reference": "Payroll November"},

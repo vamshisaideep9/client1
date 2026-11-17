@@ -196,10 +196,10 @@ class ContestResult(Base):
         String(16), nullable=False, default=ContestPaymentStatus.NONE.value
     )
     payout_uuid: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("payouts.id", ondelete="RESTRICT"), nullable=True
+        UUID(as_uuid=True), ForeignKey("payouts.id", ondelete="SET NULL"), nullable=True
     )
     payout_txn_uuid: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="RESTRICT"), nullable=True
+        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="SET NULL"), nullable=True
     )
     paid_marked_by_uuid: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("auth_users.id", ondelete="SET NULL"), nullable=True
