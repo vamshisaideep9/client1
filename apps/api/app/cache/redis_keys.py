@@ -111,6 +111,13 @@ TASK_DOCUMENT_UPLOAD = "task_document_upload:{object_key_hash}"
 # account.
 PERSONALIZATION_LOCATION_CAPTURE = "personalization_location_capture:{owner_uuid}"
 
+# CS-026 pincode lookups, per account. Separate budgets: typing pincodes must
+# not use up the (smaller) "Use my location" budget. The keys hold a counter
+# only; the looked-up pincode and any coordinates are never written to Redis.
+# Owner: api/v1/pincodes.py.
+PINCODE_LOOKUP_RATE = "pincode_lookup_rate:{owner_uuid}"
+PINCODE_NEAREST_RATE = "pincode_nearest_rate:{owner_uuid}"
+
 # TTLs in seconds
 TTL_OTP = 5 * 60  # 5 min
 TTL_OTP_RESEND = 60 * 60  # 1 hour window + lock duration
@@ -135,6 +142,7 @@ TTL_TASK_FEEDBACK_MEDIA_PRESIGN = 60 * 60
 TTL_TASK_DOCUMENT_PRESIGN = 60 * 60
 TTL_TASK_DOCUMENT_UPLOAD = 10 * 60
 TTL_PERSONALIZATION_LOCATION_CAPTURE = 60 * 60
+TTL_PINCODE_RATE = 60 * 60
 
 
 # ---------------------------------------------------------------------------
@@ -362,6 +370,14 @@ def task_document_upload_key(object_key: str) -> str:
 
 def personalization_location_capture_key(owner_uuid: str) -> str:
     return PERSONALIZATION_LOCATION_CAPTURE.format(owner_uuid=owner_uuid)
+
+
+def pincode_lookup_rate_key(owner_uuid: str) -> str:
+    return PINCODE_LOOKUP_RATE.format(owner_uuid=owner_uuid)
+
+
+def pincode_nearest_rate_key(owner_uuid: str) -> str:
+    return PINCODE_NEAREST_RATE.format(owner_uuid=owner_uuid)
 
 
 def agent_apply_otp_daily_key(mobile: str) -> str:

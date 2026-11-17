@@ -37,6 +37,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.auth import AuthEvent, RefreshToken
+from app.models.pincode import Pincode
 from app.models.profile import (
     AgentProfile,
     ClientProfile,
@@ -71,6 +72,7 @@ from app.schemas.contact_change import (
     RegisterEmailInitiateResponse,
     RegisterEmailVerifyRequest,
 )
+from app.schemas.pincodes import PincodePlaceRead
 from app.services import account_deletion, contact_change, referrals
 from app.services.leads import (
     bind_registered_client_leads,
@@ -668,6 +670,19 @@ async def get_me(db: AsyncSession, current_user_id: UUID) -> MeResponse:
         for p in rows.all()
         if p.business_line in ("loans", "real_estate")
     ]
+    # CS-026: the place name is derived from the reference list on read, never
+    # stored as free text alongside the pincode.
+    place_row = await db.get(Pincode, user.pincode) if user.pincode else None
+    place = (
+        PincodePlaceRead(
+            pincode=place_row.pincode,
+            area=place_row.area,
+            district=place_row.district,
+            state=place_row.state,
+        )
+        if place_row is not None
+        else None
+    )
     return MeResponse(
         first_name=user.first_name,
         last_name=user.last_name,
@@ -682,6 +697,8 @@ async def get_me(db: AsyncSession, current_user_id: UUID) -> MeResponse:
         income_period=user.income_period,
         occupation=user.occupation,
         location=user.location,
+        pincode=user.pincode,
+        place=place,
         profiles=profiles,
     )
 
@@ -752,6 +769,7 @@ async def update_me(
         "income_period",
         "occupation",
         "location",
+        "pincode",
     ):
         if field in supplied_fields:
             setattr(user, field, getattr(req, field))

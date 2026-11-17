@@ -11,3 +11,4 @@ packages/contracts/generated/*.d.ts text eol=lf
 
 # Binary fixtures: never normalize line endings.
 *.mp4 binary
+*.gz binary
