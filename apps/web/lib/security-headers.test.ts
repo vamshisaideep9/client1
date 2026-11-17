@@ -48,6 +48,9 @@ describe("browser security headers", () => {
     expect(headers["X-Content-Type-Options"]).toBe("nosniff");
     expect(headers["X-Frame-Options"]).toBe("DENY");
     expect(headers["Permissions-Policy"]).toContain("camera=()");
+    expect(headers["Permissions-Policy"]).toContain("microphone=()");
+    // CS-026: one-time "Use my location" on this origin only, never in frames.
+    expect(headers["Permissions-Policy"]).toContain("geolocation=(self)");
   });
 
   it("adds transport enforcement only to the production policy", () => {

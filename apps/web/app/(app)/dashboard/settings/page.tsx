@@ -66,7 +66,7 @@ export default function SettingsPage() {
         <ReadOnlyProfile firstName={me.firstName} lastName={me.lastName} />
       ) : me && sections ? (
         <ProfileForm
-          key={`${me.firstName}|${me.lastName}|${me.gender}|${me.incomeAmountMinor}|${me.occupation}|${me.location}`}
+          key={`${me.firstName}|${me.lastName}|${me.gender}|${me.incomeAmountMinor}|${me.occupation}|${me.location}|${me.pincode}`}
           firstName={me.firstName}
           lastName={me.lastName}
           gender={me.gender}
@@ -76,6 +76,8 @@ export default function SettingsPage() {
           incomePeriod={me.incomePeriod}
           occupation={me.occupation}
           location={me.location}
+          pincode={me.pincode}
+          place={me.place}
           includePersonalDetails={includePersonalDetails}
           onSaved={setMe}
         />
@@ -158,6 +160,8 @@ function ProfileForm({
   incomePeriod: initialIncomePeriod,
   occupation: initialOccupation,
   location: initialLocation,
+  pincode: initialPincode,
+  place,
   includePersonalDetails,
   onSaved,
 }: {
@@ -170,6 +174,8 @@ function ProfileForm({
   incomePeriod: Me["incomePeriod"];
   occupation: Me["occupation"];
   location: Me["location"];
+  pincode: Me["pincode"];
+  place: Me["place"];
   includePersonalDetails: boolean;
   onSaved: (next: Me) => void;
 }) {
@@ -184,6 +190,7 @@ function ProfileForm({
     incomePeriod: initialIncomePeriod ?? "",
     occupation: initialOccupation ?? "",
     location: initialLocation ?? "",
+    pincode: initialPincode ?? "",
   });
   const [saving, setSaving] = React.useState(false);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
@@ -197,7 +204,8 @@ function ProfileForm({
       (initialIncomeAmountMinor === null ? "" : String(initialIncomeAmountMinor / 100)) ||
     optionalProfile.incomePeriod !== (initialIncomePeriod ?? "") ||
     optionalProfile.occupation.trim() !== (initialOccupation ?? "") ||
-    optionalProfile.location.trim() !== (initialLocation ?? ""));
+    optionalProfile.location.trim() !== (initialLocation ?? "") ||
+    optionalProfile.pincode.trim() !== (initialPincode ?? ""));
   const dirty =
     firstName.trim() !== initialFirst || lastName.trim() !== initialLast || optionalChanged;
   const canSave = dirty && !saving;
@@ -261,6 +269,7 @@ function ProfileForm({
         income_period: "incomePeriod",
         occupation: "occupation",
         location: "location",
+        pincode: "pincode",
       });
       if (Object.keys(serverErrors).length > 0) setFieldErrors(serverErrors);
       toast.error(res.error || "Couldn't save your changes.", {
@@ -320,6 +329,7 @@ function ProfileForm({
               }); }}
               disabled={saving}
               errors={fieldErrors}
+              initialPlace={place}
             />
           </div>
         ) : null}

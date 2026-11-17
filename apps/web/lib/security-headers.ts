@@ -99,7 +99,9 @@ export function buildSecurityHeaders({
     { key: "X-Frame-Options", value: "DENY" },
     {
       key: "Permissions-Policy",
-      value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+      // CS-026: "Use my location" on the profile asks for the position once,
+      // so geolocation is allowed for this origin only (never for frames).
+      value: "camera=(), microphone=(), geolocation=(self), browsing-topics=()",
     },
     { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
     { key: "Origin-Agent-Cluster", value: "?1" },

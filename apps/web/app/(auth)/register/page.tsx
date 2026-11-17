@@ -424,6 +424,7 @@ function RegisterPageContent() {
         income_period: "incomePeriod",
         occupation: "occupation",
         location: "location",
+        pincode: "pincode",
       });
       if (Object.keys(serverErrors).length > 0) setProfileErrors(serverErrors);
       toast.error(result.error || "Couldn't save your profile.", {
