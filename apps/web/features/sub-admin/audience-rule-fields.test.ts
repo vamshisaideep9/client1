@@ -6,6 +6,7 @@ import {
   normalizeAudienceRules,
   withAgentSignals,
   withClientJourneyStages,
+  withPlaceTargets,
 } from "./audience-rule-fields";
 
 describe("audience rule helpers", () => {
@@ -16,8 +17,33 @@ describe("audience rule helpers", () => {
       client_journey_stages: [],
       agent_signals: [],
       locations: [],
+      pincodes: [],
+      cities: [],
     });
     expect(audienceSummary(emptyAudienceRules())).toBe("Everyone");
+  });
+
+  it("uses version 2 only when pincode or city targets are present (CS-026)", () => {
+    const plain = normalizeAudienceRules({ version: 1, user_types: ["client"] });
+    expect(plain.version).toBe(1);
+
+    const shared = { ...emptyAudienceRules(), user_types: ["client", "agent"] as ("client" | "agent")[] };
+    const placed = withPlaceTargets(shared, {
+      pincodes: ["500001"],
+      cities: [{ district: "Hyderabad", state: "Telangana" }],
+    });
+    expect(placed.version).toBe(2);
+    expect(placed.user_types).toEqual(["client"]);
+    expect(audienceSummary(placed)).toBe("Clients · 1 city · 1 pincode");
+
+    const cleared = withPlaceTargets(placed, { pincodes: [], cities: [] });
+    expect(cleared.version).toBe(1);
+
+    // Agent signals make the audience Agent-only, which drops place targets.
+    const agentOnly = withAgentSignals(placed, ["no_leads"]);
+    expect(agentOnly.pincodes).toEqual([]);
+    expect(agentOnly.cities).toEqual([]);
+    expect(agentOnly.version).toBe(1);
   });
 
   it("summarizes targeted dimensions without exposing coordinates", () => {

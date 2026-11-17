@@ -25,7 +25,6 @@ from app.schemas.campaign_media import (
     CampaignMediaUsageType,
 )
 from app.services.campaign_media import (
-    MEDIA_MAX_BYTES,
     CampaignMediaInUse,
     CampaignMediaInvalid,
     create_asset,
@@ -33,6 +32,7 @@ from app.services.campaign_media import (
     presign_campaign_media,
     read_asset,
     update_asset,
+    upload_limit,
     usage_counts,
 )
 
@@ -49,13 +49,13 @@ async def image_upload_url(
     except CampaignMediaInvalid as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unsupported campaign image. Use JPEG, PNG, or WEBP.",
+            detail="Unsupported campaign media. Use JPEG, PNG, WEBP, or MP4.",
         ) from exc
     return CampaignMediaUploadResponse(
         object_key=object_key,
         upload_url=url,
         fields=fields,
-        max_bytes=MEDIA_MAX_BYTES,
+        max_bytes=upload_limit(payload.content_type),
     )
 
 
@@ -71,11 +71,13 @@ async def confirm_media(
         )
         return await read_asset(db, asset)
     except CampaignMediaInvalid as exc:
+        detail = (
+            "Upload a valid MP4 banner video (H.264 with AAC audio) of up to 60 seconds."
+            if payload.content_type == "video/mp4"
+            else "Upload a valid landscape campaign image with the required placement dimensions."
+        )
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=(
-                "Upload a valid landscape campaign image with the required placement dimensions."
-            ),
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail
         ) from exc
 
 

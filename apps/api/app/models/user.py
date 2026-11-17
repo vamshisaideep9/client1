@@ -72,6 +72,10 @@ class User(Base):
             "income_amount_minor IS NULL OR income_amount_minor BETWEEN 1 AND 1000000000000",
             name="profile_income_amount_valid",
         ),
+        CheckConstraint(
+            "pincode IS NULL OR pincode ~ '^[1-9][0-9]{5}$'",
+            name="profile_pincode_valid",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -106,6 +110,10 @@ class User(Base):
     income_period: Mapped[str | None] = mapped_column(String(16), nullable=True)
     occupation: Mapped[str | None] = mapped_column(String(120), nullable=True)
     location: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # CS-026: optional six-digit pincode. Its place name comes from the
+    # `pincodes` reference table (no FK: a pincode missing from that list is
+    # still accepted, it just has no place name).
+    pincode: Mapped[str | None] = mapped_column(String(6), nullable=True)
     password_hash: Mapped[str | None] = mapped_column(
         String,
         nullable=True,

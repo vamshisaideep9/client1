@@ -63,7 +63,7 @@ for (const { role, route, label } of destinations) {
       await page.screenshot({ path: testInfo.outputPath(`sidebar-${width}.png`), animations: "disabled" });
     }
 
-    for (const { width, height } of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 600 }]) {
+    for (const { width, height } of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 700, height: 600 }]) {
       await page.setViewportSize({ width, height });
       const trigger = page.getByRole("button", { name: "Open menu", exact: true });
       await trigger.click();
