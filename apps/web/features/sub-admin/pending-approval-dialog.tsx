@@ -28,7 +28,7 @@ export function PendingApprovalDialog({ items }: { items: PendingApprovalItem[] 
           <DialogContent showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
             <CmsWorkspaceHeader title="Waiting on Admin" description={`Filter all ${items.length} approval items currently loaded for your work.`} />
             <div className="min-h-0 space-y-4 overflow-y-auto pt-1">
-              <FilterBar value={filters} onChange={setFilters} searchLabel="Search approval items" searchPlaceholder="Title" showStatus={false} kindLabel="review types" kindOptions={[{ value: "banner", label: "Banner" }, { value: "property_submission", label: "Property listing" }]} note="Filters apply to the approval items already loaded for your role." />
+              <FilterBar value={filters} onChange={setFilters} searchLabel="Search approval items" searchPlaceholder="Title" showStatus={false} kindLabel="Review type" kindOptions={[{ value: "banner", label: "Banner" }, { value: "property_submission", label: "Property listing" }]} note="Filters apply to the approval items already loaded for your role." />
               <p className="text-sm text-text-secondary">{filtered.length} {filtered.length === 1 ? "item" : "items"} shown</p>
               <PendingApprovalList items={filtered} emptyMessage="No loaded items match these filters." />
             </div>

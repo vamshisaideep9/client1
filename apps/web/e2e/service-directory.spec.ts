@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { FINANCIAL_SERVICE_SEO } from "@/lib/financial-service-content";
 import { financialServiceHref, LOAN_PRODUCTS } from "@/lib/products";
 import { serviceAnchor } from "@/lib/service-directory";
 import type { PublicFinancialProduct } from "@/lib/financial-catalog";
@@ -52,7 +53,7 @@ test("desktop and mobile navigation open the same published service", async ({ p
   for (const width of [1365, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/");
-    if (width < 1280) {
+    if (width < 768) {
       await page.locator("header").getByRole("button", { name: "Open menu", exact: true }).click();
       await page.getByRole("dialog").locator("summary").filter({ hasText: "Financial Services" }).click();
       await page.getByRole("dialog").getByRole("link", { name: product.label, exact: true }).click();
@@ -61,7 +62,9 @@ test("desktop and mobile navigation open the same published service", async ({ p
       await page.keyboard.press("Enter");
       await page.locator('[data-slot="navigation-menu-viewport"]').getByRole("link", { name: product.label, exact: true }).click();
     }
-    await expect(page.getByRole("heading", { level: 1, name: product.label, exact: true })).toBeVisible();
+    // Drafted services use their supplied H1; the nav keeps the catalogue label.
+    const h1 = FINANCIAL_SERVICE_SEO[product.slug]?.h1 ?? product.label;
+    await expect(page.getByRole("heading", { level: 1, name: h1, exact: true })).toBeVisible();
   }
 });
 
@@ -78,7 +81,7 @@ for (const service of LOAN_PRODUCTS) {
       return;
     }
     expect(response?.status()).toBe(200);
-    await expect(page.locator("main").getByRole("heading", { level: 1 })).toHaveText(product.label);
+    await expect(page.locator("main").getByRole("heading", { level: 1 })).toHaveText(FINANCIAL_SERVICE_SEO[product.slug]?.h1 ?? product.label);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `${baseURL}${href}`);
     await expect(page.locator("#providers").getByRole("heading", { name: "Compare configured provider options", exact: true })).toBeVisible();
     expect(await page.locator('main a[href*="dashboard%2Fapply"]').count()).toBeGreaterThan(0);

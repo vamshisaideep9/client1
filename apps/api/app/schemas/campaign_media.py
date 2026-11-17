@@ -18,8 +18,11 @@ CampaignMediaUsageType = Literal[
     "dashboard_banner",
     "dashboard_offer",
     "campaign",
+    "banner_video",
 ]
-CampaignImageContentType = Literal["image/jpeg", "image/png", "image/webp"]
+# MP4 only for video: the isolated media processor transcodes to MP4, and a
+# `video/mp4` upload is accepted only for the `banner_video` usage type.
+CampaignImageContentType = Literal["image/jpeg", "image/png", "image/webp", "video/mp4"]
 
 
 class CampaignMediaUploadRequest(BaseModel):

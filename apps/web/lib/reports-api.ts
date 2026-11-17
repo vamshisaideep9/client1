@@ -5,7 +5,7 @@
 import type { components } from "@contracts/generated/schema";
 
 import { apiDownload, apiRequest, type ApiDownloadResponse, type ApiResponse } from "@/lib/api/client";
-import { buildReportParams } from "@/lib/reports";
+import { buildReportParams, type ReportDetailFilters } from "@/lib/reports";
 import { brandedFilename } from "@/lib/brand";
 
 type Schemas = components["schemas"];
@@ -35,11 +35,22 @@ export type ReportFilters = {
   bucket?: ReportBucket; // ignored for "agents"
   businessLine?: ReportBusinessLine;
   agentProfileUuids?: string[];
+  detail?: ReportDetailFilters;
   sortBy?: string;
   sortDir?: SortDir;
   limit?: number;
   offset?: number;
 };
+
+export type ReportTelecallerOption = Schemas["ReportTelecallerOption"];
+
+/** Telecallers for the Analytics "Telecaller" filter (platform Admin only). */
+export async function getReportTelecallers(
+  businessLine?: ReportBusinessLine,
+): Promise<ApiResponse<ReportTelecallerOption[]>> {
+  const query = businessLine ? `?business_line=${businessLine}` : "";
+  return apiRequest<ReportTelecallerOption[]>(`/api/v1/admin/reports/telecallers${query}`);
+}
 
 export async function getLeadsReport(filters: ReportFilters): Promise<ApiResponse<LeadsReportResponse>> {
   return apiRequest<LeadsReportResponse>(
