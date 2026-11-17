@@ -312,14 +312,22 @@ async def test_staff_may_withdraw_a_pending_request(client: AsyncClient) -> None
     ) == {"status": "cancelled", "new_value": None}
 
 
-async def test_admins_are_notified_of_a_new_request(client: AsyncClient) -> None:
-    admin_token, admin_uid, _ = await make_admin(client)
-    token, _, _ = await make_staff(client, "telecaller")
+async def test_admins_are_notified_of_a_new_request(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # notify_admins caps its fan-out (a suite-wide database can hold more
+    # active Admins than the cap), so assert the call rather than one row.
+    from app.services import contact_change as service
+
+    calls: list[dict] = []
+
+    async def _capture(**kwargs: object) -> None:
+        calls.append(kwargs)
+
+    monkeypatch.setattr(service, "notify_admins", _capture)
+    token, uid, _ = await make_staff(client, "telecaller")
     await _submitted(client, token, "mobile", unique_mobile())
-    notice = await fetch_all(
-        "SELECT title FROM notifications WHERE user_uuid = :id "
-        "AND type = 'contact_change_requested'",
-        {"id": admin_uid},
-    )
-    assert len(notice) >= 1
-    assert admin_token
+    assert len(calls) == 1
+    assert calls[0]["notification_type"] == "contact_change_requested"
+    assert str(calls[0]["exclude_user_uuid"]) == uid
+    assert "+91" not in str(calls[0]["body"])

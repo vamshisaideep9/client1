@@ -88,7 +88,8 @@ stacked on Batch D PR 2:
   registration (email code step) and every endpoint except the email step;
   `POST /auth/email/add` (+ `/resend`, `/verify`) adds a code-verified email
   (password first); `PATCH /auth/me` no longer edits or clears email;
-  `/auth/me`, login and refresh carry `email_required`.
+  `/auth/me`, login and refresh carry `email_required`. The platform-scope
+  policy ledger test lists the two new admin-gated policies.
 - *PR E2 — API: self-service phone/email change and history*, branch
   `feat/batch-e-contact-change-api` stacked on E1 (PR
   [#376](https://github.com/brollysolutions/client1/pull/376), mirror
@@ -119,6 +120,8 @@ stacked on Batch D PR 2:
   (password; applied like a self-service change, history `admin_approved`
   with the approver) and `/{id}/reject` (password, PII-free reason). An Admin
   never decides a request on their own account; Admins cannot file one.
+  Full API suite on the stack: no new failure once the two batch tests
+  were fixed (three pre-existing failures on main remain).
 - *PR E4 — web*, branch `feat/batch-e-contact-change-web` stacked on E3.
   Registration shows a "Verify your email" step when verify-otp says the
   server requires it (the optional email field left the profile step); a

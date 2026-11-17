@@ -78,7 +78,13 @@ requirement-percentage change.
   and notice; not reviewable before the code; one active request; another
   staff member cannot verify it; Client 403; wrong password / registered
   number / malformed number; expiry; withdraw; Admins notified). Full API
-  suite: see Batch E PR 4 (run before the last slice).
+  suite on the stack (fresh scratch database at `d4f6a8c0e2b4`): 2618 passed,
+  5 failed — three pre-existing on main (`test_client_loan_copy_migration`
+  pinned head, `test_public_banners` / `test_public_properties` internal
+  fields) and two of this batch, both fixed: the platform-scope policy ledger
+  (E1) and "Admins notified", which assumed one Admin's row although
+  `notify_admins` caps its fan-out at 25 and the suite database held 34; it
+  now asserts the call. Rerun: 17 passed.
 
 **In progress — Batch E PR 2: self-service phone/email change and contact
 history (API)** (2026-11-17; CS-025; PR
@@ -183,7 +189,10 @@ requirement-percentage change.
   eligibility modules: 489 passed, 1 failed (`test_email_verify` changed the
   address through PATCH; it now changes it directly) and the three email
   modules rerun 55 passed. Ruff check/format clean; one Alembic head; web
-  `pnpm typecheck` and `pnpm lint` pass on the regenerated types.
+  `pnpm typecheck` and `pnpm lint` pass on the regenerated types. The full
+  API suite (run on the stack before the web slice) found the platform-scope
+  policy ledger in `test_platform_scope_rls.py` missing the two new
+  admin-gated policies; they are now listed (4 passed).
 
 **In progress — Batch D PR 2: lead and referral eligibility (web)**
 (2026-11-17; CS-024; PR
