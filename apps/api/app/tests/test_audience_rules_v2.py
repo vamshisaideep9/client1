@@ -11,7 +11,7 @@ coarse point.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -261,6 +261,23 @@ async def test_profile_pincode_drives_location_offers_only_with_consent(
             json={"personalization_enabled": True},
         )
         assert consent.status_code == 200
+        # Personalization alone is not location consent: no pincode, city or
+        # circle match until the separate location consent is given.
+        assert not (await _offer_titles(client, headers)) & targeted
+
+        located = await client.put("/api/v1/personalization/location/consent", headers=headers)
+        assert located.status_code == 200, located.text
+        assert located.json()["location_enabled"] is True
+        assert located.json()["location_captured_at"] is None
+        assert (await _offer_titles(client, headers)) >= targeted
+
+        # Revoking location consent stops every location match at once.
+        withdrawn = await client.delete("/api/v1/personalization/location", headers=headers)
+        assert withdrawn.status_code == 200
+        assert withdrawn.json()["location_enabled"] is False
+        assert not (await _offer_titles(client, headers)) & targeted
+        regranted = await client.put("/api/v1/personalization/location/consent", headers=headers)
+        assert regranted.status_code == 200
         assert (await _offer_titles(client, headers)) >= targeted
 
         # Another pincode in the same city: city still matches, the pincode
@@ -276,7 +293,7 @@ async def test_profile_pincode_drives_location_offers_only_with_consent(
         assert pincode_title not in titles
         assert (city_title in titles) is (district == "Hyderabad")
 
-        # Revoking consent stops every location match at once.
+        # Turning personalized content off also ends location consent.
         await client.patch(
             "/api/v1/auth/me",
             headers=headers,
@@ -288,6 +305,14 @@ async def test_profile_pincode_drives_location_offers_only_with_consent(
             json={"personalization_enabled": False},
         )
         assert revoked.status_code == 200
+        assert revoked.json()["location_enabled"] is False
+        assert not (await _offer_titles(client, headers)) & targeted
+        # Turning it back on does not silently restore location consent.
+        await client.patch(
+            "/api/v1/personalization/preferences",
+            headers=headers,
+            json={"personalization_enabled": True},
+        )
         assert not (await _offer_titles(client, headers)) & targeted
     finally:
         async with session_module.AsyncSessionLocal() as db:
@@ -505,3 +530,140 @@ async def test_district_list(client: AsyncClient) -> None:
         rows, key=lambda row: (row["state"].casefold(), row["district"].casefold())
     )
     assert (await client.get("/api/v1/pincodes/districts")).status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Location consent without a device point (CS-026, migration f6b8d0a2c4e7)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_location_consent_needs_personalization_and_a_profile_pincode(
+    client: AsyncClient,
+) -> None:
+    import app.db.session as session_module
+    from app.models.auth import AuthEvent
+
+    token, mobile = await full_registration(client, lines=["loans"])
+    headers = {"Authorization": f"Bearer {token}"}
+    user_id = await _user_uuid(mobile)
+    url = "/api/v1/personalization/location/consent"
+
+    assert (await client.put(url, headers=headers)).status_code == 409
+    await client.patch(
+        "/api/v1/personalization/preferences",
+        headers=headers,
+        json={"personalization_enabled": True},
+    )
+    no_pincode = await client.put(url, headers=headers)
+    assert no_pincode.status_code == 409
+    assert "pincode" in no_pincode.json()["detail"]
+
+    await client.patch(
+        "/api/v1/auth/me",
+        headers=headers,
+        json={"first_name": "Pin", "last_name": "Code", "pincode": "500001"},
+    )
+    granted = await client.put(url, headers=headers)
+    assert granted.status_code == 200, granted.text
+    assert granted.headers["cache-control"] == "private, no-store"
+    assert granted.json() == {
+        "personalization_enabled": True,
+        "location_enabled": True,
+        "location_captured_at": None,
+    }
+    again = await client.put(url, headers=headers)
+    assert again.status_code == 200
+
+    async with session_module.AsyncSessionLocal() as db:
+        stored = await db.get(PersonalizationPreference, user_id)
+        assert stored is not None
+        assert stored.location_consented_at is not None
+        assert (stored.latitude_e2, stored.longitude_e2) == (None, None)
+        events = (
+            await db.scalars(
+                select(AuthEvent).where(
+                    AuthEvent.auth_user_uuid == user_id,
+                    AuthEvent.event_type == "location_personalization_consent_updated",
+                )
+            )
+        ).all()
+    # One consent event (the repeat is a no-op) carrying only the decision.
+    assert [event.detail for event in events] == [{"enabled": True}]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", ["agent", "telecaller", "employee", "sub_admin", "admin"])
+async def test_location_consent_is_client_only(client: AsyncClient, role: str) -> None:
+    _, mobile = await full_registration(client, lines=["loans"])
+    token = create_access_token(
+        {
+            "sub": str(await _user_uuid(mobile)),
+            "role": role,
+            "business_line": "loans",
+            "platform_scope": "true" if role in ("admin", "sub_admin") else "false",
+        }
+    )
+    resp = await client.put(
+        "/api/v1/personalization/location/consent",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_location_consent_rows_are_consistent(client: AsyncClient) -> None:
+    import app.db.session as session_module
+
+    _, mobile = await full_registration(client, lines=["loans"])
+    user_id = await _user_uuid(mobile)
+    now = datetime.now(UTC)
+    base = {
+        "auth_user_uuid": user_id,
+        "personalization_enabled": True,
+        "personalization_consented_at": now,
+        "updated_at": now,
+    }
+    invalid = [
+        # consent without a consent time
+        {"location_enabled": True},
+        # a partial point
+        {"location_enabled": True, "location_consented_at": now, "latitude_e2": 1738},
+        # a point without consent
+        {"location_enabled": False, "latitude_e2": 1738, "longitude_e2": 7846},
+    ]
+    for values in invalid:
+        async with session_module.AsyncSessionLocal() as db:
+            db.add(PersonalizationPreference(**base, **values))
+            with pytest.raises(Exception, match="location_consistent"):
+                await db.commit()
+    async with session_module.AsyncSessionLocal() as db:
+        db.add(PersonalizationPreference(**base, location_enabled=True, location_consented_at=now))
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_retention_purge_keeps_pincode_only_location_consent(client: AsyncClient) -> None:
+    import app.db.session as session_module
+    from app.services.personalization import purge_stale_locations
+
+    token, mobile = await full_registration(client, lines=["loans"])
+    headers = {"Authorization": f"Bearer {token}"}
+    user_id = await _user_uuid(mobile)
+    await client.patch(
+        "/api/v1/personalization/preferences",
+        headers=headers,
+        json={"personalization_enabled": True},
+    )
+    await client.patch(
+        "/api/v1/auth/me",
+        headers=headers,
+        json={"first_name": "Pin", "last_name": "Code", "pincode": "500001"},
+    )
+    granted = await client.put("/api/v1/personalization/location/consent", headers=headers)
+    assert granted.status_code == 200
+
+    await purge_stale_locations(now=datetime.now(UTC) + timedelta(days=365))
+    async with session_module.AsyncSessionLocal() as db:
+        stored = await db.get(PersonalizationPreference, user_id)
+        assert stored is not None and stored.location_enabled is True

@@ -4241,6 +4241,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/personalization/location/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Location Consent
+         * @description CS-026: turn on location-based content using the profile pincode only.
+         *
+         *     No device position is sent or stored. Revoke with ``DELETE /location``
+         *     (or by turning personalized content off).
+         */
+        put: operations["put_location_consent_api_v1_personalization_location_consent_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/personalization/placements": {
         parameters: {
             query?: never;
@@ -22636,6 +22659,26 @@ export interface operations {
         };
     };
     delete_location_api_v1_personalization_location_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalizationPreferenceRead"];
+                };
+            };
+        };
+    };
+    put_location_consent_api_v1_personalization_location_consent_put: {
         parameters: {
             query?: never;
             header?: never;

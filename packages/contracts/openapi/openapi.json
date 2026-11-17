@@ -43164,6 +43164,33 @@
         ]
       }
     },
+    "/api/v1/personalization/location/consent": {
+      "put": {
+        "description": "CS-026: turn on location-based content using the profile pincode only.\n\nNo device position is sent or stored. Revoke with ``DELETE /location``\n(or by turning personalized content off).",
+        "operationId": "put_location_consent_api_v1_personalization_location_consent_put",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalizationPreferenceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Put Location Consent",
+        "tags": [
+          "personalization"
+        ]
+      }
+    },
     "/api/v1/personalization/placements": {
       "get": {
         "operationId": "get_placements_api_v1_personalization_placements_get",

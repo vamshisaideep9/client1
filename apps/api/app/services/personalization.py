@@ -210,6 +210,60 @@ async def revoke_location(
     return preference
 
 
+def location_consent_active(preference: PersonalizationPreference | None) -> bool:
+    """Both consents on: personalized content and the separate location consent."""
+    return bool(
+        preference is not None
+        and preference.personalization_enabled
+        and preference.location_enabled
+        and preference.location_consented_at is not None
+    )
+
+
+class ProfilePincodeRequired(Exception):
+    """Location consent without a device point needs a profile pincode to use."""
+
+
+async def grant_location_consent(
+    db: AsyncSession,
+    *,
+    auth_user_uuid: UUID,
+    ip: str | None,
+    user_agent: str | None,
+) -> PersonalizationPreference:
+    """CS-026: location consent without capturing a device position.
+
+    The Client's profile pincode alone is then used for location targeting.
+    Requires personalized content to be on and a saved profile pincode. An
+    existing coarse point (CS-008) is kept as is; revoking location consent
+    (``revoke_location``) or turning personalization off clears both.
+    """
+    preference = await db.get(PersonalizationPreference, auth_user_uuid, with_for_update=True)
+    if preference is None or not preference.personalization_enabled:
+        raise PersonalizationConsentRequired
+    user = await db.get(User, auth_user_uuid)
+    if user is None or not user.pincode:
+        raise ProfilePincodeRequired
+    if preference.location_enabled and preference.location_consented_at is not None:
+        return preference
+    now = datetime.now(UTC)
+    preference.location_enabled = True
+    preference.location_consented_at = now
+    preference.updated_at = now
+    db.add(
+        _consent_event(
+            auth_user_uuid=auth_user_uuid,
+            event_type="location_personalization_consent_updated",
+            enabled=True,
+            ip=ip,
+            user_agent=user_agent,
+        )
+    )
+    await db.commit()
+    await db.refresh(preference)
+    return preference
+
+
 def _loan_stage(status: LoanStatus) -> ClientJourneyStage:
     if status == LoanStatus.ON_HOLD:
         return "on_hold"
@@ -362,23 +416,28 @@ async def build_audience_context(
     if personalization_enabled:
         if current_user.role == "client":
             stages = await _client_stages(db, profile, business_line, current_user.id)
-            # CS-026: the profile pincode is read only while consent is on, so
-            # turning personalization off stops every location match at once.
-            user = await db.get(User, current_user.id)
-            if user is not None and user.pincode:
-                pincode = user.pincode
-                place = await db.get(Pincode, user.pincode)
-                if place is not None:
-                    city = (place.district.casefold(), place.state.casefold())
-                    if place.latitude is not None and place.longitude is not None:
-                        location = (place.latitude, place.longitude)
+            # CS-026: the profile pincode drives location targeting only while
+            # BOTH consents are on — personalized content and the separate,
+            # revocable location consent (CS-008). Revoking either stops every
+            # pincode, city and circle match at once.
+            if location_consent_active(preference):
+                user = await db.get(User, current_user.id)
+                if user is not None and user.pincode:
+                    pincode = user.pincode
+                    place = await db.get(Pincode, user.pincode)
+                    if place is not None:
+                        city = (place.district.casefold(), place.state.casefold())
+                        if place.latitude is not None and place.longitude is not None:
+                            location = (place.latitude, place.longitude)
         elif current_user.role == "agent":
             signals = await _agent_activity_signals(db, profile, current_user.id)
         cutoff = datetime.now(UTC) - LOCATION_RETENTION
+        # Precedence: the profile pincode's centroid wins; otherwise a still
+        # valid legacy coarse point (same location consent, 30-day retention).
         if (
             location is None
+            and location_consent_active(preference)
             and preference is not None
-            and preference.location_enabled
             and preference.location_captured_at is not None
             and preference.location_captured_at >= cutoff
             and preference.latitude_e2 is not None

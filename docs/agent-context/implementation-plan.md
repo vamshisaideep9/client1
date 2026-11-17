@@ -94,16 +94,22 @@ against `main`, stacked on Batch E PR 4:
   centroid within 100 km using an in-memory 0.5° grid and Haversine, so the
   position never reaches the database, logs, audit or Redis.
 - *PR F2 — API: audience rules version 2*, branch
-  `feat/batch-f-audience-v2-api` stacked on F1 (PR link added on ship). No
-  migration. `AudienceRules.version` accepts 1 or 2; version 2 adds
+  `feat/batch-f-audience-v2-api` stacked on F1 (PR link added on ship).
+  Migration `f6b8d0a2c4e7` (revises `e5a7c9b1d3f6`, single head) lets the
+  CS-008 location consent exist without a saved point (CHECK
+  `location_consistent`); `PUT /personalization/location/consent` gives it
+  (Client only; needs personalized content and a profile pincode; consent
+  event carries only the decision). `AudienceRules.version` accepts 1 or 2; version 2 adds
   `pincodes` (≤ 100, valid format, unique) and `cities` (≤ 50 district +
   state pairs, unique case-insensitively), both requiring a Client-only
   audience; storage writes the lowest version that can express the rule, so
   version-1 rules stay byte-identical. Circles, pincodes and cities are one
-  "where" dimension (any match), ANDed with the rest. A consenting Client's
-  profile pincode supplies the pincode, the (district, state) and — taking
-  precedence over a legacy coarse point — the centroid for circles; nothing
-  is read without consent. Banner and offer create/update refuse pincodes or
+  "where" dimension (any match), ANDed with the rest. A Client's profile
+  pincode supplies the pincode, the (district, state) and — taking
+  precedence over a legacy coarse point — the centroid for circles, but only
+  while both personalized content and the location consent are on; revoking
+  either stops all location matching (security review finding, fixed before
+  ship). Banner and offer create/update refuse pincodes or
   cities not on the list (422) and store cities in the list's spelling.
   `GET /pincodes/districts` lists the targetable cities.
 - *PR F3 — web: profile pincode, "Use my location", campaign location
