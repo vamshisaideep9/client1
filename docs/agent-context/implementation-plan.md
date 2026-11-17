@@ -76,7 +76,8 @@ against `main`, stacked on Batch E PR 4:
 
 - *PR F1 — API: pincode reference data, profile pincode and lookups*, branch
   `feat/batch-f-pincode-api` from `feat/batch-e-contact-change-web`
-  `ee330543` (PR link added on ship). Migration `e5a7c9b1d3f6` (revises
+  `ee330543`; PR [#379](https://github.com/brollysolutions/client1/pull/379),
+  mirror vamshisaideep9/client1#80. Migration `e5a7c9b1d3f6` (revises
   `d4f6a8c0e2b4`, single head) creates `pincodes` (pincode PK with format
   CHECK, area, district, state, centroid with an India bounding-box CHECK;
   indexes on state + district and latitude + longitude; RLS enabled and

@@ -3,7 +3,9 @@
 Status: **Derived living implementation ledger**
 
 **In progress — Batch F PR 1: pincode reference data, profile pincode and
-lookups (API)** (2026-11-17; CS-026; PR link added on ship), branch
+lookups (API)** (2026-11-17; CS-026; PR
+[#379](https://github.com/brollysolutions/client1/pull/379), mirror
+vamshisaideep9/client1#80), branch
 `feat/batch-f-pincode-api` stacked on Batch E PR 4. API, migration and
 regenerated contracts; no requirement-percentage change.
 - Data: `pincodes` seeded by migration `e5a7c9b1d3f6` from
