@@ -70,6 +70,10 @@ class Task(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     outcome: Mapped[BgCheckOutcome | None] = mapped_column(bg_check_outcome_enum, nullable=True)
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # CS-027: when the task entered `completed`, stamped by the database
+    # trigger trg_tasks_completed_at (a request session cannot backdate it;
+    # it is kept once completed and cleared for any other status).
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
     )

@@ -27,6 +27,21 @@ afterEach(() => {
 });
 
 describe("apiRequest 401 -> refresh -> retry", () => {
+  it("returns a network error if the response stream fails after headers", async () => {
+    const response = fakeResponse(200, {});
+    response.text = vi.fn().mockRejectedValue(new TypeError("stream terminated"));
+    const fetchMock = vi.fn().mockResolvedValue(response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(apiRequest("/api/v1/leads", { method: "POST", body: {} })).resolves.toEqual({
+      ok: false,
+      status: 0,
+      error: "Can't reach the server. Check your connection and try again.",
+    });
+    // The server may already have accepted the write: never replay it here.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("preserves sanitized FastAPI field issues on a 422 response", async () => {
     const fetchMock = vi.fn(async () =>
       fakeResponse(422, {

@@ -126,3 +126,12 @@ class AgentsReportResponse(BaseModel):
     total: int
     summary: AgentsSummary
     team_summaries: list[TeamPerformanceSummary]
+
+
+class ReportTelecallerOption(BaseModel):
+    """One Telecaller for the Analytics "Telecaller" filter (ids and names only)."""
+
+    staff_profile_uuid: UUID
+    staff_code: str
+    name: str
+    business_line: str | None

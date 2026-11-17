@@ -114,7 +114,7 @@ export async function uploadProviderLogo(
   );
   if (!presign.ok) return presign;
   if (file.size < 1 || file.size > presign.data.max_bytes) {
-    return { ok: false, status: 422, error: "The logo must be 1 MiB or smaller." };
+    return { ok: false, status: 422, error: "The logo must be 5 MB or smaller." };
   }
   const form = new FormData();
   for (const [key, value] of Object.entries(presign.data.fields)) form.append(key, value);

@@ -64,6 +64,32 @@ CATALOGUE: tuple[FieldDefinition, ...] = (
         lock_reason=_MOBILE_LOCK,
     ),
     FieldDefinition(FieldTargetRole.AGENT, "lead", "requirement", "Requirement details"),
+    # CS-022: an Agent's lead history, commission history and payout detail.
+    # All default visible (user-approved); the Admin may switch any of them off.
+    FieldDefinition(
+        FieldTargetRole.AGENT,
+        "lead_history",
+        "call_notes",
+        "Telecaller call notes on lead history",
+    ),
+    FieldDefinition(
+        FieldTargetRole.AGENT,
+        "lead_history",
+        "staff_names",
+        "Telecaller names on lead history",
+    ),
+    FieldDefinition(
+        FieldTargetRole.AGENT,
+        "deal",
+        "amount",
+        "Loan and property deal amounts",
+    ),
+    FieldDefinition(
+        FieldTargetRole.AGENT,
+        "payout",
+        "staff_names",
+        "Staff who requested and approved a payout (names)",
+    ),
     FieldDefinition(FieldTargetRole.TELECALLER, "lead", "name", "Lead name"),
     FieldDefinition(
         FieldTargetRole.TELECALLER,
@@ -74,6 +100,7 @@ CATALOGUE: tuple[FieldDefinition, ...] = (
         locked=True,
         lock_reason=_MOBILE_LOCK,
     ),
+    FieldDefinition(FieldTargetRole.TELECALLER, "lead", "referrer", "Referred by (ID)"),
     FieldDefinition(
         FieldTargetRole.TELECALLER,
         "lead",
@@ -163,6 +190,28 @@ CATALOGUE: tuple[FieldDefinition, ...] = (
             FieldVisibilityMode.DENY,
             FieldVisibilityMode.SHARE_LINK,
         ),
+    ),
+    FieldDefinition(FieldTargetRole.EMPLOYEE, "lead", "referrer", "Referred by (ID)"),
+    # CS-027: contest leaderboards show other participants' display name
+    # (first name, last initial) and achieved value. Default visible; the
+    # Admin may hide either per role. A participant always sees their own.
+    *(
+        definition
+        for role in (FieldTargetRole.AGENT, FieldTargetRole.TELECALLER, FieldTargetRole.EMPLOYEE)
+        for definition in (
+            FieldDefinition(
+                role,
+                "contest_leaderboard",
+                "names",
+                "Other participants' names on contest leaderboards",
+            ),
+            FieldDefinition(
+                role,
+                "contest_leaderboard",
+                "amounts",
+                "Other participants' amounts on contest leaderboards",
+            ),
+        )
     ),
 )
 

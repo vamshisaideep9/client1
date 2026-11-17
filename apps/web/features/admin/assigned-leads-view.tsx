@@ -20,6 +20,7 @@ import {
   type FilterBarValue,
 } from "@/features/dashboard/filter-bar";
 import { ListEmptyState, ListLoadingState, ListPagination } from "@/features/dashboard/list-states";
+import { leadStatusRank } from "@/features/dashboard/list-order";
 import { StatusBadge, type StatusTone } from "@/features/dashboard/status-badge";
 import { useFilteredPage } from "@/features/dashboard/use-filtered-page";
 import { isInDateRange } from "@/lib/date-range";
@@ -40,6 +41,9 @@ const STATUS_OPTIONS = [
   { value: "working", label: "Working" },
 ];
 
+/** No column: the default lead order from `list-order`. */
+const DEFAULT_SORT_KEY = "default";
+
 const LINE_OPTIONS = [
   { value: "loans", label: "Loans" },
   { value: "real_estate", label: "Real Estate" },
@@ -48,7 +52,7 @@ const LINE_OPTIONS = [
 export function AssignedLeadsView() {
   const { leads, loading, error, reload } = useAdminAssignedLeads();
   const [filters, setFilters] = React.useState<FilterBarValue>(EMPTY_FILTERS);
-  const [sort, setSort] = React.useState<SortState>({ key: "created_at", dir: "desc" });
+  const [sort, setSort] = React.useState<SortState>({ key: DEFAULT_SORT_KEY, dir: "asc" });
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
   const active = React.useMemo(
@@ -68,6 +72,14 @@ export function AssignedLeadsView() {
     });
     const direction = sort.dir === "asc" ? 1 : -1;
     return [...rows].sort((left, right) => {
+      // Landing order: status rank (New > Assigned > Working > … > Released),
+      // newest first within a status. A column sort replaces it.
+      if (sort.key === DEFAULT_SORT_KEY) {
+        return (
+          leadStatusRank(left.status) - leadStatusRank(right.status) ||
+          right.created_at.localeCompare(left.created_at)
+        );
+      }
       const result =
         sort.key === "lead"
           ? (left.name ?? "").localeCompare(right.name ?? "")
@@ -76,7 +88,7 @@ export function AssignedLeadsView() {
                 right.assigned_telecaller_name ?? "",
               )
             : sort.key === "status"
-              ? left.status.localeCompare(right.status)
+              ? leadStatusRank(left.status) - leadStatusRank(right.status)
               : left.created_at.localeCompare(right.created_at);
       return result * direction || left.created_at.localeCompare(right.created_at);
     });

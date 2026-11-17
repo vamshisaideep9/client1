@@ -130,8 +130,9 @@ async def test_malformed_legacy_details_do_not_break_dashboard_catalog(
     client: AsyncClient,
 ) -> None:
     """A stale row (structured_details predating a since-tightened field
-    requirement, e.g. project_residence's amenities_description) must not
-    500 the whole authenticated catalog for every Client/Agent/staff user —
+    requirement, e.g. a project_residence row missing its required project
+    facts) must not 500 the whole authenticated catalog for every
+    Client/Agent/staff user —
     mirrors test_public_properties.py's identically-named public-catalog
     regression test for app/api/v1/public_catalog.py's _public_property_data.
     """

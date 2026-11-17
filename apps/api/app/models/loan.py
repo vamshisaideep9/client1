@@ -30,7 +30,12 @@ class LoanStatus(enum.StrEnum):
     CONTACTED = "contacted"
     DOCS_COLLECTED = "docs_collected"
     SUBMITTED_TO_BANK = "submitted_to_bank"
+    UNDER_REVIEW = "under_review"
+    # Shown to people as "Approved"; the stored value stays "sanctioned" so
+    # sanction terms, history and reports keep their meaning.
     SANCTIONED = "sanctioned"
+    AGREEMENT_COLLECTED = "agreement_collected"
+    AGREEMENT_SUBMITTED_TO_BANK = "agreement_submitted_to_bank"
     DISBURSED = "disbursed"
     CLOSED = "closed"
     REJECTED = "rejected"
@@ -239,6 +244,13 @@ class LoanApplication(Base):
     # later closed doesn't silently and permanently lose commission
     # eligibility (found in review, 2026-07-29 — see docs/specs/agent-commission.md).
     disbursed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # CS-027 stage markers, set once when `status` first reaches the stage or a
+    # later one before disbursal (a forward jump past a stage still reaches it;
+    # CLOSED and the side branches never stamp). Contest scoring counts a case
+    # by the moment it reached its counted stage. NULL on rows that passed the
+    # stage before this column existed.
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sanctioned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     loan_type: Mapped["LoanType"] = relationship("LoanType")
     bank: Mapped[Optional["Bank"]] = relationship("Bank")
