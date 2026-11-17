@@ -99,8 +99,47 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   approve or reject (never their own). Ledgers: business-line
   classification, Admin coverage and the platform-scope policy ledger list
   both tables; `pincodes` (missed by CS-026) is added to the first two.
-- *PR G2 — API: scoring, lifecycle job, participant and Admin standings*
-  (planned).
+- *PR G2 — API: scoring, lifecycle job, participant and Admin standings*,
+  branch `feat/batch-g-contests-scoring` stacked on G1.
+  `services/contest_scoring.py` computes standings on read: participants
+  (active profile and account on the line, optional tenure, KYC for
+  Agents; teams with their active managing Sub Admin and eligible members),
+  business credit (Agents: introduced leads, sharing
+  `loan_commission_eligible` / `deal_commission_eligible` now extracted in
+  `services/commissions.py`; Telecallers: leads they hold now and called before the stage; Employees:
+  leads where they completed a task at or before the moment the case reached
+  its counted stage; teams: members' union, a team managed by the contest's
+  maker left out), stage time
+  inside the IST window, true amount read live, per-case bounds, activity
+  (calls, connect rate, follow-ups kept by the end of the due IST day,
+  tasks completed / on time, site visits), targets, metric and competition
+  rank; `decide_winners` (threshold / top N with whole ties, budget cap by
+  rank groups, team manager and member prizes with the member minimum).
+  `services/contest_lifecycle.py` + `jobs/contest_lifecycle.py` (every 5
+  minutes): approved → live at the IST start with "contest is live"
+  notifications in the same transaction, live → ended after the IST end
+  with the snapshot into `contest_results`; per-contest locked transactions,
+  idempotent; approval on the start day goes live at once.
+  `services/contest_views.py`: `/api/v1/my-contests` (+ `/{id}`) for
+  Agents, Telecallers, Employees and managing Sub Admins — rules, own
+  standing, leaderboard of display name / rank / achieved (field-visibility
+  entries `contest_leaderboard.names` / `.amounts` per role), team standing
+  (members see only their own contribution, managers every member); Admin
+  `GET /api/v1/contests/{id}/standings` with full names.
+  Security review fix (automated commit review, MEDIUM, prize
+  manipulation): Employee credit had joined any non-cancelled task on the
+  lead, so work created, assigned or still open after the case reached its
+  stage earned credit, and task activity used `updated_at`. Migration
+  `b9e1a3c5d7f0` (revises `a8d0f2b4c6e9`, single head; up/down/up
+  verified) adds `tasks.completed_at`, backfilled from `updated_at` for
+  completed tasks, and the trigger `trg_tasks_completed_at` (entering
+  completed stamps `now()`, a request session cannot backdate it, a
+  completed task keeps its first time, any other status clears it).
+  Credit now needs a task completed (created and completed) at or before
+  the stage time; tasks completed / on time / site visits use
+  `completed_at`. Sub Admin managers can reassign open tasks and move due
+  dates later (audited) but cannot complete tasks; the due-date residual
+  for on-time contests is documented for the Admin's review.
 - *PR G3 — API: finalize, Agent prize payouts, staff mark-paid, Admin
   cancel* (planned).
 - *PR G4 — web: Sub Admin contests and Admin approvals / winners* (planned).

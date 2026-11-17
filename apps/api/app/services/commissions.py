@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 import uuid
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -69,6 +69,32 @@ def _name_expr(user_model):
     return func.nullif(func.trim(full_name), "")
 
 
+def loan_commission_eligible():
+    """The commission-eligibility predicate for a loan case, over a query that
+    joins ``LoanApplication`` to its ``Lead``: disbursed at some point and
+    introduced by an Agent.
+
+    disbursed_at IS NOT NULL, not status == DISBURSED: DISBURSED isn't
+    terminal, so a loan that has since moved on to CLOSED (its normal next
+    step) must stay eligible — see disbursed_at's column docstring in
+    models/loan.py. Shared with contest scoring (CS-027), which credits the
+    same cases to the introducing Agent.
+    """
+    return and_(
+        LoanApplication.disbursed_at.is_not(None),
+        Lead.origin_agent_profile_uuid.is_not(None),
+    )
+
+
+def deal_commission_eligible():
+    """The commission-eligibility predicate for a property deal joined to its
+    ``Lead``: closed and introduced by an Agent. Shared with contest scoring."""
+    return and_(
+        PropertyDeal.status == PropertyDealStatus.CLOSED,
+        Lead.origin_agent_profile_uuid.is_not(None),
+    )
+
+
 async def list_eligible_deals(
     db: AsyncSession, *, limit: int = 50, offset: int = 0
 ) -> tuple[list[EligibleDeal], int]:
@@ -98,12 +124,7 @@ async def list_eligible_deals(
         .join(AgentProfile, AgentProfile.id == Lead.origin_agent_profile_uuid)
         .join(AgentUser, AgentUser.id == AgentProfile.auth_user_uuid)
         .where(
-            # disbursed_at IS NOT NULL, not status == DISBURSED: DISBURSED
-            # isn't terminal, so a loan that has since moved on to CLOSED (its
-            # normal next step) must stay eligible — see disbursed_at's
-            # column docstring in models/loan.py.
-            LoanApplication.disbursed_at.is_not(None),
-            Lead.origin_agent_profile_uuid.is_not(None),
+            loan_commission_eligible(),
             ~select(Commission.id)
             .where(
                 Commission.loan_application_uuid == LoanApplication.id,
@@ -129,8 +150,7 @@ async def list_eligible_deals(
         .join(AgentProfile, AgentProfile.id == Lead.origin_agent_profile_uuid)
         .join(AgentUser, AgentUser.id == AgentProfile.auth_user_uuid)
         .where(
-            PropertyDeal.status == PropertyDealStatus.CLOSED,
-            Lead.origin_agent_profile_uuid.is_not(None),
+            deal_commission_eligible(),
             ~select(Commission.id)
             .where(
                 Commission.property_deal_uuid == PropertyDeal.id,

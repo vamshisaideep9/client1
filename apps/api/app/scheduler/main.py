@@ -27,6 +27,7 @@ from app.jobs.audit_paid_payouts import audit_paid_payouts
 from app.jobs.backfill_customer_codes import backfill_customer_codes
 from app.jobs.backfill_referral_codes import backfill_referral_codes
 from app.jobs.cms_activation import cms_activation
+from app.jobs.contest_lifecycle import contest_lifecycle
 from app.jobs.expire_agent_leads import expire_agent_leads
 from app.jobs.managed_media import process_pending_media, purge_expired_private_media
 from app.jobs.purge_agent_application_orphans import purge_agent_application_orphans
@@ -290,6 +291,16 @@ def build_scheduler() -> AsyncIOScheduler:
         # homepage's 60s ISR window puts a banner live within ~6 min of its
         # starts_at. Cost is 4 indexed UPDATEs matching 0 rows most ticks.
         id="cms_activation",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    add_operational_job(
+        contest_lifecycle,
+        trigger="interval",
+        minutes=5,  # CS-027: contests go live / end within 5 min of the IST
+        # date boundary; standings are computed by date, not by this tick
+        id="contest_lifecycle",
         max_instances=1,
         coalesce=True,
         replace_existing=True,

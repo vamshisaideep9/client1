@@ -466,3 +466,134 @@ class ContestRead(BaseModel):
 class ContestListResponse(BaseModel):
     contests: list[ContestRead]
     total: int
+
+
+class ContestProgress(BaseModel):
+    """Achieved numbers for the populated targets (absent ones are null)."""
+
+    count: int | None = None
+    amount_paise: int | None = None
+    calls_logged: int | None = None
+    connect_rate_percent: int | None = None
+    follow_ups_on_time: int | None = None
+    tasks_completed: int | None = None
+    tasks_on_time: int | None = None
+    site_visits_completed: int | None = None
+
+
+ContestRole = Literal["participant", "team_member", "team_manager"]
+
+
+class MyStanding(BaseModel):
+    """The caller's own standing (or their team's, for a manager)."""
+
+    rank: int | None
+    metric_value: int
+    progress: ContestProgress
+    qualified: bool
+    won: bool | None = None
+    prize_paise: int | None = None
+    payment_status: str | None = None
+    excluded_reason: str | None = None
+
+
+class LeaderboardEntry(BaseModel):
+    """Display name, rank and achieved value only. A name or amount the Admin
+    hides from this role is null for everyone but the caller."""
+
+    rank: int | None
+    name: str | None
+    achieved: int | None
+    qualified: bool
+    is_me: bool
+
+
+class TeamMemberStanding(BaseModel):
+    name: str
+    metric_value: int
+    progress: ContestProgress
+    meets_member_minimum: bool | None
+    won: bool | None = None
+    prize_paise: int | None = None
+    payment_status: str | None = None
+    is_me: bool = False
+
+
+class TeamStanding(BaseModel):
+    team_name: str
+    rank: int | None
+    metric_value: int
+    progress: ContestProgress
+    qualified: bool
+    won: bool | None = None
+    members: list[TeamMemberStanding]
+
+
+class MyContestSummary(BaseModel):
+    id: UUID
+    title: str
+    business_line: Literal["loans", "real_estate"]
+    audience: ContestAudience
+    team_member_role: ContestTeamMemberRole | None
+    metric: ContestMetric
+    win_mode: ContestWinMode
+    top_n: int | None
+    prize_paise: int | None
+    manager_prize_paise: int | None
+    member_prize_paise: int | None
+    member_min_contribution: int | None
+    starts_on: date
+    ends_on: date
+    status: ContestStatus
+    my_role: ContestRole
+    eligible: bool
+    participants: int | None
+    me: MyStanding | None
+
+
+class MyContestListResponse(BaseModel):
+    contests: list[MyContestSummary]
+
+
+class MyContestDetail(MyContestSummary):
+    description: str | None
+    terms: str | None
+    criteria: ContestCriteria
+    budget_cap_paise: int | None
+    computed_at: datetime | None
+    leaderboard: list[LeaderboardEntry]
+    team: TeamStanding | None
+
+
+class StandingRow(BaseModel):
+    """One row of the Admin's full standings (names in full)."""
+
+    result_id: UUID | None
+    kind: str
+    participant_type: Literal["agent", "staff", "team"]
+    name: str
+    team_name: str | None
+    rank: int | None
+    metric_value: int
+    achieved_count: int
+    achieved_amount_paise: int
+    progress: ContestProgress
+    qualified: bool
+    won: bool
+    prize_paise: int
+    excluded_reason: str | None
+    payment_status: str
+    payout_uuid: UUID | None
+    paid_reference: str | None
+    paid_marked_at: datetime | None
+
+
+class ContestStandingsResponse(BaseModel):
+    contest: ContestRead
+    source: Literal["live", "snapshot", "none"]
+    computed_at: datetime | None
+    rows: list[StandingRow]
+    team_people: list[StandingRow]
+    winners: int
+    prize_total_paise: int
+    paid_total_paise: int

@@ -10001,6 +10001,101 @@
         "title": "ContestMetric",
         "type": "string"
       },
+      "ContestProgress": {
+        "description": "Achieved numbers for the populated targets (absent ones are null).",
+        "properties": {
+          "amount_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Paise"
+          },
+          "calls_logged": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calls Logged"
+          },
+          "connect_rate_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connect Rate Percent"
+          },
+          "count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count"
+          },
+          "follow_ups_on_time": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Ups On Time"
+          },
+          "site_visits_completed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Visits Completed"
+          },
+          "tasks_completed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tasks Completed"
+          },
+          "tasks_on_time": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tasks On Time"
+          }
+        },
+        "title": "ContestProgress",
+        "type": "object"
+      },
       "ContestRead": {
         "properties": {
           "audience": {
@@ -10335,6 +10430,72 @@
           "note"
         ],
         "title": "ContestReject",
+        "type": "object"
+      },
+      "ContestStandingsResponse": {
+        "properties": {
+          "computed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computed At"
+          },
+          "contest": {
+            "$ref": "#/components/schemas/ContestRead"
+          },
+          "paid_total_paise": {
+            "title": "Paid Total Paise",
+            "type": "integer"
+          },
+          "prize_total_paise": {
+            "title": "Prize Total Paise",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/StandingRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "source": {
+            "enum": [
+              "live",
+              "snapshot",
+              "none"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "team_people": {
+            "items": {
+              "$ref": "#/components/schemas/StandingRow"
+            },
+            "title": "Team People",
+            "type": "array"
+          },
+          "winners": {
+            "title": "Winners",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "contest",
+          "source",
+          "computed_at",
+          "rows",
+          "team_people",
+          "winners",
+          "prize_total_paise",
+          "paid_total_paise"
+        ],
+        "title": "ContestStandingsResponse",
         "type": "object"
       },
       "ContestStatus": {
@@ -12877,6 +13038,61 @@
         "title": "LeadTransactionSummary",
         "type": "object"
       },
+      "LeaderboardEntry": {
+        "description": "Display name, rank and achieved value only. A name or amount the Admin\nhides from this role is null for everyone but the caller.",
+        "properties": {
+          "achieved": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Achieved"
+          },
+          "is_me": {
+            "title": "Is Me",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "qualified": {
+            "title": "Qualified",
+            "type": "boolean"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          }
+        },
+        "required": [
+          "rank",
+          "name",
+          "achieved",
+          "qualified",
+          "is_me"
+        ],
+        "title": "LeaderboardEntry",
+        "type": "object"
+      },
       "LeadsReportResponse": {
         "properties": {
           "rows": {
@@ -15034,6 +15250,424 @@
         "title": "MobileChangeVerifyOtpRequest",
         "type": "object"
       },
+      "MyContestDetail": {
+        "properties": {
+          "audience": {
+            "$ref": "#/components/schemas/ContestAudience"
+          },
+          "budget_cap_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Cap Paise"
+          },
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "computed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computed At"
+          },
+          "criteria": {
+            "$ref": "#/components/schemas/ContestCriteria"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "eligible": {
+            "title": "Eligible",
+            "type": "boolean"
+          },
+          "ends_on": {
+            "format": "date",
+            "title": "Ends On",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "leaderboard": {
+            "items": {
+              "$ref": "#/components/schemas/LeaderboardEntry"
+            },
+            "title": "Leaderboard",
+            "type": "array"
+          },
+          "manager_prize_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Prize Paise"
+          },
+          "me": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MyStanding"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "member_min_contribution": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Min Contribution"
+          },
+          "member_prize_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Prize Paise"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/ContestMetric"
+          },
+          "my_role": {
+            "enum": [
+              "participant",
+              "team_member",
+              "team_manager"
+            ],
+            "title": "My Role",
+            "type": "string"
+          },
+          "participants": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participants"
+          },
+          "prize_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prize Paise"
+          },
+          "starts_on": {
+            "format": "date",
+            "title": "Starts On",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ContestStatus"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamStanding"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "team_member_role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestTeamMemberRole"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terms": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terms"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "top_n": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top N"
+          },
+          "win_mode": {
+            "$ref": "#/components/schemas/ContestWinMode"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "business_line",
+          "audience",
+          "team_member_role",
+          "metric",
+          "win_mode",
+          "top_n",
+          "prize_paise",
+          "manager_prize_paise",
+          "member_prize_paise",
+          "member_min_contribution",
+          "starts_on",
+          "ends_on",
+          "status",
+          "my_role",
+          "eligible",
+          "participants",
+          "me",
+          "description",
+          "terms",
+          "criteria",
+          "budget_cap_paise",
+          "computed_at",
+          "leaderboard",
+          "team"
+        ],
+        "title": "MyContestDetail",
+        "type": "object"
+      },
+      "MyContestListResponse": {
+        "properties": {
+          "contests": {
+            "items": {
+              "$ref": "#/components/schemas/MyContestSummary"
+            },
+            "title": "Contests",
+            "type": "array"
+          }
+        },
+        "required": [
+          "contests"
+        ],
+        "title": "MyContestListResponse",
+        "type": "object"
+      },
+      "MyContestSummary": {
+        "properties": {
+          "audience": {
+            "$ref": "#/components/schemas/ContestAudience"
+          },
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "eligible": {
+            "title": "Eligible",
+            "type": "boolean"
+          },
+          "ends_on": {
+            "format": "date",
+            "title": "Ends On",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "manager_prize_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Prize Paise"
+          },
+          "me": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MyStanding"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "member_min_contribution": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Min Contribution"
+          },
+          "member_prize_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Prize Paise"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/ContestMetric"
+          },
+          "my_role": {
+            "enum": [
+              "participant",
+              "team_member",
+              "team_manager"
+            ],
+            "title": "My Role",
+            "type": "string"
+          },
+          "participants": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participants"
+          },
+          "prize_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prize Paise"
+          },
+          "starts_on": {
+            "format": "date",
+            "title": "Starts On",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ContestStatus"
+          },
+          "team_member_role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestTeamMemberRole"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "top_n": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top N"
+          },
+          "win_mode": {
+            "$ref": "#/components/schemas/ContestWinMode"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "business_line",
+          "audience",
+          "team_member_role",
+          "metric",
+          "win_mode",
+          "top_n",
+          "prize_paise",
+          "manager_prize_paise",
+          "member_prize_paise",
+          "member_min_contribution",
+          "starts_on",
+          "ends_on",
+          "status",
+          "my_role",
+          "eligible",
+          "participants",
+          "me"
+        ],
+        "title": "MyContestSummary",
+        "type": "object"
+      },
       "MyReferralResponse": {
         "properties": {
           "code": {
@@ -15078,6 +15712,85 @@
           "stats"
         ],
         "title": "MyReferralResponse",
+        "type": "object"
+      },
+      "MyStanding": {
+        "description": "The caller's own standing (or their team's, for a manager).",
+        "properties": {
+          "excluded_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excluded Reason"
+          },
+          "metric_value": {
+            "title": "Metric Value",
+            "type": "integer"
+          },
+          "payment_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Status"
+          },
+          "prize_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prize Paise"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/ContestProgress"
+          },
+          "qualified": {
+            "title": "Qualified",
+            "type": "boolean"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "won": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Won"
+          }
+        },
+        "required": [
+          "rank",
+          "metric_value",
+          "progress",
+          "qualified"
+        ],
+        "title": "MyStanding",
         "type": "object"
       },
       "NearestPincodeRequest": {
@@ -21428,6 +22141,161 @@
         "title": "StaffTeamUpdate",
         "type": "object"
       },
+      "StandingRow": {
+        "description": "One row of the Admin's full standings (names in full).",
+        "properties": {
+          "achieved_amount_paise": {
+            "title": "Achieved Amount Paise",
+            "type": "integer"
+          },
+          "achieved_count": {
+            "title": "Achieved Count",
+            "type": "integer"
+          },
+          "excluded_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excluded Reason"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "metric_value": {
+            "title": "Metric Value",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "paid_marked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Marked At"
+          },
+          "paid_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Reference"
+          },
+          "participant_type": {
+            "enum": [
+              "agent",
+              "staff",
+              "team"
+            ],
+            "title": "Participant Type",
+            "type": "string"
+          },
+          "payment_status": {
+            "title": "Payment Status",
+            "type": "string"
+          },
+          "payout_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payout Uuid"
+          },
+          "prize_paise": {
+            "title": "Prize Paise",
+            "type": "integer"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/ContestProgress"
+          },
+          "qualified": {
+            "title": "Qualified",
+            "type": "boolean"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "result_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Id"
+          },
+          "team_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Name"
+          },
+          "won": {
+            "title": "Won",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "result_id",
+          "kind",
+          "participant_type",
+          "name",
+          "team_name",
+          "rank",
+          "metric_value",
+          "achieved_count",
+          "achieved_amount_paise",
+          "progress",
+          "qualified",
+          "won",
+          "prize_paise",
+          "excluded_reason",
+          "payment_status",
+          "payout_uuid",
+          "paid_reference",
+          "paid_marked_at"
+        ],
+        "title": "StandingRow",
+        "type": "object"
+      },
       "SubAdminHomeResponse": {
         "properties": {
           "content_drafts_count": {
@@ -23516,6 +24384,78 @@
         "title": "TeamMemberRead",
         "type": "object"
       },
+      "TeamMemberStanding": {
+        "properties": {
+          "is_me": {
+            "default": false,
+            "title": "Is Me",
+            "type": "boolean"
+          },
+          "meets_member_minimum": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meets Member Minimum"
+          },
+          "metric_value": {
+            "title": "Metric Value",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "payment_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Status"
+          },
+          "prize_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prize Paise"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/ContestProgress"
+          },
+          "won": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Won"
+          }
+        },
+        "required": [
+          "name",
+          "metric_value",
+          "progress",
+          "meets_member_minimum"
+        ],
+        "title": "TeamMemberStanding",
+        "type": "object"
+      },
       "TeamMemberSummary": {
         "properties": {
           "kpis": {
@@ -23796,6 +24736,64 @@
           "status"
         ],
         "title": "TeamReassignResponse",
+        "type": "object"
+      },
+      "TeamStanding": {
+        "properties": {
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberStanding"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "metric_value": {
+            "title": "Metric Value",
+            "type": "integer"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/ContestProgress"
+          },
+          "qualified": {
+            "title": "Qualified",
+            "type": "boolean"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "team_name": {
+            "title": "Team Name",
+            "type": "string"
+          },
+          "won": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Won"
+          }
+        },
+        "required": [
+          "team_name",
+          "rank",
+          "metric_value",
+          "progress",
+          "qualified",
+          "members"
+        ],
+        "title": "TeamStanding",
         "type": "object"
       },
       "TeamTaskDetailResponse": {
@@ -39003,6 +40001,55 @@
         ]
       }
     },
+    "/api/v1/contests/{contest_id}/standings": {
+      "get": {
+        "description": "Full standings with names: live while running, the snapshot after.",
+        "operationId": "contest_standings_api_v1_contests__contest_id__standings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContestStandingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Contest Standings",
+        "tags": [
+          "contests"
+        ]
+      }
+    },
     "/api/v1/contests/{contest_id}/submit": {
       "post": {
         "operationId": "submit_contest_api_v1_contests__contest_id__submit_post",
@@ -42956,6 +44003,80 @@
         "summary": "Verify",
         "tags": [
           "mobile-change"
+        ]
+      }
+    },
+    "/api/v1/my-contests": {
+      "get": {
+        "operationId": "list_my_contests_api_v1_my_contests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyContestListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List My Contests",
+        "tags": [
+          "contests"
+        ]
+      }
+    },
+    "/api/v1/my-contests/{contest_id}": {
+      "get": {
+        "operationId": "get_my_contest_api_v1_my_contests__contest_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contest Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyContestDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get My Contest",
+        "tags": [
+          "contests"
         ]
       }
     },

@@ -192,6 +192,27 @@ CATALOGUE: tuple[FieldDefinition, ...] = (
         ),
     ),
     FieldDefinition(FieldTargetRole.EMPLOYEE, "lead", "referrer", "Referred by (ID)"),
+    # CS-027: contest leaderboards show other participants' display name
+    # (first name, last initial) and achieved value. Default visible; the
+    # Admin may hide either per role. A participant always sees their own.
+    *(
+        definition
+        for role in (FieldTargetRole.AGENT, FieldTargetRole.TELECALLER, FieldTargetRole.EMPLOYEE)
+        for definition in (
+            FieldDefinition(
+                role,
+                "contest_leaderboard",
+                "names",
+                "Other participants' names on contest leaderboards",
+            ),
+            FieldDefinition(
+                role,
+                "contest_leaderboard",
+                "amounts",
+                "Other participants' amounts on contest leaderboards",
+            ),
+        )
+    ),
 )
 
 _DEFINITIONS = {definition.key: definition for definition in CATALOGUE}

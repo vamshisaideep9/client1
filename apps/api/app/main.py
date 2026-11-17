@@ -44,6 +44,7 @@ from app.api.v1.loans import router as loans_router
 from app.api.v1.manager import router as manager_router
 from app.api.v1.mobile_change import admin_router as mobile_change_admin_router
 from app.api.v1.mobile_change import router as mobile_change_router
+from app.api.v1.my_contests import router as my_contests_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.offers import router as offers_router
 from app.api.v1.payments import router as payments_router
@@ -201,6 +202,7 @@ app.include_router(admin_teams_router, prefix="/api/v1/admin/teams", tags=["team
 app.include_router(manager_router, prefix="/api/v1/manager", tags=["manager"])
 app.include_router(commissions_router, prefix="/api/v1/admin/commissions", tags=["commissions"])
 app.include_router(contests_router, prefix="/api/v1/contests", tags=["contests"])
+app.include_router(my_contests_router, prefix="/api/v1/my-contests", tags=["contests"])
 app.include_router(
     fee_cashbacks_router, prefix="/api/v1/admin/fee-cashbacks", tags=["fee-cashbacks"]
 )

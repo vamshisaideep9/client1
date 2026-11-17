@@ -16,6 +16,7 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.models.contest import Contest
 from app.models.lead import Lead, LeadOrigin, LeadStatus
+from app.models.lead_activity import CallDisposition, LeadActivity
 from app.models.loan import Bank, LoanApplication, LoanStatus, LoanType
 from app.models.profile import (
     AgentProfile,
@@ -222,6 +223,29 @@ async def seed_lead(
         db.add(lead)
         await db.commit()
         return lead
+
+
+async def seed_call(
+    telecaller: StaffProfile,
+    lead: Lead,
+    *,
+    at: datetime,
+    connected: bool = True,
+    follow_up_at: datetime | None = None,
+) -> None:
+    """A call the Telecaller logged on the lead at ``at``."""
+    async with db_session.AsyncSessionLocal() as db:
+        db.add(
+            LeadActivity(
+                lead_uuid=lead.id,
+                telecaller_staff_profile_uuid=telecaller.id,
+                business_line=lead.business_line,
+                disposition=CallDisposition.CONNECTED if connected else CallDisposition.NO_ANSWER,
+                follow_up_at=follow_up_at,
+                created_at=at,
+            )
+        )
+        await db.commit()
 
 
 async def seed_client_profile(business_line: str) -> ClientProfile:

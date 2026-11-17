@@ -2,6 +2,46 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch G PR 2: contest scoring, lifecycle job and standings
+(API)** (2026-11-17; CS-027), branch `feat/batch-g-contests-scoring`
+stacked on G1. API, migration `b9e1a3c5d7f0` (security fix) and
+regenerated contracts; no requirement-percentage change.
+- Scoring, winner rules, lifecycle job, participant pages and Admin
+  standings as described in `implementation-plan.md` (Batch G2);
+  `services/commissions.py` exposes the commission-eligibility predicates
+  it already used, shared with Agent contest credit.
+- Batch security review (MEDIUM, credit steering): Telecaller credit also
+  needs a call by the current holder on the lead at or before the stage
+  time, so a manager reassigning an already-counted lead near the end moves
+  no credit (tests: no call, a call after the stage, a call before it).
+- Security review fix (MEDIUM, prize manipulation; see the plan): Employee
+  credit needs a task completed at or before the case's stage time, task
+  activity uses the new database-stamped `tasks.completed_at`, and a team
+  managed by the contest's maker takes no part. New tests: a task created
+  after the counted stage, an open task, and a task completed before the
+  stage (only the last earns credit); on time judged by `completed_at`
+  although `updated_at` is later; a request session cannot backdate the
+  completion and it never moves once set; the maker's own team is left out.
+  Migration downgrade to `a8d0f2b4c6e9` and upgrade to head pass.
+- Evidence (same container and scratch database): `ruff` passes; new
+  `test_contest_winners.py` (ranking ties, threshold, top N cut-off ties,
+  zero results, budget cap groups, team member minimum, at-most and
+  connect-rate targets), `test_contest_scoring.py` (Agent loans with true
+  amount recomputed live, filters and the at-most rule; sanctioned stage
+  excludes rejected cases and applies per-case bounds; Agent real estate by
+  category, city and stage with listing-price fallback; eligibility by
+  tenure, KYC, line and status; Telecaller credit follows the current
+  assignee, calls / connect rate / follow-ups kept; Employee tasks, on-time
+  and site visits by completion time and the case-credit rule; completion
+  stamping; team union, member contributions and the maker's team left
+  out),
+  `test_contest_lifecycle.py` (IST midnight boundaries, idempotent go-live
+  and end, one notification, snapshot rows, overdue contest in one tick,
+  approval on the start day, job registration) and
+  `test_my_contests_api.py` (visibility, minimal leaderboard keys, hidden
+  names / amounts, team member vs manager views, Admin standings guard):
+  25 passed after the fix.
+
 **In progress — Batch G PR 1: contest model, migration, criteria grammar,
 authoring and review (API)** (2026-11-17; CS-027), branch
 `feat/batch-g-contests-model` from `upstream/main` `9f2c479f` (Batches A–F
