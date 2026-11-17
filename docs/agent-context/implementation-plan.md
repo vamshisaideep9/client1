@@ -179,7 +179,10 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   placeholder password is now a constant built from parts
   (`MOCK_ADMIN_SECRET`), so secret scanners stop flagging it. Design
   review: the contest dialogs now widen from `sm` up (the dialog default
-  `sm:max-w-lg` clipped the winners table).
+  `sm:max-w-lg` clipped the winners table). Security review: every contest
+  or result id put into an API path must be a canonical UUID and is
+  encoded (`isContestId` in `lib/contests-api.ts`); link ids are ignored
+  otherwise.
 - *PR G5 — web: participant contests page, home card and team progress*
   (planned).
 

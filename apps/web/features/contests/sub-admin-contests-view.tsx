@@ -35,6 +35,7 @@ import {
 import {
   cancelContest,
   deleteContest,
+  isContestId,
   listContests,
   submitContest,
   withdrawContest,
@@ -80,7 +81,10 @@ export function SubAdminContestsView() {
   const [filters, setFilters] = React.useState<FilterBarValue>(EMPTY_FILTERS);
   const [editing, setEditing] = React.useState<Contest | null>(null);
   const [formOpen, setFormOpen] = React.useState(false);
-  const [openId, setOpenId] = React.useState<string | null>(params.get("contest"));
+  const [openId, setOpenId] = React.useState<string | null>(() => {
+    const linked = params.get("contest");
+    return isContestId(linked) ? linked : null;
+  });
   const [cancelling, setCancelling] = React.useState<Contest | null>(null);
   const { confirm, confirmDialog } = useConfirm();
 

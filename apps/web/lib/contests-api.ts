@@ -44,8 +44,35 @@ export async function listContests(query: ContestListQuery = {}): Promise<ApiRes
   return { ok: true, status: res.status, data: res.data.contests };
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * True for a canonical UUID. Ids reach these helpers from links (`?contest=`),
+ * so anything else — `..`, slashes, query text — must never become part of an
+ * API path (security review: a crafted id could redirect the authenticated
+ * request to another endpoint).
+ */
+export function isContestId(value: string | null | undefined): value is string {
+  return typeof value === "string" && UUID.test(value);
+}
+
+const INVALID_ID = { ok: false as const, status: 400, error: "That contest link is not valid." };
+
+/** `/api/v1/<base>/<id>/...` with every id validated and encoded, or null. */
+function idPath(base: string, ids: readonly string[], suffix = ""): string | null {
+  if (!ids.every(isContestId)) return null;
+  return `${base}/${ids.map(encodeURIComponent).join("/")}${suffix}`;
+}
+
+function request<T>(
+  path: string | null,
+  options?: Parameters<typeof apiRequest>[1],
+): Promise<ApiResponse<T>> {
+  return path === null ? Promise.resolve(INVALID_ID) : apiRequest<T>(path, options);
+}
+
 export function getContest(id: string): Promise<ApiResponse<Contest>> {
-  return apiRequest<Contest>(`/api/v1/contests/${id}`);
+  return request<Contest>(idPath("/api/v1/contests", [id]));
 }
 
 export function createContest(body: ContestDefinition): Promise<ApiResponse<Contest>> {
@@ -53,15 +80,15 @@ export function createContest(body: ContestDefinition): Promise<ApiResponse<Cont
 }
 
 export function updateContest(id: string, body: ContestDefinition): Promise<ApiResponse<Contest>> {
-  return apiRequest<Contest>(`/api/v1/contests/${id}`, { method: "PUT", body });
+  return request<Contest>(idPath("/api/v1/contests", [id]), { method: "PUT", body });
 }
 
 export function deleteContest(id: string): Promise<ApiResponse<unknown>> {
-  return apiRequest<unknown>(`/api/v1/contests/${id}`, { method: "DELETE" });
+  return request<unknown>(idPath("/api/v1/contests", [id]), { method: "DELETE" });
 }
 
 function command(id: string, action: string, body?: unknown): Promise<ApiResponse<Contest>> {
-  return apiRequest<Contest>(`/api/v1/contests/${id}/${action}`, {
+  return request<Contest>(idPath("/api/v1/contests", [id], `/${action}`), {
     method: "POST",
     ...(body === undefined ? {} : { body }),
   });
@@ -76,7 +103,12 @@ export const recalculateContest = (id: string) => command(id, "recalculate");
 export const finalizeContest = (id: string) => command(id, "finalize");
 
 export function getStandings(id: string): Promise<ApiResponse<ContestStandings>> {
-  return apiRequest<ContestStandings>(`/api/v1/contests/${id}/standings`);
+  return request<ContestStandings>(idPath("/api/v1/contests", [id], "/standings"));
+}
+
+function resultPath(contestId: string, resultId: string, action: string): string | null {
+  if (!isContestId(contestId) || !isContestId(resultId)) return null;
+  return `/api/v1/contests/${encodeURIComponent(contestId)}/results/${encodeURIComponent(resultId)}/${action}`;
 }
 
 export function requestPrizePayout(
@@ -84,10 +116,10 @@ export function requestPrizePayout(
   resultId: string,
   body: ContestPrizePayoutRequest,
 ): Promise<ApiResponse<Schemas["ContestPrizePayoutResponse"]>> {
-  return apiRequest<Schemas["ContestPrizePayoutResponse"]>(
-    `/api/v1/contests/${contestId}/results/${resultId}/payout`,
-    { method: "POST", body },
-  );
+  return request<Schemas["ContestPrizePayoutResponse"]>(resultPath(contestId, resultId, "payout"), {
+    method: "POST",
+    body,
+  });
 }
 
 export function markPrizePaid(
@@ -95,10 +127,10 @@ export function markPrizePaid(
   resultId: string,
   reference: string,
 ): Promise<ApiResponse<Schemas["ContestResultPayment"]>> {
-  return apiRequest<Schemas["ContestResultPayment"]>(
-    `/api/v1/contests/${contestId}/results/${resultId}/mark-paid`,
-    { method: "POST", body: { reference } },
-  );
+  return request<Schemas["ContestResultPayment"]>(resultPath(contestId, resultId, "mark-paid"), {
+    method: "POST",
+    body: { reference },
+  });
 }
 
 export async function listMyContests(): Promise<ApiResponse<MyContestSummary[]>> {
@@ -108,5 +140,5 @@ export async function listMyContests(): Promise<ApiResponse<MyContestSummary[]>>
 }
 
 export function getMyContest(id: string): Promise<ApiResponse<MyContestDetail>> {
-  return apiRequest<MyContestDetail>(`/api/v1/my-contests/${id}`);
+  return request<MyContestDetail>(idPath("/api/v1/my-contests", [id]));
 }
