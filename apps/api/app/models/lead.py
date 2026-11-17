@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -143,6 +143,15 @@ class Lead(Base):
     # Telecaller pool and continue through assigned/working/converted later.
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     agent_expired_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # Same-Agent resubmissions after expiry (2026-11-14 amendment to FR-4.6).
+    resubmit_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    # Set once the 7-day "client hasn't registered" reminder is sent for the
+    # current window; cleared when the Agent resubmits.
+    expiry_reminder_sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
