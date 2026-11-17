@@ -4,7 +4,9 @@ import * as React from "react";
 import { ArrowDownLeft, Coins, Gift, Undo2, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import { useAuth } from "@/components/auth/session-provider";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AgentTransactionSheet } from "@/features/agent/agent-transaction-sheet";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { DASHBOARD_ICONS } from "@/features/dashboard/dashboard-icons";
 import { DashboardHeader, DashboardPage, DashboardPanel, MetricCard, MetricGrid } from "@/features/dashboard/dashboard-ui";
@@ -57,6 +59,11 @@ export default function TransactionsPage() {
   const [errorStatus, setErrorStatus] = React.useState<number | null>(null);
   const [reloadKey, setReloadKey] = React.useState(0);
   const { page, pageItems, setPage } = useListPagination(transactions);
+  // Agents can open a payout's trail and what it paid (CS-022); the API
+  // re-checks ownership, the role here only decides whether to offer it.
+  const { session } = useAuth();
+  const isAgent = session?.role === "agent";
+  const [openTransactionId, setOpenTransactionId] = React.useState<string | null>(null);
 
   const retry = React.useCallback(() => {
     setStatus("loading");
@@ -158,7 +165,18 @@ export default function TransactionsPage() {
                           >
                             <Icon className="h-4 w-4" />
                           </span>
-                          <span className="font-medium text-text-primary">{t.description}</span>
+                          {isAgent ? (
+                            <button
+                              type="button"
+                              onClick={() => setOpenTransactionId(t.id)}
+                              className="text-left font-medium text-text-primary underline-offset-2 hover:text-brand-link hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {t.description}
+                              <span className="sr-only">, view payment details</span>
+                            </button>
+                          ) : (
+                            <span className="font-medium text-text-primary">{t.description}</span>
+                          )}
                         </div>
                       </td>
                       <td className="hidden px-5 py-4 text-text-secondary sm:table-cell">
@@ -192,6 +210,14 @@ export default function TransactionsPage() {
           </DashboardPanel>
         </>
       )}
+      {isAgent ? (
+        <AgentTransactionSheet
+          transactionId={openTransactionId}
+          onOpenChange={(open) => {
+            if (!open) setOpenTransactionId(null);
+          }}
+        />
+      ) : null}
     </DashboardPage>
   );
 }

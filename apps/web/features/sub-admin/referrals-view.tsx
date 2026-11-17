@@ -311,7 +311,7 @@ export function ReferralsView() {
             searchLabel="Search referral rules"
             searchPlaceholder="Amount or condition"
             statusOptions={RULE_STATUS_OPTIONS}
-            statusLabel="rule states"
+            statusLabel="Rule status"
             showDates
           />
           <DashboardPanel
@@ -357,7 +357,7 @@ export function ReferralsView() {
             searchLabel="Search payout activity"
             searchPlaceholder="Description, currency, or amount"
             statusOptions={ACTIVITY_STATUS_OPTIONS}
-            statusLabel="payout states"
+            statusLabel="Payout status"
           />
           <DashboardPanel
             title="Recent payout activity"

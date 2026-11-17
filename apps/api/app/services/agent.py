@@ -15,16 +15,27 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.lead import Lead, LeadStatus
+from app.models.lead_intake_attempt import IntakeActorType
+from app.models.loan import LoanType
 from app.models.profile import AgentProfile
+from app.models.property import Property
 from app.schemas.agent import AgentLeadCreate, AgentLeadUpdate
+from app.schemas.eligibility import EligibilitySummary
 from app.schemas.lead_details import LeadDetailsPatch
+from app.services import lead_intake_attempts
+from app.services.eligibility import agent_lead_eligibility
 from app.services.lead_details import (
     DetailActor,
     LeadDetailsForbidden,
     LeadDetailsLocked,
     patch_details,
 )
-from app.services.leads import AgentLeadConflict, capture_agent_lead
+from app.services.leads import (
+    AgentLeadConflict,
+    AgentLeadNotResubmittable,
+    capture_agent_lead,
+    resubmit_agent_lead,
+)
 
 
 class AgentProfileNotFound(Exception):
@@ -55,6 +66,51 @@ class InvalidStatusFilter(Exception):
     """Raised when list_my_leads is given a status_filter that isn't a valid LeadStatus value."""
 
 
+class InvalidLeadInterest(Exception):
+    """Raised when an introduced lead names a property or product the Agent cannot offer."""
+
+
+class LeadNotResubmittable(Exception):
+    """Raised when an Agent tries to resubmit a lead that is not eligible."""
+
+
+async def _resolve_interest(
+    db: AsyncSession, business_line: str, requirement: dict | None
+) -> dict | None:
+    """Validate the optional property / product choice and snapshot its title.
+
+    Reads through the Agent's request-scoped session, so only listings and
+    products the Agent can already see are accepted. A real-estate Agent may
+    pick only an active property; a loans Agent only an active product. The
+    stored title lets the telecaller see the interest without another lookup.
+    """
+    if not requirement:
+        return requirement
+    resolved = dict(requirement)
+    property_id = requirement.get("property_id")
+    product_slug = requirement.get("product_slug")
+    if property_id is not None:
+        if business_line != "real_estate":
+            raise InvalidLeadInterest
+        prop = await db.scalar(
+            select(Property).where(Property.id == UUID(str(property_id)), Property.active.is_(True))
+        )
+        if prop is None:
+            raise InvalidLeadInterest
+        resolved["property_id"] = str(prop.id)
+        resolved["interest_title"] = f"{prop.title}, {prop.location}"[:240]
+    elif product_slug is not None:
+        if business_line != "loans":
+            raise InvalidLeadInterest
+        product = await db.scalar(
+            select(LoanType).where(LoanType.name == product_slug, LoanType.active.is_(True))
+        )
+        if product is None:
+            raise InvalidLeadInterest
+        resolved["interest_title"] = product.label[:240]
+    return resolved
+
+
 async def get_home_summary(
     db: AsyncSession, agent_profile_uuid: UUID
 ) -> tuple[AgentProfile, dict[str, int]]:
@@ -77,13 +133,14 @@ async def introduce_lead(
     payload: AgentLeadCreate,
 ) -> Lead:
     """Capture and automatically assign a lead sourced by this Agent."""
+    requirement = await _resolve_interest(db, business_line, payload.requirement)
     try:
         lead = await capture_agent_lead(
             mobile=payload.mobile,
             name=payload.name,
             business_line=business_line,
             agent_profile_uuid=agent_profile_uuid,
-            requirement=payload.requirement,
+            requirement=requirement,
         )
     except AgentLeadConflict as exc:
         raise LeadCaptureFailed from exc
@@ -119,6 +176,30 @@ async def list_my_leads(
             stmt = stmt.where(Lead.agent_expired_at.is_(None), Lead.status == status_enum)
     stmt = stmt.order_by(Lead.updated_at.desc())
     return list((await db.scalars(stmt)).all())
+
+
+async def lead_eligibility_summary(
+    db: AsyncSession, agent_profile_uuid: UUID
+) -> EligibilitySummary:
+    """Eligible / Not eligible / Duplicate for the Agent's leads (CS-024).
+
+    Accepted leads are read on the Agent's RLS session and classified by
+    services.eligibility; rejected introductions come from the recorded
+    attempts.
+    """
+    expired_markers = (
+        await db.scalars(
+            select(Lead.agent_expired_at).where(
+                Lead.origin_agent_profile_uuid == agent_profile_uuid
+            )
+        )
+    ).all()
+    return await lead_intake_attempts.eligibility_summary(
+        db,
+        IntakeActorType.AGENT,
+        agent_profile_uuid,
+        (agent_lead_eligibility(marker)[0] for marker in expired_markers),
+    )
 
 
 async def get_lead_for_agent(
@@ -158,3 +239,33 @@ async def update_lead_for_agent(
     except (LeadDetailsForbidden, LeadDetailsLocked, DBAPIError) as exc:
         await db.rollback()
         raise LeadLocked from exc
+
+
+async def resubmit_lead_for_agent(
+    db: AsyncSession,
+    lead_id: UUID,
+    *,
+    agent_profile_uuid: UUID,
+    auth_user_uuid: UUID,
+) -> Lead:
+    """Restart this Agent's 30-day window on their expired lead.
+
+    The write runs in services.leads on its own transaction; the result is then
+    re-read through the Agent's request-scoped RLS session.
+    """
+    try:
+        await resubmit_agent_lead(
+            lead_id=lead_id,
+            agent_profile_uuid=agent_profile_uuid,
+            actor_auth_user_uuid=auth_user_uuid,
+        )
+    except AgentLeadNotResubmittable as exc:
+        raise LeadNotResubmittable from exc
+    visible = await db.scalar(
+        select(Lead)
+        .where(Lead.id == lead_id, Lead.origin_agent_profile_uuid == agent_profile_uuid)
+        .execution_options(populate_existing=True)
+    )
+    if visible is None:
+        raise LeadNotResubmittable
+    return visible

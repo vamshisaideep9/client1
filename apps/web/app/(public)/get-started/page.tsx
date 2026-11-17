@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { HelpCenter } from "@/components/help/help-center";
 
 export const metadata: Metadata = {
-  title: "Get Started | Dhanadhara",
-  description: "Set up your Dhanadhara account, explore financial services and real estate, and learn how to track the next step.",
+  title: "How to Get Started with Dhanadhara",
+  description: "Create a free account with your mobile number, tell us which loan, card or property you need, and an advisor calls you back to take it forward.",
   alternates: { canonical: "/get-started" },
-  openGraph: { title: "Get Started | Dhanadhara", description: "Set up your Dhanadhara account, explore financial services and real estate, and learn how to track the next step.", url: "/get-started", images: ["/brand/social.png"] },
+  openGraph: { title: "How to Get Started with Dhanadhara", description: "Create a free account with your mobile number, tell us which loan, card or property you need, and an advisor calls you back to take it forward.", url: "/get-started", images: ["/brand/social.png"] },
 };
 
 export default function Page() {

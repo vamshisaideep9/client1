@@ -511,9 +511,12 @@ async def test_invalid_client_line_and_non_viewer_are_rejected(client: AsyncClie
 
 
 @pytest.mark.asyncio
-async def test_agent_matches_agent_signals_and_is_forced_to_profile_line(
+async def test_agent_gets_role_banners_only_and_is_forced_to_profile_line(
     client: AsyncClient,
 ) -> None:
+    """CS-021: Agents cannot consent, so an Agent-activity banner never matches
+    them (even with a stale consent row left from before the change), while a
+    role-only Agent banner still does."""
     user_id, profile_id = await _seed_agent()
     import app.db.session as session_module
 
@@ -526,14 +529,31 @@ async def test_agent_matches_agent_signals_and_is_forced_to_profile_line(
             "user_types": ["agent"],
             "agent_signals": ["no_leads"],
         },
+        priority=2_000_001,
+        status=BannerStatus.LIVE,
+        created_by_uuid=user_id,
+    )
+    role_only = Banner(
+        business_line="loans",
+        banner_type=BannerType.PERSONALIZED,
+        title="Every agent banner",
+        audience_rules={"version": 1, "user_types": ["agent"]},
         priority=2_000_000,
         status=BannerStatus.LIVE,
         created_by_uuid=user_id,
     )
     async with session_module.AsyncSessionLocal() as db:
-        db.add(targeted)
+        db.add_all([targeted, role_only])
+        # A consent row written before CS-021 must not switch signals on.
+        db.add(
+            PersonalizationPreference(
+                auth_user_uuid=user_id,
+                personalization_enabled=True,
+                personalization_consented_at=datetime.now(UTC),
+            )
+        )
         await db.commit()
-        banner_id = targeted.id
+        banner_ids = [targeted.id, role_only.id]
 
     token = create_access_token(
         {
@@ -551,13 +571,15 @@ async def test_agent_matches_agent_signals_and_is_forced_to_profile_line(
             json={"personalization_enabled": True},
             headers=headers,
         )
-        assert enabled.status_code == 200, enabled.text
+        assert enabled.status_code == 403, enabled.text
 
         placements = await client.get(
             "/api/v1/personalization/placements?business_line=loans", headers=headers
         )
         assert placements.status_code == 200, placements.text
-        assert "First lead agent banner" in {row["title"] for row in placements.json()["banners"]}
+        titles = {row["title"] for row in placements.json()["banners"]}
+        assert "First lead agent banner" not in titles
+        assert "Every agent banner" in titles
         assert placements.json()["offers"] == []
 
         wrong_line = await client.get(
@@ -565,7 +587,48 @@ async def test_agent_matches_agent_signals_and_is_forced_to_profile_line(
         )
         assert wrong_line.status_code == 404
     finally:
-        await _delete_content([banner_id])
+        await _delete_content(banner_ids)
+        async with session_module.AsyncSessionLocal() as db:
+            await db.execute(
+                delete(PersonalizationPreference).where(
+                    PersonalizationPreference.auth_user_uuid == user_id
+                )
+            )
+            await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", ["agent", "telecaller", "employee", "sub_admin", "admin"])
+async def test_preference_and_location_settings_are_client_only(
+    client: AsyncClient, role: str
+) -> None:
+    access_token, mobile = await full_registration(client, lines=["loans"])
+    user_id = await _user_uuid(mobile)
+    token = create_access_token(
+        {
+            "sub": str(user_id),
+            "role": role,
+            "business_line": "loans",
+            "platform_scope": "true" if role == "admin" else "false",
+        }
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+    calls = [
+        ("GET", "/api/v1/personalization/preferences", None),
+        ("PATCH", "/api/v1/personalization/preferences", {"personalization_enabled": True}),
+        ("PUT", "/api/v1/personalization/location", {"latitude": 17.39, "longitude": 78.49}),
+        ("DELETE", "/api/v1/personalization/location", None),
+    ]
+    for method, path, body in calls:
+        response = await client.request(method, path, json=body, headers=headers)
+        assert response.status_code == 403, (method, path, response.text)
+
+    # The same person's Client session still reaches the settings.
+    own = await client.get(
+        "/api/v1/personalization/preferences",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert own.status_code == 200, own.text
 
 
 @pytest.mark.asyncio
