@@ -681,6 +681,44 @@ Evidence:
 CS-005's profile rules are unchanged for Clients. Evidence is listed in
 `feature-status.md` under Batch A.
 
+### CS-022 — Agent commission history, payout trail, lead history and cancelled cheque
+
+**Decision (2026-11-16, user-approved stakeholder feedback, batch B; both
+lines, Agents stay line-scoped):**
+
+- *Commission summary.* The Agent sees Total / Pending / Paid and the amount
+  paid in the previous calendar month (IST), labelled with that month
+  ("Commission paid · Oct 2026"). Totals cover every commission; filters only
+  narrow the history rows. Cancelled commissions stay in the history (CS-021).
+- *Commission history.* Each commission shows its client (the Agent's own lead
+  name, under the existing Agent "Lead name" rule), lead, product or property,
+  bank, deal status, deal amount and paid date, with status, deal type,
+  product, bank, property category, amount, date and search filters.
+- *Transaction detail.* A commission transaction shows the payout method with
+  its masked hint, when it was requested, approved, issued (cheque), paid or
+  reversed, who requested and who approved it (name and role), and the one
+  commission it paid. Each payout pays exactly one commission today; bundled
+  payouts are a separate money-layer feature.
+- *Lead history.* Only for a lead the Agent introduced, on their line:
+  applications, service enquiries, property deals, enquiries, site visits,
+  call outcomes with telecaller notes, and a status timeline. Status reasons,
+  rates, fees, form answers, contact details and messages are not shown.
+- *Field rules.* New Agent rules, all default visible: telecaller call notes,
+  telecaller names, loan and deal amounts, payout staff names. The Admin can
+  switch each off; existing notes become visible to Agents retroactively
+  while the rule is on.
+- *Enforcement.* The reach is not a table policy. Three SECURITY DEFINER
+  read functions re-check the Agent context and return projected columns
+  only, because a new SELECT policy would also widen the RLS-only request
+  routes that return full loan applications and deals. Payouts and the audit
+  log stay Admin-only.
+- *Cancelled cheque.* Optional, JPEG/PNG/PDF up to 5 MB, attached to saved
+  payout details; replacing or removing the bank account removes it. Payout
+  makers (Admin, or a Sub Admin with the payout-request grant) can open it;
+  every view is audited. It is erased with the account.
+
+Evidence is listed in `feature-status.md` under Batch B.
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in

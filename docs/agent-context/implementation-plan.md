@@ -68,8 +68,50 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — Batch A: one filter system, Settings by role, small fixes
-(CS-021)** (2026-11-16; user-approved stakeholder feedback, batch A of A–G;
+**In progress — Batch B: Agent dashboard money and lead history (CS-022)**
+(2026-11-16; user-approved stakeholder feedback, batch B of A–G; both lines,
+Agents stay line-scoped; no requirement or completion-percentage change).
+Two stacked PRs, both opened against `main`, stacked on Batch A PR 2:
+
+- *PR B1 — API, migration, contracts*, branch `feat/agent-dashboard-api`
+  from `feat/filters-settings-by-role` `1baaa30f`, with `upstream/main`
+  `b8adb6ae` (Batch A merged) merged in; PR
+  [#369](https://github.com/brollysolutions/client1/pull/369), mirror
+  vamshisaideep9/client1#70. Migration `e8b0d2f4a6c9`
+  (revises `d6f8a0b2c4e7`, single head) adds three confined SECURITY DEFINER
+  reads — `agent_commission_ledger()`, `agent_lead_history(uuid)`,
+  `agent_transaction_detail(uuid)` — each re-checking role `agent`, account,
+  Agent profile and line, and the optional cancelled-cheque columns on
+  `agent_payout_details`. No table policy or grant changes: an Agent SELECT
+  policy on loan applications/deals would also feed the RLS-only
+  `GET /loans/applications`, `/loans/enquiries` and `/property-deals`
+  routes (form answers, status reasons, rates). `GET /agent/earnings` takes
+  status, deal type, product, bank, property category, amount and IST date
+  filters plus search, and each row carries client name, lead, product or
+  property, bank, deal status, deal amount and paid date; totals add
+  `last_month_paid_amount_paise` (previous IST calendar month).
+  `GET /agent/transactions/{id}` (owner check first) returns the payout
+  trail — method and masked hint, requested/approved/issued/paid/reversed
+  times, maker and checker name + role — and the one commission it paid.
+  `GET /agent/leads/{id}/history` returns applications, service enquiries,
+  deals, enquiries, site visits, calls and an audit-based status timeline
+  for a lead the Agent introduced. New Agent field rules (all default
+  visible): call notes, telecaller names, loan/deal amounts, payout staff
+  names. Cancelled cheque: presign/confirm/delete (JPEG/PNG/PDF ≤ 5 MB,
+  sniffed, sanitized/scanned to a canonical key), cleared when the bank
+  account changes, audited payout-maker view
+  (`agent_payout_details_viewed`, purpose `cheque_view`), erased with the
+  account, daily orphan sweep.
+- *PR B2 — web* (next): home Total / Pending / Paid and "Commission paid ·
+  <last month>", commission history table with filters and detail drawer,
+  transaction drawer, lead history sections, cheque upload row and the
+  payout dialog's "View cancelled cheque".
+
+Next: ship B1, then B2. Recommended: Opus 5.5 / high (B1 is RLS-adjacent
+money and upload work; reviewed with `security-review`).
+
+**Merged — Batch A: one filter system, Settings by role, small fixes
+(CS-021)** (PRs #367 and #368 merged into `upstream/main` `b8adb6ae`) (2026-11-16; user-approved stakeholder feedback, batch A of A–G;
 no requirement or completion-percentage change). Two stacked PRs, both
 opened against `main`:
 
@@ -118,8 +160,7 @@ opened against `main`:
   period ("Oct 2026"); the Agent "Commission by status" breakdown leaves out
   cancelled commissions. No contract shape change (only 403s).
 
-Next: ship PR 1, then PR 2. Recommended: Opus 5.5 / high (web; PR 2 adds a
-role guard and a data-clearing migration).
+Both PRs are merged; the mirror PRs on vamshisaideep9/client1 follow.
 
 **In review — Banner lifecycle fixes (web slice)** (2026-11-16; PR
 [#366](https://github.com/brollysolutions/client1/pull/366), mirror

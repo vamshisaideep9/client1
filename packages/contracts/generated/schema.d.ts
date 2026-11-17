@@ -1636,9 +1636,11 @@ export interface paths {
         };
         /**
          * Earnings
-         * @description Read-only commission ledger + totals. No agent_profile_uuid filter
-         *     needed here — commissions_select RLS already scopes to the caller's own
-         *     agent_auth_user_uuid + business_line.
+         * @description The Agent's commission history on their line with client and deal
+         *     details, filtered; totals always cover every commission. Read through the
+         *     confined ``agent_commission_ledger()`` function (caller's account, Agent
+         *     profile and line only). Dates are IST calendar days on the entry date;
+         *     amounts filter the commission amount.
          */
         get: operations["earnings_api_v1_agent_earnings_get"];
         put?: never;
@@ -1702,6 +1704,27 @@ export interface paths {
         patch: operations["patch_lead_api_v1_agent_leads__lead_id__patch"];
         trace?: never;
     };
+    "/api/v1/agent/leads/{lead_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Lead History
+         * @description Applications, deals, enquiries, visits, calls and the status timeline
+         *     of a lead this Agent introduced. Any other lead reads as not found.
+         */
+        get: operations["get_lead_history_api_v1_agent_leads__lead_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/agent/leads/{lead_id}/resubmit": {
         parameters: {
             query?: never;
@@ -1742,9 +1765,75 @@ export interface paths {
         post?: never;
         /**
          * Delete Payout Details
-         * @description Remove every saved payout destination.
+         * @description Remove every saved payout destination (and any cancelled cheque).
          */
         delete: operations["delete_payout_details_api_v1_agent_payout_details_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/payout-details/cheque": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Confirm Payout Cheque
+         * @description Attach (or replace) the cancelled cheque after the browser uploaded it.
+         */
+        put: operations["confirm_payout_cheque_api_v1_agent_payout_details_cheque_put"];
+        post?: never;
+        /**
+         * Delete Payout Cheque
+         * @description Remove the cancelled cheque; the saved bank account and UPI ID stay.
+         */
+        delete: operations["delete_payout_cheque_api_v1_agent_payout_details_cheque_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/payout-details/cheque/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Presign Payout Cheque
+         * @description Signed upload for an optional cancelled cheque (JPEG, PNG or PDF, up to
+         *     5 MB). Requires saved payout details.
+         */
+        post: operations["presign_payout_cheque_api_v1_agent_payout_details_cheque_presign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/transactions/{transaction_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Transaction Detail
+         * @description One of the Agent's own ledger rows with its payout trail and the
+         *     commission it paid. Another account's transaction reads as not found.
+         */
+        get: operations["get_transaction_detail_api_v1_agent_transactions__transaction_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3453,6 +3542,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payouts/agents/{agent_profile_uuid}/cancelled-cheque": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Cancelled Cheque
+         * @description Same as the recipient cheque view, keyed by Agent profile (commission payouts).
+         */
+        get: operations["get_agent_cancelled_cheque_api_v1_payouts_agents__agent_profile_uuid__cancelled_cheque_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/payouts/agents/{agent_profile_uuid}/saved-destination": {
         parameters: {
             query?: never;
@@ -3510,6 +3619,29 @@ export interface paths {
          * @description Minimal recipient picker for an authorized payout requester.
          */
         get: operations["list_payout_recipients_api_v1_payouts_recipients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/recipients/{user_uuid}/cancelled-cheque": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Recipient Cancelled Cheque
+         * @description Open the cancelled cheque an Agent attached to their payout details.
+         *
+         *     Same access as the saved-destination prefill; every successful view is
+         *     audited (agent_payout_details_viewed, purpose cheque_view).
+         */
+        get: operations["get_recipient_cancelled_cheque_api_v1_payouts_recipients__user_uuid__cancelled_cheque_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5938,6 +6070,37 @@ export interface components {
             /** Ifsc */
             ifsc: string;
         };
+        /** AgentChequeConfirm */
+        AgentChequeConfirm: {
+            /**
+             * Content Type
+             * @enum {string}
+             */
+            content_type: "image/jpeg" | "image/png" | "application/pdf";
+            /** Object Key */
+            object_key: string;
+        };
+        /** AgentChequePresignRequest */
+        AgentChequePresignRequest: {
+            /**
+             * Content Type
+             * @enum {string}
+             */
+            content_type: "image/jpeg" | "image/png" | "application/pdf";
+        };
+        /** AgentChequePresignResponse */
+        AgentChequePresignResponse: {
+            /** Fields */
+            fields: {
+                [key: string]: string;
+            };
+            /** Max Bytes */
+            max_bytes: number;
+            /** Object Key */
+            object_key: string;
+            /** Upload Url */
+            upload_url: string;
+        };
         /**
          * AgentContactRead
          * @description Name + agent_code only -- never phone/email. Contact routes through
@@ -5951,21 +6114,40 @@ export interface components {
         };
         /** AgentEarningsResponse */
         AgentEarningsResponse: {
+            /** Hidden Fields */
+            hidden_fields: string[];
             /** Rows */
             rows: components["schemas"]["AgentEarningsRow"][];
             totals: components["schemas"]["AgentEarningsTotals"];
         };
-        /** AgentEarningsRow */
+        /**
+         * AgentEarningsRow
+         * @description One commission in the Agent's history (CS-022).
+         *
+         *     ``client_name`` follows the Admin's Agent "Lead name" rule and
+         *     ``deal_amount`` the Agent "Loan and deal amounts" rule; a hidden value is
+         *     null and listed in the response's ``hidden_fields``.
+         */
         AgentEarningsRow: {
             /** Agreed Amount Paise */
             agreed_amount_paise: number;
+            /** Bank Name */
+            bank_name: string | null;
+            /** Bank Uuid */
+            bank_uuid: string | null;
             /** Business Line */
             business_line: string;
+            /** Client Name */
+            client_name: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Deal Amount */
+            deal_amount: string | null;
+            /** Deal Status */
+            deal_status: string | null;
             /**
              * Deal Type
              * @enum {string}
@@ -5981,19 +6163,208 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Lead Status */
+            lead_status: string | null;
+            /** Lead Uuid */
+            lead_uuid: string | null;
+            /** Paid At */
+            paid_at: string | null;
             /** Payout Txn Uuid */
             payout_txn_uuid: string | null;
-            /** Status */
-            status: string;
+            /** Product Label */
+            product_label: string | null;
+            /** Product Uuid */
+            product_uuid: string | null;
+            /** Property Category */
+            property_category: string | null;
+            /** Property Title */
+            property_title: string | null;
+            /** Property Uuid */
+            property_uuid: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "paid" | "cancelled";
         };
-        /** AgentEarningsTotals */
+        /**
+         * AgentEarningsTotals
+         * @description Totals over every commission the Agent has on this line (filters do not
+         *     change them). ``last_month_*`` is the previous calendar month in IST.
+         */
         AgentEarningsTotals: {
+            /** Last Month End */
+            last_month_end: string | null;
+            /** Last Month Paid Amount Paise */
+            last_month_paid_amount_paise: number;
+            /** Last Month Start */
+            last_month_start: string | null;
             /** Paid Amount Paise */
             paid_amount_paise: number;
             /** Pending Amount Paise */
             pending_amount_paise: number;
             /** Total Amount Paise */
             total_amount_paise: number;
+        };
+        /** AgentHistoryApplication */
+        AgentHistoryApplication: {
+            /** Amount Requested */
+            amount_requested: string | null;
+            /** Amount Sanctioned */
+            amount_sanctioned: string | null;
+            /** Bank Name */
+            bank_name: string | null;
+            /** Closed At */
+            closed_at: string | null;
+            /** Disbursed At */
+            disbursed_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+            /** Product Label */
+            product_label: string | null;
+            /** Status */
+            status: string;
+        };
+        /** AgentHistoryCall */
+        AgentHistoryCall: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            disposition: components["schemas"]["CallDisposition"];
+            /** Follow Up At */
+            follow_up_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            interest_level: components["schemas"]["InterestLevel"] | null;
+            /** Notes */
+            notes: string | null;
+            /** Staff Name */
+            staff_name: string | null;
+        };
+        /** AgentHistoryDeal */
+        AgentHistoryDeal: {
+            /** Booking Amount */
+            booking_amount: string | null;
+            /** Closed At */
+            closed_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+            /** Price Quoted */
+            price_quoted: string | null;
+            /** Property Category */
+            property_category: string | null;
+            /** Property Title */
+            property_title: string | null;
+            /** Status */
+            status: string;
+        };
+        /** AgentHistoryEnquiry */
+        AgentHistoryEnquiry: {
+            /** City */
+            city: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Locality */
+            locality: string | null;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+        };
+        /** AgentHistoryEvent */
+        AgentHistoryEvent: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /**
+             * Event
+             * @enum {string}
+             */
+            event: "introduced" | "lead_assigned" | "agent_lead_expired" | "agent_lead_resubmitted" | "team_lead_status_updated" | "team_lead_reassigned" | "loan_application_updated" | "property_deal_updated";
+            /** From Status */
+            from_status: string | null;
+            /** Request Id */
+            request_id: string | null;
+            /** To Status */
+            to_status: string | null;
+        };
+        /** AgentHistoryServiceEnquiry */
+        AgentHistoryServiceEnquiry: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Product Category */
+            product_category: string | null;
+            /** Product Label */
+            product_label: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+        };
+        /** AgentHistorySiteVisit */
+        AgentHistorySiteVisit: {
+            /** City */
+            city: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Locality */
+            locality: string | null;
+            /**
+             * Preferred Date
+             * Format: date
+             */
+            preferred_date: string;
+            /** Preferred Time Slot */
+            preferred_time_slot: string;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
         };
         /** AgentHomeResponse */
         AgentHomeResponse: {
@@ -6074,6 +6445,40 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** AgentLeadHistoryRead */
+        AgentLeadHistoryRead: {
+            /** Applications */
+            applications: components["schemas"]["AgentHistoryApplication"][];
+            /** Calls */
+            calls: components["schemas"]["AgentHistoryCall"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Deals */
+            deals: components["schemas"]["AgentHistoryDeal"][];
+            /** Enquiries */
+            enquiries: components["schemas"]["AgentHistoryEnquiry"][];
+            /** Hidden Fields */
+            hidden_fields: string[];
+            /**
+             * Lead Id
+             * Format: uuid
+             */
+            lead_id: string;
+            /** Service Enquiries */
+            service_enquiries: components["schemas"]["AgentHistoryServiceEnquiry"][];
+            /** Site Visits */
+            site_visits: components["schemas"]["AgentHistorySiteVisit"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "assigned" | "working" | "converted" | "closed" | "released" | "expired";
+            /** Timeline */
+            timeline: components["schemas"]["AgentHistoryEvent"][];
+        };
         /** AgentLeadRead */
         AgentLeadRead: {
             /** Business Line */
@@ -6127,6 +6532,17 @@ export interface components {
             } | null;
         };
         /**
+         * AgentPayoutActor
+         * @description A staff member on the payout trail: display name (null when the Admin
+         *     hides payout staff names) and staff role.
+         */
+        AgentPayoutActor: {
+            /** Name */
+            name: string | null;
+            /** Role */
+            role: string | null;
+        };
+        /**
          * AgentPayoutDetailsRead
          * @description What the Agent sees about their own saved destination: masked only.
          */
@@ -6135,6 +6551,10 @@ export interface components {
             available: boolean;
             /** Bank Hint */
             bank_hint?: string | null;
+            /** Cheque Content Type */
+            cheque_content_type?: string | null;
+            /** Cheque Uploaded At */
+            cheque_uploaded_at?: string | null;
             /** Saved */
             saved: boolean;
             /** Updated At */
@@ -6153,6 +6573,31 @@ export interface components {
             bank?: components["schemas"]["AgentBankAccount"] | null;
             /** Upi Id */
             upi_id?: string | null;
+        };
+        /** AgentPayoutTrail */
+        AgentPayoutTrail: {
+            /** Approval Mode */
+            approval_mode: ("maker_checker" | "standalone") | null;
+            /** Approved At */
+            approved_at: string | null;
+            approved_by: components["schemas"]["AgentPayoutActor"] | null;
+            /** Destination Hint */
+            destination_hint: string;
+            /** Issued At */
+            issued_at: string | null;
+            method: components["schemas"]["PayoutDestination"];
+            /** Paid At */
+            paid_at: string | null;
+            provider: components["schemas"]["PayoutProvider"];
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
+            requested_by: components["schemas"]["AgentPayoutActor"] | null;
+            /** Reversed At */
+            reversed_at: string | null;
+            status: components["schemas"]["PayoutStatus"];
         };
         /** AgentProfileStatusRead */
         AgentProfileStatusRead: {
@@ -6179,6 +6624,82 @@ export interface components {
         AgentRejectRequest: {
             /** Note */
             note: string;
+        };
+        /** AgentTransactionDetail */
+        AgentTransactionDetail: {
+            /** Amount Paise */
+            amount_paise: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /** Description */
+            description: string;
+            /** Hidden Fields */
+            hidden_fields: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Items */
+            items: components["schemas"]["AgentTransactionItem"][];
+            payout: components["schemas"]["AgentPayoutTrail"] | null;
+            status: components["schemas"]["TransactionStatus"];
+            type: components["schemas"]["TransactionType"];
+        };
+        /**
+         * AgentTransactionItem
+         * @description What a payout paid. Each payout pays exactly one commission today.
+         */
+        AgentTransactionItem: {
+            /** Amount Paise */
+            amount_paise: number;
+            /** Bank Name */
+            bank_name: string | null;
+            /** Client Name */
+            client_name: string | null;
+            /**
+             * Commission Id
+             * Format: uuid
+             */
+            commission_id: string;
+            /** Deal Amount */
+            deal_amount: string | null;
+            /** Deal Status */
+            deal_status: string | null;
+            /**
+             * Deal Type
+             * @enum {string}
+             */
+            deal_type: "loan_application" | "property_deal";
+            /**
+             * Deal Uuid
+             * Format: uuid
+             */
+            deal_uuid: string;
+            /**
+             * Entered At
+             * Format: date-time
+             */
+            entered_at: string;
+            /**
+             * Lead Uuid
+             * Format: uuid
+             */
+            lead_uuid: string;
+            /** Product Label */
+            product_label: string | null;
+            /** Property Title */
+            property_title: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "paid" | "cancelled";
         };
         /** AgentsReportResponse */
         AgentsReportResponse: {
@@ -7050,6 +7571,27 @@ export interface components {
             label: string;
             /** Status */
             status: string;
+        };
+        /**
+         * CancelledChequeRead
+         * @description Short-lived link to an Agent's cancelled cheque for one payout maker
+         *     (audited read). Images open inline; a PDF downloads.
+         */
+        CancelledChequeRead: {
+            /**
+             * Content Type
+             * @enum {string}
+             */
+            content_type: "image/jpeg" | "image/png" | "application/pdf";
+            /** Expires In Seconds */
+            expires_in_seconds: number;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
+            /** Url */
+            url: string;
         };
         /** ChangePasswordRequest */
         ChangePasswordRequest: {
@@ -10368,6 +10910,8 @@ export interface components {
          */
         SavedPayoutDestinationRead: {
             bank?: components["schemas"]["AgentBankAccount"] | null;
+            /** Cheque Uploaded At */
+            cheque_uploaded_at?: string | null;
             /**
              * Updated At
              * Format: date-time
@@ -15488,7 +16032,18 @@ export interface operations {
     };
     earnings_api_v1_agent_earnings_get: {
         parameters: {
-            query?: never;
+            query?: {
+                status?: ("pending" | "paid" | "cancelled") | null;
+                deal_type?: ("loan_application" | "property_deal") | null;
+                product_id?: string | null;
+                bank_id?: string | null;
+                property_category?: string | null;
+                amount_min_paise?: number | null;
+                amount_max_paise?: number | null;
+                date_from?: string | null;
+                date_to?: string | null;
+                q?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -15502,6 +16057,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentEarningsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -15656,6 +16220,37 @@ export interface operations {
             };
         };
     };
+    get_lead_history_api_v1_agent_leads__lead_id__history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentLeadHistoryRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     resubmit_lead_api_v1_agent_leads__lead_id__resubmit_post: {
         parameters: {
             query?: never;
@@ -15755,6 +16350,121 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    confirm_payout_cheque_api_v1_agent_payout_details_cheque_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentChequeConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentPayoutDetailsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_payout_cheque_api_v1_agent_payout_details_cheque_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    presign_payout_cheque_api_v1_agent_payout_details_cheque_presign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentChequePresignRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentChequePresignResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_transaction_detail_api_v1_agent_transactions__transaction_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transaction_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTransactionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
@@ -19637,6 +20347,37 @@ export interface operations {
             };
         };
     };
+    get_agent_cancelled_cheque_api_v1_payouts_agents__agent_profile_uuid__cancelled_cheque_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_profile_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CancelledChequeRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_agent_saved_destination_api_v1_payouts_agents__agent_profile_uuid__saved_destination_get: {
         parameters: {
             query?: never;
@@ -19707,6 +20448,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PayoutRecipientListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_recipient_cancelled_cheque_api_v1_payouts_recipients__user_uuid__cancelled_cheque_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CancelledChequeRead"];
                 };
             };
             /** @description Validation Error */

@@ -100,7 +100,7 @@ from app.models.support_ticket import SupportTicket
 from app.models.task import TaskFeedbackMedia
 from app.models.transaction import Transaction
 from app.models.user import User, UserStatus
-from app.services import payout_links, storage
+from app.services import agent_payout_cheque, payout_links, storage
 from app.services.admin_notify import notify_admins
 from app.services.agent_applications import scrub_documents
 from app.services.audit_log import record as record_audit
@@ -292,7 +292,16 @@ async def delete_account(
     # Phase A makes erasure atomic with the identity scrub.
     await db.scalar(func.erase_personalization_preference(target_auth_user_uuid))
     # Same confined-definer shape for an Agent's encrypted payout destination.
+    # Its optional cancelled cheque (CS-022) lives in object storage: read the
+    # key first (an Admin cannot SELECT the row under RLS), erase the row, then
+    # delete the object best-effort. Anything left behind is unreferenced and
+    # removed by the scheduled cheque orphan sweep.
+    cheque_keys = await agent_payout_cheque.object_keys_for_account(target_auth_user_uuid)
     await db.scalar(func.erase_agent_payout_details(target_auth_user_uuid))
+    if cheque_keys:
+        await db.flush()
+    for key in cheque_keys:
+        storage.delete_object(key)  # best-effort, already swallows failures
 
     db.add(
         AuthEvent(

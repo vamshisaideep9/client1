@@ -7,7 +7,7 @@ API only through the payout-maker prefill read, which is guarded and audited.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, StringConstraints, model_validator
 
@@ -63,6 +63,10 @@ class AgentPayoutDetailsRead(BaseModel):
     updated_at: datetime | None = None
     # False when this environment has no encryption key; saving is disabled.
     available: bool
+    # Optional cancelled cheque (CS-022). The file itself is never served back
+    # to the Agent; payout makers open it through an audited read.
+    cheque_uploaded_at: datetime | None = None
+    cheque_content_type: str | None = None
 
 
 class SavedPayoutDestinationRead(BaseModel):
@@ -71,3 +75,34 @@ class SavedPayoutDestinationRead(BaseModel):
     upi_id: str | None = None
     bank: AgentBankAccount | None = None
     updated_at: datetime
+    # Set when the Agent attached a cancelled cheque (opened separately, audited).
+    cheque_uploaded_at: datetime | None = None
+
+
+ChequeContentType = Literal["image/jpeg", "image/png", "application/pdf"]
+
+
+class AgentChequePresignRequest(BaseModel):
+    content_type: ChequeContentType
+
+
+class AgentChequePresignResponse(BaseModel):
+    object_key: str
+    upload_url: str
+    fields: dict[str, str]
+    max_bytes: int
+
+
+class AgentChequeConfirm(BaseModel):
+    object_key: Annotated[str, StringConstraints(max_length=300)]
+    content_type: ChequeContentType
+
+
+class CancelledChequeRead(BaseModel):
+    """Short-lived link to an Agent's cancelled cheque for one payout maker
+    (audited read). Images open inline; a PDF downloads."""
+
+    url: str
+    content_type: ChequeContentType
+    uploaded_at: datetime
+    expires_in_seconds: int

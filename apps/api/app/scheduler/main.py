@@ -30,6 +30,7 @@ from app.jobs.cms_activation import cms_activation
 from app.jobs.expire_agent_leads import expire_agent_leads
 from app.jobs.managed_media import process_pending_media, purge_expired_private_media
 from app.jobs.purge_agent_application_orphans import purge_agent_application_orphans
+from app.jobs.purge_agent_cheque_orphans import purge_agent_cheque_orphans
 from app.jobs.purge_banner_image_orphans import purge_banner_image_orphans
 from app.jobs.purge_loan_document_orphans import purge_loan_document_orphans
 from app.jobs.purge_personalization_locations import purge_personalization_locations
@@ -204,6 +205,15 @@ def build_scheduler() -> AsyncIOScheduler:
         trigger="interval",
         hours=24,  # storage cost cleanup, not time-critical
         id="purge_loan_document_orphans",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    add_operational_job(
+        purge_agent_cheque_orphans,
+        trigger="interval",
+        hours=24,  # private financial document cleanup, not time-critical
+        id="purge_agent_cheque_orphans",
         max_instances=1,
         coalesce=True,
         replace_existing=True,

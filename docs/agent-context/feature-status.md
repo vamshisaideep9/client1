@@ -2,7 +2,48 @@
 
 Status: **Derived living implementation ledger**
 
-**In review — Batch A PR 2: Settings by role, self-service guards, small
+**In review — Batch B PR 1: Agent commission history, payout trail, lead
+history and cancelled cheque (API)** (2026-11-16; CS-022; PR
+[#369](https://github.com/brollysolutions/client1/pull/369), mirror
+vamshisaideep9/client1#70), branch `feat/agent-dashboard-api` from Batch A
+PR 2 with `upstream/main` (Batch A merged) merged in. API, one migration and
+regenerated contracts; no requirement-percentage change.
+- Reads: `agent_commission_ledger()`, `agent_lead_history(uuid)` and
+  `agent_transaction_detail(uuid)` are SECURITY DEFINER functions (migration
+  `e8b0d2f4a6c9`) that answer only for the calling Agent's account, profile
+  and line and return projected columns; payouts and the audit log stay
+  Admin-only, and no RLS-only route gains rows.
+- `GET /agent/earnings`: filters `status`, `deal_type`, `product_id`,
+  `bank_id`, `property_category`, `amount_min_paise`/`amount_max_paise`,
+  `date_from`/`date_to` (IST, entry date), `q`; rows add client name, lead
+  id/status, product or property, bank, deal status, deal amount, paid date;
+  totals add the previous IST calendar month's paid amount with its dates.
+- `GET /agent/transactions/{id}`: owner-only; payout method + masked hint,
+  requested/approved/issued/paid/reversed, maker and checker name + role
+  (standalone Main Admin approval marked), and the single commission paid.
+- `GET /agent/leads/{id}/history`: originating Agent only; applications,
+  service enquiries, deals, enquiries, site visits, calls (outcome, interest,
+  notes, follow-up, telecaller) and timeline (introduced, assigned, expired,
+  resubmitted, manager status/reassign, loan/deal status changes).
+- Field rules (Agent, default visible): `lead_history.call_notes`,
+  `lead_history.staff_names`, `deal.amount`, `payout.staff_names`; hidden
+  values are null and listed in `hidden_fields`; a hidden client name is not
+  searchable.
+- Cancelled cheque: `POST/PUT/DELETE /agent/payout-details/cheque`,
+  `GET /payouts/{agents|recipients}/{id}/cancelled-cheque` (payout
+  requesters only, self refused, audited), cleared on bank change or
+  payout-details removal, erased with the account, daily
+  `purge_agent_cheque_orphans`.
+- Evidence (python 3.13 container, scratch database migrated to
+  `e8b0d2f4a6c9`): new `test_agent_dashboard_history.py` (13) and
+  `test_agent_payout_cheque.py` (9) pass; 25 affected modules 432 passed;
+  final re-run of the agent, cheque, earnings, refinements, account-delete
+  and commission-payout modules 85 passed; ruff check/format clean; one
+  Alembic head; upgrade → downgrade → upgrade round trip on a second scratch
+  database; OpenAPI export identical to the committed contract; web
+  `pnpm typecheck` passes on the regenerated types.
+
+**Merged — Batch A PR 2: Settings by role, self-service guards, small
 fixes** (2026-11-16; CS-021; PR [#368](https://github.com/brollysolutions/client1/pull/368),
 mirror vamshisaideep9/client1#69), branch `feat/filters-settings-by-role` stacked
 on PR 1. API, one additive data migration, web; no requirement-percentage
@@ -35,7 +76,7 @@ change and no contract shape change.
   filter system with follow-ups, staff analytics, team, lead signals,
   listings, admin analytics).
 
-**In review — Batch A PR 1: one filter system across every dashboard**
+**Merged — Batch A PR 1: one filter system across every dashboard**
 (2026-11-16; CS-021), branch `feat/unified-dashboard-filters` from
 `upstream/main` `5e8aaf7b`. Web only; no contract, dependency or
 requirement-percentage change.

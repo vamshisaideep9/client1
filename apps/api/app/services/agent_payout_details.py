@@ -25,6 +25,7 @@ from app.core.masking import mask_bank_account, mask_vpa
 from app.models.agent_payout_details import AgentPayoutDetails
 from app.models.audit_log import AuditAction
 from app.schemas.agent_payout_details import AgentBankAccount, AgentPayoutDetailsUpdate
+from app.services import agent_payout_cheque
 from app.services.audit_log import record as record_audit
 
 
@@ -49,6 +50,7 @@ class SavedDestination:
     upi_id: str | None
     bank: AgentBankAccount | None
     updated_at: datetime
+    cheque_uploaded_at: datetime | None = None
 
 
 def _aad(agent_profile_uuid: UUID, field: str) -> bytes:
@@ -90,6 +92,7 @@ async def save_own(
         )
 
     changes: dict[str, str] = {}
+    cheque_key_to_delete: str | None = None
     if "upi_id" in payload.model_fields_set:
         if payload.upi_id is None:
             row.upi_ciphertext, row.upi_hint = None, None
@@ -110,6 +113,11 @@ async def save_own(
             )
             row.bank_hint = _bank_hint(payload.bank)[:60]
             changes["bank"] = "set"
+        # A cancelled cheque proves one account: replacing or removing the bank
+        # account detaches it (the object is deleted after commit).
+        if row.cheque_object_key is not None:
+            cheque_key_to_delete = agent_payout_cheque.clear_columns(row)
+            changes["cheque"] = "removed"
 
     if row.upi_ciphertext is None and row.bank_ciphertext is None:
         await db.rollback()
@@ -129,13 +137,21 @@ async def save_own(
         detail=changes,
     )
     await db.commit()
+    await agent_payout_cheque.best_effort_delete(cheque_key_to_delete)
     return row
 
 
 async def delete_own(db: AsyncSession, *, agent_profile_uuid: UUID, auth_user_uuid: UUID) -> bool:
-    row = await get_own(db, agent_profile_uuid)
+    # Locked so a cheque confirmation racing this delete cannot leave its new
+    # object behind with a stale key captured here.
+    row = await db.scalar(
+        select(AgentPayoutDetails)
+        .where(AgentPayoutDetails.agent_profile_uuid == agent_profile_uuid)
+        .with_for_update()
+    )
     if row is None:
         return False
+    cheque_key = row.cheque_object_key
     await db.delete(row)
     await db.flush()
     await record_audit(
@@ -147,6 +163,7 @@ async def delete_own(db: AsyncSession, *, agent_profile_uuid: UUID, auth_user_uu
         actor_role="agent",
     )
     await db.commit()
+    await agent_payout_cheque.best_effort_delete(cheque_key)
     return True
 
 
@@ -172,7 +189,12 @@ def _decrypt_row(row: AgentPayoutDetails) -> SavedDestination:
         )
     except (field_crypto.FieldDecryptionError, ValueError, ValidationError) as exc:
         raise PayoutDetailsUnreadable from exc
-    return SavedDestination(upi_id=upi_id, bank=bank, updated_at=row.updated_at)
+    return SavedDestination(
+        upi_id=upi_id,
+        bank=bank,
+        updated_at=row.updated_at,
+        cheque_uploaded_at=row.cheque_uploaded_at,
+    )
 
 
 async def reveal_for_payout(
