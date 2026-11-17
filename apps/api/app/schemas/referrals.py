@@ -22,6 +22,7 @@ from uuid import UUID
 from pydantic import BaseModel, model_validator
 
 from app.models.payout import PayoutDestination
+from app.schemas.eligibility import EligibilityReasonLiteral, RowEligibilityLiteral
 from app.schemas.payments import PayoutDestinationInput, validate_destination
 
 
@@ -71,6 +72,12 @@ class ReferralRead(BaseModel):
     converted_at: datetime | None
     created_at: datetime
     converted_item: ReferralConvertedItem | None = None
+    # CS-024: whether this referral can earn (or earned) its bonus, with the
+    # rule that refused it. A closed reason code and its label only; the raw
+    # accrual_reason stays Admin-only.
+    eligibility: RowEligibilityLiteral
+    eligibility_reason: EligibilityReasonLiteral | None = None
+    eligibility_reason_label: str | None = None
 
 
 class ReferralListResponse(BaseModel):

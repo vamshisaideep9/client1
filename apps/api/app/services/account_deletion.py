@@ -298,6 +298,10 @@ async def delete_account(
     # removed by the scheduled cheque orphan sweep.
     cheque_keys = await agent_payout_cheque.object_keys_for_account(target_auth_user_uuid)
     await db.scalar(func.erase_agent_payout_details(target_auth_user_uuid))
+    # Rejected lead introductions and referral sign-ups this account made
+    # (CS-024) go with it. api_user cannot DELETE them, so the same confined
+    # definer shape: owner or platform Admin only, atomic with the scrub.
+    await db.scalar(func.erase_lead_intake_attempts(target_auth_user_uuid))
     if cheque_keys:
         await db.flush()
     for key in cheque_keys:

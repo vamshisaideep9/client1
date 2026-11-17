@@ -15,11 +15,15 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.lead import Lead, LeadStatus
+from app.models.lead_intake_attempt import IntakeActorType
 from app.models.loan import LoanType
 from app.models.profile import AgentProfile
 from app.models.property import Property
 from app.schemas.agent import AgentLeadCreate, AgentLeadUpdate
+from app.schemas.eligibility import EligibilitySummary
 from app.schemas.lead_details import LeadDetailsPatch
+from app.services import lead_intake_attempts
+from app.services.eligibility import agent_lead_eligibility
 from app.services.lead_details import (
     DetailActor,
     LeadDetailsForbidden,
@@ -172,6 +176,30 @@ async def list_my_leads(
             stmt = stmt.where(Lead.agent_expired_at.is_(None), Lead.status == status_enum)
     stmt = stmt.order_by(Lead.updated_at.desc())
     return list((await db.scalars(stmt)).all())
+
+
+async def lead_eligibility_summary(
+    db: AsyncSession, agent_profile_uuid: UUID
+) -> EligibilitySummary:
+    """Eligible / Not eligible / Duplicate for the Agent's leads (CS-024).
+
+    Accepted leads are read on the Agent's RLS session and classified by
+    services.eligibility; rejected introductions come from the recorded
+    attempts.
+    """
+    expired_markers = (
+        await db.scalars(
+            select(Lead.agent_expired_at).where(
+                Lead.origin_agent_profile_uuid == agent_profile_uuid
+            )
+        )
+    ).all()
+    return await lead_intake_attempts.eligibility_summary(
+        db,
+        IntakeActorType.AGENT,
+        agent_profile_uuid,
+        (agent_lead_eligibility(marker)[0] for marker in expired_markers),
+    )
 
 
 async def get_lead_for_agent(

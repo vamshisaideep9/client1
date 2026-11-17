@@ -2,7 +2,63 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — Batch C PR 2: filters by product, property, status,
+**In progress — Batch D PR 1: lead and referral eligibility (API)**
+(2026-11-17; CS-024; PR
+[#373](https://github.com/brollysolutions/client1/pull/373), mirror
+vamshisaideep9/client1#74), branch `feat/batch-d-eligibility-api` stacked on
+Batch C PR 2. API, one migration and regenerated contracts; no
+requirement-percentage change.
+- Store: migration `c7e9a1b3d5f8` (revises `f1b3d5a7c9e2`) adds
+  `lead_intake_attempts` (actor type `agent` / `referrer`, actor id, owning
+  account, last four digits, keyed HMAC-SHA256 fingerprint, line, outcome
+  `duplicate` / `not_eligible`, reason code; format checks on every column
+  that could otherwise carry free text or a number). RLS enabled and forced:
+  SELECT for the owner only (Agent rows also need the request's Agent
+  profile; no staff or Admin read policy, and the Admin coverage ledger marks
+  the table protected); no api_user INSERT/UPDATE/DELETE; confined definer
+  `erase_lead_intake_attempts(uuid)` (owner or platform Admin, 42501
+  otherwise), called in account deletion Phase A.
+- Recording: `capture_agent_lead` raises `AgentLeadConflict(reason)` and,
+  after its own session has rolled back, records the attempt on a separate
+  session (registered number, another Agent's / line's / worked lead, unique
+  race → duplicate `already_linked`; only the Agent's own expired lead → not
+  eligible `own_lead_window_ended`). `attribute_signup` records
+  `already_referred` for a later referrer (not for the first referrer
+  re-using their own code) and `self_referral`; an unknown code has no owner
+  and is not recorded. Best-effort, a repeat within 24 hours stored once; the
+  409 detail is unchanged.
+- Derived: `services/eligibility.py` holds every reason code and label and
+  maps Agent leads (`agent_expired_at` → not eligible `attribution_expired`)
+  and referrals (`self_referral`, `referrer_not_client`,
+  `below_min_conversion`, `cap_reached`, or `void` → not eligible; the rest
+  eligible).
+- API: `GET /agent/leads` rows add `eligibility`, `eligibility_reason`,
+  `eligibility_reason_label` and `facets` (from `lead_list_signals`' Agent
+  branch; ids, labels, enums); `GET /agent/leads/{id}` adds the eligibility
+  fields. `GET /referrals` rows add the eligibility fields (the raw
+  `accrual_reason` stays Admin-only). New `GET /agent/lead-eligibility`,
+  `GET /referrals/eligibility` (eligible / not eligible / duplicate /
+  not accepted) and `GET /agent/lead-attempts`, `GET /referrals/attempts`
+  (masked `***1234`, reason, label, line, date; `limit` ≤ 500, `offset`).
+- Ledgers: `lead_intake_attempts` classified `optional_audit` (line on Agent
+  attempts, NULL on referral attempts) and Admin coverage `protected`.
+- Evidence (python 3.13 container, scratch database migrated to
+  `c7e9a1b3d5f8`): new `test_lead_eligibility.py` (26: every rejection
+  branch recorded and kept after the rollback, no raw number in any column,
+  a recording failure leaves the 409 unchanged, 24-hour repeat stored once,
+  derived mapping, summaries, owner-only RLS for Agents / Clients / staff /
+  Admin, no api_user insert, erasure by Admin removal and by self-deletion,
+  definer refuses another account) with 23 other affected modules: 325
+  passed in total.
+  The one remaining failure in the wider contract set,
+  `test_client_loan_copy_migration::test_single_alembic_head_includes_this_revision`,
+  pins an old head and fails on the base too. Ruff check/format clean; one
+  Alembic head; upgrade → downgrade → upgrade on a second scratch database;
+  OpenAPI regenerated (4 new paths, 3 new schemas, `AgentLeadRead` and
+  `ReferralRead` extended, no removals); web `pnpm typecheck` passes on the
+  regenerated types.
+
+**In review — Batch C PR 2: filters by product, property, status,
 transactions and earnings (web)** (2026-11-17; CS-023; PR
 [#372](https://github.com/brollysolutions/client1/pull/372), mirror
 vamshisaideep9/client1#73), branch
@@ -38,7 +94,7 @@ C1 contracts; no requirement-percentage change.
   the filter-system, lead-signal, staff-analytics, admin-analytics, agent
   money, sub-admin-teams and telecaller workspace specs, 38 passed.
 
-**In progress — Batch C PR 1: filters by product, property, status,
+**In review — Batch C PR 1: filters by product, property, status,
 transactions and earnings (API)** (2026-11-17; CS-023; PR
 [#371](https://github.com/brollysolutions/client1/pull/371), mirror
 vamshisaideep9/client1#72), branch

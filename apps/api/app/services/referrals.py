@@ -52,6 +52,7 @@ from app.core.config import settings
 from app.core.masking import mask_mobile
 from app.core.security import generate_referral_code
 from app.models.lead import Lead
+from app.models.lead_intake_attempt import IntakeActorType
 from app.models.loan import LoanApplication, LoanType
 from app.models.notification import NotificationType
 from app.models.profile import AgentProfile, ClientProfile, ProfileStatus, StaffProfile
@@ -59,7 +60,11 @@ from app.models.property import Property
 from app.models.property_deal import PropertyDeal
 from app.models.referral import Referral, ReferralCode, ReferralStatus
 from app.models.referral_bonus_config import ReferralBonusConfig
+from app.schemas.eligibility import EligibilitySummary
 from app.schemas.referrals import MyReferralResponse, ReferralConvertedItem, ReferralStats
+from app.services import lead_intake_attempts
+from app.services.eligibility import EligibilityReason, referral_eligibility
+from app.services.lead_intake_attempts import record_attempt as record_intake_attempt
 from app.services.notifications import emit_notification
 
 logger = logging.getLogger(__name__)
@@ -196,11 +201,14 @@ async def attribute_signup(
     if not code:
         return None
     try:
+        rejection: EligibilityReason | None = None
         async with db_session.AsyncSessionLocal() as session:
             referrer_auth_user_uuid = await session.scalar(
                 select(ReferralCode.auth_user_uuid).where(ReferralCode.code == code)
             )
             if referrer_auth_user_uuid is None:
+                # No referrer owns the code, so there is no panel to show an
+                # attempt on; the code is kept in auth_events.detail (D4).
                 logger.info(
                     "referrals.code_unmatched code=%s mobile=%s",
                     code,
@@ -213,23 +221,44 @@ async def attribute_signup(
                 logger.warning(
                     "referrals.self_referral_at_signup auth_user_uuid=%s", referred_auth_user_uuid
                 )
-                return None
-
-            lead_uuid = await _lookup_lead_uuid(session, referred_mobile)
-            # First-claim-wins (D6): the UNIQUE constraint on referred_mobile
-            # is the real guard; ON CONFLICT DO NOTHING makes a concurrent
-            # second claim a silent no-op instead of an IntegrityError.
-            await session.execute(
-                pg_insert(Referral)
-                .values(
-                    referrer_auth_user_uuid=referrer_auth_user_uuid,
-                    referred_mobile=referred_mobile,
-                    referred_auth_user_uuid=referred_auth_user_uuid,
-                    referred_lead_uuid=lead_uuid,
+                rejection = EligibilityReason.SELF_REFERRAL
+            else:
+                lead_uuid = await _lookup_lead_uuid(session, referred_mobile)
+                # First-claim-wins (D6): the UNIQUE constraint on referred_mobile
+                # is the real guard; ON CONFLICT DO NOTHING makes a concurrent
+                # second claim a silent no-op instead of an IntegrityError.
+                inserted = await session.scalar(
+                    pg_insert(Referral)
+                    .values(
+                        referrer_auth_user_uuid=referrer_auth_user_uuid,
+                        referred_mobile=referred_mobile,
+                        referred_auth_user_uuid=referred_auth_user_uuid,
+                        referred_lead_uuid=lead_uuid,
+                    )
+                    .on_conflict_do_nothing(index_elements=["referred_mobile"])
+                    .returning(Referral.id)
                 )
-                .on_conflict_do_nothing(index_elements=["referred_mobile"])
+                if inserted is None:
+                    # The number was already referred. Recorded for this
+                    # referrer only when the existing referral is someone
+                    # else's: their own row is already on their list.
+                    first_referrer = await session.scalar(
+                        select(Referral.referrer_auth_user_uuid).where(
+                            Referral.referred_mobile == referred_mobile
+                        )
+                    )
+                    if first_referrer != referrer_auth_user_uuid:
+                        rejection = EligibilityReason.ALREADY_REFERRED
+                await session.commit()
+        if rejection is not None:
+            # Own session, after the attribution transaction has finished.
+            await record_intake_attempt(
+                actor_type=IntakeActorType.REFERRER,
+                actor_uuid=referrer_auth_user_uuid,
+                auth_user_uuid=referrer_auth_user_uuid,
+                mobile=referred_mobile,
+                reason=rejection,
             )
-            await session.commit()
     except Exception:
         logger.warning(
             "referrals.attribute_signup_failed mobile=%s",
@@ -512,6 +541,27 @@ async def list_referrals(db: AsyncSession) -> list[Referral]:
     # Trust RLS, same convention as _compute_stats / api/v1/transactions.py.
     result = await db.execute(select(Referral).order_by(Referral.created_at.desc()))
     return list(result.scalars().all())
+
+
+async def referral_eligibility_summary(
+    db: AsyncSession, auth_user_uuid: UUID
+) -> EligibilitySummary:
+    """Eligible / Not eligible / Duplicate for the caller's own referrals (CS-024).
+
+    Named explicitly by referrer as well as scoped by referrals_rls, so a
+    platform Admin calling it still gets only their own referrals.
+    """
+    rows = await db.execute(
+        select(Referral.conversion_status, Referral.accrual_reason).where(
+            Referral.referrer_auth_user_uuid == auth_user_uuid
+        )
+    )
+    return await lead_intake_attempts.eligibility_summary(
+        db,
+        IntakeActorType.REFERRER,
+        auth_user_uuid,
+        (referral_eligibility(status, reason)[0] for status, reason in rows.all()),
+    )
 
 
 async def converted_items(rows: list[Referral]) -> dict[UUID, ReferralConvertedItem]:

@@ -68,7 +68,44 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — Batch C: filters by product, property, status, transactions
+**In progress — Batch D: lead and referral eligibility (CS-024)**
+(2026-11-17; user-approved stakeholder feedback, batch D of A–G; both lines;
+no requirement or completion-percentage change). Two stacked PRs, both
+opened against `main`, stacked on Batch C PR 2:
+
+- *PR D1 — API, migration, contracts*, branch `feat/batch-d-eligibility-api`
+  from `feat/batch-c-filters-web` `08144773`; PR
+  [#373](https://github.com/brollysolutions/client1/pull/373), mirror
+  vamshisaideep9/client1#74. Migration `c7e9a1b3d5f8`
+  (revises `f1b3d5a7c9e2`, single head) adds `lead_intake_attempts`: actor
+  (`agent` + Agent profile, or `referrer` + account), owning account, last
+  four digits and a keyed HMAC-SHA256 fingerprint of the number (never the
+  number), line, outcome `duplicate` / `not_eligible`, reason code. RLS
+  enabled and forced; SELECT for the owner only (an Agent row also needs the
+  request's Agent profile; no staff or Admin read); no api_user write grant; the
+  confined definer `erase_lead_intake_attempts(uuid)` erases with the account
+  (owner or platform Admin). `capture_agent_lead` records its rejections on a
+  separate session after the capture transaction rolls back (registered,
+  other Agent / line / worked lead → duplicate; own expired lead → not
+  eligible); `attribute_signup` records an already-referred number for a
+  later referrer and a self-referral; unknown codes have no owner. Reason
+  codes and labels live in `services/eligibility.py`, which also derives
+  eligibility on Agent leads (expired → not eligible) and referrals (voided,
+  self-referral, referrer not a client, below minimum, cap reached → not
+  eligible). API: `GET /agent/leads` and `GET /referrals` rows carry
+  `eligibility` + reason + label (Agent rows also `facets`), `GET
+  /agent/lead-eligibility` and `GET /referrals/eligibility` return the three
+  counts, `GET /agent/lead-attempts` and `GET /referrals/attempts` list the
+  caller's recorded attempts.
+- *PR D2 — web*, branch `feat/batch-d-eligibility-web` stacked on D1: Agent
+  Leads and Client Referrals get an Eligibility summary, an `Eligibility`
+  filter, a badge per row and a "Not accepted" tab; the Agent Leads list
+  gains status and product / property filters.
+
+Next: the user merges B1, B2, C1, C2, then D1 and D2. Recommended: Opus 5.5 /
+high (extra-high for the migration and RLS).
+
+**In review — Batch C: filters by product, property, status, transactions
 and earnings (CS-023)** (2026-11-17; user-approved stakeholder feedback, batch C
 of A–G; both lines; no requirement or completion-percentage change). Two
 stacked PRs, both opened against `main`, stacked on Batch B PR 2:
