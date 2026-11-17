@@ -102,13 +102,27 @@ Two stacked PRs, both opened against `main`, stacked on Batch A PR 2:
   account changes, audited payout-maker view
   (`agent_payout_details_viewed`, purpose `cheque_view`), erased with the
   account, daily orphan sweep.
-- *PR B2 — web* (next): home Total / Pending / Paid and "Commission paid ·
-  <last month>", commission history table with filters and detail drawer,
-  transaction drawer, lead history sections, cheque upload row and the
-  payout dialog's "View cancelled cheque".
+- *PR B2 — web*, branch `feat/agent-dashboard-web` stacked on B1 (PR
+  [#370](https://github.com/brollysolutions/client1/pull/370), mirror
+  vamshisaideep9/client1#71). Agent
+  home: Commission summary Total / Pending / Paid and a "Commission paid ·
+  Oct 2026" card (previous IST month, from the API's dates). Earnings: four
+  totals, the shared `FilterBar` (search, status, deal type, entered From /
+  To) with "More filters" Lead (lead status) / Product (product, bank) or
+  Property (category) / Money (commission ₹ range) and chips, a commission
+  table and a detail sheet (client, lead link, deal, amounts, entered/paid)
+  that opens the payment-trail sheet. `/dashboard/transactions`: Agents
+  open the same payment-trail sheet (method + masked hint, timestamps,
+  requested/approved by with role, what it paid). Agent lead detail:
+  "Applications and deals", "Status timeline" and "Calls" (Telecaller
+  `CallLogList` with a telecaller byline) with Admin-hidden notes. Settings:
+  optional cancelled-cheque row (JPEG/PNG/PDF ≤ 5 MB checked before upload;
+  Upload / Replace / Remove); the payout dialog gains "View cancelled
+  cheque" (new tab, audited server-side). Filtering runs on the loaded
+  rows (`agent-earnings-filters.ts`), mirroring the API filters.
 
-Next: ship B1, then B2. Recommended: Opus 5.5 / high (B1 is RLS-adjacent
-money and upload work; reviewed with `security-review`).
+Next: the user merges B1, then B2; then Batch C. Recommended: Opus 5.5 /
+high.
 
 **Merged — Batch A: one filter system, Settings by role, small fixes
 (CS-021)** (PRs #367 and #368 merged into `upstream/main` `b8adb6ae`) (2026-11-16; user-approved stakeholder feedback, batch A of A–G;

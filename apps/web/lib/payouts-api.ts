@@ -121,3 +121,19 @@ export async function getSavedPayoutDestination(
       : `/api/v1/payouts/recipients/${encodeURIComponent(target.recipientUserUuid)}/saved-destination`;
   return apiRequest<SavedPayoutDestination>(path);
 }
+
+export type CancelledCheque = Schemas["CancelledChequeRead"];
+
+/**
+ * A short-lived link to the cancelled cheque an Agent attached to their payout
+ * details. Same access as the saved-destination prefill; every view is audited.
+ */
+export async function getCancelledCheque(
+  target: { recipientUserUuid: string } | { agentProfileUuid: string },
+): Promise<ApiResponse<CancelledCheque>> {
+  const path =
+    "agentProfileUuid" in target
+      ? `/api/v1/payouts/agents/${encodeURIComponent(target.agentProfileUuid)}/cancelled-cheque`
+      : `/api/v1/payouts/recipients/${encodeURIComponent(target.recipientUserUuid)}/cancelled-cheque`;
+  return apiRequest<CancelledCheque>(path);
+}

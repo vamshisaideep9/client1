@@ -14,6 +14,7 @@ import { FetchError } from "@/features/dashboard/fetch-error";
 import { formatMobile } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
+import { AgentLeadHistorySection } from "./agent-lead-history";
 import { useAgentLeadDetail } from "./use-agent-lead-detail";
 import { AGENT_LEAD_EXPIRY_POLICY, formatAgentLeadExpiry, isAgentLeadExpiryDue } from "./lead-expiry";
 import { ResubmitLeadButton } from "./resubmit-lead-button";
@@ -188,6 +189,8 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
           </>
         )}
       </DashboardPanel>
+
+      <AgentLeadHistorySection leadId={lead.id} />
     </DashboardPage>
   );
 }

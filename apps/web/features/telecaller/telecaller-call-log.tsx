@@ -36,11 +36,14 @@ export function CallLogList({
   requests,
   showRequest = false,
   emptyText = "No calls logged yet.",
+  byline,
 }: {
   activities: LeadActivity[];
   requests: WorkspaceRequest[];
   showRequest?: boolean;
   emptyText?: string;
+  /** Optional "by …" line per call, e.g. the telecaller's name for an Agent. */
+  byline?: (activity: LeadActivity) => string | null;
 }) {
   const byKey = React.useMemo(
     () => new Map(requests.map((request) => [request.key, request])),
@@ -71,6 +74,9 @@ export function CallLogList({
             <p className="mt-0.5 text-xs font-medium text-brand-link">
               {requestLabel(activity, byKey)}
             </p>
+          ) : null}
+          {byline?.(activity) ? (
+            <p className="mt-0.5 text-xs text-text-secondary">{byline(activity)}</p>
           ) : null}
           {activity.notes ? (
             <p className="mt-1 whitespace-pre-line break-words text-sm text-text-secondary">
