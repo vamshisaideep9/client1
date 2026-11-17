@@ -106,7 +106,7 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   Agents; teams with their active managing Sub Admin and eligible members),
   business credit (Agents: introduced leads, sharing
   `loan_commission_eligible` / `deal_commission_eligible` now extracted in
-  `services/commissions.py`; Telecallers: leads they hold now; Employees:
+  `services/commissions.py`; Telecallers: leads they hold now and called before the stage; Employees:
   leads where they completed a task at or before the moment the case reached
   its counted stage; teams: members' union, a team managed by the contest's
   maker left out), stage time

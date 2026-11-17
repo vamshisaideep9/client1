@@ -17,8 +17,10 @@ Business credit, by audience:
   ``services/commissions.py`` (``loan_commission_eligible`` /
   ``deal_commission_eligible``), timed by ``disbursed_at`` / ``closed_at``.
 - Telecallers: cases and deals on leads they hold now
-  (``leads.assigned_telecaller_profile_uuid``). Only the current assignee is
-  stored, so a reassigned lead counts for whoever holds it when scored.
+  (``leads.assigned_telecaller_profile_uuid``) and called at or before the
+  moment the case reached its stage. Only the current assignee is stored, so
+  a reassigned lead counts for its current holder, and only if they worked it
+  before the stage.
 - Employees: a case or deal on a lead where they completed a task at or
   before the moment the case reached the counted stage (``tasks.completed_at``,
   stamped by the database). A task created, reassigned or still open at that
@@ -357,12 +359,30 @@ def _credit_column(role: str):
 
 
 def _with_credit(stmt: Select, role: str, line: str, ids: list[uuid.UUID], reached_at) -> Select:
-    """Who gets credit for each case. Employees: only for a task on the lead
-    they completed at or before the moment the case reached its stage
-    (``reached_at``), so open, later or reassigned-later work earns nothing."""
+    """Who gets credit for each case.
+
+    Telecallers: the lead's current holder, and only when they logged a call
+    on it at or before the moment the case reached its stage (``reached_at``):
+    a manager reassigning an already-counted lead to another member near the
+    end moves no credit (security review). Employees: only for a task on the
+    lead they completed at or before that moment, so open, later or
+    reassigned-later work earns nothing."""
     column = _credit_column(role)
     if column is not None:
-        return stmt.add_columns(column.label("who")).where(column.in_(ids))
+        stmt = stmt.add_columns(column.label("who")).where(column.in_(ids))
+        if role == "telecaller":
+            worked = (
+                select(literal(1))
+                .where(
+                    LeadActivity.lead_uuid == Lead.id,
+                    LeadActivity.telecaller_staff_profile_uuid
+                    == Lead.assigned_telecaller_profile_uuid,
+                    LeadActivity.created_at <= reached_at,
+                )
+                .exists()
+            )
+            stmt = stmt.where(worked)
+        return stmt
     task = aliased(Task)
     return (
         stmt.add_columns(task.assigned_employee_profile_uuid.label("who"))

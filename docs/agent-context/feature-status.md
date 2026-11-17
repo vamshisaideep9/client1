@@ -10,6 +10,10 @@ regenerated contracts; no requirement-percentage change.
   standings as described in `implementation-plan.md` (Batch G2);
   `services/commissions.py` exposes the commission-eligibility predicates
   it already used, shared with Agent contest credit.
+- Batch security review (MEDIUM, credit steering): Telecaller credit also
+  needs a call by the current holder on the lead at or before the stage
+  time, so a manager reassigning an already-counted lead near the end moves
+  no credit (tests: no call, a call after the stage, a call before it).
 - Security review fix (MEDIUM, prize manipulation; see the plan): Employee
   credit needs a task completed at or before the case's stage time, task
   activity uses the new database-stamped `tasks.completed_at`, and a team
