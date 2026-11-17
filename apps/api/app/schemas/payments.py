@@ -67,6 +67,27 @@ class PayoutCreate(BaseModel):
         validate_destination(self.destination_type, self.destination)
         return self
 
+    @model_validator(mode="after")
+    def _contest_prizes_come_from_results(self) -> PayoutCreate:
+        # CS-027: a contest prize is paid only from its finalized result, so
+        # its amount, recipient and one-payout-per-result link can't be forged.
+        if self.type == PayoutType.CONTEST_REWARD:
+            raise ValueError("Contest prizes are paid from the contest's winners screen.")
+        return self
+
+
+class ContestPrizePayoutRequest(BaseModel):
+    """Only the destination is caller-supplied; amount, recipient, line and the
+    idempotency key come from the contest result (services/contest_awards.py)."""
+
+    destination_type: PayoutDestination
+    destination: PayoutDestinationInput
+
+    @model_validator(mode="after")
+    def _require_matching_destination(self) -> ContestPrizePayoutRequest:
+        validate_destination(self.destination_type, self.destination)
+        return self
+
 
 SimulatedGatewayEvent = Literal[
     "payout.processed", "payout.failed", "payout.rejected", "payout.reversed"

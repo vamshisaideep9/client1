@@ -285,10 +285,15 @@ async def create_payout(
     idempotency_key: str,
     maker_user_uuid: uuid.UUID,
     actor_role: str | None = None,
+    allow_standalone: bool = True,
 ) -> uuid.UUID:
     """Validate the safety guards, provision the gateway fund account (real
     mode), and persist a payout. Main Admin payouts start approved; all others
     require a different Admin checker. Returns the new payout id.
+
+    ``allow_standalone=False`` removes the Main Admin exception for one
+    payout: it always starts pending approval by a different Admin (CS-027
+    contest prizes).
 
     Runs entirely on the bypass session: the guard reads (recipient, daily cap,
     dedupe) and the insert must not depend on the caller's RLS scope.
@@ -314,7 +319,7 @@ async def create_payout(
         # Main Admin is the only approval-free maker. Derive this from the live
         # staff row inside the trusted service; callers cannot request or forge
         # the exception.
-        standalone = bool(
+        standalone = allow_standalone and bool(
             await db.scalar(
                 select(StaffProfile.id).where(
                     StaffProfile.auth_user_uuid == maker_user_uuid,
@@ -1313,6 +1318,7 @@ def _ledger_description(payout_type: PayoutType) -> str:
         PayoutType.CASHBACK: "Cashback payout",
         PayoutType.REFERRAL_BONUS: "Referral bonus payout",
         PayoutType.COMMISSION: "Commission payout",
+        PayoutType.CONTEST_REWARD: "Contest prize payout",
     }[payout_type]
 
 

@@ -49,6 +49,7 @@ const TYPE_LABEL: Record<string, string> = {
   cashback: "Cashback",
   referral_bonus: "Referral bonus",
   commission: "Commission",
+  contest_reward: "Contest prize",
 };
 
 const STATUS_LABEL: Record<PayoutStatus, string> = {

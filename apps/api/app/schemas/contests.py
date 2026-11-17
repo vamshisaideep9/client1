@@ -426,6 +426,24 @@ class ContestReject(BaseModel):
     note: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=500)]
 
 
+class ContestPrizeMarkPaid(BaseModel):
+    """How a staff prize was paid (for example "November payroll"). No
+    personal or bank details."""
+
+    reference: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=80)]
+
+
+class ContestPrizePayoutResponse(BaseModel):
+    payout_id: UUID
+
+
+class ContestResultPayment(BaseModel):
+    result_id: UUID
+    payment_status: str
+    paid_marked_at: datetime | None
+    paid_reference: str | None
+
+
 class ContestRead(BaseModel):
     id: UUID
     title: str
@@ -571,6 +589,8 @@ class StandingRow(BaseModel):
     result_id: UUID | None
     kind: str
     participant_type: Literal["agent", "staff", "team"]
+    # Lets the Admin's prize payout dialog offer the Agent's saved destination.
+    agent_profile_uuid: UUID | None = None
     name: str
     team_name: str | None
     rank: int | None

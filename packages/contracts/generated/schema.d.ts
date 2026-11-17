@@ -2936,9 +2936,51 @@ export interface paths {
         put?: never;
         /**
          * Cancel Contest
-         * @description The maker cancels a contest that has not been approved.
+         * @description The maker (Sub Admin) cancels a contest that has not been approved; a
+         *     platform Admin who is not the maker cancels an approved, live or ended
+         *     one. A finalized contest cannot be cancelled.
          */
         post: operations["cancel_contest_api_v1_contests__contest_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contests/{contest_id}/finalize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finalize Contest
+         * @description Confirm the winners of an ended contest; prizes become owed.
+         */
+        post: operations["finalize_contest_api_v1_contests__contest_id__finalize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contests/{contest_id}/recalculate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recalculate Contest
+         * @description Re-snapshot an ended contest's standings from live data.
+         */
+        post: operations["recalculate_contest_api_v1_contests__contest_id__recalculate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2956,6 +2998,47 @@ export interface paths {
         put?: never;
         /** Reject Contest */
         post: operations["reject_contest_api_v1_contests__contest_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contests/{contest_id}/results/{result_id}/mark-paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Prize Paid
+         * @description Record a staff prize as paid outside Payouts (audited).
+         */
+        post: operations["mark_prize_paid_api_v1_contests__contest_id__results__result_id__mark_paid_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contests/{contest_id}/results/{result_id}/payout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Prize Payout
+         * @description Maker step for an Agent prize: one contest_reward payout, always
+         *     approved at POST /payouts/{id}/approve by a different Admin.
+         */
+        post: operations["request_prize_payout_api_v1_contests__contest_id__results__result_id__payout_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8943,6 +9026,32 @@ export interface components {
          */
         ContestMetric: "cases" | "amount" | "calls_logged" | "follow_ups_on_time" | "tasks_completed" | "tasks_on_time" | "site_visits_completed";
         /**
+         * ContestPrizeMarkPaid
+         * @description How a staff prize was paid (for example "November payroll"). No
+         *     personal or bank details.
+         */
+        ContestPrizeMarkPaid: {
+            /** Reference */
+            reference: string;
+        };
+        /**
+         * ContestPrizePayoutRequest
+         * @description Only the destination is caller-supplied; amount, recipient, line and the
+         *     idempotency key come from the contest result (services/contest_awards.py).
+         */
+        ContestPrizePayoutRequest: {
+            destination: components["schemas"]["PayoutDestinationInput"];
+            destination_type: components["schemas"]["PayoutDestination"];
+        };
+        /** ContestPrizePayoutResponse */
+        ContestPrizePayoutResponse: {
+            /**
+             * Payout Id
+             * Format: uuid
+             */
+            payout_id: string;
+        };
+        /**
          * ContestProgress
          * @description Achieved numbers for the populated targets (absent ones are null).
          */
@@ -9054,6 +9163,20 @@ export interface components {
         ContestReject: {
             /** Note */
             note: string;
+        };
+        /** ContestResultPayment */
+        ContestResultPayment: {
+            /** Paid Marked At */
+            paid_marked_at: string | null;
+            /** Paid Reference */
+            paid_reference: string | null;
+            /** Payment Status */
+            payment_status: string;
+            /**
+             * Result Id
+             * Format: uuid
+             */
+            result_id: string;
         };
         /** ContestStandingsResponse */
         ContestStandingsResponse: {
@@ -11275,7 +11398,7 @@ export interface components {
          * PayoutType
          * @enum {string}
          */
-        PayoutType: "cashback" | "referral_bonus" | "commission";
+        PayoutType: "cashback" | "referral_bonus" | "commission" | "contest_reward";
         /**
          * PendingApprovalItem
          * @description An own-authored banner or property listing still awaiting Admin review.
@@ -12994,6 +13117,8 @@ export interface components {
             achieved_amount_paise: number;
             /** Achieved Count */
             achieved_count: number;
+            /** Agent Profile Uuid */
+            agent_profile_uuid?: string | null;
             /** Excluded Reason */
             excluded_reason: string | null;
             /** Kind */
@@ -14330,7 +14455,7 @@ export interface components {
          * TransactionType
          * @enum {string}
          */
-        TransactionType: "cashback" | "referral_bonus" | "commission";
+        TransactionType: "cashback" | "referral_bonus" | "commission" | "contest_reward";
         /** TrendPoint */
         TrendPoint: {
             /**
@@ -20783,6 +20908,68 @@ export interface operations {
             };
         };
     };
+    finalize_contest_api_v1_contests__contest_id__finalize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recalculate_contest_api_v1_contests__contest_id__recalculate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     reject_contest_api_v1_contests__contest_id__reject_post: {
         parameters: {
             query?: never;
@@ -20805,6 +20992,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_prize_paid_api_v1_contests__contest_id__results__result_id__mark_paid_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+                result_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContestPrizeMarkPaid"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestResultPayment"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_prize_payout_api_v1_contests__contest_id__results__result_id__payout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contest_id: string;
+                result_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContestPrizePayoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestPrizePayoutResponse"];
                 };
             };
             /** @description Validation Error */
