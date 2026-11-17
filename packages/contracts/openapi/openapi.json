@@ -5882,6 +5882,30 @@
         "title": "AnalyticsTrend",
         "type": "object"
       },
+      "AudienceCity": {
+        "additionalProperties": false,
+        "description": "A city target: a district and its state from the pincode reference list.",
+        "properties": {
+          "district": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "District",
+            "type": "string"
+          },
+          "state": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "district",
+          "state"
+        ],
+        "title": "AudienceCity",
+        "type": "object"
+      },
       "AudienceLocationCircle": {
         "additionalProperties": false,
         "properties": {
@@ -5921,7 +5945,7 @@
       },
       "AudienceRules": {
         "additionalProperties": false,
-        "description": "Version-one rule grammar.\n\nPopulated dimensions are ANDed. Values within one dimension are ORed.\nAn empty object is the canonical generic-content representation.",
+        "description": "Versioned rule grammar (version 1, and version 2 since CS-026).\n\nPopulated dimensions are ANDed. Values within one dimension are ORed.\nCircles (`locations`), `pincodes` and `cities` together form one \"where\"\ndimension: a match on any of them counts. `pincodes` and `cities` exist\nonly in version 2 and target Clients only. An empty object is the\ncanonical generic-content representation.",
         "properties": {
           "agent_signals": {
             "items": {
@@ -5936,6 +5960,14 @@
             },
             "maxItems": 5,
             "title": "Agent Signals",
+            "type": "array"
+          },
+          "cities": {
+            "items": {
+              "$ref": "#/components/schemas/AudienceCity"
+            },
+            "maxItems": 50,
+            "title": "Cities",
             "type": "array"
           },
           "client_journey_stages": {
@@ -5962,6 +5994,15 @@
             "title": "Locations",
             "type": "array"
           },
+          "pincodes": {
+            "items": {
+              "pattern": "^[1-9][0-9]{5}$",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Pincodes",
+            "type": "array"
+          },
           "user_types": {
             "items": {
               "enum": [
@@ -5977,8 +6018,11 @@
             "type": "array"
           },
           "version": {
-            "const": 1,
             "default": 1,
+            "enum": [
+              1,
+              2
+            ],
             "title": "Version",
             "type": "integer"
           }
@@ -15704,6 +15748,25 @@
           "personalization_enabled"
         ],
         "title": "PersonalizationPreferenceUpdate",
+        "type": "object"
+      },
+      "PincodeDistrictRead": {
+        "description": "A city for campaign targeting: a district and its state.",
+        "properties": {
+          "district": {
+            "title": "District",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "district",
+          "state"
+        ],
+        "title": "PincodeDistrictRead",
         "type": "object"
       },
       "PincodePlaceRead": {
@@ -43101,6 +43164,33 @@
         ]
       }
     },
+    "/api/v1/personalization/location/consent": {
+      "put": {
+        "description": "CS-026: turn on location-based content using the profile pincode only.\n\nNo device position is sent or stored. Revoke with ``DELETE /location``\n(or by turning personalized content off).",
+        "operationId": "put_location_consent_api_v1_personalization_location_consent_put",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalizationPreferenceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Put Location Consent",
+        "tags": [
+          "personalization"
+        ]
+      }
+    },
     "/api/v1/personalization/placements": {
       "get": {
         "operationId": "get_placements_api_v1_personalization_placements_get",
@@ -43219,6 +43309,37 @@
         "summary": "Update Preferences",
         "tags": [
           "personalization"
+        ]
+      }
+    },
+    "/api/v1/pincodes/districts": {
+      "get": {
+        "description": "Every district (with its state) on the list: the cities a campaign can target.\n\nDeclared before ``/{pincode}`` so the literal path is matched first.",
+        "operationId": "list_districts_api_v1_pincodes_districts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PincodeDistrictRead"
+                  },
+                  "title": "Response List Districts Api V1 Pincodes Districts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Districts",
+        "tags": [
+          "pincodes"
         ]
       }
     },

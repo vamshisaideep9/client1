@@ -33,6 +33,13 @@ class PincodePlaceRead(BaseModel):
     state: str
 
 
+class PincodeDistrictRead(BaseModel):
+    """A city for campaign targeting: a district and its state."""
+
+    district: str
+    state: str
+
+
 class NearestPincodeRequest(BaseModel):
     """A one-time device position. Used for one lookup, then discarded."""
 

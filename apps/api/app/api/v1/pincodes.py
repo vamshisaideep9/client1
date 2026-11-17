@@ -25,7 +25,12 @@ from app.cache.redis_keys import (
 from app.core.deps import CurrentUser, get_active_user, get_cache
 from app.db.session import get_db
 from app.models.pincode import Pincode
-from app.schemas.pincodes import PINCODE_PATTERN, NearestPincodeRequest, PincodePlaceRead
+from app.schemas.pincodes import (
+    PINCODE_PATTERN,
+    NearestPincodeRequest,
+    PincodeDistrictRead,
+    PincodePlaceRead,
+)
 from app.services import pincodes
 from app.services.auth_service import ensure_self_service_allowed
 
@@ -72,6 +77,25 @@ async def nearest_pincode(
         )
     response.headers.update(_NO_STORE)
     return place_read(row)
+
+
+@router.get("/districts", response_model=list[PincodeDistrictRead])
+async def list_districts(
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+    db: AsyncSession = Depends(get_db),
+    cache: RedisCache = Depends(get_cache),
+) -> list[PincodeDistrictRead]:
+    """Every district (with its state) on the list: the cities a campaign can target.
+
+    Declared before ``/{pincode}`` so the literal path is matched first.
+    """
+    await _within_budget(
+        cache, pincode_lookup_rate_key(str(current_user.id)), PINCODE_LOOKUPS_PER_HOUR
+    )
+    rows = await pincodes.list_districts(db)
+    response.headers["Cache-Control"] = "private, max-age=86400"
+    return [PincodeDistrictRead(district=district, state=state) for district, state in rows]
 
 
 @router.get("/{pincode}", response_model=PincodePlaceRead)

@@ -21,8 +21,10 @@ from app.models.lead import Lead, LeadStatus
 from app.models.loan import LoanApplication, LoanStatus
 from app.models.offer import Offer, OfferStatus
 from app.models.personalization import PersonalizationPreference
+from app.models.pincode import Pincode
 from app.models.profile import AgentProfile, ClientProfile, ProfileStatus, StaffProfile
 from app.models.property_deal import PropertyDeal, PropertyDealStatus
+from app.models.user import User
 from app.schemas.personalization import (
     AgentSignal,
     AudienceRules,
@@ -52,7 +54,13 @@ class AudienceContext:
     personalization_enabled: bool
     client_journey_stages: frozenset[str] = field(default_factory=frozenset)
     agent_signals: frozenset[str] = field(default_factory=frozenset)
+    # Point used for circle targets: the profile pincode's centroid when there
+    # is one, otherwise a still-valid legacy coarse point (CS-026 precedence).
     location: tuple[float, float] | None = None
+    # CS-026: the consenting Client's profile pincode and its (district,
+    # state), casefolded, for pincode and city targets.
+    pincode: str | None = None
+    city: tuple[str, str] | None = None
 
 
 def preference_read_values(
@@ -193,6 +201,60 @@ async def revoke_location(
             auth_user_uuid=auth_user_uuid,
             event_type="location_personalization_consent_updated",
             enabled=False,
+            ip=ip,
+            user_agent=user_agent,
+        )
+    )
+    await db.commit()
+    await db.refresh(preference)
+    return preference
+
+
+def location_consent_active(preference: PersonalizationPreference | None) -> bool:
+    """Both consents on: personalized content and the separate location consent."""
+    return bool(
+        preference is not None
+        and preference.personalization_enabled
+        and preference.location_enabled
+        and preference.location_consented_at is not None
+    )
+
+
+class ProfilePincodeRequired(Exception):
+    """Location consent without a device point needs a profile pincode to use."""
+
+
+async def grant_location_consent(
+    db: AsyncSession,
+    *,
+    auth_user_uuid: UUID,
+    ip: str | None,
+    user_agent: str | None,
+) -> PersonalizationPreference:
+    """CS-026: location consent without capturing a device position.
+
+    The Client's profile pincode alone is then used for location targeting.
+    Requires personalized content to be on and a saved profile pincode. An
+    existing coarse point (CS-008) is kept as is; revoking location consent
+    (``revoke_location``) or turning personalization off clears both.
+    """
+    preference = await db.get(PersonalizationPreference, auth_user_uuid, with_for_update=True)
+    if preference is None or not preference.personalization_enabled:
+        raise PersonalizationConsentRequired
+    user = await db.get(User, auth_user_uuid)
+    if user is None or not user.pincode:
+        raise ProfilePincodeRequired
+    if preference.location_enabled and preference.location_consented_at is not None:
+        return preference
+    now = datetime.now(UTC)
+    preference.location_enabled = True
+    preference.location_consented_at = now
+    preference.updated_at = now
+    db.add(
+        _consent_event(
+            auth_user_uuid=auth_user_uuid,
+            event_type="location_personalization_consent_updated",
+            enabled=True,
             ip=ip,
             user_agent=user_agent,
         )
@@ -349,15 +411,33 @@ async def build_audience_context(
     stages: frozenset[str] = frozenset()
     signals: frozenset[str] = frozenset()
     location: tuple[float, float] | None = None
+    pincode: str | None = None
+    city: tuple[str, str] | None = None
     if personalization_enabled:
         if current_user.role == "client":
             stages = await _client_stages(db, profile, business_line, current_user.id)
+            # CS-026: the profile pincode drives location targeting only while
+            # BOTH consents are on — personalized content and the separate,
+            # revocable location consent (CS-008). Revoking either stops every
+            # pincode, city and circle match at once.
+            if location_consent_active(preference):
+                user = await db.get(User, current_user.id)
+                if user is not None and user.pincode:
+                    pincode = user.pincode
+                    place = await db.get(Pincode, user.pincode)
+                    if place is not None:
+                        city = (place.district.casefold(), place.state.casefold())
+                        if place.latitude is not None and place.longitude is not None:
+                            location = (place.latitude, place.longitude)
         elif current_user.role == "agent":
             signals = await _agent_activity_signals(db, profile, current_user.id)
         cutoff = datetime.now(UTC) - LOCATION_RETENTION
+        # Precedence: the profile pincode's centroid wins; otherwise a still
+        # valid legacy coarse point (same location consent, 30-day retention).
         if (
-            preference is not None
-            and preference.location_enabled
+            location is None
+            and location_consent_active(preference)
+            and preference is not None
             and preference.location_captured_at is not None
             and preference.location_captured_at >= cutoff
             and preference.latitude_e2 is not None
@@ -372,6 +452,8 @@ async def build_audience_context(
         client_journey_stages=stages,
         agent_signals=signals,
         location=location,
+        pincode=pincode,
+        city=city,
     )
 
 
@@ -384,12 +466,28 @@ def _distance_km(first: tuple[float, float], second: tuple[float, float]) -> flo
     return 6371.0088 * 2 * math.asin(min(1, math.sqrt(value)))
 
 
+def _location_matches(rules: AudienceRules, context: AudienceContext) -> bool:
+    """Circles, pincodes and cities are one "where" dimension: any match counts."""
+    if context.location is not None and any(
+        _distance_km(context.location, (circle.latitude, circle.longitude)) <= circle.radius_km
+        for circle in rules.locations
+    ):
+        return True
+    if context.pincode is not None and context.pincode in rules.pincodes:
+        return True
+    return context.city is not None and any(
+        (city.district.casefold(), city.state.casefold()) == context.city for city in rules.cities
+    )
+
+
 def matches_audience(rules: AudienceRules, context: AudienceContext) -> bool:
     if rules.is_empty:
         return False
     if context.role not in rules.user_types:
         return False
-    uses_personal_data = bool(rules.client_journey_stages or rules.agent_signals or rules.locations)
+    uses_personal_data = bool(
+        rules.client_journey_stages or rules.agent_signals or rules.has_location_targets
+    )
     if uses_personal_data and not context.personalization_enabled:
         return False
     if rules.client_journey_stages and not (
@@ -398,15 +496,7 @@ def matches_audience(rules: AudienceRules, context: AudienceContext) -> bool:
         return False
     if rules.agent_signals and not (context.agent_signals & set(rules.agent_signals)):
         return False
-    if rules.locations:
-        if context.location is None:
-            return False
-        if not any(
-            _distance_km(context.location, (circle.latitude, circle.longitude)) <= circle.radius_km
-            for circle in rules.locations
-        ):
-            return False
-    return True
+    return not rules.has_location_targets or _location_matches(rules, context)
 
 
 def _parse_rules(raw: dict) -> AudienceRules | None:

@@ -42,9 +42,9 @@ from app.schemas.banners import (
 )
 from app.schemas.personalization import (
     AudienceRules,
-    audience_rules_to_storage,
     audience_rules_valid_for_banner,
 )
+from app.services import pincodes as pincode_service
 from app.services.audit_log import record as record_audit
 from app.services.banners import (
     IMAGE_MAX_BYTES,
@@ -74,6 +74,17 @@ from app.services.campaign_media import (
 )
 
 router = APIRouter()
+
+
+async def _stored_audience_rules(db: AsyncSession, rules: AudienceRules) -> dict:
+    """CS-026: every pincode and city target must be on the reference list."""
+    try:
+        return await pincode_service.audience_rules_for_storage(db, rules)
+    except pincode_service.UnknownAudiencePlaces as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Choose places from the list: {exc}.",
+        ) from exc
 
 
 def _read(banner: Banner) -> BannerRead:
@@ -174,7 +185,7 @@ async def create_banner(
         values["image_key"] = media_asset.image_ref
     values["youtube_video_id"] = youtube_id_or_none(payload.youtube_url)
     values["video_key"] = video_asset.image_ref if video_asset else None
-    values["audience_rules"] = audience_rules_to_storage(payload.audience_rules)
+    values["audience_rules"] = await _stored_audience_rules(db, payload.audience_rules)
     values["category_key"] = template.category_key if template else None
     banner = Banner(created_by_uuid=current_user.id, **values)
     db.add(banner)
@@ -437,7 +448,7 @@ async def update_banner(
         exclude_unset=True, exclude={"audience_rules", "expected_version", "youtube_url"}
     )
     if "audience_rules" in payload.model_fields_set and payload.audience_rules is not None:
-        values["audience_rules"] = audience_rules_to_storage(payload.audience_rules)
+        values["audience_rules"] = await _stored_audience_rules(db, payload.audience_rules)
     if "media_asset_id" in payload.model_fields_set:
         values["image_key"] = media_asset.image_ref if media_asset else None
     # One video source at a time: choosing either replaces the other.

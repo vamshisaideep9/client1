@@ -2,6 +2,56 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch F PR 2: audience rules version 2 (API)** (2026-11-17;
+CS-026; PR [#380](https://github.com/brollysolutions/client1/pull/380), mirror
+vamshisaideep9/client1#81), branch `feat/batch-f-audience-v2-api`
+stacked on Batch F PR 1. API, migration `f6b8d0a2c4e7` and regenerated
+contracts; no requirement-percentage change.
+- Grammar (`schemas/personalization.py`): version 1 or 2; version 2 adds
+  `pincodes` and `cities` ({district, state}); both need a Client-only
+  audience and fail closed in version 1; storage keeps version 1 for rules
+  without them.
+- Matching (`services/personalization.py`): circles, pincodes and cities are
+  one "where" dimension; the Client's profile pincode gives the pincode, city
+  and circle point, ahead of a legacy coarse point, read only while both
+  personalized content and the location consent are on; revoking either
+  stops all location matching; Agents and staff never match location
+  targets.
+- Location consent without a point (security review finding on the first
+  F2 commit — profile pincode was used with personalization consent alone —
+  fixed before ship): migration `f6b8d0a2c4e7` relaxes CHECK
+  `location_consistent` (consent needs a consent time; a point is complete or
+  absent; downgrade withdraws point-less consent); `PUT
+  /personalization/location/consent` (Client only; 409 without personalized
+  content or a profile pincode; idempotent; auth event `{"enabled": true}`
+  only); `DELETE /personalization/location` still revokes; the 30-day purge
+  only touches rows with a point.
+- Authoring: banner/offer create and update validate every pincode and city
+  against the list (422 naming the unknown ones) and store the list
+  spelling. `GET /api/v1/pincodes/districts` (signed in; shared lookup
+  budget; private cache) feeds the campaign form's city picker.
+- Evidence (python 3.13 container, scratch database): new
+  `test_audience_rules_v2.py` (version-1 parse/store/match unchanged,
+  version-2 round trip and minimal stored version, 12 invalid rules refused,
+  caps, pincode/city/one-dimension/consent matching, end to end: profile
+  pincode targets only after consent, another pincode keeps the city but
+  loses the pincode and 5 km circle, revoking consent stops it, profile
+  pincode beats a valid coarse point, offer and banner authoring refuse
+  unknown places and canonicalise cities, district list) with
+  `test_pincodes_api.py`: 84 passed. With banner, offer, campaign-media,
+  personalization, public-campaign, CMS-activation and coverage modules
+  (before the consent fix): 309 passed, 1 failed —
+  `test_public_banners.py::test_response_omits_internal_fields` (expects no
+  `youtube_video_id` / `video_url`; a known failure on `main`, unrelated).
+  Consent fix: `test_audience_rules_v2.py` (now with the both-consent end to
+  end, consent endpoint, CHECK and purge cases) with personalization API /
+  RLS / rules, account deletion, retention purge and coverage: 110 passed;
+  migration `f6b8d0a2c4e7` down (3 point-less consent rows withdrawn) and
+  up again clean, one head. The full API suite was started on the stack and stopped
+  deliberately (no failure up to 13 %) to free the machine; the plan requires
+  it only before the last slice of E and G. Ruff clean; contracts
+  regenerated; web `pnpm typecheck` passes.
+
 **In progress — Batch F PR 1: pincode reference data, profile pincode and
 lookups (API)** (2026-11-17; CS-026; PR
 [#379](https://github.com/brollysolutions/client1/pull/379), mirror

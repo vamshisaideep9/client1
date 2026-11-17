@@ -4241,6 +4241,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/personalization/location/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Location Consent
+         * @description CS-026: turn on location-based content using the profile pincode only.
+         *
+         *     No device position is sent or stored. Revoke with ``DELETE /location``
+         *     (or by turning personalized content off).
+         */
+        put: operations["put_location_consent_api_v1_personalization_location_consent_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/personalization/placements": {
         parameters: {
             query?: never;
@@ -4274,6 +4297,28 @@ export interface paths {
         head?: never;
         /** Update Preferences */
         patch: operations["update_preferences_api_v1_personalization_preferences_patch"];
+        trace?: never;
+    };
+    "/api/v1/pincodes/districts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Districts
+         * @description Every district (with its state) on the list: the cities a campaign can target.
+         *
+         *     Declared before ``/{pincode}`` so the literal path is matched first.
+         */
+        get: operations["list_districts_api_v1_pincodes_districts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/pincodes/nearest": {
@@ -7343,6 +7388,16 @@ export interface components {
             /** Title */
             title: string;
         };
+        /**
+         * AudienceCity
+         * @description A city target: a district and its state from the pincode reference list.
+         */
+        AudienceCity: {
+            /** District */
+            district: string;
+            /** State */
+            state: string;
+        };
         /** AudienceLocationCircle */
         AudienceLocationCircle: {
             /** Label */
@@ -7356,26 +7411,33 @@ export interface components {
         };
         /**
          * AudienceRules
-         * @description Version-one rule grammar.
+         * @description Versioned rule grammar (version 1, and version 2 since CS-026).
          *
          *     Populated dimensions are ANDed. Values within one dimension are ORed.
-         *     An empty object is the canonical generic-content representation.
+         *     Circles (`locations`), `pincodes` and `cities` together form one "where"
+         *     dimension: a match on any of them counts. `pincodes` and `cities` exist
+         *     only in version 2 and target Clients only. An empty object is the
+         *     canonical generic-content representation.
          */
         AudienceRules: {
             /** Agent Signals */
             agent_signals?: ("no_leads" | "has_active_leads" | "has_converted_leads" | "has_pending_commission" | "has_paid_commission")[];
+            /** Cities */
+            cities?: components["schemas"]["AudienceCity"][];
             /** Client Journey Stages */
             client_journey_stages?: ("not_started" | "in_progress" | "on_hold" | "completed" | "rejected" | "closed")[];
             /** Locations */
             locations?: components["schemas"]["AudienceLocationCircle"][];
+            /** Pincodes */
+            pincodes?: string[];
             /** User Types */
             user_types?: ("client" | "agent" | "employee" | "telecaller")[];
             /**
              * Version
              * @default 1
-             * @constant
+             * @enum {integer}
              */
-            version: 1;
+            version: 1 | 2;
         };
         /**
          * AuditAction
@@ -10614,6 +10676,16 @@ export interface components {
         PersonalizationPreferenceUpdate: {
             /** Personalization Enabled */
             personalization_enabled: boolean;
+        };
+        /**
+         * PincodeDistrictRead
+         * @description A city for campaign targeting: a district and its state.
+         */
+        PincodeDistrictRead: {
+            /** District */
+            district: string;
+            /** State */
+            state: string;
         };
         /**
          * PincodePlaceRead
@@ -22606,6 +22678,26 @@ export interface operations {
             };
         };
     };
+    put_location_consent_api_v1_personalization_location_consent_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalizationPreferenceRead"];
+                };
+            };
+        };
+    };
     get_placements_api_v1_personalization_placements_get: {
         parameters: {
             query: {
@@ -22686,6 +22778,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_districts_api_v1_pincodes_districts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PincodeDistrictRead"][];
                 };
             };
         };

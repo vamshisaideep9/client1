@@ -889,13 +889,20 @@ location dimension; "Does not fit" item 10 of the batch plan):**
   version-1 circles; version-1 rules keep matching unchanged. Circles,
   pincodes and cities form one "where" dimension (any match counts), ANDed
   with the other dimensions. Location matching uses the Client's profile
-  pincode — its centroid for circles — only while the Client has consented
-  to personalized content; turning consent off stops it at once. Precedence:
-  when a profile pincode with a centroid exists it is the Client's location
-  for circles; otherwise a still-valid legacy coarse point (CS-008, 30-day
-  retention) is used. Pincode and city targets match the profile pincode
-  only. Pincode and city targets need a Client-only audience, and every
-  targeted pincode or city must exist in the reference list.
+  pincode — its centroid for circles — only while the Client has BOTH
+  personalized content and the separate, revocable location consent
+  ("Offers for your area", CS-008's `location_enabled`) on. That location
+  consent can now be given without capturing any device point
+  (`PUT /personalization/location/consent`, needs personalized content and a
+  saved profile pincode); revoking it (`DELETE /personalization/location`)
+  or turning personalized content off stops every pincode, city and circle
+  match at once, and turning personalized content back on does not restore
+  it. Precedence: when a profile pincode with a centroid exists it is the
+  Client's location for circles; otherwise a still-valid legacy coarse point
+  (same consent, 30-day retention) is used. Pincode and city targets match
+  the profile pincode only. Pincode and city targets need a Client-only
+  audience, and every targeted pincode or city must exist in the reference
+  list.
 - *Privacy notice.* Updated for the pincode and one-time GPS use; flagged
   for legal review before release.
 

@@ -13,10 +13,11 @@ import math
 from collections import defaultdict
 from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.pincode import Pincode
+from app.schemas.personalization import AudienceCity, AudienceRules, audience_rules_to_storage
 
 EARTH_RADIUS_KM = 6371.0088
 # Search radii (km). Pincode centroids are typically 5-20 km apart; sparse
@@ -40,6 +41,65 @@ def distance_km(first: tuple[float, float], second: tuple[float, float]) -> floa
 
 async def get_place(db: AsyncSession, pincode: str) -> Pincode | None:
     return await db.get(Pincode, pincode)
+
+
+async def list_districts(db: AsyncSession) -> list[tuple[str, str]]:
+    """Every (district, state) pair on the list: the cities a campaign can target."""
+    rows = (await db.execute(select(Pincode.district, Pincode.state).distinct())).all()
+    # Sorted here rather than by the database collation so the order is the
+    # same in every environment.
+    return sorted(
+        ((district, state) for district, state in rows),
+        key=lambda row: (row[1].casefold(), row[0].casefold()),
+    )
+
+
+class UnknownAudiencePlaces(ValueError):
+    """A campaign targets a pincode or city that is not on the reference list."""
+
+
+async def canonical_audience_places(db: AsyncSession, rules: AudienceRules) -> AudienceRules:
+    """Check every pincode and city target exists; return cities in list spelling.
+
+    Matching compares cities case-insensitively, but storing the reference
+    spelling keeps campaign forms and previews consistent.
+    """
+    if not (rules.pincodes or rules.cities):
+        return rules
+    problems: list[str] = []
+    if rules.pincodes:
+        known = set(
+            (
+                await db.scalars(select(Pincode.pincode).where(Pincode.pincode.in_(rules.pincodes)))
+            ).all()
+        )
+        missing = [pincode for pincode in rules.pincodes if pincode not in known]
+        if missing:
+            problems.append("pincodes not on the list: " + ", ".join(missing))
+    cities: list[AudienceCity] = []
+    for city in rules.cities:
+        row = (
+            await db.execute(
+                select(Pincode.district, Pincode.state)
+                .where(
+                    func.lower(Pincode.district) == city.district.lower(),
+                    func.lower(Pincode.state) == city.state.lower(),
+                )
+                .limit(1)
+            )
+        ).first()
+        if row is None:
+            problems.append(f"city not on the list: {city.district}, {city.state}")
+        else:
+            cities.append(AudienceCity(district=row[0], state=row[1]))
+    if problems:
+        raise UnknownAudiencePlaces("; ".join(problems))
+    return rules.model_copy(update={"cities": cities})
+
+
+async def audience_rules_for_storage(db: AsyncSession, rules: AudienceRules) -> dict:
+    """Validate place targets against the list, then the canonical JSONB value."""
+    return audience_rules_to_storage(await canonical_audience_places(db, rules))
 
 
 @dataclass(frozen=True)
