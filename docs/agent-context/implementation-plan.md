@@ -83,7 +83,7 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   and reviewed statuses need a checker) and `contest_results` (individual /
   team / team manager / team member rows, achieved count, amount and metric,
   progress numbers, qualified, rank, won, prize, exclusion, payment status,
-  one payout per result, staff mark-paid fields; consistency CHECKs). RLS
+  one payout per result, staff mark-paid fields; consistency CHECKs; payout links `ON DELETE SET NULL` so the 7-year retention purge is never blocked). RLS
   enabled and forced: contests SELECT for platform Admin, any Sub Admin, and
   participants only at approved-or-later for their role and request line;
   INSERT / UPDATE / DELETE only by the maker Sub Admin while draft (UPDATE
@@ -106,7 +106,7 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   Agents; teams with their active managing Sub Admin and eligible members),
   business credit (Agents: introduced leads, sharing
   `loan_commission_eligible` / `deal_commission_eligible` now extracted in
-  `services/commissions.py`; Telecallers: leads they hold now; Employees:
+  `services/commissions.py`; Telecallers: leads they hold now and called before the stage; Employees:
   leads where they completed a task at or before the moment the case reached
   its counted stage; teams: members' union, a team managed by the contest's
   maker left out), stage time

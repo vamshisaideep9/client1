@@ -26,7 +26,10 @@ stored): one row per individual, team, team manager and team member, with
 achieved count/amount, metric value, per-target progress (numbers only),
 qualified, rank, won, prize, exclusion reason and payment status. Payment
 links (``payout_uuid`` unique, ``payout_txn_uuid``) and the staff mark-paid
-fields are consistent with ``payment_status`` by CHECK.
+fields are consistent with ``payment_status`` by CHECK. The payout links are
+``ON DELETE SET NULL``: the 7-year retention purge deletes de-linked payouts
+and ledger rows, and a contest result (a permanent business record, like a
+commission) must never block it; the prize amount stays on the row.
 
 Access (``api_user``; RLS enabled and forced on both):
 
@@ -428,13 +431,15 @@ def upgrade() -> None:
             "(payment_status = 'none') = (prize_paise = 0)",
             name=op.f("ck_contest_results_payment_matches_prize"),
         ),
+        # A paid Agent prize may lose its payout / ledger links when the 7-year
+        # retention purge deletes a de-linked payout (ON DELETE SET NULL), so
+        # "paid" does not require the links to stay.
         sa.CheckConstraint(
             "(payout_uuid IS NULL OR (agent_profile_uuid IS NOT NULL "
             "AND payment_status IN ('payout_pending', 'paid'))) "
             "AND (payment_status <> 'payout_pending' OR payout_uuid IS NOT NULL) "
-            "AND (agent_profile_uuid IS NULL OR payment_status <> 'paid' "
-            "OR payout_txn_uuid IS NOT NULL) "
-            "AND (payout_txn_uuid IS NULL OR payout_uuid IS NOT NULL)",
+            "AND (payout_txn_uuid IS NULL OR (agent_profile_uuid IS NOT NULL "
+            "AND payment_status = 'paid'))",
             name=op.f("ck_contest_results_payout_link"),
         ),
         sa.CheckConstraint(
@@ -476,13 +481,13 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["payout_uuid"],
             ["payouts.id"],
-            ondelete="RESTRICT",
+            ondelete="SET NULL",
             name=op.f("fk_contest_results_payout_uuid_payouts"),
         ),
         sa.ForeignKeyConstraint(
             ["payout_txn_uuid"],
             ["transactions.id"],
-            ondelete="RESTRICT",
+            ondelete="SET NULL",
             name=op.f("fk_contest_results_payout_txn_uuid_transactions"),
         ),
         sa.ForeignKeyConstraint(

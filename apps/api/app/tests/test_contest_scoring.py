@@ -305,12 +305,20 @@ async def test_telecaller_business_follows_current_assignee_and_activity(client)
     )
     standings = await _standings(contest)
     one, two = _by(standings, first.id), _by(standings, second.id)
-    assert one.tally.count == 1 and two.tally.count == 1
+    # The reassigned lead's case left the first Telecaller with the lead, and
+    # the new holder never worked it before the stage (security review).
+    assert one.tally.count == 1 and two.tally.count == 0
     assert (one.tally.calls, one.tally.connected) == (4, 2)
     assert one.tally.follow_ups_on_time == 1
     assert one.progress["connect_rate_percent"] == 50
     assert one.qualified and one.metric_value == 4
     assert not two.qualified
+
+    # A call after the stage does not earn the case; a call before it does.
+    await _call(second, moved, at=datetime.now(UTC) + timedelta(minutes=5))
+    assert _by(await _standings(contest), second.id).tally.count == 0
+    await _call(second, moved, at=noon + timedelta(hours=6))
+    assert _by(await _standings(contest), second.id).tally.count == 1
 
 
 async def _task(
