@@ -22,7 +22,7 @@ API, regenerated contracts and two web type labels; no migration (the
   manager / member prizes with the member minimum, staff prize refused for
   Payouts, mark-paid refused for the recipient, audited, second mark 409;
   budget cap drops a crossing tie group; Admin cancels a live contest the
-  maker cannot): 6 passed. Web `pnpm typecheck` passes.
+  maker cannot; batch security review: the retention purge of a de-linked paid contest prize payout and its ledger row succeeds and the result keeps its prize; a reference with an account number is 422): 7 passed after the review. Web `pnpm typecheck` passes.
 
 **In progress — Batch G PR 2: contest scoring, lifecycle job and standings
 (API)** (2026-11-17; CS-027), branch `feat/batch-g-contests-scoring`

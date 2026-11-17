@@ -155,7 +155,7 @@ opened against `main`, stacked on `upstream/main` `9f2c479f` (A … F merged):
   payout rejected on a lost race); payout paid / released hooks and the
   link-reconciliation sweep cover `contest_results`
   (`services/contest_payouts.py`); `POST …/mark-paid` records a staff prize
-  paid with a PII-free reference (audited, never for an Agent prize, never
+  paid with a PII-free reference (seven or more digits in a row refused; audited, never for an Agent prize, never
   by the recipient). The generic `POST /payouts` refuses `contest_reward`
   (422); rejecting one is platform-Admin only. Web maps label the new
   payout / transaction type.
