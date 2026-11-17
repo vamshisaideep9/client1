@@ -9465,6 +9465,9 @@
             "title": "Lead Contact Mode",
             "type": "string"
           },
+          "lead_facets": {
+            "$ref": "#/components/schemas/LeadFacets"
+          },
           "lead_last_disposition": {
             "anyOf": [
               {
@@ -10837,6 +10840,71 @@
         "title": "LeadActivityRead",
         "type": "object"
       },
+      "LeadDealFacet": {
+        "description": "One property deal on the lead: stage and the property's kind.",
+        "properties": {
+          "property_category": {
+            "anyOf": [
+              {
+                "enum": [
+                  "houses",
+                  "apartments",
+                  "villas",
+                  "plots",
+                  "commercial"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Category"
+          },
+          "property_subtype": {
+            "anyOf": [
+              {
+                "enum": [
+                  "individual_house",
+                  "standalone_apartment",
+                  "gated_community_apartment",
+                  "villa",
+                  "locked_space",
+                  "unlocked_space",
+                  "plot",
+                  "farmland",
+                  "agriland"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Subtype"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "contacted",
+              "site_visit_done",
+              "negotiation",
+              "booked",
+              "agreement_signed",
+              "closed",
+              "rejected",
+              "on_hold"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "LeadDealFacet",
+        "type": "object"
+      },
       "LeadDetailsPatch": {
         "properties": {
           "name": {
@@ -10963,6 +11031,96 @@
         "title": "LeadDetailsRead",
         "type": "object"
       },
+      "LeadFacets": {
+        "description": "Product and property facts of a lead, for the list filters (CS-023).\n\nOne entry per loan application (loans line) or property deal (real estate\nline), so a filter on product, bank and status matches one application.\nIds and enums only; amounts are not included.",
+        "properties": {
+          "deals": {
+            "items": {
+              "$ref": "#/components/schemas/LeadDealFacet"
+            },
+            "title": "Deals",
+            "type": "array"
+          },
+          "loans": {
+            "items": {
+              "$ref": "#/components/schemas/LeadLoanFacet"
+            },
+            "title": "Loans",
+            "type": "array"
+          }
+        },
+        "title": "LeadFacets",
+        "type": "object"
+      },
+      "LeadLoanFacet": {
+        "description": "One loan application on the lead: product, lender and stage (labels\nincluded, so a filter can offer a product or bank no longer in the\nactive catalogue).",
+        "properties": {
+          "bank_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Id"
+          },
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "loan_type_id": {
+            "format": "uuid",
+            "title": "Loan Type Id",
+            "type": "string"
+          },
+          "loan_type_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Type Label"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "assigned",
+              "contacted",
+              "docs_collected",
+              "submitted_to_bank",
+              "under_review",
+              "sanctioned",
+              "agreement_collected",
+              "agreement_submitted_to_bank",
+              "disbursed",
+              "closed",
+              "rejected",
+              "on_hold"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loan_type_id",
+          "status"
+        ],
+        "title": "LeadLoanFacet",
+        "type": "object"
+      },
       "LeadReferrerRead": {
         "description": "Who brought a lead in, as an identifier only (no names or contacts).\n\n``agent``: the introducing Agent's ``agent_code``. ``client``: the referral\ncode of the client whose link the lead signed up through.",
         "properties": {
@@ -11027,6 +11185,140 @@
           "applied_at"
         ],
         "title": "LeadRequestSummary",
+        "type": "object"
+      },
+      "LeadTransactionItem": {
+        "description": "One recorded transaction; a part the Admin hides is null.",
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "txn_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Txn Date"
+          }
+        },
+        "title": "LeadTransactionItem",
+        "type": "object"
+      },
+      "LeadTransactionSummary": {
+        "description": "Loan transactions recorded on a lead (FR-6.5), summarised for filters.\n\nOnly for callers who may read the lead's transactions: the assigned\nTelecaller, or the Sub Admin managing that Telecaller's team. A part the\nAdmin hides from Telecallers (bank name, amount, date) is null and named\nin ``hidden_fields``. ``items`` holds the latest 50 transactions, so a\nfilter can require one transaction to match bank, date and amount together.",
+        "properties": {
+          "amount_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Max"
+          },
+          "amount_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Min"
+          },
+          "bank_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Names"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "first_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Date"
+          },
+          "hidden_fields": {
+            "items": {
+              "enum": [
+                "bank_names",
+                "amount",
+                "dates"
+              ],
+              "type": "string"
+            },
+            "title": "Hidden Fields",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LeadTransactionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "last_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Date"
+          }
+        },
+        "required": [
+          "count"
+        ],
+        "title": "LeadTransactionSummary",
         "type": "object"
       },
       "LeadsReportResponse": {
@@ -18622,6 +18914,13 @@
               }
             ]
           },
+          "hidden_filters": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hidden Filters",
+            "type": "array"
+          },
           "kpis": {
             "items": {
               "$ref": "#/components/schemas/AnalyticsKpi"
@@ -20984,6 +21283,9 @@
       "TeamLeadSignals": {
         "description": "What the Telecaller / Employee lists filter on, for the same filters.",
         "properties": {
+          "facets": {
+            "$ref": "#/components/schemas/LeadFacets"
+          },
           "last_disposition": {
             "anyOf": [
               {
@@ -21046,6 +21348,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/LeadReferrerRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "transactions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadTransactionSummary"
               },
               {
                 "type": "null"
@@ -21223,6 +21535,13 @@
             "format": "date",
             "title": "Date To",
             "type": "string"
+          },
+          "hidden_filters": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hidden Filters",
+            "type": "array"
           },
           "members": {
             "items": {
@@ -21802,6 +22121,9 @@
             "title": "Created At",
             "type": "string"
           },
+          "facets": {
+            "$ref": "#/components/schemas/LeadFacets"
+          },
           "financial_enquiries": {
             "default": [],
             "items": {
@@ -21992,6 +22314,16 @@
             "title": "Tasks",
             "type": "array"
           },
+          "transactions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadTransactionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
@@ -22024,6 +22356,9 @@
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "facets": {
+            "$ref": "#/components/schemas/LeadFacets"
           },
           "id": {
             "format": "uuid",
@@ -22158,6 +22493,16 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "transactions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadTransactionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "updated_at": {
             "format": "date-time",
@@ -27300,6 +27645,33 @@
           },
           {
             "in": "query",
+            "name": "property_subtype",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "individual_house",
+                    "standalone_apartment",
+                    "gated_community_apartment",
+                    "villa",
+                    "locked_space",
+                    "unlocked_space",
+                    "plot",
+                    "farmland",
+                    "agriland"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Subtype"
+            }
+          },
+          {
+            "in": "query",
             "name": "telecaller_profile_uuid",
             "required": false,
             "schema": {
@@ -27388,6 +27760,54 @@
               ],
               "description": "Latest call interest level.",
               "title": "Interest"
+            }
+          },
+          {
+            "description": "Rupees: requested loan amount or quoted property price, at least.",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees: requested loan amount or quoted property price, at least.",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Rupees; see amount_min.",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees; see amount_min.",
+              "title": "Amount Max"
             }
           }
         ],
@@ -27572,6 +27992,33 @@
           },
           {
             "in": "query",
+            "name": "property_subtype",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "individual_house",
+                    "standalone_apartment",
+                    "gated_community_apartment",
+                    "villa",
+                    "locked_space",
+                    "unlocked_space",
+                    "plot",
+                    "farmland",
+                    "agriland"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Subtype"
+            }
+          },
+          {
+            "in": "query",
             "name": "telecaller_profile_uuid",
             "required": false,
             "schema": {
@@ -27660,6 +28107,54 @@
               ],
               "description": "Latest call interest level.",
               "title": "Interest"
+            }
+          },
+          {
+            "description": "Rupees: requested loan amount or quoted property price, at least.",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees: requested loan amount or quoted property price, at least.",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Rupees; see amount_min.",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees; see amount_min.",
+              "title": "Amount Max"
             }
           }
         ],
@@ -27842,6 +28337,33 @@
           },
           {
             "in": "query",
+            "name": "property_subtype",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "individual_house",
+                    "standalone_apartment",
+                    "gated_community_apartment",
+                    "villa",
+                    "locked_space",
+                    "unlocked_space",
+                    "plot",
+                    "farmland",
+                    "agriland"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Subtype"
+            }
+          },
+          {
+            "in": "query",
             "name": "telecaller_profile_uuid",
             "required": false,
             "schema": {
@@ -27930,6 +28452,54 @@
               ],
               "description": "Latest call interest level.",
               "title": "Interest"
+            }
+          },
+          {
+            "description": "Rupees: requested loan amount or quoted property price, at least.",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees: requested loan amount or quoted property price, at least.",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Rupees; see amount_min.",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees; see amount_min.",
+              "title": "Amount Max"
             }
           }
         ],
@@ -28120,6 +28690,160 @@
             }
           },
           {
+            "description": "Leads with a loan application in this status.",
+            "in": "query",
+            "name": "loan_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "contacted",
+                    "docs_collected",
+                    "submitted_to_bank",
+                    "under_review",
+                    "sanctioned",
+                    "agreement_collected",
+                    "agreement_submitted_to_bank",
+                    "disbursed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a loan application in this status.",
+              "title": "Loan Status"
+            }
+          },
+          {
+            "description": "Leads with a loan application for this product.",
+            "in": "query",
+            "name": "loan_type_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a loan application for this product.",
+              "title": "Loan Type Id"
+            }
+          },
+          {
+            "description": "Leads with a loan application at this bank.",
+            "in": "query",
+            "name": "bank_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a loan application at this bank.",
+              "title": "Bank Id"
+            }
+          },
+          {
+            "description": "Leads with a property deal in this status.",
+            "in": "query",
+            "name": "deal_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "contacted",
+                    "site_visit_done",
+                    "negotiation",
+                    "booked",
+                    "agreement_signed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a property deal in this status.",
+              "title": "Deal Status"
+            }
+          },
+          {
+            "description": "Leads with a deal on a property of this category.",
+            "in": "query",
+            "name": "property_category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "houses",
+                    "apartments",
+                    "villas",
+                    "plots",
+                    "commercial"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a deal on a property of this category.",
+              "title": "Property Category"
+            }
+          },
+          {
+            "description": "Leads with a deal on a property of this subtype.",
+            "in": "query",
+            "name": "property_subtype",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "individual_house",
+                    "standalone_apartment",
+                    "gated_community_apartment",
+                    "villa",
+                    "locked_space",
+                    "unlocked_space",
+                    "plot",
+                    "farmland",
+                    "agriland"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a deal on a property of this subtype.",
+              "title": "Property Subtype"
+            }
+          },
+          {
             "in": "query",
             "name": "telecaller_profile_uuid",
             "required": false,
@@ -28209,6 +28933,54 @@
               ],
               "description": "Latest call interest level.",
               "title": "Interest"
+            }
+          },
+          {
+            "description": "Rupees: requested loan amount or quoted property price, at least.",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees: requested loan amount or quoted property price, at least.",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Rupees; see amount_min.",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees; see amount_min.",
+              "title": "Amount Max"
             }
           }
         ],
@@ -28348,6 +29120,160 @@
             }
           },
           {
+            "description": "Leads with a loan application in this status.",
+            "in": "query",
+            "name": "loan_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "contacted",
+                    "docs_collected",
+                    "submitted_to_bank",
+                    "under_review",
+                    "sanctioned",
+                    "agreement_collected",
+                    "agreement_submitted_to_bank",
+                    "disbursed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a loan application in this status.",
+              "title": "Loan Status"
+            }
+          },
+          {
+            "description": "Leads with a loan application for this product.",
+            "in": "query",
+            "name": "loan_type_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a loan application for this product.",
+              "title": "Loan Type Id"
+            }
+          },
+          {
+            "description": "Leads with a loan application at this bank.",
+            "in": "query",
+            "name": "bank_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a loan application at this bank.",
+              "title": "Bank Id"
+            }
+          },
+          {
+            "description": "Leads with a property deal in this status.",
+            "in": "query",
+            "name": "deal_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "contacted",
+                    "site_visit_done",
+                    "negotiation",
+                    "booked",
+                    "agreement_signed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a property deal in this status.",
+              "title": "Deal Status"
+            }
+          },
+          {
+            "description": "Leads with a deal on a property of this category.",
+            "in": "query",
+            "name": "property_category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "houses",
+                    "apartments",
+                    "villas",
+                    "plots",
+                    "commercial"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a deal on a property of this category.",
+              "title": "Property Category"
+            }
+          },
+          {
+            "description": "Leads with a deal on a property of this subtype.",
+            "in": "query",
+            "name": "property_subtype",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "individual_house",
+                    "standalone_apartment",
+                    "gated_community_apartment",
+                    "villa",
+                    "locked_space",
+                    "unlocked_space",
+                    "plot",
+                    "farmland",
+                    "agriland"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a deal on a property of this subtype.",
+              "title": "Property Subtype"
+            }
+          },
+          {
             "in": "query",
             "name": "telecaller_profile_uuid",
             "required": false,
@@ -28437,6 +29363,54 @@
               ],
               "description": "Latest call interest level.",
               "title": "Interest"
+            }
+          },
+          {
+            "description": "Rupees: requested loan amount or quoted property price, at least.",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees: requested loan amount or quoted property price, at least.",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Rupees; see amount_min.",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees; see amount_min.",
+              "title": "Amount Max"
             }
           }
         ],
@@ -28574,6 +29548,160 @@
             }
           },
           {
+            "description": "Leads with a loan application in this status.",
+            "in": "query",
+            "name": "loan_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "assigned",
+                    "contacted",
+                    "docs_collected",
+                    "submitted_to_bank",
+                    "under_review",
+                    "sanctioned",
+                    "agreement_collected",
+                    "agreement_submitted_to_bank",
+                    "disbursed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a loan application in this status.",
+              "title": "Loan Status"
+            }
+          },
+          {
+            "description": "Leads with a loan application for this product.",
+            "in": "query",
+            "name": "loan_type_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a loan application for this product.",
+              "title": "Loan Type Id"
+            }
+          },
+          {
+            "description": "Leads with a loan application at this bank.",
+            "in": "query",
+            "name": "bank_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a loan application at this bank.",
+              "title": "Bank Id"
+            }
+          },
+          {
+            "description": "Leads with a property deal in this status.",
+            "in": "query",
+            "name": "deal_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "contacted",
+                    "site_visit_done",
+                    "negotiation",
+                    "booked",
+                    "agreement_signed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a property deal in this status.",
+              "title": "Deal Status"
+            }
+          },
+          {
+            "description": "Leads with a deal on a property of this category.",
+            "in": "query",
+            "name": "property_category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "houses",
+                    "apartments",
+                    "villas",
+                    "plots",
+                    "commercial"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a deal on a property of this category.",
+              "title": "Property Category"
+            }
+          },
+          {
+            "description": "Leads with a deal on a property of this subtype.",
+            "in": "query",
+            "name": "property_subtype",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "individual_house",
+                    "standalone_apartment",
+                    "gated_community_apartment",
+                    "villa",
+                    "locked_space",
+                    "unlocked_space",
+                    "plot",
+                    "farmland",
+                    "agriland"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Leads with a deal on a property of this subtype.",
+              "title": "Property Subtype"
+            }
+          },
+          {
             "in": "query",
             "name": "telecaller_profile_uuid",
             "required": false,
@@ -28663,6 +29791,54 @@
               ],
               "description": "Latest call interest level.",
               "title": "Interest"
+            }
+          },
+          {
+            "description": "Rupees: requested loan amount or quoted property price, at least.",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees: requested loan amount or quoted property price, at least.",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Rupees; see amount_min.",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees; see amount_min.",
+              "title": "Amount Max"
             }
           }
         ],
@@ -28984,6 +30160,54 @@
               "description": "Latest call interest level.",
               "title": "Interest"
             }
+          },
+          {
+            "description": "Rupees: requested loan amount or quoted property price, at least.",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees: requested loan amount or quoted property price, at least.",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Rupees; see amount_min.",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees; see amount_min.",
+              "title": "Amount Max"
+            }
           }
         ],
         "responses": {
@@ -29253,6 +30477,54 @@
               "description": "Latest call interest level.",
               "title": "Interest"
             }
+          },
+          {
+            "description": "Rupees: requested loan amount or quoted property price, at least.",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees: requested loan amount or quoted property price, at least.",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Rupees; see amount_min.",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees; see amount_min.",
+              "title": "Amount Max"
+            }
           }
         ],
         "responses": {
@@ -29519,6 +30791,54 @@
               ],
               "description": "Latest call interest level.",
               "title": "Interest"
+            }
+          },
+          {
+            "description": "Rupees: requested loan amount or quoted property price, at least.",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees: requested loan amount or quoted property price, at least.",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Rupees; see amount_min.",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees; see amount_min.",
+              "title": "Amount Max"
             }
           }
         ],
@@ -36263,6 +37583,175 @@
             }
           },
           {
+            "description": "Loans teams: leads with an application for this product.",
+            "in": "query",
+            "name": "loan_type_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Loans teams: leads with an application for this product.",
+              "title": "Loan Type Id"
+            }
+          },
+          {
+            "description": "Loans teams: applications with this bank.",
+            "in": "query",
+            "name": "bank_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Loans teams: applications with this bank.",
+              "title": "Bank Id"
+            }
+          },
+          {
+            "description": "Real estate teams: deals in this status.",
+            "in": "query",
+            "name": "deal_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "contacted",
+                    "site_visit_done",
+                    "negotiation",
+                    "booked",
+                    "agreement_signed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Real estate teams: deals in this status.",
+              "title": "Deal Status"
+            }
+          },
+          {
+            "description": "Real estate teams: deals on a property of this category.",
+            "in": "query",
+            "name": "property_category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "houses",
+                    "apartments",
+                    "villas",
+                    "plots",
+                    "commercial"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Real estate teams: deals on a property of this category.",
+              "title": "Property Category"
+            }
+          },
+          {
+            "description": "Real estate teams: deals on a property of this subtype.",
+            "in": "query",
+            "name": "property_subtype",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "individual_house",
+                    "standalone_apartment",
+                    "gated_community_apartment",
+                    "villa",
+                    "locked_space",
+                    "unlocked_space",
+                    "plot",
+                    "farmland",
+                    "agriland"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Real estate teams: deals on a property of this subtype.",
+              "title": "Property Subtype"
+            }
+          },
+          {
+            "description": "Telecaller teams, rupees: requested loan amount or quoted property price, while the Admin shows it to Telecallers.",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller teams, rupees: requested loan amount or quoted property price, while the Admin shows it to Telecallers.",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Rupees; see amount_min.",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees; see amount_min.",
+              "title": "Amount Max"
+            }
+          },
+          {
             "description": "Only these members (repeatable); all when omitted.",
             "in": "query",
             "name": "member",
@@ -36580,6 +38069,175 @@
               ],
               "description": "Employee teams: task type.",
               "title": "Task Type"
+            }
+          },
+          {
+            "description": "Loans teams: leads with an application for this product.",
+            "in": "query",
+            "name": "loan_type_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Loans teams: leads with an application for this product.",
+              "title": "Loan Type Id"
+            }
+          },
+          {
+            "description": "Loans teams: applications with this bank.",
+            "in": "query",
+            "name": "bank_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Loans teams: applications with this bank.",
+              "title": "Bank Id"
+            }
+          },
+          {
+            "description": "Real estate teams: deals in this status.",
+            "in": "query",
+            "name": "deal_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "contacted",
+                    "site_visit_done",
+                    "negotiation",
+                    "booked",
+                    "agreement_signed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Real estate teams: deals in this status.",
+              "title": "Deal Status"
+            }
+          },
+          {
+            "description": "Real estate teams: deals on a property of this category.",
+            "in": "query",
+            "name": "property_category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "houses",
+                    "apartments",
+                    "villas",
+                    "plots",
+                    "commercial"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Real estate teams: deals on a property of this category.",
+              "title": "Property Category"
+            }
+          },
+          {
+            "description": "Real estate teams: deals on a property of this subtype.",
+            "in": "query",
+            "name": "property_subtype",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "individual_house",
+                    "standalone_apartment",
+                    "gated_community_apartment",
+                    "villa",
+                    "locked_space",
+                    "unlocked_space",
+                    "plot",
+                    "farmland",
+                    "agriland"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Real estate teams: deals on a property of this subtype.",
+              "title": "Property Subtype"
+            }
+          },
+          {
+            "description": "Telecaller teams, rupees: requested loan amount or quoted property price, while the Admin shows it to Telecallers.",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller teams, rupees: requested loan amount or quoted property price, while the Admin shows it to Telecallers.",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Rupees; see amount_min.",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees; see amount_min.",
+              "title": "Amount Max"
             }
           },
           {
@@ -37064,7 +38722,7 @@
             }
           },
           {
-            "description": "Telecaller: leads with a loan application in this status.",
+            "description": "Telecaller, Employee, Agent (loans line): leads with a loan application in this status.",
             "in": "query",
             "name": "loan_status",
             "required": false,
@@ -37092,7 +38750,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Telecaller: leads with a loan application in this status.",
+              "description": "Telecaller, Employee, Agent (loans line): leads with a loan application in this status.",
               "title": "Loan Status"
             }
           },
@@ -37166,6 +38824,198 @@
               ],
               "description": "Employee: tasks of this type.",
               "title": "Task Type"
+            }
+          },
+          {
+            "description": "Telecaller, Employee, Agent (loans line): leads with a loan application for this financial product. With bank_id, loan_status and (Telecaller) the amount, one application must match them all.",
+            "in": "query",
+            "name": "loan_type_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller, Employee, Agent (loans line): leads with a loan application for this financial product. With bank_id, loan_status and (Telecaller) the amount, one application must match them all.",
+              "title": "Loan Type Id"
+            }
+          },
+          {
+            "description": "Telecaller, Employee, Agent (loans line): applications with this bank.",
+            "in": "query",
+            "name": "bank_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller, Employee, Agent (loans line): applications with this bank.",
+              "title": "Bank Id"
+            }
+          },
+          {
+            "description": "Telecaller, Employee, Agent (real estate line): deals in this status.",
+            "in": "query",
+            "name": "deal_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "contacted",
+                    "site_visit_done",
+                    "negotiation",
+                    "booked",
+                    "agreement_signed",
+                    "closed",
+                    "rejected",
+                    "on_hold"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller, Employee, Agent (real estate line): deals in this status.",
+              "title": "Deal Status"
+            }
+          },
+          {
+            "description": "Telecaller, Employee, Agent (real estate line): deals on a property of this category.",
+            "in": "query",
+            "name": "property_category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "houses",
+                    "apartments",
+                    "villas",
+                    "plots",
+                    "commercial"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller, Employee, Agent (real estate line): deals on a property of this category.",
+              "title": "Property Category"
+            }
+          },
+          {
+            "description": "Telecaller, Employee, Agent (real estate line): deals on a property of this subtype.",
+            "in": "query",
+            "name": "property_subtype",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "individual_house",
+                    "standalone_apartment",
+                    "gated_community_apartment",
+                    "villa",
+                    "locked_space",
+                    "unlocked_space",
+                    "plot",
+                    "farmland",
+                    "agriland"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Telecaller, Employee, Agent (real estate line): deals on a property of this subtype.",
+              "title": "Property Subtype"
+            }
+          },
+          {
+            "description": "Agent: commissions in this status (and the leads behind them).",
+            "in": "query",
+            "name": "commission_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "paid",
+                    "cancelled"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Agent: commissions in this status (and the leads behind them).",
+              "title": "Commission Status"
+            }
+          },
+          {
+            "description": "Rupees. Telecaller: requested loan amount or quoted property price, while the Admin shows it to Telecallers. Agent: agreed commission.",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees. Telecaller: requested loan amount or quoted property price, while the Admin shows it to Telecallers. Agent: agreed commission.",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Rupees; see amount_min.",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rupees; see amount_min.",
+              "title": "Amount Max"
             }
           },
           {

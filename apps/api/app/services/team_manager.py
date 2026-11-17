@@ -18,12 +18,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import bindparam, select, text
-from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy import select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -62,15 +61,18 @@ from app.schemas.staff_teams import (
     TeamWorkResponse,
     TeamWorkUpdateResponse,
 )
-from app.schemas.telecaller import LeadReferrerRead
 from app.services.audit_log import record as record_audit
 from app.services.field_visibility import effective_modes
+from app.services.lead_signals import facets, team_lead_signals_for_ids, transaction_summary
 from app.services.notifications import emit_notification
 from app.services.staff_analytics import (
     AnalyticsWindow,
+    InvalidAnalyticsFilter,
     StaffAnalyticsFilters,
     employee_analytics,
+    hidden_filters,
     telecaller_analytics,
+    validate_filters,
 )
 from app.services.staff_teams import build_team_reads
 from app.services.telecaller import (
@@ -113,7 +115,7 @@ class InvalidFollowUp(Exception):
 
 
 class UnsupportedAnalyticsFilter(Exception):
-    """An analytics filter the team's member role does not have."""
+    """An analytics filter the team cannot use; the message is user-facing."""
 
 
 async def list_my_teams(db: AsyncSession, manager_uuid: UUID) -> list[StaffTeamRead]:
@@ -154,49 +156,53 @@ def _builder(team: StaffTeamRead):
     return telecaller_analytics if team.member_role == "telecaller" else employee_analytics
 
 
-# Which analytics filters each team role understands (mirrors /me/analytics).
-_ROLE_FILTERS: dict[str, frozenset[str]] = {
-    "telecaller": frozenset({"call_status", "interest", "loan_status", "lead_source"}),
-    "employee": frozenset({"task_type"}),
-}
-
-
 @dataclass(frozen=True)
 class TeamAnalyticsQuery:
-    """Optional filters a manager applies to team or member analytics."""
+    """Optional filters a manager applies to team or member analytics (the
+    same names, and the same per-role and per-line rules, as /me/analytics)."""
 
     call_status: str | None = None
     interest: str | None = None
     loan_status: str | None = None
     lead_source: str | None = None
     task_type: str | None = None
+    loan_type_id: UUID | None = None
+    bank_id: UUID | None = None
+    deal_status: str | None = None
+    property_category: str | None = None
+    property_subtype: str | None = None
+    amount_min: Decimal | None = None
+    amount_max: Decimal | None = None
     member_ids: tuple[UUID, ...] = ()
 
-    def requested(self) -> set[str]:
-        return {
-            name
-            for name in ("call_status", "interest", "loan_status", "lead_source", "task_type")
-            if getattr(self, name) is not None
-        }
 
-
-def _team_filters(
-    team: StaffTeamRead, query: TeamAnalyticsQuery | None = None
+async def _team_filters(
+    db: AsyncSession, team: StaffTeamRead, query: TeamAnalyticsQuery | None = None
 ) -> StaffAnalyticsFilters:
     """Always pin the team's line, so a dual-line member's other-line work
-    never counts; reject a filter the team's role does not support."""
+    never counts; reject a filter the team's role, line or the member role's
+    field rules do not support."""
     query = query or TeamAnalyticsQuery()
-    unsupported = query.requested() - _ROLE_FILTERS[team.member_role]
-    if unsupported:
-        raise UnsupportedAnalyticsFilter(", ".join(sorted(unsupported)))
-    return StaffAnalyticsFilters(
+    filters = StaffAnalyticsFilters(
         business_line=team.business_line,
         call_status=query.call_status,
         interest=query.interest,
         loan_status=query.loan_status,
         lead_source=query.lead_source,  # type: ignore[arg-type]
         task_type=query.task_type,
+        loan_type_id=query.loan_type_id,
+        bank_id=query.bank_id,
+        deal_status=query.deal_status,
+        property_category=query.property_category,
+        property_subtype=query.property_subtype,
+        amount_min=query.amount_min,
+        amount_max=query.amount_max,
     )
+    try:
+        await validate_filters(db, team.member_role, team.business_line, filters, subject="team")
+    except InvalidAnalyticsFilter as exc:
+        raise UnsupportedAnalyticsFilter(str(exc)) from exc
+    return filters
 
 
 def _team_totals(summaries: list[StaffAnalyticsResponse]) -> list[AnalyticsKpi]:
@@ -330,7 +336,7 @@ async def team_overview(
 ) -> TeamOverviewResponse:
     team = await _my_team(db, team_id, manager_uuid)
     query = query or TeamAnalyticsQuery()
-    filters = _team_filters(team, query)
+    filters = await _team_filters(db, team, query)
     members = _chosen_members(team, query.member_ids)
     builder = _builder(team)
     analytics = [
@@ -338,6 +344,8 @@ async def team_overview(
         for member in members
     ]
     totals = _team_totals(analytics)
+    hidden = await hidden_filters(db, team.member_role, team.business_line)
+    report = _team_report(analytics, totals)
     return TeamOverviewResponse(
         team=team,
         date_from=window.date_from,
@@ -348,7 +356,8 @@ async def team_overview(
             TeamMemberSummary(member=member, kpis=result.kpis)
             for member, result in zip(members, analytics, strict=True)
         ],
-        report=_team_report(analytics, totals),
+        report=report.model_copy(update={"hidden_filters": hidden}) if report else None,
+        hidden_filters=hidden,
     )
 
 
@@ -364,37 +373,46 @@ async def member_analytics(
     team = await _my_team(db, team_id, manager_uuid)
     if _member(team, member_uuid) is None:
         raise MemberNotInTeam
-    return await _builder(team)(
-        db, member_uuid, window, now, _team_filters(team, query), for_manager=True
+    result = await _builder(team)(
+        db, member_uuid, window, now, await _team_filters(db, team, query), for_manager=True
+    )
+    return result.model_copy(
+        update={"hidden_filters": await hidden_filters(db, team.member_role, team.business_line)}
     )
 
 
 # --- Work rows -----------------------------------------------------------------
 
-_SIGNALS_SQL = text(
-    "SELECT lead_uuid, client_referral_code, agent_code, loan_statuses, "
-    "last_disposition, last_interest_level FROM team_lead_signals(:lead_uuids)"
-).bindparams(bindparam("lead_uuids", type_=ARRAY(PG_UUID(as_uuid=True))))
 
+async def _signals(
+    db: AsyncSession, team: StaffTeamRead, lead_ids: list[UUID]
+) -> dict[UUID, TeamLeadSignals]:
+    """Filter signals for leads the caller reaches (team_lead_signals re-checks).
 
-async def _signals(db: AsyncSession, lead_ids: list[UUID]) -> dict[UUID, TeamLeadSignals]:
-    """Filter signals for leads the caller reaches (team_lead_signals re-checks)."""
-    out: dict[UUID, TeamLeadSignals] = {}
-    for start in range(0, len(lead_ids), 1000):
-        rows = await db.execute(_SIGNALS_SQL, {"lead_uuids": lead_ids[start : start + 1000]})
-        for lead_uuid, client_code, agent_code, loan_statuses, disposition, interest in rows:
-            referrer = None
-            if agent_code:
-                referrer = LeadReferrerRead(kind="agent", reference_id=agent_code)
-            elif client_code:
-                referrer = LeadReferrerRead(kind="client", reference_id=client_code)
-            out[lead_uuid] = TeamLeadSignals(
-                loan_statuses=list(loan_statuses or []),
-                last_disposition=disposition,
-                last_interest_level=interest,
-                referrer=referrer,
-            )
-    return out
+    The loan-transaction summary is only returned by the database for leads
+    reached through their Telecaller; it then follows the Admin's Telecaller
+    field rules, exactly as on the member's own list."""
+    signals = await team_lead_signals_for_ids(db, lead_ids)
+    txn_modes = (
+        await effective_modes(db, FieldTargetRole.TELECALLER)
+        if team.member_role == TeamMemberRole.TELECALLER
+        else {}
+    )
+    return {
+        lead_uuid: TeamLeadSignals(
+            loan_statuses=signal.loan_statuses,  # type: ignore[arg-type]
+            last_disposition=signal.last_disposition,  # type: ignore[arg-type]
+            last_interest_level=signal.last_interest_level,  # type: ignore[arg-type]
+            referrer=signal.referrer,
+            facets=facets(signal),
+            transactions=(
+                transaction_summary(signal.transactions, txn_modes, team.business_line)
+                if team.member_role == TeamMemberRole.TELECALLER
+                else None
+            ),
+        )
+        for lead_uuid, signal in signals.items()
+    }
 
 
 async def _hidden_fields(db: AsyncSession, team: StaffTeamRead, keys: tuple[str, ...]) -> list[str]:
@@ -427,7 +445,7 @@ async def _lead_rows(db: AsyncSession, team: StaffTeamRead, leads: list[Lead]) -
     ids = [lead.id for lead in leads]
     summaries = await request_summaries_for_leads(db, ids)
     last = await get_last_activities(db, ids)
-    signals = await _signals(db, ids)
+    signals = await _signals(db, team, ids)
     # Lead mobile is locked visible for Telecallers; name and referrer follow
     # the Admin's Telecaller rules.
     hidden = await _hidden_fields(db, team, ("name", "referrer"))
@@ -470,7 +488,7 @@ async def _task_rows(db: AsyncSession, team: StaffTeamRead, tasks: list[Task]) -
             await db.execute(select(Lead.id, Lead.name, Lead.mobile).where(Lead.id.in_(lead_ids)))
         ).all()
     }
-    signals = await _signals(db, lead_ids)
+    signals = await _signals(db, team, lead_ids)
     hidden = await _hidden_fields(db, team, ("name", "mobile", "referrer"))
     rows: list[TeamTaskRow] = []
     for task in tasks:

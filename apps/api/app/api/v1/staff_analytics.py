@@ -10,13 +10,16 @@ and ending today). Business line: always the request's effective line (the
 dashboard line switcher's X-Business-Line header, validated against the
 token), so analytics never disagree with the line-scoped RLS of the same
 request. Every other filter only narrows the caller's own rows, and a filter
-that does not apply to the caller's role is rejected rather than ignored.
+that does not apply to the caller's role, to the business line, or to a field
+the Admin hides from the role is rejected rather than ignored.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Literal
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,15 +27,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import CurrentUser, get_active_user
 from app.db.session import get_db
 from app.schemas.staff_analytics import StaffAnalyticsResponse
+from app.schemas.telecaller import PropertyCategoryLiteral, PropertySubtypeLiteral
 from app.services.staff_analytics import (
+    AMOUNT_LIMIT,
+    ROLE_FILTERS,
     AnalyticsWindow,
+    InvalidAnalyticsFilter,
     InvalidAnalyticsWindow,
     StaffAnalyticsFilters,
     agent_analytics,
     employee_analytics,
+    hidden_filters,
     resolve_analytics_window,
     sub_admin_analytics,
     telecaller_analytics,
+    validate_filters,
 )
 
 router = APIRouter()
@@ -61,18 +70,22 @@ _LoanStatus = Literal[
     "rejected",
     "on_hold",
 ]
+_DealStatus = Literal[
+    "new",
+    "contacted",
+    "site_visit_done",
+    "negotiation",
+    "booked",
+    "agreement_signed",
+    "closed",
+    "rejected",
+    "on_hold",
+]
+_CommissionStatus = Literal["pending", "paid", "cancelled"]
 _LeadStatus = Literal["new", "assigned", "working", "converted", "closed", "released"]
 _TaskType = Literal["document_collection", "property_visit", "background_check"]
 _ContentStatus = Literal["draft", "pending_approval", "approved", "live", "rejected", "archived"]
 _Placement = Literal["homepage", "financial_services", "properties", "dashboard", "homepage_ad"]
-
-# Which optional filters each role's analytics understand.
-_ROLE_FILTERS: dict[str, set[str]] = {
-    "telecaller": {"call_status", "interest", "loan_status", "lead_source"},
-    "employee": {"task_type"},
-    "agent": {"lead_status"},
-    "sub_admin": {"content_type", "content_status", "placement", "banner_type", "discount_type"},
-}
 
 
 def _unprocessable(detail: str) -> HTTPException:
@@ -99,13 +112,60 @@ async def my_analytics(
         None, description="Telecaller: calls with this interest level."
     ),
     loan_status: _LoanStatus | None = Query(
-        None, description="Telecaller: leads with a loan application in this status."
+        None,
+        description=(
+            "Telecaller, Employee, Agent (loans line): leads with a loan application in "
+            "this status."
+        ),
     ),
     lead_source: Literal["direct", "agent", "client"] | None = Query(
         None, description="Telecaller: leads from this referral source."
     ),
     lead_status: _LeadStatus | None = Query(None, description="Agent: leads in this status."),
     task_type: _TaskType | None = Query(None, description="Employee: tasks of this type."),
+    loan_type_id: UUID | None = Query(
+        None,
+        description=(
+            "Telecaller, Employee, Agent (loans line): leads with a loan application for "
+            "this financial product. With bank_id, loan_status and (Telecaller) the "
+            "amount, one application must match them all."
+        ),
+    ),
+    bank_id: UUID | None = Query(
+        None,
+        description="Telecaller, Employee, Agent (loans line): applications with this bank.",
+    ),
+    deal_status: _DealStatus | None = Query(
+        None,
+        description="Telecaller, Employee, Agent (real estate line): deals in this status.",
+    ),
+    property_category: PropertyCategoryLiteral | None = Query(
+        None,
+        description=(
+            "Telecaller, Employee, Agent (real estate line): deals on a property of this category."
+        ),
+    ),
+    property_subtype: PropertySubtypeLiteral | None = Query(
+        None,
+        description=(
+            "Telecaller, Employee, Agent (real estate line): deals on a property of this subtype."
+        ),
+    ),
+    commission_status: _CommissionStatus | None = Query(
+        None, description="Agent: commissions in this status (and the leads behind them)."
+    ),
+    amount_min: Decimal | None = Query(
+        None,
+        ge=0,
+        le=AMOUNT_LIMIT,
+        description=(
+            "Rupees. Telecaller: requested loan amount or quoted property price, while "
+            "the Admin shows it to Telecallers. Agent: agreed commission."
+        ),
+    ),
+    amount_max: Decimal | None = Query(
+        None, ge=0, le=AMOUNT_LIMIT, description="Rupees; see amount_min."
+    ),
     content_type: Literal["banners", "offers"] | None = Query(
         None, description="Sub Admin: only banners or only offers."
     ),
@@ -133,50 +193,44 @@ async def my_analytics(
     role = current_user.role
     window = _window(date_from, date_to, days, now)
 
-    requested = {
-        name
-        for name, value in (
-            ("call_status", call_status),
-            ("interest", interest),
-            ("loan_status", loan_status),
-            ("lead_source", lead_source),
-            ("lead_status", lead_status),
-            ("task_type", task_type),
-            ("content_type", content_type),
-            ("content_status", content_status),
-            ("placement", placement),
-            ("banner_type", banner_type),
-            ("discount_type", discount_type),
-        )
-        if value is not None
-    }
-    unsupported = requested - _ROLE_FILTERS.get(role, set())
-    if role in _ROLE_FILTERS and unsupported:
-        raise _unprocessable(
-            f"Filter not available for this role: {', '.join(sorted(unsupported))}."
-        )
-
     line = current_user.business_line
+    business_line = line if line in ("loans", "real_estate") else None
     filters = StaffAnalyticsFilters(
-        business_line=line if line in ("loans", "real_estate") else None,
+        business_line=business_line,
         call_status=call_status,
         interest=interest,
         loan_status=loan_status,
         lead_source=lead_source,
         lead_status=lead_status,
         task_type=task_type,
+        loan_type_id=loan_type_id,
+        bank_id=bank_id,
+        deal_status=deal_status,
+        property_category=property_category,
+        property_subtype=property_subtype,
+        commission_status=commission_status,
+        amount_min=amount_min,
+        amount_max=amount_max,
         content_type=content_type,
         content_status=content_status,
         placement=placement,
         banner_type=banner_type,
         discount_type=discount_type,
     )
+    if role in ROLE_FILTERS:
+        try:
+            await validate_filters(db, role, business_line, filters)
+        except InvalidAnalyticsFilter as exc:
+            raise _unprocessable(str(exc)) from exc
 
     if role in ("telecaller", "employee"):
         if current_user.staff_profile_uuid is None:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "No staff profile on this account.")
         builder = telecaller_analytics if role == "telecaller" else employee_analytics
-        return await builder(db, current_user.staff_profile_uuid, window, now, filters)
+        result = await builder(db, current_user.staff_profile_uuid, window, now, filters)
+        return result.model_copy(
+            update={"hidden_filters": await hidden_filters(db, role, business_line)}
+        )
     if role == "agent":
         if current_user.agent_profile_uuid is None:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "No agent profile on this account.")

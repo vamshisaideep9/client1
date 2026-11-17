@@ -24,6 +24,8 @@ from sqlalchemy.pool import NullPool
 from app.core.config import settings
 from conftest import unique_mobile
 
+_CALL_COLUMNS = ("lead_uuid", "client_referral_code", "last_disposition", "last_interest_level")
+
 
 async def _staff(role: str, business_line: str = "loans") -> str:
     import app.db.session as _session_mod
@@ -192,7 +194,7 @@ async def test_assigned_telecaller_gets_code_and_only_their_own_latest_call(
 
     rows = await _signals_as([world["lead"]], role="telecaller", staff=world["a"])
 
-    assert rows == [
+    assert [{key: row[key] for key in _CALL_COLUMNS} for row in rows] == [
         {
             "lead_uuid": uuid.UUID(world["lead"]),
             "client_referral_code": world["code"],
@@ -252,15 +254,23 @@ async def test_unassigned_lead_on_another_line_is_never_returned(client: AsyncCl
 
 
 @pytest.mark.asyncio
-async def test_only_four_narrow_columns_are_exposed(client: AsyncClient) -> None:
+async def test_only_narrow_columns_are_exposed(client: AsyncClient) -> None:
     world = await _seed_world()
 
     rows = await _signals_as([world["lead"]], role="telecaller", staff=world["a"])
 
+    # CS-023 added product/property items and the transaction summary
+    # (test_lead_signal_facets.py); still no names, mobiles or notes.
     assert set(rows[0]) == {
-        "lead_uuid",
-        "client_referral_code",
-        "last_disposition",
-        "last_interest_level",
+        *_CALL_COLUMNS,
+        "loan_items",
+        "deal_items",
+        "txn_count",
+        "txn_bank_names",
+        "txn_amount_min",
+        "txn_amount_max",
+        "txn_first_date",
+        "txn_last_date",
+        "txn_items",
     }
     assert "private call note" not in repr(rows)

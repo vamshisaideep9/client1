@@ -19,8 +19,10 @@ from app.schemas.telecaller import (
     CallDispositionLiteral,
     InterestLevelLiteral,
     LeadActivityRead,
+    LeadFacets,
     LeadReferrerRead,
     LeadRequestSummary,
+    LeadTransactionSummary,
     LoanStatusLiteral,
     ManagerNoteRead,
 )
@@ -125,6 +127,8 @@ class TeamOverviewResponse(BaseModel):
     # The chosen members' analytics summed into one report (KPIs, trend,
     # breakdowns, funnel); null when no member is selected.
     report: StaffAnalyticsResponse | None = None
+    # Filters the Admin's field rules for the member role rule out (CS-023).
+    hidden_filters: list[str] = Field(default_factory=list)
 
 
 class TeamLastCall(BaseModel):
@@ -147,6 +151,10 @@ class TeamLeadSignals(BaseModel):
     last_disposition: CallDispositionLiteral | None = None
     last_interest_level: InterestLevelLiteral | None = None
     referrer: LeadReferrerRead | None = None
+    # Products, banks and property facts of the lead (CS-023).
+    facets: LeadFacets = Field(default_factory=LeadFacets)
+    # Telecaller teams on the loans line only, under the Telecaller field rules.
+    transactions: LeadTransactionSummary | None = None
 
 
 class TeamLeadRow(BaseModel):

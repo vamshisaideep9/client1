@@ -33,6 +33,7 @@ import io
 from collections.abc import Generator
 from dataclasses import replace
 from datetime import date
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
@@ -58,7 +59,9 @@ from app.schemas.reporting import (
     ReportTelecallerOption,
     TeamPerformanceSummary,
 )
+from app.schemas.telecaller import PropertySubtypeLiteral
 from app.services import reporting
+from app.services.staff_analytics import AMOUNT_LIMIT
 
 router = APIRouter()
 
@@ -101,6 +104,7 @@ _DealStatus = Literal[
     "on_hold",
 ]
 _PropertyCategory = Literal["houses", "apartments", "villas", "plots", "commercial"]
+_PropertySubtype = PropertySubtypeLiteral
 
 
 def _lead_level(
@@ -117,11 +121,61 @@ def _lead_level(
     )
 
 
+def _amount_range(
+    amount_min: Decimal | None = Query(
+        default=None,
+        ge=0,
+        le=AMOUNT_LIMIT,
+        description="Rupees: requested loan amount or quoted property price, at least.",
+    ),
+    amount_max: Decimal | None = Query(
+        default=None, ge=0, le=AMOUNT_LIMIT, description="Rupees; see amount_min."
+    ),
+) -> tuple[Decimal | None, Decimal | None]:
+    if amount_min is not None and amount_max is not None and amount_min > amount_max:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="amount_min must not be more than amount_max.",
+        )
+    return amount_min, amount_max
+
+
 def leads_report_filters(
     base: reporting.ReportFilters = Depends(_lead_level),
     lead_status: _LeadStatus | None = None,
+    loan_status: _LoanStatus | None = Query(
+        default=None, description="Leads with a loan application in this status."
+    ),
+    loan_type_id: UUID | None = Query(
+        default=None, description="Leads with a loan application for this product."
+    ),
+    bank_id: UUID | None = Query(
+        default=None, description="Leads with a loan application at this bank."
+    ),
+    deal_status: _DealStatus | None = Query(
+        default=None, description="Leads with a property deal in this status."
+    ),
+    property_category: _PropertyCategory | None = Query(
+        default=None, description="Leads with a deal on a property of this category."
+    ),
+    property_subtype: _PropertySubtype | None = Query(
+        default=None, description="Leads with a deal on a property of this subtype."
+    ),
+    amount: tuple[Decimal | None, Decimal | None] = Depends(_amount_range),
 ) -> reporting.ReportFilters:
-    return replace(base, lead_status=lead_status)
+    """Loan filters must all match one application, property filters one deal."""
+    return replace(
+        base,
+        lead_status=lead_status,
+        loan_status=loan_status,
+        loan_type_id=loan_type_id,
+        bank_id=bank_id,
+        deal_status=deal_status,
+        property_category=property_category,
+        property_subtype=property_subtype,
+        amount_min=amount[0],
+        amount_max=amount[1],
+    )
 
 
 def loans_report_filters(
@@ -129,8 +183,16 @@ def loans_report_filters(
     loan_status: _LoanStatus | None = None,
     loan_type_id: UUID | None = None,
     bank_id: UUID | None = None,
+    amount: tuple[Decimal | None, Decimal | None] = Depends(_amount_range),
 ) -> reporting.ReportFilters:
-    return replace(base, loan_status=loan_status, loan_type_id=loan_type_id, bank_id=bank_id)
+    return replace(
+        base,
+        loan_status=loan_status,
+        loan_type_id=loan_type_id,
+        bank_id=bank_id,
+        amount_min=amount[0],
+        amount_max=amount[1],
+    )
 
 
 def deals_report_filters(
@@ -138,12 +200,17 @@ def deals_report_filters(
     deal_status: _DealStatus | None = None,
     property_city: str | None = Query(default=None, min_length=1, max_length=120),
     property_category: _PropertyCategory | None = None,
+    property_subtype: _PropertySubtype | None = None,
+    amount: tuple[Decimal | None, Decimal | None] = Depends(_amount_range),
 ) -> reporting.ReportFilters:
     return replace(
         base,
         deal_status=deal_status,
         property_city=property_city,
         property_category=property_category,
+        property_subtype=property_subtype,
+        amount_min=amount[0],
+        amount_max=amount[1],
     )
 
 

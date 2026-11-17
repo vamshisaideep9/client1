@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
@@ -35,7 +36,9 @@ from app.schemas.staff_teams import (
     TeamWorkResponse,
     TeamWorkUpdateResponse,
 )
+from app.schemas.telecaller import PropertyCategoryLiteral, PropertySubtypeLiteral
 from app.services.staff_analytics import (
+    AMOUNT_LIMIT,
     AnalyticsWindow,
     InvalidAnalyticsWindow,
     resolve_analytics_window,
@@ -113,14 +116,22 @@ _LoanStatus = Literal[
     "on_hold",
 ]
 _TaskType = Literal["document_collection", "property_visit", "background_check"]
+_DealStatus = Literal[
+    "new",
+    "contacted",
+    "site_visit_done",
+    "negotiation",
+    "booked",
+    "agreement_signed",
+    "closed",
+    "rejected",
+    "on_hold",
+]
 
 
 def _http(exc: Exception) -> HTTPException:
     if isinstance(exc, UnsupportedAnalyticsFilter):
-        return HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-            f"Filter not available for this team: {exc}.",
-        )
+        return HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc))
     code, detail = _ERRORS[type(exc)]
     return HTTPException(status_code=code, detail=detail)
 
@@ -155,6 +166,31 @@ def _analytics_query(
         None, description="Telecaller teams: leads from this referral source."
     ),
     task_type: _TaskType | None = Query(None, description="Employee teams: task type."),
+    loan_type_id: UUID | None = Query(
+        None, description="Loans teams: leads with an application for this product."
+    ),
+    bank_id: UUID | None = Query(None, description="Loans teams: applications with this bank."),
+    deal_status: _DealStatus | None = Query(
+        None, description="Real estate teams: deals in this status."
+    ),
+    property_category: PropertyCategoryLiteral | None = Query(
+        None, description="Real estate teams: deals on a property of this category."
+    ),
+    property_subtype: PropertySubtypeLiteral | None = Query(
+        None, description="Real estate teams: deals on a property of this subtype."
+    ),
+    amount_min: Decimal | None = Query(
+        None,
+        ge=0,
+        le=AMOUNT_LIMIT,
+        description=(
+            "Telecaller teams, rupees: requested loan amount or quoted property price, "
+            "while the Admin shows it to Telecallers."
+        ),
+    ),
+    amount_max: Decimal | None = Query(
+        None, ge=0, le=AMOUNT_LIMIT, description="Rupees; see amount_min."
+    ),
     member: list[UUID] | None = Query(  # noqa: B008
         None, description="Only these members (repeatable); all when omitted."
     ),
@@ -165,6 +201,13 @@ def _analytics_query(
         loan_status=loan_status,
         lead_source=lead_source,
         task_type=task_type,
+        loan_type_id=loan_type_id,
+        bank_id=bank_id,
+        deal_status=deal_status,
+        property_category=property_category,
+        property_subtype=property_subtype,
+        amount_min=amount_min,
+        amount_max=amount_max,
         member_ids=tuple(member or ()),
     )
 

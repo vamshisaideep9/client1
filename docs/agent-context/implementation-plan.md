@@ -68,7 +68,44 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — Batch B: Agent dashboard money and lead history (CS-022)**
+**In progress — Batch C: filters by product, property, status, transactions
+and earnings (CS-023)** (2026-11-17; user-approved stakeholder feedback, batch C
+of A–G; both lines; no requirement or completion-percentage change). Two
+stacked PRs, both opened against `main`, stacked on Batch B PR 2:
+
+- *PR C1 — API, migration, contracts*, branch `feat/batch-c-filters-api`
+  from `feat/agent-dashboard-web` `eb8ce10a`; PR
+  [#371](https://github.com/brollysolutions/client1/pull/371), mirror
+  vamshisaideep9/client1#72. Migration `f1b3d5a7c9e2`
+  (revises `e8b0d2f4a6c9`, single head) drops and recreates the two
+  confined SECURITY DEFINER readers with more columns:
+  `lead_list_signals(uuid[])` (Telecaller and Employee unchanged reach; new
+  Agent branch for leads the Agent introduced, on their line, with no
+  referral code, calls or transactions) and `team_lead_signals(uuid[])`.
+  Each returns one entry per loan application (id, product id + label, bank
+  id + name, status, requested amount) and per property deal (id, status,
+  category, subtype, quoted price), and — assigned Telecaller, or the manager
+  through that Telecaller only — a loan-transaction summary (count, banks,
+  min/max amount, first/last date and the latest 50 transactions). The API
+  returns ids, labels and enums (`facets`), never the application or deal
+  amounts, and applies the Admin's Telecaller rules
+  (`loan_transaction.bank_name` / `amount` / `txn_date`) to the summary.
+  Analytics: `/me/analytics` and team analytics take `loan_type_id`,
+  `bank_id`, `loan_status`, `deal_status`, `property_category`,
+  `property_subtype`, `amount_min/max` (and Agent `commission_status`) per
+  role and line, one application or deal matching every product filter;
+  role, line, family-mixing, inverted amounts and an amount the Admin hides
+  from Telecallers are 422. Admin reports: leads report takes the product and
+  property filters, loans and deals take `amount_min/max`, deals take
+  `property_subtype`. Logic fixes: team analytics lead source (managers read
+  `team_lead_signals`), Agent lead status now narrows commissions, and the
+  Admin "Referred by client" matches the staff lists.
+- *PR C2 — web*, branch `feat/batch-c-filters-web` stacked on C1 (follows).
+
+Next: the user merges B1, B2, then C1 and C2. Recommended: Opus 5.5 / high
+(extra-high for the definer-function migration).
+
+**In review — Batch B: Agent dashboard money and lead history (CS-022)**
 (2026-11-16; user-approved stakeholder feedback, batch B of A–G; both lines,
 Agents stay line-scoped; no requirement or completion-percentage change).
 Two stacked PRs, both opened against `main`, stacked on Batch A PR 2:

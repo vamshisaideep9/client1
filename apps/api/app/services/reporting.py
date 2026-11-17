@@ -40,6 +40,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
+from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -71,9 +72,12 @@ class ReportFilters:
 
     Lead-level filters (telecaller, source, lead status, latest call outcome
     and interest) apply to the leads report directly and to the loans/deals
-    reports through their lead. Loan- and deal-level filters apply only to
-    their own report. Every value is a whitelisted enum, UUID or a bounded
-    plain string compared as a bound parameter, never interpolated.
+    reports through their lead. Loan- and deal-level filters apply to their
+    own report and (CS-023) to the leads report as "the lead has one
+    application, or one deal, matching all of them". ``amount_min/max`` are
+    rupees: the requested loan amount or the quoted property price. Every
+    value is a whitelisted enum, UUID, decimal or a bounded plain string
+    compared as a bound parameter, never interpolated.
     """
 
     telecaller_profile_uuids: tuple[UUID, ...] = ()
@@ -87,6 +91,9 @@ class ReportFilters:
     deal_status: str | None = None
     property_city: str | None = None
     property_category: str | None = None
+    property_subtype: str | None = None
+    amount_min: Decimal | None = None
+    amount_max: Decimal | None = None
 
     @property
     def needs_lead(self) -> bool:
@@ -103,10 +110,95 @@ NO_FILTERS = ReportFilters()
 
 
 def _client_referred() -> ColumnElement:
-    """The lead signed up through a client's referral code (see lead_list_signals)."""
-    return exists().where(
-        or_(Referral.referred_lead_uuid == Lead.id, Referral.referred_mobile == Lead.mobile)
+    """The lead signed up through a client's referral code — the same three
+    matches as lead_list_signals (lead, mobile, or the lead's client account),
+    so the Admin report and the staff lists agree on "Referred by client"."""
+    lead_client_account = (
+        select(ClientProfile.auth_user_uuid)
+        .where(ClientProfile.id == Lead.client_profile_uuid)
+        # Two levels down from the report's FROM leads: correlate explicitly.
+        .correlate(Lead)
+        .scalar_subquery()
     )
+    return exists().where(
+        or_(
+            Referral.referred_lead_uuid == Lead.id,
+            Referral.referred_mobile == Lead.mobile,
+            and_(
+                Referral.referred_auth_user_uuid.is_not(None),
+                Referral.referred_auth_user_uuid == lead_client_account,
+            ),
+        )
+    )
+
+
+def _amount(column: Any, filters: ReportFilters) -> list[ColumnElement]:
+    out: list[ColumnElement] = []
+    if filters.amount_min is not None:
+        out.append(column >= filters.amount_min)
+    if filters.amount_max is not None:
+        out.append(column <= filters.amount_max)
+    return out
+
+
+def _loan_level(filters: ReportFilters) -> list[ColumnElement]:
+    """Predicates over one ``LoanApplication`` row."""
+    out: list[ColumnElement] = []
+    if filters.loan_status:
+        out.append(LoanApplication.status == LoanStatus(filters.loan_status))
+    if filters.loan_type_id:
+        out.append(LoanApplication.loan_type_id == filters.loan_type_id)
+    if filters.bank_id:
+        out.append(LoanApplication.bank_id == filters.bank_id)
+    return out + _amount(LoanApplication.amount_requested, filters)
+
+
+def _deal_level(filters: ReportFilters) -> tuple[list[ColumnElement], bool]:
+    """Predicates over one ``PropertyDeal`` row, and whether they need its
+    ``Property`` joined."""
+    out: list[ColumnElement] = []
+    if filters.deal_status:
+        out.append(PropertyDeal.status == PropertyDealStatus(filters.deal_status))
+    property_preds: list[ColumnElement] = []
+    if filters.property_city:
+        property_preds.append(func.lower(Property.city) == filters.property_city.strip().lower())
+    if filters.property_category:
+        property_preds.append(Property.category == filters.property_category)
+    if filters.property_subtype:
+        property_preds.append(Property.property_subtype == filters.property_subtype)
+    return out + property_preds + _amount(PropertyDeal.price_quoted, filters), bool(property_preds)
+
+
+def _lead_has_request(filters: ReportFilters) -> list[ColumnElement]:
+    """Leads report: the lead has one application (or deal) matching every
+    loan (or deal) filter."""
+    loan_filtered = bool(filters.loan_status or filters.loan_type_id or filters.bank_id)
+    deal_filtered = bool(
+        filters.deal_status
+        or filters.property_city
+        or filters.property_category
+        or filters.property_subtype
+    )
+    amount = filters.amount_min is not None or filters.amount_max is not None
+    if not (loan_filtered or deal_filtered or amount):
+        return []
+    loan_match = exists().where(LoanApplication.lead_uuid == Lead.id, *_loan_level(filters))
+    deal_preds, needs_property = _deal_level(filters)
+    deal_from: Any = PropertyDeal.__table__
+    if needs_property:
+        deal_from = deal_from.join(Property.__table__, Property.id == PropertyDeal.property_id)
+    deal_match = exists(
+        select(1).select_from(deal_from).where(PropertyDeal.lead_uuid == Lead.id, *deal_preds)
+    )
+    out: list[ColumnElement] = []
+    if loan_filtered:
+        out.append(loan_match)
+    if deal_filtered:
+        out.append(deal_match)
+    if amount and not loan_filtered and not deal_filtered:
+        # An amount alone: one application or one deal in the range.
+        out.append(or_(loan_match, deal_match))
+    return out
 
 
 def _latest_call(column: ColumnElement) -> Any:
@@ -198,6 +290,7 @@ def _leads_filters(
     if agent_profile_uuids:
         filters.append(Lead.origin_agent_profile_uuid.in_(agent_profile_uuids))
     filters.extend(_lead_level_filters(report_filters))
+    filters.extend(_lead_has_request(report_filters))
     return filters
 
 
@@ -309,24 +402,13 @@ async def _get_journey_report(
         filters.extend(_lead_level_filters(report_filters))
 
     if model is LoanApplication:
-        if report_filters.loan_status:
-            filters.append(LoanApplication.status == LoanStatus(report_filters.loan_status))
-        if report_filters.loan_type_id:
-            filters.append(LoanApplication.loan_type_id == report_filters.loan_type_id)
-        if report_filters.bank_id:
-            filters.append(LoanApplication.bank_id == report_filters.bank_id)
+        filters.extend(_loan_level(report_filters))
     else:
-        if report_filters.deal_status:
-            filters.append(PropertyDeal.status == PropertyDealStatus(report_filters.deal_status))
-        if report_filters.property_city or report_filters.property_category:
+        deal_preds, needs_property = _deal_level(report_filters)
+        if needs_property:
             # Each deal has exactly one property: no fan-out.
             base_from = base_from.join(Property.__table__, Property.id == PropertyDeal.property_id)
-            if report_filters.property_city:
-                filters.append(
-                    func.lower(Property.city) == report_filters.property_city.strip().lower()
-                )
-            if report_filters.property_category:
-                filters.append(Property.category == report_filters.property_category)
+        filters.extend(deal_preds)
 
     bucket_col = _bucket_col(time_col, bucket).label("bucket_start")
     line_col = model.business_line.label("business_line")

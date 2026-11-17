@@ -55,6 +55,18 @@ CallDispositionLiteral = Literal[
     "not_interested",
 ]
 InterestLevelLiteral = Literal["hot", "warm", "cold"]
+PropertyCategoryLiteral = Literal["houses", "apartments", "villas", "plots", "commercial"]
+PropertySubtypeLiteral = Literal[
+    "individual_house",
+    "standalone_apartment",
+    "gated_community_apartment",
+    "villa",
+    "locked_space",
+    "unlocked_space",
+    "plot",
+    "farmland",
+    "agriland",
+]
 
 
 class LeadReferrerRead(BaseModel):
@@ -66,6 +78,70 @@ class LeadReferrerRead(BaseModel):
 
     kind: Literal["agent", "client"]
     reference_id: str
+
+
+class LeadTransactionItem(BaseModel):
+    """One recorded transaction; a part the Admin hides is null."""
+
+    txn_date: date | None = None
+    bank_name: str | None = None
+    # Rupees.
+    amount: float | None = None
+
+
+class LeadTransactionSummary(BaseModel):
+    """Loan transactions recorded on a lead (FR-6.5), summarised for filters.
+
+    Only for callers who may read the lead's transactions: the assigned
+    Telecaller, or the Sub Admin managing that Telecaller's team. A part the
+    Admin hides from Telecallers (bank name, amount, date) is null and named
+    in ``hidden_fields``. ``items`` holds the latest 50 transactions, so a
+    filter can require one transaction to match bank, date and amount together.
+    """
+
+    count: int
+    # Distinct bank names as entered (trimmed), alphabetical.
+    bank_names: list[str] | None = None
+    # Smallest and largest transaction amount, in rupees.
+    amount_min: float | None = None
+    amount_max: float | None = None
+    # Earliest and latest transaction date.
+    first_date: date | None = None
+    last_date: date | None = None
+    items: list[LeadTransactionItem] = Field(default_factory=list)
+    hidden_fields: list[Literal["bank_names", "amount", "dates"]] = Field(default_factory=list)
+
+
+class LeadLoanFacet(BaseModel):
+    """One loan application on the lead: product, lender and stage (labels
+    included, so a filter can offer a product or bank no longer in the
+    active catalogue)."""
+
+    loan_type_id: UUID
+    loan_type_label: str | None = None
+    bank_id: UUID | None = None
+    bank_name: str | None = None
+    status: LoanStatusLiteral
+
+
+class LeadDealFacet(BaseModel):
+    """One property deal on the lead: stage and the property's kind."""
+
+    status: PropertyDealStatusLiteral
+    property_category: PropertyCategoryLiteral | None = None
+    property_subtype: PropertySubtypeLiteral | None = None
+
+
+class LeadFacets(BaseModel):
+    """Product and property facts of a lead, for the list filters (CS-023).
+
+    One entry per loan application (loans line) or property deal (real estate
+    line), so a filter on product, bank and status matches one application.
+    Ids and enums only; amounts are not included.
+    """
+
+    loans: list[LeadLoanFacet] = Field(default_factory=list)
+    deals: list[LeadDealFacet] = Field(default_factory=list)
 
 
 # Staff working notes (call logs, field tasks) allow about 1500 words. The
@@ -171,6 +247,10 @@ class TelecallerLeadRead(BaseModel):
     loan_statuses: list[LoanStatusLiteral] = Field(default_factory=list)
     # Absent when Admin hides the "Referred by" field; null when nobody referred.
     referrer: LeadReferrerRead | None = None
+    # Products, banks and property facts of the lead (CS-023 list filters).
+    facets: LeadFacets = Field(default_factory=LeadFacets)
+    # Loan transactions recorded on the lead; null on the real estate line.
+    transactions: LeadTransactionSummary | None = None
 
 
 class LoanTxnCreate(BaseModel):

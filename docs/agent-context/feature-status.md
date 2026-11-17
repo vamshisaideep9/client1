@@ -2,6 +2,48 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch C PR 1: filters by product, property, status,
+transactions and earnings (API)** (2026-11-17; CS-023; PR
+[#371](https://github.com/brollysolutions/client1/pull/371), mirror
+vamshisaideep9/client1#72), branch
+`feat/batch-c-filters-api` stacked on Batch B PR 2. API, one migration and
+regenerated contracts; no requirement-percentage change.
+- Readers: migration `f1b3d5a7c9e2` (revises `e8b0d2f4a6c9`) drops and
+  recreates `lead_list_signals(uuid[])` and `team_lead_signals(uuid[])`
+  (SECURITY DEFINER, `search_path = pg_catalog, public, pg_temp`, EXECUTE only
+  for `api_user`). New columns: `loan_items` (id, product id + label, bank id
+  + name, status, requested amount), `deal_items` (id, status, category,
+  subtype, quoted price) and a transaction summary (count, banks, min/max,
+  first/last date, latest 50 transactions) for the assigned Telecaller, or
+  the manager through that Telecaller. New Agent branch: own introduced leads
+  on the Agent's line, no referral code, calls or transactions.
+- Lists: Telecaller leads (`facets`, `transactions`), Employee tasks
+  (`lead_facets`) and team work (`signals.facets`, `signals.transactions`);
+  ids, labels and enums only, no application or deal amounts; Telecaller
+  rules `loan_transaction.bank_name` / `amount` / `txn_date` null the hidden
+  parts and list them in `hidden_fields`.
+- Analytics: `/me/analytics` and `/manager/teams/{id}/overview|members/{id}/analytics`
+  take `loan_type_id`, `bank_id`, `loan_status`, `deal_status`,
+  `property_category`, `property_subtype`, `amount_min/max` (Telecaller:
+  requested amount or quoted price; Agent: commission) and Agent
+  `commission_status`; one application or deal must match all product
+  filters; role, line, loan + property mix, min > max and an amount the
+  Admin hides from Telecallers are 422, and responses list `hidden_filters`.
+- Admin reports: leads report takes product and property filters (one
+  application or deal matching all), loans and deals reports take
+  `amount_min/max`, deals take `property_subtype`.
+- Logic fixes: team analytics lead source never matched "client" (the
+  manager path read `lead_list_signals`, which answers only the lead's own
+  staff); the Agent lead-status filter left commission KPIs unfiltered; the
+  Admin "Referred by client" missed referrals matched through the lead's
+  client account.
+- Evidence (python 3.13 container, scratch database migrated to
+  `f1b3d5a7c9e2`): new `test_lead_signal_facets.py` (29) and the 16 affected
+  modules 273 passed; ruff check/format clean; one Alembic head;
+  upgrade → downgrade → upgrade round trip on a second scratch database;
+  OpenAPI regenerated (5 new schemas, 12 paths and 6 schemas changed, no
+  removals); web `pnpm typecheck` passes on the regenerated types.
+
 **In review — Batch B PR 2: Agent money and lead history (web)**
 (2026-11-16; CS-022; PR [#370](https://github.com/brollysolutions/client1/pull/370),
 mirror vamshisaideep9/client1#71), branch `feat/agent-dashboard-web`
