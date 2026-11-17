@@ -31,6 +31,10 @@ const PUBLIC_DESTINATIONS: Destination[] = [
   { label: "Cookie policy", href: "/cookies" },
 ];
 
+/** Shown under every banner destination field. */
+export const DESTINATION_HINT =
+  "A page like /loans, or a full https:// link. Type / to browse pages. External links open in a new tab.";
+
 type Props = Omit<React.ComponentProps<typeof Input>, "value" | "onChange"> & {
   value: string;
   onValueChange: (value: string) => void;
@@ -92,7 +96,7 @@ export function DestinationInput({ value, onValueChange, dashboard, businessLine
   return (
     <Popover open={open && value.startsWith("/") && !props.disabled} onOpenChange={setOpen}>
       <PopoverAnchor asChild>
-        <Input {...props} ref={inputRef} value={value} role="combobox" autoComplete="off" aria-autocomplete="list" aria-expanded={open && value.startsWith("/") && !props.disabled} aria-controls={listId} aria-activedescendant={open && options.length ? `${listId}-${activeIndex}` : undefined}
+        <Input placeholder="/loans or https://…" {...props} ref={inputRef} value={value} role="combobox" autoComplete="off" aria-autocomplete="list" aria-expanded={open && value.startsWith("/") && !props.disabled} aria-controls={listId} aria-activedescendant={open && options.length ? `${listId}-${activeIndex}` : undefined}
           onFocus={(event) => { if (value.startsWith("/")) setOpen(true); props.onFocus?.(event); }}
           onChange={(event) => { onValueChange(event.target.value); setIndex(0); setOpen(event.target.value.startsWith("/")); }}
           onKeyDown={(event) => {
@@ -109,7 +113,7 @@ export function DestinationInput({ value, onValueChange, dashboard, businessLine
           {options.map((option, i) => <div key={option.href} id={`${listId}-${i}`} data-index={i} role="option" aria-selected={i === activeIndex} onPointerMove={() => setIndex(i)} onPointerDown={(event) => event.preventDefault()} onClick={() => choose(option)} className={cn("flex min-h-12 cursor-pointer items-center gap-3 rounded-md px-3 py-2", i === activeIndex && "bg-accent text-accent-foreground")}>
             <div className="min-w-0 flex-1"><p className="text-sm font-medium capitalize">{option.label}</p><p className="break-all text-xs text-text-secondary">{option.href}</p></div><ArrowUpRight className="size-4 shrink-0" aria-hidden />
           </div>)}
-          {!options.length && <p className="p-3 text-sm text-text-secondary">No suggestions. You can enter a valid same-site path.</p>}
+          {!options.length && <p className="p-3 text-sm text-text-secondary">No suggestions. Enter a page path like /loans, or a full https:// link.</p>}
         </div>
         {loadError && <p role="status" className="border-t border-border p-3 text-xs text-text-secondary">Product suggestions could not load. Page destinations are still available.</p>}
       </PopoverContent>

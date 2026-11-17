@@ -6,7 +6,7 @@ import { Loader2, Headset } from "lucide-react";
 import { toast } from "sonner";
 
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { WORKSPACE_DIALOG_CLASS, WorkspaceDialogHeader } from "@/features/dashboard/workspace-dialog";
+import { WorkspaceDialogHeader } from "@/features/dashboard/workspace-dialog";
 import { DashboardHeader, DashboardPage } from "@/features/dashboard/dashboard-ui";
 import { Input } from "@/components/ui/input";
 import { FieldError, RequiredIndicator } from "@/components/ui/field-error";
@@ -34,6 +34,21 @@ import {
   type SupportCategory,
   type SupportTicket,
 } from "@/lib/support-tickets";
+
+// A ticket is a few lines of text, so it opens in a compact panel sized to its
+// content rather than the full-viewport workspace used by editors (which left
+// a screen-sized window with one short paragraph in it).
+const TICKET_DIALOG_CLASS =
+  "!grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] !max-w-lg grid-rows-[auto_minmax(0,1fr)] gap-4 overflow-hidden rounded-xl p-4 sm:max-h-[80dvh] sm:p-6";
+
+// What the client can expect next. The staff resolution note is internal and
+// is deliberately not part of the client ticket view.
+const NEXT_STEP: Record<SupportTicket["status"], string> = {
+  open: "Our support team will review this and get back to you. Status changes appear here.",
+  in_progress: "Our support team is working on this. Status changes appear here.",
+  resolved: "This ticket has been resolved. Raise a new ticket if you still need help.",
+  closed: "This ticket is closed. Raise a new ticket if you still need help.",
+};
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -150,7 +165,7 @@ export default function SupportPage() {
         )}
       </section>
       <Dialog open={activeTicket !== null} onOpenChange={(open) => !open && setActiveTicket(null)}>
-        <DialogContent className={WORKSPACE_DIALOG_CLASS} showCloseButton={false}
+        <DialogContent className={TICKET_DIALOG_CLASS} showCloseButton={false}
           onCloseAutoFocus={(event) => {
             if (ticketTriggerRef.current?.isConnected) {
               event.preventDefault();
@@ -161,11 +176,29 @@ export default function SupportPage() {
             <>
               <WorkspaceDialogHeader
                 title={activeTicket.subject}
-                description={`${CATEGORY_LABEL[activeTicket.category]} · ${STATUS_STYLES[activeTicket.status].label} · ${formatDate(activeTicket.createdOn)}`}
+                description={`Raised on ${formatDate(activeTicket.createdOn)}`}
                 closeLabel="Close ticket"
               />
-              <div className="min-h-0 overflow-y-auto overscroll-contain">
-                <p className="max-w-4xl whitespace-pre-wrap break-words text-sm leading-7">{activeTicket.body}</p>
+              <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain">
+                <dl className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/40 p-3 text-sm">
+                  <div className="min-w-0">
+                    <dt className="text-xs text-text-secondary">Status</dt>
+                    <dd className="mt-1">
+                      <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_STYLES[activeTicket.status].className)}>
+                        {STATUS_STYLES[activeTicket.status].label}
+                      </span>
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs text-text-secondary">Topic</dt>
+                    <dd className="mt-1 break-words font-medium text-text-primary">{CATEGORY_LABEL[activeTicket.category]}</dd>
+                  </div>
+                </dl>
+                <div>
+                  <h3 className="text-xs font-medium text-text-secondary">Your message</h3>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-text-primary">{activeTicket.body}</p>
+                </div>
+                <p className="rounded-lg bg-brand-cta-tint/50 px-3 py-2 text-sm text-text-secondary">{NEXT_STEP[activeTicket.status]}</p>
               </div>
             </>
           )}

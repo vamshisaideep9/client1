@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveSiteConfig, SITE_NAME } from "@/lib/site";
+import { BUSINESS_FACTS, resolveSiteConfig, SITE_CONTACT, SITE_NAME } from "@/lib/site";
 
 const PRODUCTION_ENV = {
   DHANADHARA_REQUIRE_PUBLIC_CONFIG: "true",
@@ -70,5 +70,27 @@ describe("public site identity", () => {
         address: ["Dhanadhara House", "Hyderabad, Telangana"],
       },
     });
+  });
+
+  it("defaults to the client-confirmed public contact details", () => {
+    const local = resolveSiteConfig({});
+    expect(local.contact).toEqual({
+      phone: "+91 90100 53010",
+      phoneHref: "tel:+919010053010",
+      email: "dhanadhara@gmail.com",
+      emailHref: "mailto:dhanadhara@gmail.com",
+      hours: ["Monday to Saturday", "10 AM to 6 PM", "Sunday closed"],
+      address: ["APHB Colony", "Vikarabad, Telangana"],
+    });
+    expect(SITE_CONTACT.email).not.toMatch(/example/);
+  });
+
+  it("accepts the real number in production and still rejects the retired sample", () => {
+    expect(resolveSiteConfig({ ...PRODUCTION_ENV, NEXT_PUBLIC_CONTACT_PHONE: "+91 90100 53010" }).contact.phoneHref).toBe("tel:+919010053010");
+    expect(() => resolveSiteConfig({ ...PRODUCTION_ENV, NEXT_PUBLIC_CONTACT_PHONE: "+919876543210" })).toThrow(/sample number/);
+  });
+
+  it("publishes only the approved business facts", () => {
+    expect(BUSINESS_FACTS).toMatchObject({ proprietor: "R Rohini", udyamNumber: "UDYAM-TS-28-0042986", businessType: "Proprietorship", founded: "2026" });
   });
 });

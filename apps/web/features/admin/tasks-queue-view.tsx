@@ -5,6 +5,7 @@ import * as React from "react";
 import { ClipboardList, Download, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ViewDocumentButton } from "@/components/documents/document-viewer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DashboardHeader, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
@@ -215,7 +216,7 @@ export function TasksQueueView() {
         searchPlaceholder="Lead, Telecaller, or Employee"
         statusOptions={STATUS_OPTIONS}
         kindOptions={TYPE_OPTIONS}
-        kindLabel="Task types"
+        kindLabel="Task type"
         lineOptions={LINE_OPTIONS}
         dateFromLabel="Due from"
         dateToLabel="Due to"
@@ -380,8 +381,12 @@ export function TasksQueueView() {
                                     <FileText className="h-7 w-7" aria-hidden="true" />
                                   </div>
                                 )}
-                                <div className="p-3">
-                                  <Button asChild size="sm" variant="outline" className="w-full">
+                                <div className="grid grid-cols-2 gap-2 p-3">
+                                  <ViewDocumentButton
+                                    url={item.download_url}
+                                    title={`Visit feedback ${index + 1}`}
+                                  />
+                                  <Button asChild size="sm" variant="outline">
                                     <a href={item.download_url} target="_blank" rel="noreferrer">
                                       <Download className="h-4 w-4" aria-hidden="true" /> Download
                                     </a>
