@@ -3,7 +3,9 @@
 Status: **Derived living implementation ledger**
 
 **In progress — Batch F PR 3: profile pincode, "Use my location" and
-campaign place targets (web)** (2026-11-17; CS-026; PR link added on ship),
+campaign place targets (web)** (2026-11-17; CS-026; PR
+[#381](https://github.com/brollysolutions/client1/pull/381), mirror
+vamshisaideep9/client1#82),
 branch `feat/batch-f-location-web` stacked on Batch F PR 2. Web only;
 consumes the F1–F2 contracts; no requirement-percentage change.
 - Profile (`components/profile/pincode-field.tsx` inside
@@ -44,8 +46,8 @@ consumes the F1–F2 contracts; no requirement-percentage change.
   PUT/DELETE without a position; Sub Admin pincode/city targets 1280 / 390
   px), and `settings-by-role`, `registration-profile`, `contact-change`,
   `security-headers`, `banner-cta-and-offers`: 22 passed, 2 skipped
-  (pre-existing skips). `pnpm build` in `node:22-alpine`: see the PR 3 link
-  commit.
+  (pre-existing skips). `pnpm build` in `node:22-alpine` (clean
+  `--frozen-lockfile` install): passed, exit 0 (114 static pages).
 
 **In progress — Batch F PR 2: audience rules version 2 (API)** (2026-11-17;
 CS-026; PR [#380](https://github.com/brollysolutions/client1/pull/380), mirror

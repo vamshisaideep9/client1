@@ -116,7 +116,8 @@ against `main`, stacked on Batch E PR 4:
   `GET /pincodes/districts` lists the targetable cities.
 - *PR F3 — web: profile pincode, "Use my location", campaign location
   targets, privacy notice*, branch `feat/batch-f-location-web` stacked on F2
-  (PR link added on ship). The optional profile fields (registration profile
+  (PR [#381](https://github.com/brollysolutions/client1/pull/381), mirror
+  vamshisaideep9/client1#82). The optional profile fields (registration profile
   step and Client Settings) gain a Pincode field that shows the place name
   from the list and a "Use my location" button (one
   `getCurrentPosition`, low accuracy, no cache; position POSTed once to
