@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ViewDocumentButton } from "@/components/documents/document-viewer";
 import { Button } from "@/components/ui/button";
 import { FieldError, RequiredIndicator } from "@/components/ui/field-error";
 import { Label } from "@/components/ui/label";
@@ -472,7 +473,7 @@ export function ListingApprovalsView() {
 
                     {activeMedia.some((asset) => asset.kind === "panorama") ? (
                       <div>
-                        <p className="mb-2 text-sm font-medium text-text-primary">360° panorama</p>
+                        <p className="mb-2 text-sm font-medium text-text-primary">360° images</p>
                         {activeMedia
                           .filter((asset) => asset.kind === "panorama")
                           .map((asset) => (
@@ -502,16 +503,28 @@ export function ListingApprovalsView() {
                             .filter((asset) => asset.kind === "document")
                             .map((asset, index) =>
                               mediaUrls[asset.id] ? (
-                                <li key={asset.id}>
-                                  <a
-                                    href={mediaUrls[asset.id]}
-                                    className="flex items-center gap-2 rounded-lg border border-border p-2 text-sm text-brand-link hover:underline"
-                                    target="_blank"
-                                    rel="noreferrer"
-                                  >
+                                <li
+                                  key={asset.id}
+                                  className="flex items-center justify-between gap-2 rounded-lg border border-border p-2"
+                                >
+                                  <span className="flex items-center gap-2 text-sm text-text-primary">
                                     <FileText className="h-4 w-4" aria-hidden />
-                                    Download document {index + 1}
-                                  </a>
+                                    Document {index + 1}
+                                  </span>
+                                  <span className="flex items-center gap-2">
+                                    <ViewDocumentButton
+                                      url={mediaUrls[asset.id]}
+                                      title={`Reviewer document ${index + 1}`}
+                                    />
+                                    <a
+                                      href={mediaUrls[asset.id]}
+                                      className="text-sm text-brand-link hover:underline"
+                                      target="_blank"
+                                      rel="noreferrer"
+                                    >
+                                      Download
+                                    </a>
+                                  </span>
                                 </li>
                               ) : null,
                             )}

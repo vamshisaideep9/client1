@@ -18,8 +18,19 @@ describe("optionalProfilePayload", () => {
         incomePeriod: null,
         occupation: null,
         location: null,
+        pincode: null,
       },
     });
+  });
+
+  it("keeps a valid pincode and refuses a malformed one (CS-026)", () => {
+    const valid = optionalProfilePayload({ ...EMPTY_OPTIONAL_PROFILE, pincode: " 500001 " });
+    expect(valid.ok && valid.data.pincode).toBe("500001");
+    for (const pincode of ["012345", "50001", "5000011", "50a001"]) {
+      const result = optionalProfilePayload({ ...EMPTY_OPTIONAL_PROFILE, pincode });
+      expect(result.ok).toBe(false);
+      expect(!result.ok && result.field).toBe("pincode");
+    }
   });
 
   it("converts rupees to integer minor units", () => {

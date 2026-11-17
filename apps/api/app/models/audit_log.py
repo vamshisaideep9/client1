@@ -103,6 +103,11 @@ class AuditAction(enum.StrEnum):
     MOBILE_CHANGE_VERIFIED = "mobile_change_verified"
     MOBILE_CHANGED = "mobile_changed"
     MOBILE_CHANGE_REJECTED = "mobile_change_rejected"
+    # CS-025 contact changes: ids, field and method only, never the values.
+    CONTACT_CHANGED = "contact_changed"
+    CONTACT_CHANGE_REQUESTED = "contact_change_requested"
+    CONTACT_CHANGE_REJECTED = "contact_change_rejected"
+    CONTACT_HISTORY_VIEWED = "contact_history_viewed"
     VEHICLE_ARRANGEMENT_UPDATED = "vehicle_arrangement_updated"
     BANNER_CREATED = "banner_created"
     BANNER_UPDATED = "banner_updated"
@@ -136,6 +141,45 @@ class AuditAction(enum.StrEnum):
     CONTENT_BLOCK_ARCHIVED = "content_block_archived"
     LOAN_APPLICATION_UPDATED = "loan_application_updated"
     PROPERTY_DEAL_UPDATED = "property_deal_updated"
+    AGENT_LEAD_RESUBMITTED = "agent_lead_resubmitted"
+    AGENT_PAYOUT_DETAILS_UPDATED = "agent_payout_details_updated"
+    AGENT_PAYOUT_DETAILS_DELETED = "agent_payout_details_deleted"
+    AGENT_PAYOUT_DETAILS_VIEWED = "agent_payout_details_viewed"
+    STAFF_TEAM_CREATED = "staff_team_created"
+    STAFF_TEAM_UPDATED = "staff_team_updated"
+    STAFF_TEAM_ARCHIVED = "staff_team_archived"
+    STAFF_TEAM_MEMBER_ADDED = "staff_team_member_added"
+    STAFF_TEAM_MEMBER_REMOVED = "staff_team_member_removed"
+    TEAM_LEAD_VIEWED = "team_lead_viewed"
+    TEAM_LEAD_REASSIGNED = "team_lead_reassigned"
+    TEAM_TASK_REASSIGNED = "team_task_reassigned"
+    TEAM_LEAD_STATUS_UPDATED = "team_lead_status_updated"
+    TEAM_TASK_UPDATED = "team_task_updated"
+    TEAM_NOTE_ADDED = "team_note_added"
+    TEAM_TASK_VIEWED = "team_task_viewed"
+    # Bulk client PII extraction (name + mobile for every client account across
+    # both lines). Unlike the aggregate leads/loans/deals/agents report exports
+    # -- which are counts, never row-level contact data, and intentionally
+    # unaudited -- a client-roster download is a row-level PII export and is
+    # recorded. Written by services/reporting.py::export_client_rows. The enum
+    # label is added by migration a7c9e1b3d5f6 (ALTER TYPE audit_action), which
+    # must land and the api/scheduler restart (ADR-0004) BEFORE this code ships.
+    CLIENT_EXPORT_DOWNLOADED = "client_export_downloaded"
+    # CS-027 contests (migration a8d0f2b4c6e9), written by services/contests.py
+    # and jobs/contest_lifecycle.py: ids, statuses, counts and paise only.
+    CONTEST_CREATED = "contest_created"
+    CONTEST_UPDATED = "contest_updated"
+    CONTEST_SUBMITTED = "contest_submitted"
+    CONTEST_DELETED = "contest_deleted"
+    CONTEST_APPROVED = "contest_approved"
+    CONTEST_REJECTED = "contest_rejected"
+    CONTEST_CANCELLED = "contest_cancelled"
+    CONTEST_WENT_LIVE = "contest_went_live"
+    CONTEST_ENDED = "contest_ended"
+    CONTEST_RECALCULATED = "contest_recalculated"
+    CONTEST_FINALIZED = "contest_finalized"
+    CONTEST_PRIZE_PAYOUT_REQUESTED = "contest_prize_payout_requested"
+    CONTEST_PRIZE_MARKED_PAID = "contest_prize_marked_paid"
 
 
 _ev = lambda x: [e.value for e in x]  # noqa: E731

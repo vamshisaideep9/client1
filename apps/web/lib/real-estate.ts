@@ -2,8 +2,9 @@ import { Building2, Home, LandPlot, TreePine, Warehouse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { components } from "@contracts/generated/schema";
 
-import type { PropertyListing as BaseListing } from "@/lib/properties";
+import { listingSaleType, type PropertyListing as BaseListing, type SaleType } from "@/lib/properties";
 import { categoryArtwork } from "@/lib/property-artwork";
+import { listingPriceRupees } from "@/lib/property-budget";
 
 // Derived from the generated contract, never hand-declared: a category,
 // furnishing state, or construction status the backend adds later must surface
@@ -103,16 +104,30 @@ export function populatedPropertyCategories(listings: REListing[]) {
 
 export type SortOrder = "relevance" | "price_asc" | "price_desc" | "newest";
 
+/** Age of a resale property, in whole years since completion. */
+export type AgeBand = "under_5" | "5_to_10" | "10_plus";
+
+export function ageBandOf(ageYears: number): AgeBand {
+  if (ageYears < 5) return "under_5";
+  if (ageYears < 10) return "5_to_10";
+  return "10_plus";
+}
+
 export type PropertyFilters = {
   q?: string;
   /** Sale vs rent/lease. Also scopes the price facet, whose ranges differ by an
    * order of magnitude between a sale price and a monthly rent. */
   intent?: components["schemas"]["ListingIntent"][];
+  /** New launch vs resale. Only sale listings can match. */
+  saleType?: SaleType[];
+  /** Age of property, mainly for resale homes. */
+  age?: AgeBand[];
   categories?: RECategory[];
   subtypes?: RESubtype[];
   bhk?: number[];
-  priceMin?: number;
-  priceMax?: number;
+  /** Budget bounds in whole rupees (see lib/property-budget.ts). */
+  budgetMin?: number;
+  budgetMax?: number;
   areaMin?: number;
   areaMax?: number;
   status?: ListingStatus[];
@@ -121,16 +136,20 @@ export type PropertyFilters = {
   city?: string;
   locality?: string;
   pincode?: string;
+  /** Exact developer / builder brand, matched case-insensitively. */
+  developer?: string;
   sort?: SortOrder;
 };
 
 const FACET_KEYS = [
   "intent",
+  "saleType",
+  "age",
   "categories",
   "subtypes",
   "bhk",
-  "priceMin",
-  "priceMax",
+  "budgetMin",
+  "budgetMax",
   "areaMin",
   "areaMax",
   "status",
@@ -139,12 +158,18 @@ const FACET_KEYS = [
   "city",
   "locality",
   "pincode",
+  "developer",
 ] as const;
 
 export function filterListings(listings: REListing[], filters: PropertyFilters): REListing[] {
   const query = filters.q?.trim().toLowerCase();
   return listings.filter((listing) => {
     if (filters.intent?.length && !filters.intent.includes(listing.listingIntent)) return false;
+    if (filters.saleType?.length) {
+      const saleType = listing.listingIntent === "sale" ? listingSaleType(listing.structuredDetails) : null;
+      if (!saleType || !filters.saleType.includes(saleType)) return false;
+    }
+    if (filters.age?.length && !filters.age.includes(ageBandOf(listing.ageYears))) return false;
     if (filters.categories?.length && !filters.categories.includes(listing.category)) return false;
     // Legacy rows carry no subtype. Asking for a subtype is a narrower question
     // than asking for its category, so an unclassified listing cannot answer it
@@ -156,8 +181,11 @@ export function filterListings(listings: REListing[], filters: PropertyFilters):
       return false;
     }
     if (filters.bhk?.length && !filters.bhk.includes(listing.bhk)) return false;
-    if (filters.priceMin != null && listing.priceLakhs < filters.priceMin) return false;
-    if (filters.priceMax != null && listing.priceLakhs > filters.priceMax) return false;
+    if (filters.budgetMin != null || filters.budgetMax != null) {
+      const rupees = listingPriceRupees(listing.priceLakhs);
+      if (filters.budgetMin != null && rupees < filters.budgetMin) return false;
+      if (filters.budgetMax != null && rupees > filters.budgetMax) return false;
+    }
     if (filters.areaMin != null && listing.areaSqft < filters.areaMin) return false;
     if (filters.areaMax != null && listing.areaSqft > filters.areaMax) return false;
     if (filters.status?.length && (!listing.status || !filters.status.includes(listing.status))) return false;
@@ -168,8 +196,14 @@ export function filterListings(listings: REListing[], filters: PropertyFilters):
     if (filters.city && listing.city !== filters.city) return false;
     if (filters.locality && listing.locality !== filters.locality) return false;
     if (filters.pincode && listing.pincode !== filters.pincode) return false;
+    if (
+      filters.developer &&
+      listing.developerName?.toLowerCase() !== filters.developer.toLowerCase()
+    ) {
+      return false;
+    }
     if (query) {
-      const haystack = `${listing.title} ${listing.locality} ${listing.city} ${listing.pincode}`.toLowerCase();
+      const haystack = `${listing.title} ${listing.developerName ?? ""} ${listing.locality} ${listing.city} ${listing.pincode}`.toLowerCase();
       if (!haystack.includes(query)) return false;
     }
     return true;

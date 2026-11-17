@@ -92,7 +92,7 @@ export function FinancialServicesCatalogue({
       id={CATALOGUE_ANCHOR}
       // scroll-mt clears the 64px site header plus the sticky filter bar, so
       // anchored jumps land on the results rather than behind the chrome.
-      className="scroll-mt-16 border-t border-[var(--nav-border)] bg-[var(--nav-bg)]"
+      className="scroll-mt-[var(--site-header-h)] border-t border-[var(--nav-border)] bg-[var(--nav-bg)]"
     >
       <div className="mx-auto max-w-7xl px-4 pt-16 sm:px-6 sm:pt-20 lg:px-8">
         <div className="max-w-3xl">
@@ -100,8 +100,8 @@ export function FinancialServicesCatalogue({
             Explore financial services
           </h2>
           <p className="mt-4 text-lg text-text-secondary">
-            Explore our loans, insurance and credit card services. Compare available
-            provider options or enquire with our team for guidance.
+            Explore our loan and credit card services. Compare available provider
+            options or enquire with our team for guidance.
           </p>
         </div>
       </div>

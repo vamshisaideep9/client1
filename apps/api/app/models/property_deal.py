@@ -74,6 +74,18 @@ class PropertyDeal(Base):
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
     )
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # CS-027 stage markers, set once when `status` first reaches the stage or a
+    # later one, CLOSED included (a closed deal went through every stage; the
+    # side branches never stamp). The closed stage itself is `closed_at` with
+    # status CLOSED. Contest scoring counts a deal by the moment it reached its
+    # counted stage.
+    site_visit_done_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    booked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    agreement_signed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     property: Mapped["Property"] = relationship("Property")
     client_profile: Mapped["ClientProfile"] = relationship("ClientProfile")

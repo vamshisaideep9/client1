@@ -12,6 +12,7 @@ import { getLoanApplications, type LoanApplication } from "@/lib/loans";
 import { DASHBOARD_ICONS } from "./dashboard-icons";
 import { DashboardHeader, DashboardPage } from "./dashboard-ui";
 import { FetchError } from "./fetch-error";
+import { sinkFinishedLoans } from "./list-order";
 import { ListPagination, useListPagination } from "./list-pagination";
 import { STATUS_STYLES, formatAmount, formatDate } from "./loan-format";
 
@@ -57,7 +58,8 @@ export function LoansApplications() {
       const res = await getLoanApplications();
       if (!active) return;
       if (res.ok) {
-        setApplications(res.data);
+        // Active applications first; closed and rejected ones sink below them.
+        setApplications(sinkFinishedLoans(res.data, (application) => application.status));
         setStatus("ready");
         return;
       }

@@ -219,7 +219,7 @@ export function SupportTicketsView() {
         searchPlaceholder="Subject, body, or requester"
         statusOptions={STATUS_OPTIONS}
         kindOptions={CATEGORY_OPTIONS}
-        kindLabel="Categories"
+        kindLabel="Category"
         showLine={false}
         dateFromLabel="Raised from"
         dateToLabel="Raised to"

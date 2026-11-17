@@ -264,8 +264,11 @@ services:
         NEXT_PUBLIC_CONTACT_EMAIL: ${NEXT_PUBLIC_CONTACT_EMAIL?set NEXT_PUBLIC_CONTACT_EMAIL to the verified public support email}
         NEXT_PUBLIC_CONTACT_HOURS: ${NEXT_PUBLIC_CONTACT_HOURS?set NEXT_PUBLIC_CONTACT_HOURS; use | between display lines}
         NEXT_PUBLIC_CONTACT_ADDRESS: ${NEXT_PUBLIC_CONTACT_ADDRESS?set NEXT_PUBLIC_CONTACT_ADDRESS; use | between display lines}
-        # Origin only (e.g. https://nyc3.digitaloceanspaces.com), same origin
-        # SPACES_ENDPOINT_URL resolves to on the API side -- next.config.ts
+        # Origin only (e.g. https://blr1.digitaloceanspaces.com) and exactly
+        # the SPACES_ENDPOINT_URL origin in apps/api/.env.prod: uploads,
+        # public/ assets and private playback all use path-style URLs on that
+        # one origin (infra/production-environment/README.md, "Object
+        # storage"). It also becomes the CSP's only storage origin; next.config.ts
         # turns this into next/image's remotePatterns entry for banner
         # images served from the public/ storage prefix. Required (not
         # optional like the asset host itself being empty would suggest):

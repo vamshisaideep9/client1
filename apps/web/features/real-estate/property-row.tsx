@@ -56,7 +56,7 @@ export function PropertyRow({
   if (listings.length === 0) return null;
 
   return (
-    <section id={id} aria-label={heading} className="w-full scroll-mt-16">
+    <section id={id} aria-label={heading} className="w-full scroll-mt-[var(--site-header-h)]">
       <div className="flex items-baseline justify-between gap-3 px-4 sm:px-6 lg:px-10">
         <div>
           <h3 className="font-heading text-xl font-semibold text-text-primary">{heading}</h3>
