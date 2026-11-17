@@ -252,7 +252,6 @@ describe("profile mapping", () => {
     await updateProfile({
       firstName: "Test",
       lastName: "User",
-      email: null,
       gender: null,
       genderSelfDescription: null,
       incomeSource: null,
@@ -263,8 +262,8 @@ describe("profile mapping", () => {
     });
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(JSON.parse(init.body as string)).toMatchObject({
-      email: null,
+    const body = JSON.parse(init.body as string);
+    expect(body).toMatchObject({
       gender: null,
       income_source: null,
       income_amount_minor: null,
@@ -272,6 +271,8 @@ describe("profile mapping", () => {
       occupation: null,
       location: null,
     });
+    // CS-025: email is never sent with a profile edit (it cannot be cleared).
+    expect(body).not.toHaveProperty("email");
   });
 });
 

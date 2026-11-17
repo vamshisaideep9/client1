@@ -2,6 +2,59 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch E PR 4: mandatory email and contact changes (web)**
+(2026-11-17; CS-025; PR
+[#378](https://github.com/brollysolutions/client1/pull/378), mirror
+vamshisaideep9/client1#79), branch `feat/batch-e-contact-change-web` stacked on
+Batch E PR 3. Web only; consumes the E1–E3 contracts; no
+requirement-percentage change.
+- Registration: after the phone code, a "Verify your email" step (email →
+  code → the upgraded registration token) when the server requires it; the
+  step indicator shows it only then. The optional email field on the profile
+  step is gone (PATCH no longer accepts email).
+- Blocking step: `/add-email` (auth layout; sign-out available) verifies the
+  address on file or, for Clients/Agents/Admins, adds another with password +
+  code; staff may only verify the Admin-set address or open a contact-change
+  request. `middleware.ts` sends `/dashboard/*` to `/add-email` while the
+  non-authoritative `email_required` cookie (set from the tokens and kept in
+  step with `/auth/me` by the dashboard guard) is present and covers
+  `/add-email` with the login redirect; `DashboardRouteGuard` redirects on
+  `me.emailRequired`.
+- Settings: "Phone and email" card (`contact-details-card.tsx`): Change
+  phone / Change email (`contact-change-dialog.tsx`: password → current code
+  → new value → new code; a full navigation to `/login?changed=…`, whose
+  notice explains every device was signed out), Add / verify email
+  (`add-email-form.tsx`, shared with `/add-email`), resume or cancel an
+  unfinished change; staff get "Request a contact change"
+  (`staff-contact-request-dialog.tsx`) and a pending notice with Withdraw;
+  everyone gets "Lost access to your number? Recover your account" →
+  `/change-mobile`. The profile form no longer shows email/mobile inputs;
+  staff's read-only profile keeps names. `settingsForRole` adds
+  `contactChange: "self" | "request"`.
+- Admin: the support-tickets queue section is now "Contact change requests":
+  staff requests (`staff-contact-requests.tsx`: current → requested value,
+  "changed since" flag, Review with password, Approve and apply or Reject with
+  a PII-free reason) above the existing two-Admin "Lost number" reviews; a
+  "Contact history" dialog (`contact-history-dialog.tsx`: old → new, method,
+  proof category/reference, approver, time; noted as audited) on each staff
+  request, in the lost-number review and in the account dialog on Users.
+- Privacy notice (`components/help/privacy-content.tsx`, public and
+  dashboard): email collected and code-verified; contact change history
+  recorded, kept for the life of the account, platform Admins only, erased
+  with the account; how to change phone/email. Flagged for legal review.
+- Evidence: `pnpm lint` and `pnpm typecheck` pass; `pnpm test` 1076 passed
+  (144 files, incl. new `lib/contact-change.test.ts`, extended middleware,
+  settings-by-role and auth tests, four forms added to the form-surface
+  registry); Playwright against `pnpm dev` (port 3141, mocked API): new
+  `contact-change.spec.ts` 10 passed (client phone change 1440 / 390 px,
+  Add email without a verified one, staff request 1280 / 390 px, blocking
+  add-email step 1440 / 390 px, registration email step, Admin approval and
+  contact history 1365 / 390 px; no page overflow), with settings-by-role and
+  registration-profile passing; `dashboard-navigation` and `personalization`
+  need a live API on :8000 and three `dashboard-refinement` checks fail the
+  same way on the E3 base. `pnpm build` passes in `node:22-alpine`. Full API
+  suite on the stack: see Batch E PR 3 (no new failure after its two fixes).
+
 **In progress — Batch E PR 3: staff contact-change requests and one-Admin
 approval (API)** (2026-11-17; CS-025; PR
 [#377](https://github.com/brollysolutions/client1/pull/377), mirror

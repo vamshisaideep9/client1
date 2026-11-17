@@ -52,6 +52,14 @@ function LoginPageContent() {
       ? normalizeReferralCode(rawRef)
       : null;
   const registerHref = authHref("/register", { code: referralCode, returnTo });
+  // CS-025: a completed phone/email change ends every session and lands here.
+  const changed = searchParams.get("changed");
+  const changedNotice =
+    changed === "mobile"
+      ? "Your phone number was changed and every device was signed out. Log in with your new number."
+      : changed === "email"
+        ? "Your email was changed and every device was signed out. Log in again to continue."
+        : null;
   const [mobile, setMobile] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
@@ -222,6 +230,14 @@ function LoginPageContent() {
         </h1>
         <p className="text-base text-text-secondary">Log in to your account.</p>
       </div>
+      {changedNotice ? (
+        <p
+          role="status"
+          className="mt-4 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm text-text-primary"
+        >
+          {changedNotice}
+        </p>
+      ) : null}
       {referralCode ? (
         <p
           className="mt-4 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-text-secondary"

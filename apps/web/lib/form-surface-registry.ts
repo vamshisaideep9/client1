@@ -22,6 +22,11 @@ export const FORM_SURFACE_REGISTRY = {
   "components/apply-as-agent/file-field.tsx": "composite",
   "components/auth/mobile-input.tsx": "composite",
   "components/auth/otp-form.tsx": "mutation",
+  // CS-025 email and contact changes.
+  "components/auth/add-email-form.tsx": "mutation",
+  "features/settings/contact-change-dialog.tsx": "mutation",
+  "features/settings/staff-contact-request-dialog.tsx": "mutation",
+  "features/admin/staff-contact-requests.tsx": "mutation",
   "components/auth/password-field.tsx": "composite",
   "components/auth/set-password-form.tsx": "mutation",
   "components/financial-provider-options.tsx": "filter",
