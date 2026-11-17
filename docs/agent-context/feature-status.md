@@ -2,6 +2,40 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch D PR 2: lead and referral eligibility (web)**
+(2026-11-17; CS-024; PR
+[#374](https://github.com/brollysolutions/client1/pull/374), mirror
+vamshisaideep9/client1#75), branch `feat/batch-d-eligibility-web` stacked on
+Batch D PR 1. Web only; consumes the D1 contracts; no requirement-percentage
+change.
+- Shared (`features/dashboard`): `eligibility.ts` (Eligible / Not eligible /
+  Duplicate labels and tones, the two filter option lists, row and attempt
+  matching, the Not eligible split for the hint), `use-eligibility.ts`
+  (summary + attempts, each with its own error), `eligibility-ui.tsx` (badge
+  with the API's reason label, a one-card three-column summary that stays
+  side by side on phones, and the "Not accepted" list with its own
+  Eligibility filter, masked number, result, reason and date).
+- Agent Leads: summary (Eligible / Not eligible "n leads · m not accepted" /
+  Duplicate), tabs "Leads (n)" and "Not accepted (n)", FilterBar with search
+  (name or mobile digits), Status, Eligibility and "More filters" Product
+  (product, bank, loan status) or Property (category, type, deal status) from
+  the row facets — Batch C's option sources and one-application matching,
+  without the Telecaller-only Lead group (`leadSignalFilterGroups` gains
+  `lead: false`); an Eligibility column with the reason under a Not eligible
+  badge; the Registered column moves off phones; resubmitting reloads the
+  counts.
+- Client Referrals: the same summary, tabs "Referrals (n)" / "Not accepted
+  (n)", an Eligibility filter, and an Eligibility column (under the status on
+  phones). Fix: the table's screen-reader-only "Details" header could widen
+  the page on a phone; the scroll box now contains it.
+- Evidence: `pnpm lint`, `pnpm typecheck` pass; `pnpm test` 1063 passed
+  (143 files, incl. new `eligibility.test.ts`); Playwright against `pnpm dev`
+  (port 3141, mocked API): new `lead-eligibility.spec.ts` (4: Agent 1440 px
+  and 390 px dark mode, Client 1440 and 390 px, no page overflow) and the agent
+  refinements, agent money, lead-signal, Batch C filters, filter-system,
+  dashboard repairs and sub-admin teams specs, 47 passed; `pnpm build`
+  passes in `node:22-alpine`.
+
 **In progress — Batch D PR 1: lead and referral eligibility (API)**
 (2026-11-17; CS-024; PR
 [#373](https://github.com/brollysolutions/client1/pull/373), mirror

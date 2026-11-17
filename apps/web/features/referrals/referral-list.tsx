@@ -3,6 +3,8 @@
 import { Users } from "lucide-react";
 
 import { formatPaise } from "@/lib/format";
+import { rowEligibility } from "@/features/dashboard/eligibility";
+import { RowEligibilityBadge } from "@/features/dashboard/eligibility-ui";
 import { ListPagination, useListPagination } from "@/features/dashboard/list-pagination";
 import { ReferralDetailDialog } from "@/features/referrals/referral-detail-dialog";
 import type { Referral } from "@/lib/referrals-api";
@@ -43,8 +45,25 @@ function formatDate(iso: string | null): string {
     : d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export function ReferralList({ referrals, embedded = false }: { referrals: Referral[]; embedded?: boolean }) {
+export function ReferralList({
+  referrals,
+  embedded = false,
+  filtered = false,
+}: {
+  referrals: Referral[];
+  embedded?: boolean;
+  /** True when a filter emptied the list, so the empty copy says so. */
+  filtered?: boolean;
+}) {
   const { page, pageItems, setPage } = useListPagination(referrals);
+
+  if (referrals.length === 0 && filtered) {
+    return (
+      <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-text-secondary">
+        No referrals match this filter.
+      </p>
+    );
+  }
 
   if (referrals.length === 0) {
     return (
@@ -63,13 +82,16 @@ export function ReferralList({ referrals, embedded = false }: { referrals: Refer
 
   return (
     <div className="space-y-3">
-    <div className={cn("overflow-x-auto", !embedded && "rounded-xl border border-border bg-card")}>
+    {/* `relative` keeps the absolutely positioned sr-only header inside the
+        scroll box, so it cannot widen the page on a phone. */}
+    <div className={cn("relative overflow-x-auto", !embedded && "rounded-xl border border-border bg-card")}>
       <table className="w-full text-left text-sm">
         <thead className="border-b border-border text-xs uppercase tracking-wide text-text-secondary">
           <tr>
             <th className="px-5 py-3 font-medium">Referred</th>
             <th className="hidden px-5 py-3 font-medium sm:table-cell">Line</th>
             <th className="px-5 py-3 font-medium">Status</th>
+            <th className="hidden px-5 py-3 font-medium sm:table-cell">Eligibility</th>
             <th className="px-5 py-3 font-medium">Bonus</th>
             <th className="hidden px-5 py-3 font-medium sm:table-cell">Date</th>
             <th className="px-5 py-3 font-medium"><span className="sr-only">Details</span></th>
@@ -98,6 +120,15 @@ export function ReferralList({ referrals, embedded = false }: { referrals: Refer
                 >
                   {STATUS_LABEL[r.conversion_status] ?? r.conversion_status}
                 </span>
+                {/* Phones: eligibility sits under the status instead of its own column. */}
+                {rowEligibility(r) ? (
+                  <span className="mt-2 block sm:hidden">
+                    <RowEligibilityBadge row={r} />
+                  </span>
+                ) : null}
+              </td>
+              <td className="hidden px-5 py-4 sm:table-cell">
+                <RowEligibilityBadge row={r} />
               </td>
               <td className="px-5 py-4 text-text-primary">
                 {r.bonus_amount_paise != null ? formatPaise(r.bonus_amount_paise) : "-"}

@@ -38,21 +38,26 @@ const PRESENCE_OPTIONS = optionsFromLabels(TRANSACTION_PRESENCE_LABEL);
  * interest, source, referred by), Product (loans line: product, bank, loan
  * status) or Property (real estate line: category, type, deal status), and
  * Money (Telecaller transactions: has or none, date range, bank, amount),
- * leaving out any transaction part the Admin hides.
+ * leaving out any transaction part the Admin hides. `lead: false` drops the
+ * Lead group for callers without call outcomes or referral codes (the Agent's
+ * own leads list, CS-024).
  */
 export function leadSignalFilterGroups({
   filters,
   onChange,
   scope,
   options = NO_LEAD_SIGNAL_OPTIONS,
+  lead = true,
 }: {
   filters: LeadSignalFilters;
   onChange: (patch: Partial<LeadSignalFilters>) => void;
   scope: LeadSignalScope;
   options?: LeadSignalOptions;
+  lead?: boolean;
 }): MoreFilterGroup[] {
-  const groups: MoreFilterGroup[] = [
-    {
+  const groups: MoreFilterGroup[] = [];
+  if (lead) {
+    groups.push({
       title: "Lead",
       content: (
         <>
@@ -85,8 +90,8 @@ export function leadSignalFilterGroups({
           />
         </>
       ),
-    },
-  ];
+    });
+  }
   if (scope.loans) {
     groups.push({
       title: "Product",
