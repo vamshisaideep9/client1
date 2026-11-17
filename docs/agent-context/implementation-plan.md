@@ -107,7 +107,21 @@ stacked on Batch D PR 2:
   /admin/users/{id}/contact-history` (platform Admin, RLS session, every read
   audited as `contact_history_viewed`). Number rules shared with the
   lost-number flow moved to `services/contact_identity.py`.
-- *PR E3 — API: staff contact-change requests and one-Admin approval.*
+- *PR E3 — API: staff contact-change requests and one-Admin approval*,
+  branch `feat/batch-e-staff-requests-api` stacked on E2 (PR
+  [#377](https://github.com/brollysolutions/client1/pull/377), mirror
+  vamshisaideep9/client1#78). Telecaller,
+  Employee and Sub Admin: `POST /auth/contact-change/requests` (field, new
+  value, password; reachable while the email step is owed) → code to the new
+  value → `requests/verify` → `pending_approval` (7 days), Admins notified;
+  `requests/resend`; withdraw with `cancel`. `GET
+  /admin/contact-change-requests` (platform Admin, live profile re-checked)
+  lists pending requests with the live current value; `/{id}/approve`
+  (password; applied like a self-service change, history `admin_approved`
+  with the approver) and `/{id}/reject` (password, PII-free reason). An Admin
+  never decides a request on their own account; Admins cannot file one.
+  Full API suite on the stack: no new failure once the two batch tests
+  were fixed (three pre-existing failures on main remain).
 - *PR E4 — web.*
 
 Before turning `EMAIL_REQUIRED_ENFORCED` on in an environment: SMTP

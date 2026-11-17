@@ -67,13 +67,16 @@ from app.models.contact_change import (
 )
 from app.models.mobile_change import MobileChangeRequest, MobileChangeStatus
 from app.models.notification import Notification, NotificationType
+from app.models.profile import ProfileScope, ProfileStatus, StaffProfile, StaffRole
 from app.models.push_subscription import PushSubscription
 from app.models.user import User, UserStatus
 from app.schemas.contact_change import (
+    ContactChangeAdminRead,
     ContactChangeChallengeResponse,
     ContactChangeRead,
     ContactHistoryEntry,
 )
+from app.services.admin_notify import notify_admins
 from app.services.audit_log import record as record_audit
 from app.services.contact_identity import (
     clear_identity_caches,
@@ -136,6 +139,10 @@ class ValueUnavailable(ContactChangeError):
     def __init__(self, detail: str) -> None:
         super().__init__(detail)
         self.detail = detail
+
+
+class MakerCheckerViolation(ContactChangeError):
+    """An Admin may never decide a request on their own account (409)."""
 
 
 class InvalidValue(ContactChangeError):
@@ -657,6 +664,11 @@ def http_error(exc: ContactChangeError) -> HTTPException:
         return HTTPException(status.HTTP_409_CONFLICT, exc.detail)
     if isinstance(exc, InvalidValue):
         return HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, exc.detail)
+    if isinstance(exc, MakerCheckerViolation):
+        return HTTPException(
+            status.HTTP_409_CONFLICT,
+            "The requester cannot approve or reject their own request.",
+        )
     if isinstance(exc, CodeTargetMismatch):
         return HTTPException(
             status.HTTP_400_BAD_REQUEST, "That code is no longer valid. Request a new code."
@@ -1187,3 +1199,300 @@ async def after_apply(cache: RedisCache, applied: Applied) -> None:
                     "If you did not make this change, contact support immediately."
                 ),
             )
+
+
+# ---------------------------------------------------------------------------
+# Staff requests (Telecaller, Employee, Sub Admin) and one-Admin decisions
+# ---------------------------------------------------------------------------
+
+
+async def start_staff_request(
+    cache: RedisCache,
+    *,
+    actor: Actor,
+    field: str,
+    value: str,
+    current_password: str,
+    ip: str | None,
+) -> ContactChangeChallengeResponse:
+    """Password and the new value, then a code to it; an Admin decides after."""
+    if actor.role not in STAFF_REQUEST_ROLES:
+        raise NotPermitted("Change your phone number or email yourself in Settings.")
+    value = normalize_new_value(field, value)
+    await check_otp_rate_ip(cache, ip)
+    await check_account_budget(cache, actor.user_uuid)
+    async with _bypass_session() as db:
+        user = await lock_user(db, actor.user_uuid)
+        await reauthenticate(cache, user, current_password)
+        await ensure_no_change_in_flight(db, user.id)
+        await precheck_new_value(db, user=user, field=field, value=value)
+        await check_target_budget(cache, field, value)
+        current = current_value(user, field)
+        row = ContactChangeRequest(
+            auth_user_uuid=user.id,
+            kind=ContactChangeKind.STAFF_REQUEST.value,
+            field=field,
+            status=ContactChangeStatus.AWAITING_NEW_OTP.value,
+            current_fingerprint=contact_fingerprint(field, current) if current else None,
+            new_value=value,
+            expires_at=_now() + timedelta(minutes=settings.CONTACT_CHANGE_FLOW_EXPIRE_MINUTES),
+        )
+        db.add(row)
+        try:
+            await db.commit()
+        except IntegrityError as exc:
+            raise ChangeInProgress from exc
+    channel, otp = await issue_code(
+        cache, change_id=row.id, stage="new", field=field, destination=value
+    )
+    return challenge_response(
+        row,
+        message=f"We sent a code to the new {_noun(field)}.",
+        destination=value,
+        channel=channel,
+        otp=otp,
+    )
+
+
+async def resend_staff_request(
+    cache: RedisCache, *, actor: Actor, change_id: UUID, ip: str | None
+) -> ContactChangeChallengeResponse:
+    await check_otp_rate_ip(cache, ip)
+    await check_account_budget(cache, actor.user_uuid)
+    async with _bypass_session() as db:
+        row = await lock_own_change(db, change_id=change_id, user_uuid=actor.user_uuid)
+        if (
+            row.kind != ContactChangeKind.STAFF_REQUEST
+            or row.status != ContactChangeStatus.AWAITING_NEW_OTP
+            or row.new_value is None
+        ):
+            raise StepConflict
+        value = row.new_value
+        await db.commit()
+    await check_target_budget(cache, row.field, value)
+    channel, otp = await issue_code(
+        cache, change_id=row.id, stage="new", field=row.field, destination=value, resend=True
+    )
+    return challenge_response(
+        row, message="We sent a new code.", destination=value, channel=channel, otp=otp
+    )
+
+
+async def verify_staff_request(
+    cache: RedisCache, *, actor: Actor, change_id: UUID, otp: str
+) -> ContactChangeChallengeResponse:
+    """The new value is proven; the request now waits for one platform Admin."""
+    async with _bypass_session() as db:
+        await lock_user(db, actor.user_uuid)
+        row = await lock_own_change(db, change_id=change_id, user_uuid=actor.user_uuid)
+        if (
+            row.kind != ContactChangeKind.STAFF_REQUEST
+            or row.status != ContactChangeStatus.AWAITING_NEW_OTP
+            or row.new_value is None
+        ):
+            raise StepConflict
+        await verify_code(
+            cache,
+            change_id=row.id,
+            stage="new",
+            field=row.field,
+            expected_value=row.new_value,
+            otp=otp,
+        )
+        now = _now()
+        row.status = ContactChangeStatus.PENDING_APPROVAL.value
+        row.new_verified_at = now
+        row.expires_at = now + timedelta(days=settings.CONTACT_CHANGE_REQUEST_EXPIRE_DAYS)
+        await record_audit(
+            db,
+            action=AuditAction.CONTACT_CHANGE_REQUESTED,
+            entity_type="contact_change_request",
+            entity_uuid=row.id,
+            actor_uuid=actor.user_uuid,
+            actor_role=actor.role,
+            detail={"field": row.field},
+        )
+        await db.commit()
+    await notify_admins(
+        notification_type=NotificationType.CONTACT_CHANGE_REQUESTED,
+        title="Contact change request",
+        body="A staff member asked to change their phone number or email.",
+        href="/dashboard/support-tickets",
+        exclude_user_uuid=actor.user_uuid,
+    )
+    return challenge_response(row, message="Request sent. An Admin will review it.")
+
+
+async def _assert_platform_admin(db: AsyncSession, actor_uuid: UUID) -> None:
+    """Re-check the live profile: JWT claims can outlive a deactivation."""
+    admin_profile = await db.scalar(
+        select(StaffProfile.id).where(
+            StaffProfile.auth_user_uuid == actor_uuid,
+            StaffProfile.role == StaffRole.ADMIN,
+            StaffProfile.scope == ProfileScope.PLATFORM,
+            StaffProfile.status == ProfileStatus.ACTIVE,
+        )
+    )
+    if admin_profile is None:
+        raise NotPermitted("Only an active platform Admin may review contact changes.")
+
+
+async def _reauth_admin(
+    cache: RedisCache, db: AsyncSession, actor_uuid: UUID, password: str
+) -> None:
+    await _assert_platform_admin(db, actor_uuid)
+    admin = await db.get(User, actor_uuid)
+    if admin is None or admin.status != UserStatus.ACTIVE:
+        raise NotPermitted("Only an active platform Admin may review contact changes.")
+    await reauthenticate(cache, admin, password)
+
+
+async def _staff_role(db: AsyncSession, user_uuid: UUID) -> str:
+    role = await db.scalar(
+        select(StaffProfile.role).where(
+            StaffProfile.auth_user_uuid == user_uuid,
+            StaffProfile.status == ProfileStatus.ACTIVE,
+        )
+    )
+    return role.value if role is not None else "staff"
+
+
+async def list_staff_requests(*, actor_uuid: UUID) -> list[ContactChangeAdminRead]:
+    """Pending staff requests, oldest first, with the live current value."""
+    async with _bypass_session() as db:
+        await _assert_platform_admin(db, actor_uuid)
+        await expire_stale(db)
+        await db.commit()
+        rows = (
+            await db.scalars(
+                select(ContactChangeRequest)
+                .where(
+                    ContactChangeRequest.kind == ContactChangeKind.STAFF_REQUEST,
+                    ContactChangeRequest.status == ContactChangeStatus.PENDING_APPROVAL,
+                )
+                .order_by(ContactChangeRequest.created_at, ContactChangeRequest.id)
+            )
+        ).all()
+        result: list[ContactChangeAdminRead] = []
+        for row in rows:
+            requester = await db.get(User, row.auth_user_uuid)
+            if requester is None or row.new_value is None:
+                continue
+            result.append(
+                ContactChangeAdminRead(
+                    id=row.id,
+                    auth_user_uuid=row.auth_user_uuid,
+                    requester_name=f"{requester.first_name} {requester.last_name}".strip(),
+                    requester_role=await _staff_role(db, requester.id),
+                    field=row.field,
+                    current_value=current_value(requester, row.field),
+                    requested_value=row.new_value,
+                    current_changed=(
+                        row.current_fingerprint is not None and not _current_matches(row, requester)
+                    ),
+                    new_verified_at=row.new_verified_at,
+                    expires_at=row.expires_at,
+                    created_at=row.created_at,
+                )
+            )
+        return result
+
+
+async def _lock_pending_request(
+    db: AsyncSession, request_id: UUID, actor: Actor
+) -> tuple[User, ContactChangeRequest]:
+    """Lock the requester's account, then the request (the one lock order)."""
+    target = await db.scalar(
+        select(ContactChangeRequest.auth_user_uuid).where(
+            ContactChangeRequest.id == request_id,
+            ContactChangeRequest.kind == ContactChangeKind.STAFF_REQUEST,
+        )
+    )
+    if target is None:
+        raise ChangeNotFound
+    if target == actor.user_uuid:
+        raise MakerCheckerViolation
+    user = await db.scalar(
+        select(User)
+        .where(User.id == target)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    row = await db.scalar(
+        select(ContactChangeRequest).where(ContactChangeRequest.id == request_id).with_for_update()
+    )
+    if user is None or row is None:
+        raise ChangeNotFound
+    if row.status in ACTIVE_CONTACT_CHANGE_STATUSES and row.expires_at <= _now():
+        _terminate(row, ContactChangeStatus.EXPIRED)
+        await db.commit()
+        raise ChangeExpired
+    if row.status != ContactChangeStatus.PENDING_APPROVAL:
+        raise StepConflict
+    return user, row
+
+
+async def approve_staff_request(
+    cache: RedisCache, *, request_id: UUID, actor: Actor, current_password: str
+) -> None:
+    """One platform Admin (never the requester) applies the requested change."""
+    async with _bypass_session() as db:
+        await _reauth_admin(cache, db, actor.user_uuid, current_password)
+        user, row = await _lock_pending_request(db, request_id, actor)
+        if user.status != UserStatus.ACTIVE:
+            _terminate(row, ContactChangeStatus.CANCELLED)
+            await db.commit()
+            raise ValueUnavailable("This account is no longer active.")
+        if row.current_fingerprint is not None and not _current_matches(row, user):
+            _terminate(row, ContactChangeStatus.CANCELLED)
+            await db.commit()
+            raise ValueUnavailable(
+                "Their details changed after the request. Ask them to send a new request."
+            )
+        applied = await apply_change(
+            db,
+            row=row,
+            user=user,
+            actor=actor,
+            method=ContactChangeMethod.ADMIN_APPROVED,
+            approved_by=actor.user_uuid,
+        )
+    await after_apply(cache, applied)
+
+
+async def reject_staff_request(
+    cache: RedisCache,
+    *,
+    request_id: UUID,
+    actor: Actor,
+    current_password: str,
+    reason: str,
+) -> None:
+    """One platform Admin (never the requester) refuses with a PII-free reason."""
+    async with _bypass_session() as db:
+        await _reauth_admin(cache, db, actor.user_uuid, current_password)
+        _, row = await _lock_pending_request(db, request_id, actor)
+        _terminate(row, ContactChangeStatus.REJECTED)
+        row.rejection_reason = reason
+        row.decided_by_user_uuid = actor.user_uuid
+        row.decided_at = _now()
+        label = "phone number" if row.field == ContactField.MOBILE else "email"
+        db.add(
+            Notification(
+                user_uuid=row.auth_user_uuid,
+                type=NotificationType.CONTACT_CHANGE_REJECTED,
+                title=f"Your {label} change was not approved",
+                body="An Admin did not approve your contact change request. Ask your Admin why.",
+                href="/dashboard/settings",
+            )
+        )
+        await record_audit(
+            db,
+            action=AuditAction.CONTACT_CHANGE_REJECTED,
+            entity_type="contact_change_request",
+            entity_uuid=row.id,
+            actor_uuid=actor.user_uuid,
+            actor_role=actor.role,
+            detail={"field": row.field},
+        )
+        await db.commit()

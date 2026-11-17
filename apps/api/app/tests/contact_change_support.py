@@ -27,12 +27,15 @@ async def user_id(mobile: str) -> str:
         return str(value)
 
 
-async def fetch_one(sql: str, params: dict) -> dict | None:
+async def fetch_one(sql: str, params: dict, *, commit: bool = False) -> dict | None:
     import app.db.session as session_mod
 
     async with session_mod.AsyncSessionLocal() as db:
         row = (await db.execute(text(sql), params)).mappings().first()
-        return dict(row) if row else None
+        result = dict(row) if row else None
+        if commit:
+            await db.commit()
+        return result
 
 
 async def fetch_all(sql: str, params: dict) -> list[dict]:
