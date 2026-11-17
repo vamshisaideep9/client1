@@ -13,8 +13,10 @@ import {
   PAYOUT_PAGE_LIMIT,
   rejectPayout,
   reverseManualCheque,
+  simulatePayoutGateway,
   type Payout,
   type PayoutCreate,
+  type SimulatedGatewayEvent,
 } from "@/lib/payouts-api";
 
 // Mirrors use-admin-home.ts's status/errorStatus/retry contract, plus the
@@ -100,6 +102,15 @@ export function useAdminPayouts() {
     return res;
   }
 
+  async function simulateGateway(
+    id: string,
+    event: SimulatedGatewayEvent,
+  ): Promise<ApiResponse<Payout>> {
+    const res = await simulatePayoutGateway(id, event);
+    if (res.ok) reload();
+    return res;
+  }
+
   return {
     payouts,
     status,
@@ -115,6 +126,7 @@ export function useAdminPayouts() {
     clearCheque,
     failCheque,
     reverseCheque,
+    simulateGateway,
     truncated: payouts.length === PAYOUT_PAGE_LIMIT,
   };
 }

@@ -561,3 +561,67 @@ async def test_reopen_rolls_back_when_audit_cannot_be_recorded(
             )
             == 0
         )
+
+
+@pytest.mark.asyncio
+async def test_task_list_and_detail_carry_the_leads_call_signal_and_referrer(
+    client: AsyncClient,
+) -> None:
+    """Employees cannot read call logs or referrals under RLS; the confined
+    lead_list_signals function supplies the outcome and referral code only."""
+    import secrets
+
+    import app.db.session as _session_mod
+    from app.models.lead import Lead
+    from app.models.lead_activity import CallDisposition, InterestLevel, LeadActivity
+    from app.models.referral import Referral, ReferralCode
+    from app.models.task import Task
+    from app.models.user import User
+
+    auth_e, staff_e = await _seed_employee("loans")
+    task_id = await _seed_task("loans", staff_e)
+    bare_task = await _seed_task("loans", staff_e)
+    code = "".join(secrets.choice("0123456789ABCDEFGHJKMNPQRSTVWXYZ") for _ in range(8))
+    async with _session_mod.AsyncSessionLocal() as db:
+        task = await db.get(Task, uuid.UUID(task_id))
+        assert task is not None
+        lead = await db.get(Lead, task.lead_uuid)
+        assert lead is not None
+        referrer = User(
+            first_name="Ref",
+            last_name="Errer",
+            mobile=unique_mobile(),
+            email=f"ref_{uuid.uuid4().hex[:12]}@example.com",
+            password_hash="x",
+        )
+        db.add(referrer)
+        await db.flush()
+        db.add(ReferralCode(auth_user_uuid=referrer.id, code=code))
+        db.add(Referral(referrer_auth_user_uuid=referrer.id, referred_mobile=lead.mobile))
+        db.add(
+            LeadActivity(
+                lead_uuid=lead.id,
+                telecaller_staff_profile_uuid=task.raised_by_staff_profile_uuid,
+                business_line="loans",
+                disposition=CallDisposition.CONNECTED,
+                interest_level=InterestLevel.WARM,
+                notes="private call note",
+            )
+        )
+        await db.commit()
+    headers = {"Authorization": f"Bearer {_employee_token(auth_e, staff_e)}"}
+
+    listed = await client.get("/api/v1/employee/tasks", headers=headers)
+    detail = await client.get(f"/api/v1/employee/tasks/{task_id}", headers=headers)
+
+    assert listed.status_code == 200, listed.text
+    assert detail.status_code == 200, detail.text
+    by_id = {row["id"]: row for row in listed.json()}
+    for body in (by_id[task_id], detail.json()):
+        assert body["lead_referrer"] == {"kind": "client", "reference_id": code}
+        assert body["lead_last_disposition"] == "connected"
+        assert body["lead_last_interest_level"] == "warm"
+        assert body["lead_loan_statuses"] == []
+    assert by_id[bare_task]["lead_referrer"] is None
+    assert by_id[bare_task]["lead_last_disposition"] is None
+    assert "private call note" not in listed.text + detail.text

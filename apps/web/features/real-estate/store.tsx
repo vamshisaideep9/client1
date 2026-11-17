@@ -3,6 +3,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 
+import { rememberBookmarkedIds } from "@/lib/bookmark-cache";
 import { createBookmark, deleteBookmark, getBookmarks } from "@/lib/bookmarks";
 
 // Display snapshot passed by the caller (the property card, which already holds
@@ -109,6 +110,13 @@ function BookmarksProvider({ children }: { children: React.ReactNode }) {
       active = false;
     };
   }, [reloadKey]);
+
+  // Mirror confirmed ids for the public Home "Suggested for you" section
+  // (lib/bookmark-cache.ts). Only after the server answered, so a failed load
+  // never wipes a previously good cache.
+  React.useEffect(() => {
+    if (status === "ready") rememberBookmarkedIds(ids);
+  }, [ids, status]);
 
   const value = React.useMemo<BookmarksContextValue>(
     () => ({

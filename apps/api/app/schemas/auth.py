@@ -65,6 +65,9 @@ class RegisterVerifyOtpRequest(BaseModel):
 
 class RegistrationTokenResponse(BaseModel):
     registration_token: str
+    # CS-025: when true, set-password refuses until the email step has upgraded
+    # this token (POST /auth/register/email/initiate + /verify).
+    email_required: bool = False
 
 
 class SetPasswordRequest(BaseModel):
@@ -97,6 +100,9 @@ class AuthTokensResponse(BaseModel):
     expires_in: int  # seconds
     phone_verified: bool = False
     email_verified: bool = False  # drives the post-login "verify your email" banner
+    # CS-025: enforcement is on and the account must add a verified email
+    # before any business endpoint answers (the web routes to /add-email).
+    email_required: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -216,6 +222,9 @@ class MeResponse(BaseModel):
     mobile: str
     email: str | None
     email_verified: bool
+    # CS-025: true while enforcement is on and no verified email exists; every
+    # endpoint except the add-email step answers 403 until it is cleared.
+    email_required: bool = False
     gender: Literal["female", "male", "non_binary", "self_described", "prefer_not_to_say"] | None
     gender_self_description: str | None
     income_source: Literal["salaried", "business_income"] | None
@@ -233,7 +242,9 @@ class MeUpdateRequest(BaseModel):
 
     first_name: Annotated[str, Field(min_length=1, max_length=100)]
     last_name: Annotated[str, Field(min_length=1, max_length=100)]
-    # Omit to leave unchanged; send null to clear. A change resets verification.
+    # CS-025: email is no longer edited here. Omit it (or send the address
+    # already on file). Adding one uses POST /auth/email/add, changing a
+    # verified one uses the contact-change flow, and it can never be cleared.
     email: EmailStr | None = None
     gender: (
         Literal["female", "male", "non_binary", "self_described", "prefer_not_to_say"] | None

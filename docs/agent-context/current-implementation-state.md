@@ -181,6 +181,11 @@ This supersedes the former mandatory-email registration implementation and
 settles FR-3.3/FR-17.2 without changing CS-001 dual-line enrollment or CS-003
 profile/RLS scope.
 
+*Amended by CS-025 (2026-11-17):* email is again mandatory, now proven by a
+code at registration and added through a blocking step for existing accounts
+(enforced per environment), and it can no longer be cleared or edited through
+the profile form. The other optional profile fields are unchanged.
+
 ### CS-006 — vehicle arrangements are a dedicated site-visit workflow
 
 A Client may optionally request one pickup while creating a real-estate site
@@ -505,6 +510,346 @@ Source and approved interpretation:
 
 - [`campaign-studio-media-library-2026-08-29.md`](campaign-studio-media-library-2026-08-29.md)
 
+### CS-017 — same-Agent lead resubmission and Agent-saved payout details
+
+**Decision (2026-11-14, user-approved):** Amends only the named parts of
+FR-4.6 and CS-009.
+
+- *Lead name.* An Agent must give the person's name when introducing a lead
+  and cannot clear it later.
+- *Expiry and resubmit (FR-4.6).* The 30-day Agent window and the return to the
+  open Telecaller pool are unchanged. Agents now see the policy ("if the
+  customer doesn't respond within 30 days the lead expires; resubmit it after it
+  expires") instead of a day countdown. After expiry, **only the Agent who
+  introduced the lead** may resubmit it for a fresh 30-day window, and only
+  while the client has not registered, the mobile belongs to no account, and
+  the lead is neither converted nor closed. Another Agent still cannot attribute
+  a mobile whose Agent history ended. Seven days before the window ends, an
+  Agent whose client has not registered receives one reminder per window.
+- *Payout details (CS-009).* An Agent may save a UPI ID and/or a bank account
+  for commission payouts. This is the platform's only store of raw payout
+  destinations: values are AES-256-GCM encrypted at rest with a runtime key,
+  the Agent sees masked hints only, and a payout maker (platform Admin or a
+  Sub Admin with the payout-request grant) may decrypt them only to prefill one
+  payout, with every reveal audited. Payout rows still keep only masked hints;
+  account erasure removes the saved details.
+- *Uploads.* Image and document upload limits are 5 MB everywhere (provider
+  logos, banners, campaign images raised from 1, 2 and 4 MB). MP4 video stays
+  at 20 MB.
+
+**Implementation status:** Implemented on `feat/agent-dashboard-refinements` in
+[PR #334](https://github.com/brollysolutions/client1/pull/334) (mirror #38).
+Migrations `f8a0c2e4b6d1` (resubmit-aware expiry trigger, `resubmit_count`,
+`expiry_reminder_sent_at`) and `a1b3d5f7c9e2` (`agent_payout_details` with
+owner-only RLS and a confined erase function).
+
+Evidence:
+
+- [`apps/api/app/services/leads.py`](../../apps/api/app/services/leads.py) (`resubmit_agent_lead`)
+- [`apps/api/app/jobs/remind_agent_lead_expiry.py`](../../apps/api/app/jobs/remind_agent_lead_expiry.py)
+- [`apps/api/app/core/field_crypto.py`](../../apps/api/app/core/field_crypto.py)
+- [`apps/api/app/services/agent_payout_details.py`](../../apps/api/app/services/agent_payout_details.py)
+- [`apps/api/app/tests/test_agent_dashboard_refinements.py`](../../apps/api/app/tests/test_agent_dashboard_refinements.py)
+
+### CS-018 — property listing form refinements, media formats and 360 images
+
+**Decision (2026-11-14, user-approved):** Amends only the named parts of
+`property-specific-listing-forms-2026-08-21.md` (field labels, the narrative-safety
+rule) and `property-listing-authority-and-panorama-2026-08-20.md` (panorama
+count, formats and minimum size). Applies to every lister: Agent, Sub Admin and
+Admin share one form.
+
+- *Labels.* "Listing name" becomes "Property name" (same public title field).
+  Project listings say "Unit or flat area" and "Flat facing"; the approval
+  reference is labelled "Local approval number".
+- *Configurations.* 2.5 BHK and 3.5 BHK are added.
+- *Ranges.* Unit or flat area and undivided share are From-To ranges; the
+  undivided share carries a sq ft or sq yd unit. The existing single values
+  remain valid ("From"; legacy UDS reads as sq ft).
+- *Approval authority.* GHMC, HMDA, DTCP or GP, or "Other" with a typed name.
+  The API keeps accepting any name; the list is a form choice.
+- *RERA.* The registration number is shown and sent only when RERA applies.
+- *Amenities.* The free amenity list stays, with one-click common amenities.
+  Amenities description and About the project move to their own section above
+  media.
+- *Narratives.* Public descriptions may now include numbers of up to 6 digits;
+  a run of 7 or more digits (also when split by spaces, dashes, dots, brackets
+  or +) is still rejected as a phone or account number. Links, email and markup
+  stay blocked.
+- *Media.* Listing photos and 360 images accept JPEG, PNG, WebP and AVIF. A
+  listing may have up to ten 360 images (was one), each 2:1 and at least
+  1024 x 512 (was 2048 x 1024), at most 25 MP and 5 MB. A failing 360 image now
+  gets a specific error instead of "does not match its declared type".
+
+Evidence:
+
+- [`apps/api/app/schemas/property_details.py`](../../apps/api/app/schemas/property_details.py)
+- [`apps/api/alembic/versions/c7e9a1b3d5f7_property_media_formats_and_panoramas.py`](../../apps/api/alembic/versions/c7e9a1b3d5f7_property_media_formats_and_panoramas.py)
+- [`apps/web/lib/property-submit.ts`](../../apps/web/lib/property-submit.ts)
+- [`apps/api/app/tests/test_property_media_constraints.py`](../../apps/api/app/tests/test_property_media_constraints.py)
+
+### CS-019 — Sub Admin managers over Telecaller / Employee teams
+
+**Decision (2026-11-15, user-approved; item 9 of the 2026-11-13 staff
+feedback list):** Narrowly amends CS-003. A Sub Admin stays platform-scoped
+content staff, but the Main Admin may make one the manager of a team.
+
+- *Team shape.* A team is one operational line plus one member role: all
+  Telecallers or all Employees. A Sub Admin manages at most one live team per
+  line; a staff member is in at most one team per line (a dual-line member may
+  join one team in each line).
+- *Who edits.* Only the Main Admin creates, renames, re-manages, staffs or
+  archives teams; every platform Admin may view them. Archiving removes the
+  members.
+- *Manager powers.* Read the team's work in the team's line (leads with client
+  name and mobile, applications, enquiries, visits, deals, call outcomes and
+  notes; field tasks and their client), each member's analytics, and move open
+  work between members of the same team. Every lead-detail view and every move
+  is audited. Approvals, payouts, staff creation and pool assignment stay
+  Admin-only.
+- *Routing is unchanged.* New leads and tasks still round-robin across the
+  whole line; teams only supervise.
+- *Enforcement.* Manager reach is not a token claim. Read-only RLS policies
+  call `team_manager_reaches()`, which reads the team tables live, so removing
+  a member, archiving a team, changing its manager or deactivating the Sub
+  Admin ends access on the next request. Managers have no UPDATE policy; moves
+  run through confined database functions that re-check team, line, open
+  status and target.
+
+Evidence:
+
+- [`apps/api/alembic/versions/e4f6a8c0b2d5_staff_teams_and_managers.py`](../../apps/api/alembic/versions/e4f6a8c0b2d5_staff_teams_and_managers.py)
+- [`apps/api/app/services/team_manager.py`](../../apps/api/app/services/team_manager.py)
+- [`apps/api/app/tests/test_team_manager_api.py`](../../apps/api/app/tests/test_team_manager_api.py)
+- [`apps/api/app/tests/test_staff_teams_api.py`](../../apps/api/app/tests/test_staff_teams_api.py)
+
+### CS-020 — Sub Admin managers edit and filter their team's work
+
+**Decision (2026-11-15, user-approved; follow-up to CS-019):** A manager may
+change their own team's **open** work and filter it everywhere. Team roster and
+team settings stay Main-Admin-only (CS-019 unchanged).
+
+- *Leads.* Set status to working, converted or closed (the Telecaller's own
+  choices). Client details stay with their creator (FR-2.8).
+- *Tasks.* Change the due date (future only) or cancel with a reason (saved as a
+  note). Completing a task stays with the Employee, who records the outcome.
+- *Notes.* Append-only notes on a team lead (optional follow-up date) or task,
+  read by the reaching manager, the assigned member and platform Admins; the
+  member sees them on their own lead or task page.
+- *Filters.* A team-wide work list and the member list filter by member,
+  status, task type, search, overdue, loan status, last call (incl. not
+  called), interest, referral source and "referred by". Team and member
+  analytics take the date range, the role filters and a members subset; the
+  team overview adds a combined report.
+- *Field rules.* Manager views follow the Admin's field rules for the team's
+  member role (Telecaller or Employee): a hidden field stays hidden.
+- *Enforcement.* Managers still have no UPDATE or INSERT policy; every edit runs
+  through a confined definer function that re-checks team reach, line, open
+  status and the change. Every edit and note is audited and notifies the
+  member.
+
+Evidence:
+
+- [`apps/api/alembic/versions/b2d4f6a8c0e1_team_manager_edits_and_filters.py`](../../apps/api/alembic/versions/b2d4f6a8c0e1_team_manager_edits_and_filters.py)
+- [`apps/api/app/tests/test_team_manager_edits_api.py`](../../apps/api/app/tests/test_team_manager_edits_api.py)
+
+### CS-021 — One filter system, Settings by role, and staff self-service limits
+
+**Decision (2026-11-16, user-approved stakeholder feedback, batch A):**
+
+- *Filters.* Every dashboard filter uses one control: unfiltered it reads the
+  field name and its first option is "All"; secondary filters sit behind
+  "More filters (n)" with removable chips; paired dates read From / To. Lead
+  source options are Direct lead / Referred by agent / Referred by client.
+  Lead lists open New > Assigned > Working > Converted > Closed > Released,
+  then next follow-up; closed and rejected loan applications sink.
+- *Settings by role.* Client and Agent keep an editable profile and Delete
+  account; Admin keeps an editable profile and Delete account. Telecaller,
+  Employee and Sub Admin (including team managers) see their profile
+  read-only, with no Save, no personalization card and no Danger zone; name
+  and contact changes go through an Admin (the request flow is a later
+  batch). `PATCH /auth/me` and `DELETE /auth/me` return 403 for those roles.
+- *Personalization (amends CS-008).* The consent preference and the coarse
+  location endpoints are Client-only. Agents lose the consent switch, so
+  banners targeted by Agent activity signals no longer match any Agent;
+  role-only Agent banners still do. An additive migration erases every
+  stored preference that does not belong to a Client. Placements keep serving
+  Client, Agent, Employee and Telecaller.
+- *Account deletion (amends SRS 5.1 self-deletion for staff).* Self-service
+  deletion stays for Client, Agent and Admin (Main Admin protection
+  unchanged). Telecaller, Employee and Sub Admin accounts are removed through
+  the existing Admin account-removal action.
+- *Analytics.* My analytics opens on the previous calendar month and labels
+  its KPI tiles with the period; the Agent "Commission by status" breakdown
+  leaves out cancelled commissions (they stay in commission history).
+
+CS-005's profile rules are unchanged for Clients. Evidence is listed in
+`feature-status.md` under Batch A.
+
+### CS-022 — Agent commission history, payout trail, lead history and cancelled cheque
+
+**Decision (2026-11-16, user-approved stakeholder feedback, batch B; both
+lines, Agents stay line-scoped):**
+
+- *Commission summary.* The Agent sees Total / Pending / Paid and the amount
+  paid in the previous calendar month (IST), labelled with that month
+  ("Commission paid · Oct 2026"). Totals cover every commission; filters only
+  narrow the history rows. Cancelled commissions stay in the history (CS-021).
+- *Commission history.* Each commission shows its client (the Agent's own lead
+  name, under the existing Agent "Lead name" rule), lead, product or property,
+  bank, deal status, deal amount and paid date, with status, deal type,
+  product, bank, property category, amount, date and search filters.
+- *Transaction detail.* A commission transaction shows the payout method with
+  its masked hint, when it was requested, approved, issued (cheque), paid or
+  reversed, who requested and who approved it (name and role), and the one
+  commission it paid. Each payout pays exactly one commission today; bundled
+  payouts are a separate money-layer feature.
+- *Lead history.* Only for a lead the Agent introduced, on their line:
+  applications, service enquiries, property deals, enquiries, site visits,
+  call outcomes with telecaller notes, and a status timeline. Status reasons,
+  rates, fees, form answers, contact details and messages are not shown.
+- *Field rules.* New Agent rules, all default visible: telecaller call notes,
+  telecaller names, loan and deal amounts, payout staff names. The Admin can
+  switch each off; existing notes become visible to Agents retroactively
+  while the rule is on.
+- *Enforcement.* The reach is not a table policy. Three SECURITY DEFINER
+  read functions re-check the Agent context and return projected columns
+  only, because a new SELECT policy would also widen the RLS-only request
+  routes that return full loan applications and deals. Payouts and the audit
+  log stay Admin-only.
+- *Cancelled cheque.* Optional, JPEG/PNG/PDF up to 5 MB, attached to saved
+  payout details; replacing or removing the bank account removes it. Payout
+  makers (Admin, or a Sub Admin with the payout-request grant) can open it;
+  every view is audited. It is erased with the account.
+
+Evidence is listed in `feature-status.md` under Batch B.
+
+### CS-023 — Filters by product, property, status, transactions and earnings
+
+**Decision (2026-11-17, user-approved stakeholder feedback, batch C; both
+lines):**
+
+- *Every dashboard.* Lead lists (Telecaller leads, Employee tasks, a
+  manager's team work) and analytics (My analytics, team analytics, Admin
+  reports) filter by financial product, bank and loan status on the loans
+  line, and by property category, subtype and deal status on the real estate
+  line. Product and property filters describe one application or one deal:
+  "Home loan at HDFC, sanctioned" matches a lead only when one application is
+  all three. Options come from the active catalogue plus any product or bank
+  already on a loaded row.
+- *Telecaller transactions.* The Telecaller list (and a Telecaller team's
+  work list) filters by the loan transactions the Telecaller recorded: has a
+  transaction or none, date range, bank and amount range, one transaction
+  matching all of them. Bank options are the catalogue's names plus any name
+  already entered. Employees and Agents get no transaction data.
+- *Earnings.* Agent My analytics adds product, bank, loan or deal status,
+  property, commission status and a commission amount range; every filter
+  narrows both the leads and the commissions (a lead filter keeps the
+  commissions on those leads; a commission filter keeps the leads that have
+  one). Telecaller analytics take an amount range on the requested loan amount
+  or quoted price, while the Admin shows that amount to Telecallers.
+  Employees have no amount filter.
+- *Field rules.* The Admin's Telecaller rules for transaction bank, amount and
+  date hide those parts of the transaction data (and the matching filters)
+  for Telecallers and their managers; application and deal amounts never
+  reach the browser through the lists.
+- *Enforcement.* The facts come from the two existing confined readers
+  (`lead_list_signals`, now also for an Agent's own introduced leads, and
+  `team_lead_signals`), which re-check the caller; no table policy or grant
+  changes. A filter the role, line or field rules do not allow is refused
+  (422), never ignored.
+
+Evidence is listed in `feature-status.md` under Batch C.
+
+### CS-024 — Lead and referral eligibility
+
+**Decision (2026-11-17, user-approved stakeholder feedback, batch D; both
+lines):**
+
+- *One panel each.* Clients refer by code and never introduce leads; Agents
+  introduce leads and cannot refer (FR-9.1). The Client Referrals page shows
+  referral eligibility and the Agent Leads page shows lead eligibility, each
+  as Eligible / Not eligible / Duplicate with a reason.
+- *Accepted rows.* An Agent lead is Eligible until its 30-day attribution
+  window expires; an expired lead is Not eligible ("Your 30-day window
+  ended") and becomes Eligible again if the Agent resubmits it. A referral is
+  Not eligible when it was voided or refused a bonus: self-referral, the
+  referrer no longer an active client, below the minimum conversions, or the
+  bonus limit reached. The last two are stored as "converted" without a
+  bonus but still read as Not eligible. Pending, converted (including no
+  active bonus rule), accrued and paid referrals are Eligible.
+- *Rejected attempts, from release onward (no backfill).* An Agent
+  introduction turned away because the number is registered, on another
+  Agent's or line's enquiry, or already being worked is a Duplicate
+  ("Already registered or linked to an existing enquiry"); re-introducing the
+  Agent's own expired lead is Not eligible ("Your earlier lead for this number
+  expired"; resubmission stays the way back). A sign-up with a Client's code
+  for someone another Client already referred is a Duplicate for that Client;
+  a self-referral is Not eligible. An unknown code has no owner and stays only
+  in the registration event. The Agent's 409 response is unchanged, and no
+  reason says whose the existing record is.
+- *Privacy.* An attempt keeps the last four digits and a keyed fingerprint of
+  the number (HMAC under the server secret, purpose-bound), never the number.
+  A repeat of the same attempt within 24 hours is stored once. Only the owner
+  can read it (no Admin view was asked for, so none is granted); nothing but
+  the capture and referral
+  services can write it; it is erased with the owner's account, whether the
+  owner deletes it or an Admin removes it. The other person's own account
+  deletion does not erase the owner's masked row.
+- *Counts.* Eligible counts accepted eligible rows; Not eligible counts
+  accepted rows a rule excludes plus attempts turned away by a rule; Duplicate
+  counts duplicate attempts. "Not accepted" lists every recorded attempt.
+- *Agent lead filters.* The Agent Leads list also filters by status and, from
+  Batch C's facts, by product, bank and loan status (loans) or property
+  category, type and deal status (real estate).
+
+Evidence is listed in `feature-status.md` under Batch D.
+
+### CS-025 — Mandatory email, self-service contact changes and contact history
+
+**Decision (2026-11-17, user-approved stakeholder feedback, batch E; amends
+CS-005's optional email and the support-only mobile change):**
+
+- *Email is mandatory.* Registration requires an email proven by a code;
+  every existing account without a verified email is held on a blocking
+  "Add your email" step after sign-in until it adds and verifies one. Email
+  can no longer be cleared, and `PATCH /auth/me` no longer edits it.
+  Enforcement is behind the server setting `EMAIL_REQUIRED_ENFORCED` (off by
+  default) and is switched on per environment only after email delivery has
+  been proven there end to end. While it is on, every endpoint answers 403
+  for such an account except `/auth/me`, the add/verify email endpoints, a
+  staff contact-change request, account deletion, logout, refresh and
+  password change.
+- *Adding an email* needs the current password and a code sent to the new
+  address. A Telecaller, Employee or Sub Admin may only verify the address an
+  Admin set; a different one goes through a contact-change request. An
+  address verified on another account is refused (after the code, so the
+  check reveals nothing to someone who does not control it); an unverified
+  copy elsewhere is released to the proven owner.
+- *Self-service change (Client, Agent, Admin).* Current password, a code to
+  the current number or email, the new value, a code to the new value, then
+  one atomic update: the old value is replaced, the session version is
+  bumped, every refresh token is revoked and push subscriptions are removed.
+  Notices go in-app and by email to the old and the new address (an email
+  change) or to the verified email (a phone change: there is no SMS channel).
+  Phone and email are never changed together: one active change per account,
+  and an open lost-number request also blocks a new change (409).
+- *Lost number.* The public `/change-mobile` request flow (two Admins, proof
+  category only, no upload) is unchanged and linked from Settings.
+- *Staff requests.* Telecallers, Employees and Sub Admins (managers included)
+  request a phone or email change; the new value is proven by a code; one
+  platform Admin, never the requester, approves (applied like the
+  self-service change) or rejects with password re-entry.
+- *History.* `contact_change_history` keeps every completed change (field,
+  old value, new value, method, proof category and PII-free reference,
+  approver, time) permanently, readable by a platform Admin only (the account
+  holder cannot read it) and erased only with the account. Audit and auth
+  events carry ids, field and method, never the values. Change requests keep
+  the raw new value only while active (a database CHECK clears it on every
+  terminal status), as mobile-change requests already do.
+
+Evidence is listed in `feature-status.md` under Batch E.
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in
@@ -523,8 +868,8 @@ explicitly changes it.
 | Banner precedence | Public banners sort by highest `priority`, then oldest `created_at`, then stable ID. | [`services/public_catalog.py`](../../apps/api/app/services/public_catalog.py), [`test_public_banners.py`](../../apps/api/app/tests/test_public_banners.py) |
 | Client status reasons | The API exposes `status_reason`, and the client loan UI renders it verbatim when present. | [`schemas/loans.py`](../../apps/api/app/schemas/loans.py), [`apps/web/lib/loans.ts`](../../apps/web/lib/loans.ts), [`loans-applications.tsx`](../../apps/web/features/dashboard/loans-applications.tsx) |
 | Referral payout execution | Sub Admin manages bonus configuration; creating the actual referral payout is restricted to platform Admin. | [`api/v1/referral_bonus.py`](../../apps/api/app/api/v1/referral_bonus.py), [`api/v1/referrals.py`](../../apps/api/app/api/v1/referrals.py) |
-| Agent lead expiry | Agent attribution has a fixed 30-day first-attribution deadline with converted/closed exclusions, idempotent scheduled release, audit, notifications, RLS denial, and Agent history/countdown. | [PR #144](https://github.com/brollysolutions/client1/pull/144), [`services/lead_expiry.py`](../../apps/api/app/services/lead_expiry.py) |
-| Client registration and optional profile | Client registration is mobile-first; email and demographic/income/location details are optional, skippable, editable, clearable, and never gate account use. Location is entered manually through a search-style field; the web app does not request browser geolocation. | CS-005, [PR #148](https://github.com/brollysolutions/client1/pull/148), migration `e4b5c6d7e8f9` |
+| Agent lead expiry | Agent attribution has a fixed 30-day first-attribution deadline with converted/closed exclusions, idempotent scheduled release, audit, notifications, RLS denial, and Agent history/countdown. CS-017 (2026-11-14) adds same-Agent resubmission, a 7-day reminder, and policy copy in place of the countdown. | [PR #144](https://github.com/brollysolutions/client1/pull/144), [`services/lead_expiry.py`](../../apps/api/app/services/lead_expiry.py) |
+| Client registration and optional profile | Client registration is mobile-first; demographic/income/location details are optional, skippable, editable, clearable, and never gate account use. Location is entered manually through a search-style field; the web app does not request browser geolocation. CS-025 (2026-11-17) makes email mandatory and code-verified (enforced per environment by `EMAIL_REQUIRED_ENFORCED`) and no longer clearable. | CS-005, CS-025, [PR #148](https://github.com/brollysolutions/client1/pull/148), migration `e4b5c6d7e8f9` |
 | Vehicle arrangements | One dedicated arrangement per site visit; Admin enters transport details, the service automatically assigns an eligible real-estate or dual-line Employee, the assignee fulfils it, and the owning Client follows it read-only. | CS-006, [PR #149](https://github.com/brollysolutions/client1/pull/149), migration `b8c9d0e1f2a3`, migration `dd45ee67ff89`, vehicle-arrangement and Employee-auto-assignment tests |
 | Authenticated personalization | Client/Agent dashboard banner layers and Client offers use a closed consented rule grammar; coarse optional location is retained for at most 30 days; public responses exclude targeted content. | CS-008, [PR #152](https://github.com/brollysolutions/client1/pull/152), migration `c9d0e1f2a3b4`, personalization API/RLS/web tests |
 

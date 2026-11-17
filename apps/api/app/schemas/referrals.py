@@ -22,6 +22,7 @@ from uuid import UUID
 from pydantic import BaseModel, model_validator
 
 from app.models.payout import PayoutDestination
+from app.schemas.eligibility import EligibilityReasonLiteral, RowEligibilityLiteral
 from app.schemas.payments import PayoutDestinationInput, validate_destination
 
 
@@ -43,6 +44,23 @@ class MyReferralResponse(BaseModel):
     stats: ReferralStats
 
 
+class ReferralConvertedItem(BaseModel):
+    """What a referral converted on, for the referrer's own activity detail.
+
+    Deliberately limited to catalogue facts: the property listing's public
+    title/location/type, or the loan product label. Never a deal value, loan
+    amount, quoted price, status note, or anything about the referred person.
+    ``property_id`` is set only while the listing is still published, so the
+    web app can link to the public page without exposing withdrawn listings.
+    """
+
+    kind: Literal["property", "loan"]
+    title: str
+    location: str | None = None
+    property_type: str | None = None
+    property_id: UUID | None = None
+
+
 class ReferralRead(BaseModel):
     id: UUID
     # Never the raw number — see app/core/masking.py::mask_mobile. The raw
@@ -53,6 +71,13 @@ class ReferralRead(BaseModel):
     bonus_amount_paise: int | None
     converted_at: datetime | None
     created_at: datetime
+    converted_item: ReferralConvertedItem | None = None
+    # CS-024: whether this referral can earn (or earned) its bonus, with the
+    # rule that refused it. A closed reason code and its label only; the raw
+    # accrual_reason stays Admin-only.
+    eligibility: RowEligibilityLiteral
+    eligibility_reason: EligibilityReasonLiteral | None = None
+    eligibility_reason_label: str | None = None
 
 
 class ReferralListResponse(BaseModel):

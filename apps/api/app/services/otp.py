@@ -22,11 +22,13 @@ from app.cache.redis_keys import (
     login_lock_key,
     login_rate_ip_key,
     otp_agent_apply_key,
+    otp_contact_change_key,
     otp_email_verify_key,
     otp_lock_key,
     otp_mobile_change_key,
     otp_rate_ip_key,
     otp_rate_key,
+    otp_register_email_key,
     otp_register_key,
     otp_resend_key,
     otp_reset_key,
@@ -55,19 +57,36 @@ def _otp_key(mobile: str, purpose: str) -> str:
         return otp_agent_apply_key(mobile)
     if purpose == "mobile_change":
         return otp_mobile_change_key(mobile)
+    if purpose == "register_email":
+        return otp_register_email_key(mobile)
+    # CS-025: the subject is the change row id, not a number, so a code is
+    # bound to one change and one stage.
+    if purpose == "contact_change_current":
+        return otp_contact_change_key("current", mobile)
+    if purpose == "contact_change_new":
+        return otp_contact_change_key("new", mobile)
     raise ValueError(f"Unknown OTP purpose: {purpose}")
 
 
-async def generate_and_store_otp(cache: RedisCache, mobile: str, purpose: str) -> str:
-    """Generate 6-digit OTP, hash+store in Redis, return plaintext."""
-    await check_otp_rate(cache, mobile)
+async def generate_and_store_otp(
+    cache: RedisCache,
+    mobile: str,
+    purpose: str,
+    *,
+    rate_subject: str | None = None,
+) -> str:
+    """Generate 6-digit OTP, hash+store in Redis, return plaintext.
+
+    ``mobile`` is the key subject. ``rate_subject`` (default: the subject)
+    selects the daily budget: contact-change codes are keyed by change id but
+    still draw from the destination number's (or address's) shared budget.
+    """
+    await check_otp_rate(cache, rate_subject or mobile)
     otp = f"{secrets.randbelow(10**6):06d}"
     # argon2 is CPU-heavy even for a 6-digit OTP — hash off the event loop.
     otp_hash = await anyio.to_thread.run_sync(_ph.hash, otp, limiter=ARGON2_LIMITER)
     key = _otp_key(mobile, purpose)
-    attempts_key = f"{key}:attempts"
-    await cache.set(key, otp_hash, TTL_OTP)
-    await cache.set(attempts_key, settings.OTP_MAX_ATTEMPTS, TTL_OTP)
+    await cache.store_otp(key, otp_hash, settings.OTP_MAX_ATTEMPTS, TTL_OTP)
     logger.debug("otp.generated mobile=%s purpose=%s", mask_mobile(mobile), purpose)
     return otp
 
@@ -75,18 +94,17 @@ async def generate_and_store_otp(cache: RedisCache, mobile: str, purpose: str) -
 async def verify_otp(cache: RedisCache, mobile: str, purpose: str, code: str) -> None:
     """Verify OTP. Raises 400 on wrong/expired/exceeded. Burns OTP on success."""
     key = _otp_key(mobile, purpose)
-    attempts_key = f"{key}:attempts"
-
-    stored_hash = await cache.get(key)
-    if stored_hash is None:
+    # Reserve before the expensive hash comparison. Checking then decrementing
+    # after hashing lets concurrent requests all use the same final attempt.
+    claim = await cache.claim_otp_attempt(key)
+    if claim is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP expired or not found. Request a new one.",
         )
 
-    remaining_str = await cache.get(attempts_key)
-    remaining = int(remaining_str) if remaining_str else 0
-    if remaining <= 0:
+    stored_hash, remaining = claim
+    if remaining < 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP attempts exhausted. Request a new one.",
@@ -95,31 +113,24 @@ async def verify_otp(cache: RedisCache, mobile: str, purpose: str, code: str) ->
     try:
         await anyio.to_thread.run_sync(_ph.verify, stored_hash, code, limiter=ARGON2_LIMITER)
     except VerifyMismatchError as exc:
-        # Atomic DECR is the authoritative gate: the previous GET -> minus
-        # one -> SET pattern let N concurrent wrong guesses read the same
-        # value and burn a single attempt between them, voiding the 5-try
-        # cap. DECR returns a distinct post-decrement value to each caller.
-        # Keys stay alive at zero (same TTL_OTP window) rather than being
-        # deleted — resend_otp's session check needs the OTP key to still
-        # exist so "Request a new one" can be satisfied by hitting resend.
-        new_remaining = await cache.decr(attempts_key)
-        if new_remaining < 0:
-            # DECR recreated a missing/expired counter without a TTL —
-            # pin it back to zero with a bounded lifetime.
-            await cache.set(attempts_key, 0, TTL_OTP)
-            new_remaining = 0
-        if new_remaining <= 0:
+        # Keep the exhausted challenge alive for the existing resend flow.
+        # Never mutate here: a resend may have replaced it while hashing.
+        if remaining == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Incorrect OTP. No attempts remaining. Request a new one.",
             ) from exc
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Incorrect OTP. {new_remaining} attempt(s) remaining.",
+            detail=f"Incorrect OTP. {remaining} attempt(s) remaining.",
         ) from exc
 
-    # Success — burn the OTP
-    await cache.delete(key, attempts_key, otp_resend_key(mobile), otp_lock_key(mobile))
+    # Compare-and-delete prevents replay and never burns a concurrent resend.
+    if not await cache.consume_otp(key, stored_hash, otp_resend_key(mobile), otp_lock_key(mobile)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OTP expired, replaced or already used. Request a new one.",
+        )
     logger.debug("otp.verified mobile=%s purpose=%s", mask_mobile(mobile), purpose)
 
 
@@ -133,7 +144,9 @@ async def ensure_active_otp_session(cache: RedisCache, mobile: str, purpose: str
         )
 
 
-async def resend_otp(cache: RedisCache, mobile: str, purpose: str) -> str:
+async def resend_otp(
+    cache: RedisCache, mobile: str, purpose: str, *, rate_subject: str | None = None
+) -> str:
     """Resend OTP. Max 3 resends per window, then 1-hour lock (Auth Design §8)."""
     await ensure_active_otp_session(cache, mobile, purpose)
 
@@ -154,7 +167,7 @@ async def resend_otp(cache: RedisCache, mobile: str, purpose: str) -> str:
             detail="Too many resends. Try again in 1 hour.",
         )
 
-    return await generate_and_store_otp(cache, mobile, purpose)
+    return await generate_and_store_otp(cache, mobile, purpose, rate_subject=rate_subject)
 
 
 async def check_otp_rate(cache: RedisCache, mobile: str) -> None:
