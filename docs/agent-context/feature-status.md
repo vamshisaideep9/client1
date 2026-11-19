@@ -2,6 +2,18 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress → In review — Batch 1: UI fixes (web)** (2026-11-19;
+client-reported), branch `fix/dialog-autoclose-and-mobile-hover` from
+`upstream/main` `e4d7c40e`. No requirement-percentage change.
+- Dialog auto-close root causes as described in
+  `implementation-plan.md` (Batch 1: UI fixes).
+- Reproduction (Playwright, `pnpm dev` on port 3167, mocked API, Sub Admin
+  New contest form with typed values): clicking the form's own error toast
+  closed the dialog and lost the input; clicking the overlay closed it; a
+  401 followed by a `/auth/refresh` 500 signed the user out to `/`. A 401
+  followed by a successful refresh, `visibilitychange` / `focus` events and
+  choosing a Select option by touch left the same dialog node mounted.
+
 **In progress — Batch G PR 5: participant contests, home card and team
 progress (web)** (2026-11-17; CS-027), branch
 `feat/batch-g-contests-participant-web` stacked on G4. Web only; the last

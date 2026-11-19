@@ -193,7 +193,7 @@ export function ContactDetailsCard({
       ) : null}
 
       <Dialog open={adding} onOpenChange={setAdding}>
-        <DialogContent className="max-w-lg">
+        <DialogContent preventOutsideClose className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{me.email ? "Verify your email" : "Add your email"}</DialogTitle>
             <DialogDescription>

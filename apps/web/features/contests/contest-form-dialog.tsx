@@ -293,6 +293,7 @@ export function ContestFormDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => (!busy ? onOpenChange(next) : undefined)}>
       <DialogContent
+        preventOutsideClose
         ref={contentRef}
         className="max-h-[92dvh] w-[calc(100vw-2rem)] max-w-3xl overflow-y-auto sm:max-w-3xl"
       >

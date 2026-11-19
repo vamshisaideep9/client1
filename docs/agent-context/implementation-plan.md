@@ -68,6 +68,30 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In progress → In review — Batch 1: UI fixes (web)** (2026-11-19;
+client-reported fixes; web only; no API, contract, migration or dependency
+change; no requirement or completion-percentage change). Branch
+`fix/dialog-autoclose-and-mobile-hover` from `upstream/main` `e4d7c40e`.
+
+- *Dialogs closing by themselves* (reported for the contest form, then
+  every form). Reproduced with Playwright against `pnpm dev` and a mocked
+  API; two proven causes. (1) Radix dismisses a modal dialog on any
+  pointer-down outside it, and the app's sonner toasts render outside every
+  dialog: clicking the form's own "Could not save" toast, a background
+  toast or the overlay closed the dialog and discarded the typed form.
+  (2) The 401 refresher in `components/auth/session-provider.tsx` called
+  `clear()` on every failed `/auth/refresh`, including a network blip,
+  timeout or 5xx, which unmounted the whole dashboard under `AppGuard` and
+  redirected to `/`. Fixes: `DialogContent` gains `preventOutsideClose`
+  (prevents Radix `onInteractOutside`, so outside presses and focus moves
+  no longer dismiss; X, Cancel / Close and Esc still close; focus trap
+  unchanged), applied to 50 form, review and one-time-credential dialogs;
+  read-only detail and confirm dialogs keep the default. The refresher now
+  signs out only when the server refuses the session (`isRefreshRejected`:
+  401 / 403); a transient failure keeps the page and fails only the
+  request that triggered it. Token rotation itself was proven not to
+  unmount anything; the route guards are unchanged.
+
 **In progress — Batch G: contests (CS-027)** (2026-11-17; user-approved
 stakeholder feedback, batch G of A–G, the last batch; new module, both
 lines; no requirement or completion-percentage change). Stacked PRs, each

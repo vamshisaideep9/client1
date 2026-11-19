@@ -166,7 +166,7 @@ export function StaffContactRequests() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && close()}>
-        <DialogContent className="max-w-lg">
+        <DialogContent preventOutsideClose className="max-w-lg">
           {active ? (
             <>
               <DialogHeader>

@@ -119,7 +119,7 @@ export function MoneyPayoutDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : resetAndClose())}>
-      <DialogContent ref={contentRef} className="max-w-lg">
+      <DialogContent preventOutsideClose ref={contentRef} className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>

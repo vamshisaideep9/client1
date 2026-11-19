@@ -171,7 +171,7 @@ export function AddTxnDialog({
           Add transaction
         </Button>
       </DialogTrigger>
-      <DialogContent showCloseButton={false} className={cn(PANEL_DIALOG_CLASS, "!max-w-lg")}>
+      <DialogContent preventOutsideClose showCloseButton={false} className={cn(PANEL_DIALOG_CLASS, "!max-w-lg")}>
         <WorkspaceDialogHeader
           title="Add transaction"
           description={`${loanTypeName} · Entries can't be edited or deleted once saved.`}

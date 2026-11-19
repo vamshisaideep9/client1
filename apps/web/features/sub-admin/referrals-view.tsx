@@ -430,7 +430,7 @@ export function ReferralsView() {
       {isAdmin ? null : (
         <>
         <Dialog open={createOpen} onOpenChange={closeCreate}>
-          <DialogContent showCloseButton={false} className={PANEL_DIALOG_CLASS}>
+          <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_CLASS}>
             <WorkspaceDialogHeader
               title="New bonus rule"
               description="Set eligibility and amount. This workspace never initiates or approves a payout."

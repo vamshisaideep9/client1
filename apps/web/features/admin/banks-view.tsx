@@ -362,7 +362,7 @@ export function BanksView() {
       </DashboardPanel>
 
       <Dialog open={creating} onOpenChange={setCreating}>
-        <DialogContent className="max-w-md">
+        <DialogContent preventOutsideClose className="max-w-md">
           <DialogHeader>
             <DialogTitle>New provider</DialogTitle>
             <DialogDescription>
@@ -417,7 +417,7 @@ export function BanksView() {
       </Dialog>
 
       <Dialog open={active !== null} onOpenChange={(o) => !o && setActive(null)}>
-        <DialogContent className="max-w-xl">
+        <DialogContent preventOutsideClose className="max-w-xl">
           {active ? (
             <>
               <DialogHeader>

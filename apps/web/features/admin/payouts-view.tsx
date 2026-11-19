@@ -448,7 +448,7 @@ export function PayoutsView() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(o) => !o && setActive(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent preventOutsideClose className="max-w-lg">
           {active ? (
             <>
               <DialogHeader>
@@ -553,7 +553,7 @@ export function PayoutsView() {
       </Dialog>
 
       <Dialog open={manualActive !== null} onOpenChange={(o) => !o && closeManualAction()}>
-        <DialogContent className="max-w-lg">
+        <DialogContent preventOutsideClose className="max-w-lg">
           {manualActive ? (
             <>
               <DialogHeader>

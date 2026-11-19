@@ -435,7 +435,7 @@ function AssetDetailDialog({
         });
       }}
     >
-      <DialogContent showCloseButton={false} className="flex max-h-[90dvh] w-[calc(100%-2rem)] !max-w-5xl flex-col gap-0 overflow-hidden rounded-2xl !p-0">
+      <DialogContent preventOutsideClose showCloseButton={false} className="flex max-h-[90dvh] w-[calc(100%-2rem)] !max-w-5xl flex-col gap-0 overflow-hidden rounded-2xl !p-0">
         {confirmDialog}
         {asset && surface ? (
           <>

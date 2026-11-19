@@ -155,7 +155,7 @@ export function ArtworkUploadDialog({
   return (
     <Dialog open={open} onOpenChange={close}>
       {confirmDialog}
-      <DialogContent showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
+      <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
         <WorkspaceDialogHeader
           title="Upload campaign artwork"
           description="Images are scanned, stripped of metadata, re-encoded, and stored as immutable campaign assets."

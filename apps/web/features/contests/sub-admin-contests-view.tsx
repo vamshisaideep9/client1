@@ -336,7 +336,7 @@ export function ReasonDialog({
   const valid = reason.trim().length >= 3;
   return (
     <Dialog open={contest !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent preventOutsideClose className="max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>

@@ -414,7 +414,7 @@ export function ListingApprovalsView() {
       </Tabs>
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && setActive(null)}>
-        <DialogContent showCloseButton={false} className={WORKSPACE_DIALOG_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={WORKSPACE_DIALOG_CLASS}>
           {active ? (
             <>
               <WorkspaceDialogHeader

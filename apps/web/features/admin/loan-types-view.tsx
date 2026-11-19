@@ -443,7 +443,7 @@ export function LoanTypesView() {
       </DashboardPanel>
 
       <Dialog open={creating} onOpenChange={setCreating}>
-        <DialogContent className="max-w-md">
+        <DialogContent preventOutsideClose className="max-w-md">
           <DialogHeader>
             <DialogTitle>New financial product</DialogTitle>
             <DialogDescription>

@@ -243,7 +243,7 @@ export function PropertyDealsView() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && setActiveId(null)}>
-        <DialogContent showCloseButton={false} className={PANEL_DIALOG_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_CLASS}>
           {active ? (
             <>
               <WorkspaceDialogHeader

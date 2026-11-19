@@ -305,7 +305,7 @@ export function PublishedListingsPanel({ onChanged }: { onChanged?: () => void }
         open={pendingPublish !== null}
         onOpenChange={(open) => !open && setPendingPublish(null)}
       >
-        <DialogContent className="max-w-lg">
+        <DialogContent preventOutsideClose className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {pendingPublish?.next ? "Publish listing" : "Unpublish listing"}

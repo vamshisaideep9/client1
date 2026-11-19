@@ -263,7 +263,7 @@ export function CommissionsView() {
               onPay={payCommission}
             />
             <Dialog open={cancelTarget !== null} onOpenChange={(open) => !open && closeCancelDialog()}>
-              <DialogContent className="max-w-lg">
+              <DialogContent preventOutsideClose className="max-w-lg">
                 {cancelTarget ? (
                   <>
                     <DialogHeader>
