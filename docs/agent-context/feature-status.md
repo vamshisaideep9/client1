@@ -53,6 +53,14 @@ No requirement-percentage change.
   commission, commission RLS / payout, loan configuration, financial
   product, notification, platform-scope, classification, coverage, RLS
   coverage and route-authorization suites: 142 + 42 + 51 passed.
+- Contract: `./scripts/generate-openapi.sh` and
+  `./scripts/generate-client.sh` (openapi-typescript 7.13.0) regenerated
+  `packages/contracts`; the only removed lines are the two extended enums.
+  `apps/web` type-only follow-ups for the regenerated schema: label / icon
+  entries for the six new audit actions and two notification types, and
+  the two test fixtures that build full lead rows. `pnpm typecheck` and
+  `pnpm lint` pass; the touched dashboard / Telecaller unit tests 95
+  passed.
 - Evidence (2026-11-19, `python:3.13.14-slim-trixie` container on
   `client1_default`, scratch database migrated to head): new
   `test_agent_lead_requirement_keys.py` plus `test_agent_api.py` and

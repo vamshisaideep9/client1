@@ -977,6 +977,62 @@ module; "Does not fit" items 6, 11, 12 and 13 of the batch plan):**
 
 Evidence is listed in `feature-status.md` under Batch G.
 
+### CS-028 — Agent lead form fields, sticky resubmission, bulk submit and product commission rates
+
+**Decision (2026-11-19, client-reported batch 2 "Agent leads"; both lines;
+amends CS-017's resubmission and the FR-8.1 commission entry; the derived
+details below were chosen during implementation and are flagged for user
+confirmation):**
+
+- *Lead form.* An Agent's lead is name, mobile, an optional email, the
+  requirement (loans: a loan product; real estate: a property type, with or
+  without a specific listing, which must then agree) and a description (the
+  existing notes). The email and property type are stored under the lead's
+  requirement, owned by the Agent in the detail-ownership ledger; the Agent
+  may change or remove the email and notes while the lead is editable; the
+  product, listing and property type are fixed at introduction.
+- *Who reads a lead's requirement.* One allowlist for every read: the
+  originating Agent sees only what they wrote (an Agent who claimed an
+  existing open enquiry never reads what the person, a Telecaller or the
+  public form recorded); the assigned Telecaller sees every known key,
+  the email included, behind the existing Telecaller "Requirement details"
+  field rule (there is no separate email rule); a platform Admin's lead
+  details show notes, the resolved labels and the email; a Client's lead
+  details never show the email; Employees, Sub Admin team views and the
+  Agent's lead history carry no requirement.
+- *Resubmission goes back to the same Telecaller.* Every path that clears
+  a lead's Telecaller (the 30-day expiry, the repair of an ineligible
+  assignee, an Admin release) remembers that Telecaller. When the Agent
+  resubmits an expired lead that is still unassigned, it goes straight back
+  to them while they are an active Telecaller on the lead's line (or both
+  lines); otherwise round-robin assignment applies as before. A lead the
+  open pool already gave to another Telecaller before the resubmission
+  keeps that Telecaller (a lead being worked is not interrupted). Agent,
+  Telecaller and Admin lead lists show how often and when a lead was
+  resubmitted.
+- *Bulk submit.* An Agent uploads a spreadsheet the browser reads (at most
+  200 rows: S.No, name, mobile, email, requirement, description). A
+  check-only pass validates the rows (Indian mobile formats, repeated
+  numbers, product / property type on the Agent's own line) without looking
+  anything up; the real submit treats every row exactly like a single
+  introduction and reports each row (created, already yours, duplicate,
+  not eligible, repeated in the file, invalid, temporarily unavailable).
+  Limited to 5 submits and 30 checks per Agent per hour; one audit entry
+  per submit with counts only.
+- *Commission rate per loan product.* A Sub Admin or a platform Admin
+  enters an indicative commission for a loan product: a percent of the
+  loan amount or a fixed rupee amount, plus an optional short note. A Sub
+  Admin's entry waits for a platform Admin who did not make it (approve,
+  or reject with a note; the maker may withdraw it, and a new proposal
+  replaces their own earlier one); a platform Admin's own entry applies at
+  once. Loans Agents see the approved rate of the product they pick;
+  nobody else outside Admin and Sub Admin sees rates, and they are never
+  public. The per-deal commission is still entered by the Admin, now
+  pre-filled with the rate applied to the sanctioned amount (the requested
+  amount when none was sanctioned) or the fixed amount.
+
+Evidence is listed in `feature-status.md` under Batch 2.
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in

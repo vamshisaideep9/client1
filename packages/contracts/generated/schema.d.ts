@@ -1704,6 +1704,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agent/commission-rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Commission Rates
+         * @description Approved indicative commission rates of the active loan products, keyed
+         *     by product slug (CS-028). Empty for a real-estate Agent: RLS returns
+         *     approved rows to loans-line Agents only.
+         */
+        get: operations["commission_rates_api_v1_agent_commission_rates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/agent/earnings": {
         parameters: {
             query?: never;
@@ -1797,6 +1819,31 @@ export interface paths {
         put?: never;
         /** Create Lead */
         post: operations["create_lead_api_v1_agent_leads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/leads/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Create Leads
+         * @description Validate (``dry_run``) or submit up to 200 parsed spreadsheet rows.
+         *
+         *     Each submitted row goes through the single-introduction path in its own
+         *     transaction; the response reports every row's outcome. A dry run checks
+         *     the rows only (format, repeated numbers, product / property type) and
+         *     never looks up, creates or records anything about a number.
+         */
+        post: operations["bulk_create_leads_api_v1_agent_leads_bulk_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2795,6 +2842,105 @@ export interface paths {
         get: operations["get_contacts_api_v1_client_lead_details__business_line__contacts_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission-rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Rates
+         * @description Every loan product with its approved rate, any proposal awaiting
+         *     approval, and up to 20 earlier entries with maker and checker names.
+         */
+        get: operations["list_rates_api_v1_commission_rates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission-rates/{loan_type_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Rate
+         * @description Sub Admin: propose a rate (awaits a platform Admin; replaces your own
+         *     earlier proposal). Platform Admin: set the rate now.
+         */
+        put: operations["set_rate_api_v1_commission_rates__loan_type_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission-rates/{rate_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Rate
+         * @description Approve a Sub Admin's proposal; the previous approved rate is superseded.
+         */
+        post: operations["approve_rate_api_v1_commission_rates__rate_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission-rates/{rate_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Rate */
+        post: operations["reject_rate_api_v1_commission_rates__rate_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission-rates/{rate_id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw Rate
+         * @description The proposing Sub Admin takes back a rate awaiting approval.
+         */
+        post: operations["withdraw_rate_api_v1_commission_rates__rate_id__withdraw_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5640,6 +5786,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Last Resubmitted At */
+            last_resubmitted_at?: string | null;
             /** Mobile */
             mobile: string;
             /** Name */
@@ -5649,6 +5797,11 @@ export interface components {
              * @enum {string}
              */
             origin: "direct" | "agent";
+            /**
+             * Resubmit Count
+             * @default 0
+             */
+            resubmit_count: number;
             /**
              * Status
              * @enum {string}
@@ -6012,6 +6165,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Last Resubmitted At */
+            last_resubmitted_at?: string | null;
             /** Mobile */
             mobile: string;
             /** Name */
@@ -6021,6 +6176,11 @@ export interface components {
              * @enum {string}
              */
             origin: "direct" | "agent";
+            /**
+             * Resubmit Count
+             * @default 0
+             */
+            resubmit_count: number;
         };
         /** AdminLoanApplicationListResponse */
         AdminLoanApplicationListResponse: {
@@ -6923,6 +7083,39 @@ export interface components {
             upload_url: string;
         };
         /**
+         * AgentCommissionRateRead
+         * @description The approved rate a loans Agent sees for a product they can offer.
+         */
+        AgentCommissionRateRead: {
+            /** Amount Paise */
+            amount_paise: number | null;
+            /** Approved At */
+            approved_at: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "percent" | "fixed";
+            /**
+             * Loan Type Id
+             * Format: uuid
+             */
+            loan_type_id: string;
+            /** Note */
+            note: string | null;
+            /** Percent Bps */
+            percent_bps: number | null;
+            /** Product Label */
+            product_label: string;
+        };
+        /** AgentCommissionRatesResponse */
+        AgentCommissionRatesResponse: {
+            /** Rates */
+            rates: {
+                [key: string]: components["schemas"]["AgentCommissionRateRead"];
+            };
+        };
+        /**
          * AgentContactRead
          * @description Name + agent_code only -- never phone/email. Contact routes through
          *     the support-ticket flow (POST /api/v1/support-tickets/tickets).
@@ -7255,6 +7448,93 @@ export interface components {
             /** First Name */
             first_name: string;
         };
+        /** AgentLeadBulkFieldError */
+        AgentLeadBulkFieldError: {
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "sno" | "name" | "mobile" | "email" | "requirement" | "description";
+            /** Message */
+            message: string;
+        };
+        /** AgentLeadBulkRequest */
+        AgentLeadBulkRequest: {
+            /** Dry Run */
+            dry_run: boolean;
+            /** Rows */
+            rows: components["schemas"]["AgentLeadBulkRow"][];
+        };
+        /** AgentLeadBulkResponse */
+        AgentLeadBulkResponse: {
+            /** Dry Run */
+            dry_run: boolean;
+            /** Rows */
+            rows: components["schemas"]["AgentLeadBulkRowResult"][];
+            totals: components["schemas"]["AgentLeadBulkTotals"];
+        };
+        /** AgentLeadBulkRow */
+        AgentLeadBulkRow: {
+            /** Description */
+            description?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Mobile */
+            mobile?: string | number | null;
+            /** Name */
+            name?: string | null;
+            /** Requirement */
+            requirement?: string | null;
+            /** Sno */
+            sno?: string | number | null;
+        };
+        /** AgentLeadBulkRowResult */
+        AgentLeadBulkRowResult: {
+            /** Duplicate Of Row Index */
+            duplicate_of_row_index?: number | null;
+            /** Errors */
+            errors?: components["schemas"]["AgentLeadBulkFieldError"][];
+            /** Lead Id */
+            lead_id?: string | null;
+            /** Mobile */
+            mobile?: string | null;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "ready" | "created" | "already_introduced" | "duplicate" | "not_eligible" | "duplicate_in_file" | "invalid" | "unavailable";
+            /** Reason */
+            reason?: ("already_linked" | "own_lead_window_ended" | "already_referred" | "self_referral" | "attribution_expired" | "referrer_not_client" | "below_min_conversion" | "cap_reached" | "voided") | null;
+            /** Reason Label */
+            reason_label?: string | null;
+            /** Requirement Label */
+            requirement_label?: string | null;
+            /** Row Index */
+            row_index: number;
+            /** Sno */
+            sno?: string | null;
+        };
+        /** AgentLeadBulkTotals */
+        AgentLeadBulkTotals: {
+            /** Already Introduced */
+            already_introduced: number;
+            /** Created */
+            created: number;
+            /** Duplicate */
+            duplicate: number;
+            /** Duplicate In File */
+            duplicate_in_file: number;
+            /** Invalid */
+            invalid: number;
+            /** Not Eligible */
+            not_eligible: number;
+            /** Ready */
+            ready: number;
+            /** Rows */
+            rows: number;
+            /** Unavailable */
+            unavailable: number;
+        };
         /** AgentLeadCreate */
         AgentLeadCreate: {
             /** Mobile */
@@ -7330,6 +7610,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Last Resubmitted At */
+            last_resubmitted_at: string | null;
             /** Mobile */
             mobile: string;
             /** Name */
@@ -7340,6 +7622,8 @@ export interface components {
             requirement?: {
                 [key: string]: unknown;
             } | null;
+            /** Resubmit Count */
+            resubmit_count: number;
             /** Resubmittable */
             resubmittable: boolean;
             /**
@@ -7738,7 +8022,7 @@ export interface components {
          *     `services/fee_cashbacks.py` (FR-6.6 processing-fee cashback).
          * @enum {string}
          */
-        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "contact_history_viewed" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded" | "contest_created" | "contest_updated" | "contest_submitted" | "contest_deleted" | "contest_approved" | "contest_rejected" | "contest_cancelled" | "contest_went_live" | "contest_ended" | "contest_recalculated" | "contest_finalized" | "contest_prize_payout_requested" | "contest_prize_marked_paid";
+        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "contact_history_viewed" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded" | "contest_created" | "contest_updated" | "contest_submitted" | "contest_deleted" | "contest_approved" | "contest_rejected" | "contest_cancelled" | "contest_went_live" | "contest_ended" | "contest_recalculated" | "contest_finalized" | "contest_prize_payout_requested" | "contest_prize_marked_paid" | "agent_leads_bulk_submitted" | "commission_rate_proposed" | "commission_rate_set" | "commission_rate_approved" | "commission_rate_rejected" | "commission_rate_withdrawn";
         /** AuditLogListResponse */
         AuditLogListResponse: {
             /** Entries */
@@ -8571,6 +8855,99 @@ export interface components {
              */
             payout_id: string;
         };
+        /** CommissionRateApprove */
+        CommissionRateApprove: {
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * CommissionRateInput
+         * @description Propose (Sub Admin) or set (platform Admin) a product's rate.
+         */
+        CommissionRateInput: {
+            /** Amount Paise */
+            amount_paise?: number | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "percent" | "fixed";
+            /** Note */
+            note?: string | null;
+            /** Percent Bps */
+            percent_bps?: number | null;
+        };
+        /** CommissionRateListResponse */
+        CommissionRateListResponse: {
+            /** Products */
+            products: components["schemas"]["ProductCommissionRates"][];
+        };
+        /** CommissionRateRead */
+        CommissionRateRead: {
+            /** Amount Paise */
+            amount_paise: number | null;
+            /** Checker Name */
+            checker_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Name */
+            created_by_name: string | null;
+            /**
+             * Created By Role
+             * @enum {string}
+             */
+            created_by_role: "admin" | "sub_admin";
+            /**
+             * Created By Uuid
+             * Format: uuid
+             */
+            created_by_uuid: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Mine */
+            is_mine: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "percent" | "fixed";
+            /**
+             * Loan Type Id
+             * Format: uuid
+             */
+            loan_type_id: string;
+            /** Note */
+            note: string | null;
+            /** Percent Bps */
+            percent_bps: number | null;
+            /** Review Note */
+            review_note: string | null;
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending_approval" | "approved" | "rejected" | "superseded" | "withdrawn";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /** CommissionRateReject */
+        CommissionRateReject: {
+            /** Note */
+            note: string;
+        };
         /** CommissionRead */
         CommissionRead: {
             /** Agent Code */
@@ -9347,8 +9724,11 @@ export interface components {
              * Format: uuid
              */
             agent_profile_uuid: string;
+            /** Basis Amount Paise */
+            basis_amount_paise?: number | null;
             /** Business Line */
             business_line: string;
+            commission_rate?: components["schemas"]["EligibleDealCommissionRate"] | null;
             /**
              * Deal Type
              * @enum {string}
@@ -9366,6 +9746,36 @@ export interface components {
              * Format: uuid
              */
             lead_uuid: string;
+            /** Loan Type Id */
+            loan_type_id?: string | null;
+            /** Product Label */
+            product_label?: string | null;
+            /** Suggested Amount Paise */
+            suggested_amount_paise?: number | null;
+            /** Suggestion Basis */
+            suggestion_basis?: ("sanctioned" | "requested" | "fixed") | null;
+        };
+        /**
+         * EligibleDealCommissionRate
+         * @description The product's approved indicative rate (CS-028) at the time of reading.
+         */
+        EligibleDealCommissionRate: {
+            /** Amount Paise */
+            amount_paise: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "percent" | "fixed";
+            /** Note */
+            note: string | null;
+            /** Percent Bps */
+            percent_bps: number | null;
         };
         /** EligibleDealListResponse */
         EligibleDealListResponse: {
@@ -11011,7 +11421,7 @@ export interface components {
          * NotificationType
          * @enum {string}
          */
-        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "agent_lead_expiry_reminder" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed" | "contest_submitted" | "contest_reviewed" | "contest_live" | "contest_won";
+        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "agent_lead_expiry_reminder" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed" | "contest_submitted" | "contest_reviewed" | "contest_live" | "contest_won" | "commission_rate_submitted" | "commission_rate_reviewed";
         /** OfferCreate */
         OfferCreate: {
             audience_rules?: components["schemas"]["AudienceRules"];
@@ -11533,6 +11943,28 @@ export interface components {
          * @enum {string}
          */
         ProductCategory: "loan" | "credit_card" | "insurance";
+        /**
+         * ProductCommissionRates
+         * @description One loan product: its approved rate, any proposal awaiting approval,
+         *     and up to 20 earlier entries (newest first).
+         */
+        ProductCommissionRates: {
+            current: components["schemas"]["CommissionRateRead"] | null;
+            /** History */
+            history: components["schemas"]["CommissionRateRead"][];
+            /**
+             * Loan Type Id
+             * Format: uuid
+             */
+            loan_type_id: string;
+            pending: components["schemas"]["CommissionRateRead"] | null;
+            /** Product Active */
+            product_active: boolean;
+            /** Product Label */
+            product_label: string;
+            /** Product Slug */
+            product_slug: string;
+        };
         /** ProductFormDefinition */
         ProductFormDefinition: {
             /** Sections */
@@ -14172,6 +14604,8 @@ export interface components {
             last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
             /** Last Interest Level */
             last_interest_level?: ("hot" | "warm" | "cold") | null;
+            /** Last Resubmitted At */
+            last_resubmitted_at?: string | null;
             latest_request?: components["schemas"]["LeadRequestSummary"] | null;
             /**
              * Loan Applications
@@ -14206,6 +14640,11 @@ export interface components {
             requirement?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Resubmit Count
+             * @default 0
+             */
+            resubmit_count: number;
             /**
              * Site Visits
              * @default []
@@ -14250,6 +14689,8 @@ export interface components {
             last_disposition?: ("connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "callback_requested" | "not_interested") | null;
             /** Last Interest Level */
             last_interest_level?: ("hot" | "warm" | "cold") | null;
+            /** Last Resubmitted At */
+            last_resubmitted_at?: string | null;
             latest_request?: components["schemas"]["LeadRequestSummary"] | null;
             /** Loan Statuses */
             loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold")[];
@@ -14264,6 +14705,11 @@ export interface components {
             requirement?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Resubmit Count
+             * @default 0
+             */
+            resubmit_count: number;
             /**
              * Status
              * @enum {string}
@@ -18170,6 +18616,26 @@ export interface operations {
             };
         };
     };
+    commission_rates_api_v1_agent_commission_rates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentCommissionRatesResponse"];
+                };
+            };
+        };
+    };
     earnings_api_v1_agent_earnings_get: {
         parameters: {
             query?: {
@@ -18333,6 +18799,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentLeadRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_create_leads_api_v1_agent_leads_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentLeadBulkRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentLeadBulkResponse"];
                 };
             };
             /** @description Validation Error */
@@ -20472,6 +20971,162 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JourneyContactsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_rates_api_v1_commission_rates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionRateListResponse"];
+                };
+            };
+        };
+    };
+    set_rate_api_v1_commission_rates__loan_type_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                loan_type_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommissionRateInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductCommissionRates"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_rate_api_v1_commission_rates__rate_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CommissionRateApprove"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductCommissionRates"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_rate_api_v1_commission_rates__rate_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommissionRateReject"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductCommissionRates"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_rate_api_v1_commission_rates__rate_id__withdraw_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductCommissionRates"];
                 };
             };
             /** @description Validation Error */

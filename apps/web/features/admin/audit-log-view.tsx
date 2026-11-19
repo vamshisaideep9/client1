@@ -422,6 +422,12 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   contest_finalized: { label: "Contest winners confirmed", icon: Trophy, tone: "bg-success/10 text-success" },
   contest_prize_payout_requested: { label: "Contest prize payout requested", icon: Wallet, tone: "bg-loans-soft text-brand-link" },
   contest_prize_marked_paid: { label: "Contest prize marked paid", icon: IndianRupee, tone: "bg-success/10 text-success" },
+  agent_leads_bulk_submitted: { label: "Agent bulk lead upload", icon: ClipboardList, tone: "bg-loans-soft text-brand-link" },
+  commission_rate_proposed: { label: "Commission rate proposed", icon: IndianRupee, tone: "bg-loans-soft text-brand-link" },
+  commission_rate_set: { label: "Commission rate set", icon: IndianRupee, tone: "bg-success/10 text-success" },
+  commission_rate_approved: { label: "Commission rate approved", icon: BadgeCheck, tone: "bg-success/10 text-success" },
+  commission_rate_rejected: { label: "Commission rate rejected", icon: Ban, tone: "bg-muted text-text-secondary" },
+  commission_rate_withdrawn: { label: "Commission rate withdrawn", icon: CircleSlash, tone: "bg-muted text-text-secondary" },
   vehicle_arrangement_updated: {
     label: "Vehicle arrangement updated",
     icon: CarFront,

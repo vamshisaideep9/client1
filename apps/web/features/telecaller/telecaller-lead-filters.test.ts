@@ -23,6 +23,8 @@ function lead(overrides: Partial<TelecallerLead>): TelecallerLead {
     last_disposition: null,
     next_follow_up_at: null,
     requirement: null,
+    resubmit_count: 0,
+    last_resubmitted_at: null,
     ...overrides,
   };
 }

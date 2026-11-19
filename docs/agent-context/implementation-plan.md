@@ -156,6 +156,9 @@ separately and needs no further API change.
   amount (fixed amount, or percent of the sanctioned amount — requested
   when none — in integer paise rounded half up, capped); the commission is
   still entered by the Admin. Rates appear on no public or Client read.
+- *Contract.* `packages/contracts` regenerated; the web app received only
+  the type-only label / icon entries and test fixtures the new enum values
+  and required lead fields need. Decision recorded as CS-028.
 
 **In review — Batch 1: UI fixes (web)** (2026-11-19; PR
 [#387](https://github.com/brollysolutions/client1/pull/387), mirror

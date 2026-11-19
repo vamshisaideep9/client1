@@ -26,6 +26,8 @@ function lead(overrides: Partial<AgentLead> = {}): AgentLead {
     registered: false,
     editable: true,
     resubmittable: false,
+    resubmit_count: 0,
+    last_resubmitted_at: null,
     expires_at: null,
     expired_at: null,
     created_at: "2026-11-01T00:00:00Z",
