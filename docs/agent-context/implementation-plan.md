@@ -159,6 +159,19 @@ separately and needs no further API change.
 - *Contract.* `packages/contracts` regenerated; the web app received only
   the type-only label / icon entries and test fixtures the new enum values
   and required lead fields need. Decision recorded as CS-028.
+- *Final review checkpoint (2026-11-20).* The unused-product deletion
+  regression passes. The original ownership migration's backfill was run
+  against transaction-local pre-ledger rows: the originating Agent still
+  reads their notes and a claiming Agent cannot read the public enquiry's
+  email or notes. Review found that account closure retained the new lead
+  email. Additive migration `f5b7d9e1a3c4` extends the existing confined
+  closure function to erase email from the deleted person's active and
+  historical leads (mobile or Client profile), preserve third-party
+  prospects, and remember the assignee it clears. No new grants or policy.
+  Upgrade / downgrade / upgrade succeeds with one head. Final database
+  regression/full-suite checks and PR delivery are in progress; the next
+  slice is Batch 2 web. Fresh web lint, typecheck and 1,106 unit tests pass;
+  contract regeneration has no diff. These are checks, not a release claim.
 
 **In review — Batch 1: UI fixes (web)** (2026-11-19; PR
 [#387](https://github.com/brollysolutions/client1/pull/387), mirror

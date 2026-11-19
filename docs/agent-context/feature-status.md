@@ -5,6 +5,17 @@ Status: **Derived living implementation ledger**
 **In progress — Batch 2: Agent leads (API slice)** (2026-11-19; CS-028;
 client-reported), branch `feat/agent-lead-intake-api` stacked on batch 1.
 No requirement-percentage change.
+- Final review (2026-11-20): legacy ownership-backfill compatibility is
+  covered against pre-ledger rows; the originating Agent keeps their notes
+  and claiming a public enquiry does not expose its old fields. The pending
+  unused-product deletion test passes. A newly found deletion gap is fixed
+  by additive migration `f5b7d9e1a3c4`: the deleted person's lead email is
+  erased, including closed history and old-mobile profile-bound journeys;
+  other people's prospects remain. The cleared assignee is remembered.
+  Migration up / down / up succeeds and there is one head. Final API
+  verification and both PRs are pending. Fresh web lint/typecheck and all
+  1,106 unit tests pass; regenerated contracts have no diff. Next: Batch 2
+  web after API delivery.
 - Lead form fields (`requirement.email`, `requirement.property_type`) and
   the per-role requirement allowlist as described in
   `implementation-plan.md` (Batch 2). Role matrix tests in

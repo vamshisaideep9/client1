@@ -14,12 +14,17 @@ ownership ledger, Admin field visibility and the existing reads apply:
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from httpx import AsyncClient
 from pydantic import ValidationError
+from sqlalchemy import text
 
 from app.models.lead import Lead, LeadStatus
 from app.models.property import Property, PropertySubtype
@@ -393,6 +398,71 @@ def test_role_matrix_of_the_shared_requirement_allowlist() -> None:
         "notes": "Agent note",
         "interest_title": "Home Loan",
     }
+
+
+@pytest.mark.asyncio
+async def test_legacy_ownership_backfill_preserves_the_originating_agents_notes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Run the original backfill against pre-ledger rows, then use today's read.
+
+    The transaction-local table shadows leads; the rest of the historical
+    migration's DDL is captured rather than reapplied to the current database.
+    An existing public enquiry must not become readable merely when claimed.
+    """
+    import app.db.session as session_module
+
+    config = Config()
+    config.set_main_option("script_location", str(Path(__file__).parents[2] / "alembic"))
+    migration = ScriptDirectory.from_config(config).get_revision("bb23cc45dd67").module
+    statements: list[str] = []
+    monkeypatch.setattr(migration.op, "execute", lambda sql: statements.append(str(sql)))
+    monkeypatch.setattr(migration.op, "add_column", lambda *_args, **_kwargs: None)
+    migration.upgrade()
+    [backfill] = [sql for sql in statements if sql.lstrip().startswith("UPDATE leads AS l")]
+
+    agent_uuid = uuid.uuid4()
+    async with session_module.AsyncSessionLocal() as db:
+        await db.execute(
+            text(
+                "CREATE TEMP TABLE leads (id integer, name text, "
+                "origin_agent_profile_uuid uuid, client_profile_uuid uuid, "
+                "requirement jsonb, detail_ownership jsonb) ON COMMIT DROP"
+            )
+        )
+        await db.execute(
+            text(
+                "INSERT INTO leads VALUES "
+                "(1, 'Legacy introduction', :agent, NULL, CAST(:own AS jsonb), '{}'), "
+                "(2, 'Public enquiry', NULL, NULL, CAST(:public AS jsonb), '{}')"
+            ),
+            {
+                "agent": agent_uuid,
+                "own": json.dumps(
+                    {"notes": "Original Agent note", "budget": "Unknown legacy detail"}
+                ),
+                "public": json.dumps({"notes": "Public note", "email": "public@example.com"}),
+            },
+        )
+        await db.execute(text(backfill))
+        rows = (await db.execute(text("SELECT * FROM leads ORDER BY id"))).mappings().all()
+        original = Lead(
+            origin_agent_profile_uuid=agent_uuid,
+            requirement=rows[0]["requirement"],
+            detail_ownership=rows[0]["detail_ownership"],
+        )
+        assert visible_requirement(original, "agent", agent_profile_uuid=agent_uuid) == {
+            "notes": "Original Agent note"
+        }
+        assert visible_requirement(original, "agent", agent_profile_uuid=uuid.uuid4()) is None
+        # Claiming the row after the backfill does not transfer its old fields.
+        claimed = Lead(
+            origin_agent_profile_uuid=agent_uuid,
+            requirement=rows[1]["requirement"],
+            detail_ownership=rows[1]["detail_ownership"],
+        )
+        assert visible_requirement(claimed, "agent", agent_profile_uuid=agent_uuid) is None
+        await db.rollback()
 
 
 @pytest.mark.asyncio

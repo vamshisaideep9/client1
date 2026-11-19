@@ -529,3 +529,25 @@ async def test_eligible_deals_carry_the_rate_and_suggestion(client: AsyncClient)
     assert property_row["commission_rate"] is None
     assert property_row["loan_type_id"] is None
     assert property_row["suggested_amount_paise"] is None
+
+
+async def test_deleting_an_unused_product_removes_its_rates(client: AsyncClient) -> None:
+    from sqlalchemy import func
+
+    from app.models.commission_rate import ProductCommissionRate
+
+    product = await _product()
+    admin, _ = await _admin()
+    maker, _ = await _sub_admin()
+    await client.put(f"{URL}/{product.id}", json=_percent(100), headers=admin)
+    await client.put(f"{URL}/{product.id}", json=_percent(120), headers=maker)
+
+    res = await client.delete(f"/api/v1/admin/loan-types/{product.id}", headers=admin)
+    assert res.status_code == 204, res.text
+    async with db_session.AsyncSessionLocal() as db:
+        remaining = await db.scalar(
+            select(func.count())
+            .select_from(ProductCommissionRate)
+            .where(ProductCommissionRate.loan_type_id == product.id)
+        )
+    assert remaining == 0

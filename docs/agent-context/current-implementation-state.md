@@ -980,9 +980,8 @@ Evidence is listed in `feature-status.md` under Batch G.
 ### CS-028 — Agent lead form fields, sticky resubmission, bulk submit and product commission rates
 
 **Decision (2026-11-19, client-reported batch 2 "Agent leads"; both lines;
-amends CS-017's resubmission and the FR-8.1 commission entry; the derived
-details below were chosen during implementation and are flagged for user
-confirmation):**
+amends CS-017's resubmission and the FR-8.1 commission entry; the detailed
+Round 2 brief and stacked-PR delivery were confirmed on 2026-11-20):**
 
 - *Lead form.* An Agent's lead is name, mobile, an optional email, the
   requirement (loans: a loan product; real estate: a property type, with or
@@ -991,6 +990,12 @@ confirmation):**
   requirement, owned by the Agent in the detail-ownership ledger; the Agent
   may change or remove the email and notes while the lead is editable; the
   product, listing and property type are fixed at introduction.
+- *Email deletion.* Account deletion erases the person's lead email from
+  active and historical journeys selected by their verified mobile or
+  Client profile. Deleting a referring Agent does not erase another
+  person's contact. The existing financial-record retention window stays
+  separate; a deleted person's lead email is erased immediately, rather
+  than retained until a financial purge.
 - *Who reads a lead's requirement.* One allowlist for every read: the
   originating Agent sees only what they wrote (an Agent who claimed an
   existing open enquiry never reads what the person, a Telecaller or the
