@@ -99,6 +99,8 @@ change; no requirement or completion-percentage change). Branch
   public navbar need nothing; the public navbar's Radix NavigationMenu
   opens on mouse movement only. The one raw `:hover` rule (announcement
   ticker pause) now sits behind the same media query.
+- *Telecaller home*: heading `Hi, {first name}` (falls back to "Hi there")
+  with "Welcome to your workspace.".
 
 **In progress — Batch G: contests (CS-027)** (2026-11-17; user-approved
 stakeholder feedback, batch G of A–G, the last batch; new module, both

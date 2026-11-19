@@ -17,6 +17,7 @@ import {
 } from "@/features/dashboard/dashboard-ui";
 import { ContestHomeCard } from "@/features/contests/contest-home-card";
 import { useLine } from "@/features/dashboard/line-provider";
+import { useMe } from "@/features/dashboard/me-provider";
 import { getNotifications, type AppNotification } from "@/lib/notifications";
 import { getTelecallerHome, type TelecallerHome as TelecallerHomeData } from "@/lib/telecaller-api";
 
@@ -40,11 +41,18 @@ function formatDateTime(iso: string): string {
 
 type Status = "loading" | "ready" | "error";
 
+/** "Hi, Asha" once the profile is known; "Hi there" until then or without a name. */
+export function greeting(firstName: string | null | undefined): string {
+  const name = firstName?.trim();
+  return name ? `Hi, ${name}` : "Hi there";
+}
+
 // Telecaller landing page: follow-ups due today, assigned-lead counts, and a
 // notifications preview. Mirrors AdminHome's minimal-landing posture — this
 // slice ships the lead-follow-up flow only.
 export function TelecallerHome() {
   const { activeLine } = useLine();
+  const { me } = useMe();
   const [home, setHome] = React.useState<TelecallerHomeData | null>(null);
   const [notifications, setNotifications] = React.useState<AppNotification[]>([]);
   const [status, setStatus] = React.useState<Status>("loading");
@@ -97,8 +105,8 @@ export function TelecallerHome() {
   return (
     <DashboardPage>
       <DashboardHeader
-        title="Lead follow-up workspace"
-        description="Work the most urgent callbacks first, then keep every assigned lead moving."
+        title={greeting(me?.firstName)}
+        description="Welcome to your workspace."
         actions={<DashboardTextLink href="/dashboard/leads">Open lead queue</DashboardTextLink>}
       />
 
