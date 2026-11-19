@@ -859,6 +859,8 @@ async def list_assigned(
             assigned_telecaller_staff_code=staff.staff_code if staff else None,
             created_at=lead.created_at,
             updated_at=lead.updated_at,
+            resubmit_count=lead.resubmit_count,
+            last_resubmitted_at=lead.last_resubmitted_at,
         )
         for lead, staff, user in rows
     ]

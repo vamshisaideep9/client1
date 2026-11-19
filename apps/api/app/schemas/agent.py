@@ -207,6 +207,10 @@ class AgentLeadRead(BaseModel):
     # True when the originating Agent may resubmit this expired lead for a
     # fresh window (2026-11-14 amendment to FR-4.6).
     resubmittable: bool
+    # CS-028: how often and when the Agent last resubmitted it (0 / null
+    # when never), for a "Resubmitted ×N" badge and client-side filters.
+    resubmit_count: int
+    last_resubmitted_at: datetime | None
     expires_at: datetime | None
     expired_at: datetime | None
     created_at: datetime

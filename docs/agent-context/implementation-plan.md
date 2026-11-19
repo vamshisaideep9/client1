@@ -93,6 +93,23 @@ separately and needs no further API change.
   email to notes and labels; a Client's lead details never show it.
   Unknown keys pass no read. Employees, Sub Admin team reads and the Agent
   history carry no requirement at all (unchanged).
+- *Resubmitted leads back to the same Telecaller.* Migration
+  `c2e4a6b8d0f1` adds `leads.last_telecaller_profile_uuid` (FK, `ON DELETE
+  SET NULL`) and `leads.last_resubmitted_at`, guarded by trigger
+  `trg_leads_last_telecaller_guard` (a new lead carries neither; the
+  Telecaller memory may only become the assignee being cleared in the same
+  update; the resubmission time changes only with a `resubmit_count`
+  increment). The expiry job (same set-based UPDATE), the retry job's
+  stale-assignee repair and an Admin release record the cleared assignee.
+  `resubmit_agent_lead` gives an unassigned lead straight back to that
+  Telecaller while they are an active Telecaller on the lead's line or both
+  lines (`LEAD_ASSIGNED` audit mode `sticky_resubmit`, the usual
+  notification, round-robin cursor untouched), otherwise round robin as
+  before. `resubmit_count` and `last_resubmitted_at` are on the Agent,
+  Telecaller (list, detail, patch) and Admin (unassigned, assigned) lead
+  reads. A lead the 15-minute retry job already gave to another Telecaller
+  before the resubmission keeps that Telecaller (unchanged rule: a lead
+  being worked is not interrupted).
 
 **In review — Batch 1: UI fixes (web)** (2026-11-19; PR
 [#387](https://github.com/brollysolutions/client1/pull/387), mirror

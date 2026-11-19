@@ -222,6 +222,8 @@ async def list_leads(
                 loan_statuses=signals.loan_statuses,
                 facets=facets(signals),
                 transactions=transaction_summary(signals.transactions, modes, lead.business_line),
+                resubmit_count=lead.resubmit_count,
+                last_resubmitted_at=lead.last_resubmitted_at,
                 **project_values(
                     modes,
                     "lead",
@@ -320,6 +322,8 @@ async def get_lead(
         loan_statuses=signals.loan_statuses,
         facets=facets(signals),
         transactions=transaction_summary(signals.transactions, modes, lead.business_line),
+        resubmit_count=lead.resubmit_count,
+        last_resubmitted_at=lead.last_resubmitted_at,
         activities=[to_activity_read(a) for a in activities],
         loan_applications=loan_applications,
         financial_enquiries=financial_enquiries,
@@ -367,6 +371,8 @@ async def patch_lead(
         next_follow_up_at=activity.follow_up_at if activity else None,
         created_at=lead.created_at,
         updated_at=lead.updated_at,
+        resubmit_count=lead.resubmit_count,
+        last_resubmitted_at=lead.last_resubmitted_at,
         **project_values(
             modes,
             "lead",

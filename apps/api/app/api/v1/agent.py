@@ -102,6 +102,8 @@ def _to_agent_lead_read(
             lead.status in {"new", "assigned"} and lead.agent_expired_at is None and within_window
         ),
         resubmittable=is_agent_lead_resubmittable(lead),
+        resubmit_count=lead.resubmit_count,
+        last_resubmitted_at=lead.last_resubmitted_at,
         expires_at=lead.expires_at,
         expired_at=lead.agent_expired_at,
         created_at=lead.created_at,

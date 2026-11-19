@@ -13,6 +13,16 @@ No requirement-percentage change.
   neighbouring lead suites (Agent, Telecaller, Admin assign / release,
   ownership, Employee, assignment, leads RLS, facets, history, team
   manager) 231 passed.
+- Sticky resubmission and resubmit visibility (migration `c2e4a6b8d0f1`,
+  up / down / up on the scratch database): new
+  `test_agent_lead_sticky_resubmit.py` 9 passed (returns to the last
+  Telecaller with the cursor unmoved; falls back when they are inactive or
+  deleted; off-line Telecallers never qualify, dual-line ones do; a lead
+  the pool already reassigned keeps its Telecaller; expiry, stale repair
+  and Admin release record the cleared assignee; the trigger refuses the
+  three forged writes; Telecaller and Admin reads show the count). With
+  the expiry system test and the Agent, Telecaller, Admin assign / release,
+  assignment, requirement-key and leads RLS suites: 165 passed.
 - Evidence (2026-11-19, `python:3.13.14-slim-trixie` container on
   `client1_default`, scratch database migrated to head): new
   `test_agent_lead_requirement_keys.py` plus `test_agent_api.py` and

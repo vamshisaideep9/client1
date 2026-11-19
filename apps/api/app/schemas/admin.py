@@ -181,6 +181,9 @@ class AdminLeadRead(BaseModel):
     business_line: Literal["loans", "real_estate"]
     origin: Literal["direct", "agent"]
     created_at: datetime
+    # CS-028: Agent resubmissions after the window ended (0 / null when never).
+    resubmit_count: int = 0
+    last_resubmitted_at: datetime | None = None
 
 
 class AdminAssignedLeadRead(BaseModel):
@@ -195,6 +198,9 @@ class AdminAssignedLeadRead(BaseModel):
     assigned_telecaller_staff_code: str | None
     created_at: datetime
     updated_at: datetime
+    # CS-028: Agent resubmissions after the window ended (0 / null when never).
+    resubmit_count: int = 0
+    last_resubmitted_at: datetime | None = None
 
 
 # ---------------------------------------------------------------------------
