@@ -68,7 +68,9 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress → In review — Batch 1: UI fixes (web)** (2026-11-19;
+**In review — Batch 1: UI fixes (web)** (2026-11-19; PR
+[#387](https://github.com/brollysolutions/client1/pull/387), mirror
+vamshisaideep9/client1#88;
 client-reported fixes; web only; no API, contract, migration or dependency
 change; no requirement or completion-percentage change). Branch
 `fix/dialog-autoclose-and-mobile-hover` from `upstream/main` `e4d7c40e`.

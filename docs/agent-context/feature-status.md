@@ -2,8 +2,9 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress → In review — Batch 1: UI fixes (web)** (2026-11-19;
-client-reported), branch `fix/dialog-autoclose-and-mobile-hover` from
+**In review — Batch 1: UI fixes (web)** (2026-11-19; client-reported;
+PR [#387](https://github.com/brollysolutions/client1/pull/387), mirror
+vamshisaideep9/client1#88), branch `fix/dialog-autoclose-and-mobile-hover` from
 `upstream/main` `e4d7c40e`. No requirement-percentage change.
 - Dialog auto-close root causes, mobile hover gating, Telecaller greeting
   and PAN-card name copy as described in `implementation-plan.md`
