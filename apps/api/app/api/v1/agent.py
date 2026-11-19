@@ -7,22 +7,27 @@ role-gated router in this codebase).
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, date, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cache.redis_keys import RedisCache
+from app.cache.redis_keys import TTL_AGENT_LEAD_BULK_RATE, RedisCache, agent_lead_bulk_rate_key
 from app.core import field_crypto
+from app.core.config import settings
 from app.core.deps import CurrentUser, get_cache, require_agent
 from app.db.session import get_db
 from app.models.agent_payout_details import AgentPayoutDetails
+from app.models.audit_log import AuditAction
 from app.models.field_visibility import FieldTargetRole, FieldVisibilityMode
 from app.models.lead import Lead
 from app.models.lead_intake_attempt import IntakeActorType
 from app.schemas.agent import (
     AgentHomeResponse,
+    AgentLeadBulkRequest,
+    AgentLeadBulkResponse,
     AgentLeadCreate,
     AgentLeadHistoryRead,
     AgentLeadRead,
@@ -43,7 +48,7 @@ from app.schemas.commissions import (
     DealType,
 )
 from app.schemas.eligibility import EligibilitySummary, IntakeAttemptListResponse
-from app.services import agent_dashboard, lead_intake_attempts
+from app.services import agent_dashboard, agent_lead_bulk, lead_intake_attempts
 from app.services import agent_payout_cheque as payout_cheque
 from app.services import agent_payout_details as payout_details
 from app.services.agent import (
@@ -62,11 +67,14 @@ from app.services.agent import (
     resubmit_lead_for_agent,
     update_lead_for_agent,
 )
+from app.services.audit_log import record as record_audit
 from app.services.eligibility import agent_lead_eligibility, reason_label
 from app.services.field_visibility import effective_modes, project_values
 from app.services.lead_details import visible_requirement
 from app.services.lead_signals import EMPTY_SIGNALS, LeadSignals, facets, lead_signals
 from app.services.leads import is_agent_lead_resubmittable
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -186,6 +194,74 @@ async def create_lead(
         ) from exc
     modes = await effective_modes(db, FieldTargetRole.AGENT)
     return _to_agent_lead_read(lead, modes, agent_profile_uuid=agent_profile_uuid)
+
+
+@router.post("/leads/bulk", response_model=AgentLeadBulkResponse)
+async def bulk_create_leads(
+    payload: AgentLeadBulkRequest,
+    response: Response,
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+    cache: RedisCache = Depends(get_cache),
+) -> AgentLeadBulkResponse:
+    """Validate (``dry_run``) or submit up to 200 parsed spreadsheet rows.
+
+    Each submitted row goes through the single-introduction path in its own
+    transaction; the response reports every row's outcome. A dry run checks
+    the rows only (format, repeated numbers, product / property type) and
+    never looks up, creates or records anything about a number.
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    agent_profile_uuid = _agent_profile_uuid(current_user)
+    business_line = current_user.business_line
+    if business_line not in ("loans", "real_estate"):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Your agent profile has no business line set."
+        )
+    mode = "dry_run" if payload.dry_run else "submit"
+    limit = (
+        settings.AGENT_LEAD_BULK_DRY_RUNS_PER_HOUR
+        if payload.dry_run
+        else settings.AGENT_LEAD_BULK_SUBMITS_PER_HOUR
+    )
+    count = await cache.incr_with_expire(
+        agent_lead_bulk_rate_key(mode, str(agent_profile_uuid)), TTL_AGENT_LEAD_BULK_RATE
+    )
+    if count > limit:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "Too many bulk uploads. Please try again later.",
+        )
+
+    results = await agent_lead_bulk.run_bulk(
+        db,
+        payload.rows,
+        dry_run=payload.dry_run,
+        agent_profile_uuid=agent_profile_uuid,
+        business_line=business_line,
+    )
+    totals = agent_lead_bulk.totals(results)
+    if not payload.dry_run:
+        # One audit entry per real upload, counts only (no mobile, name or
+        # email). The leads are already committed row by row, so a failure
+        # here is logged rather than turned into an error the Agent would
+        # answer by uploading again.
+        try:
+            await record_audit(
+                db,
+                action=AuditAction.AGENT_LEADS_BULK_SUBMITTED,
+                entity_type="agent_profile",
+                entity_uuid=agent_profile_uuid,
+                actor_uuid=current_user.id,
+                actor_role="agent",
+                business_line=business_line,
+                detail=totals.model_dump(),
+            )
+            await db.commit()
+        except Exception:
+            logger.exception("agent.bulk_audit_failed agent_profile=%s", agent_profile_uuid)
+            await db.rollback()
+    return AgentLeadBulkResponse(dry_run=payload.dry_run, rows=results, totals=totals)
 
 
 @router.get("/leads", response_model=list[AgentLeadRead], response_model_exclude_unset=True)

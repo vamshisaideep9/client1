@@ -23,6 +23,16 @@ No requirement-percentage change.
   three forged writes; Telecaller and Admin reads show the count). With
   the expiry system test and the Agent, Telecaller, Admin assign / release,
   assignment, requirement-key and leads RLS suites: 165 passed.
+- Bulk lead submit (enum migration `d3f5b7c9e1a2`): new
+  `test_agent_lead_bulk.py` 25 passed (mobile normalisation table,
+  per-line requirement matching and ambiguity, dry run creates and records
+  nothing, mixed created / duplicate / invalid / in-file / already
+  introduced / own-expired rows with recorded attempts and a counts-only
+  audit, a failing row leaves the others committed, wrong-line
+  requirements invalid, more than 200 rows / unknown columns 422 without
+  using the budget, per-Agent submit and dry-run limits, non-Agents 403);
+  with the Agent, refinements, eligibility, requirement-key, sticky and
+  audit-log suites 153 passed.
 - Evidence (2026-11-19, `python:3.13.14-slim-trixie` container on
   `client1_default`, scratch database migrated to head): new
   `test_agent_lead_requirement_keys.py` plus `test_agent_api.py` and

@@ -82,6 +82,13 @@ class Settings(BaseSettings):
     # Fixed Agent-attribution window for newly attributed leads. The deadline
     # is stamped once, so changing this affects future leads only.
     AGENT_LEAD_EXPIRY_DAYS: int = 30
+    # CS-028 Agent bulk lead submit (POST /api/v1/agent/leads/bulk, at most
+    # 200 rows per call), hourly windows per Agent profile. A real submit
+    # creates leads and records rejected attempts, so its budget is small; a
+    # dry run only validates the rows (format, file duplicates, product /
+    # property type) and has its own, larger budget.
+    AGENT_LEAD_BULK_SUBMITS_PER_HOUR: int = 5
+    AGENT_LEAD_BULK_DRY_RUNS_PER_HOUR: int = 30
 
     # Public agent-application intake (POST /api/v1/agent-applications) abuse
     # caps. Per-IP submit cap is a separate hourly window from the shared
@@ -369,6 +376,11 @@ class Settings(BaseSettings):
     def _guard_agent_lead_expiry(self) -> "Settings":
         if self.AGENT_LEAD_EXPIRY_DAYS <= 0:
             raise ValueError("AGENT_LEAD_EXPIRY_DAYS must be greater than zero.")
+        if (
+            self.AGENT_LEAD_BULK_SUBMITS_PER_HOUR <= 0
+            or self.AGENT_LEAD_BULK_DRY_RUNS_PER_HOUR <= 0
+        ):
+            raise ValueError("Agent bulk lead limits must be greater than zero.")
         return self
 
     @model_validator(mode="after")

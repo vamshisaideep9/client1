@@ -180,6 +180,10 @@ class AuditAction(enum.StrEnum):
     CONTEST_FINALIZED = "contest_finalized"
     CONTEST_PRIZE_PAYOUT_REQUESTED = "contest_prize_payout_requested"
     CONTEST_PRIZE_MARKED_PAID = "contest_prize_marked_paid"
+    # CS-028 Agent bulk lead submit (migration d3f5b7c9e1a2), written by
+    # api/v1/agent.py once per non-dry-run upload: row counts per outcome
+    # only, never a mobile, name or email.
+    AGENT_LEADS_BULK_SUBMITTED = "agent_leads_bulk_submitted"
 
 
 _ev = lambda x: [e.value for e in x]  # noqa: E731

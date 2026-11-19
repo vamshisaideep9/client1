@@ -9,6 +9,7 @@ from uuid import UUID
 
 from pydantic import (
     BaseModel,
+    ConfigDict,
     EmailStr,
     Field,
     StringConstraints,
@@ -193,6 +194,113 @@ class AgentLeadUpdate(BaseModel):
         if "email" in self.requirement:
             self.requirement["email"] = normalise_lead_email(self.requirement["email"])
         return self
+
+
+# ---------------------------------------------------------------------------
+# Bulk lead submit (CS-028): the browser parses the spreadsheet and sends at
+# most 200 rows as JSON; the server never receives a file. Each row is
+# validated and, unless ``dry_run``, submitted through the same path as a
+# single introduction. Raw caps below only bound the request size; the
+# per-row business rules (name ≤ 100, email ≤ 254, description ≤ 1000) are
+# reported per row instead of failing the whole upload.
+# ---------------------------------------------------------------------------
+
+AGENT_LEAD_BULK_MAX_ROWS = 200
+
+BulkText = Annotated[str, Field(max_length=500)]
+
+
+class AgentLeadBulkRow(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # The row's own serial number from the sheet, echoed back as text.
+    sno: Annotated[str, Field(max_length=40)] | Annotated[int, Field(ge=0, le=10**9)] | None = None
+    name: BulkText | None = None
+    # +91XXXXXXXXXX, 91XXXXXXXXXX or a 10-digit Indian mobile; spaces,
+    # dashes, dots and brackets are ignored. A number cell may arrive as int.
+    mobile: Annotated[str, Field(max_length=40)] | Annotated[int, Field(ge=0, le=10**13)] | None = (
+        None
+    )
+    email: Annotated[str, Field(max_length=320)] | None = None
+    # Loans Agent: an active product's label or slug. Real-estate Agent: a
+    # property type's value or label. Case-insensitive.
+    requirement: Annotated[str, Field(max_length=200)] | None = None
+    # Stored as requirement.notes (at most 1000 characters).
+    description: Annotated[str, Field(max_length=4000)] | None = None
+
+
+class AgentLeadBulkRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # True: validate and report only; nothing is created or recorded.
+    dry_run: bool
+    rows: Annotated[
+        list[AgentLeadBulkRow], Field(min_length=1, max_length=AGENT_LEAD_BULK_MAX_ROWS)
+    ]
+
+
+AgentLeadBulkOutcomeLiteral = Literal[
+    # Dry run only: the row passed validation and would be submitted.
+    "ready",
+    # A new lead, or an open unclaimed enquiry for the number became theirs.
+    "created",
+    # The number was already one of this Agent's live leads (nothing changed
+    # beyond what a single re-submit would do).
+    "already_introduced",
+    # Turned away as a duplicate (CS-024 "already_linked").
+    "duplicate",
+    # Turned away by a rule (CS-024 "own_lead_window_ended": resubmit it).
+    "not_eligible",
+    # The same mobile appeared on an earlier row of this upload.
+    "duplicate_in_file",
+    "invalid",
+    # Capture was temporarily unavailable; the row can be retried.
+    "unavailable",
+]
+AgentLeadBulkFieldLiteral = Literal["sno", "name", "mobile", "email", "requirement", "description"]
+
+
+class AgentLeadBulkFieldError(BaseModel):
+    field: AgentLeadBulkFieldLiteral
+    message: str
+
+
+class AgentLeadBulkRowResult(BaseModel):
+    # Zero-based position in the request's ``rows``.
+    row_index: int
+    sno: str | None = None
+    outcome: AgentLeadBulkOutcomeLiteral
+    # The Agent's own input, normalised (E.164); null when invalid.
+    mobile: str | None = None
+    # The product / property type the requirement text matched.
+    requirement_label: str | None = None
+    # CS-024 reason code and label for duplicate / not_eligible rows; the
+    # same copy the Agent's attempts list already shows, never whose record
+    # it is.
+    reason: EligibilityReasonLiteral | None = None
+    reason_label: str | None = None
+    errors: list[AgentLeadBulkFieldError] = Field(default_factory=list)
+    lead_id: UUID | None = None
+    # For duplicate_in_file: the earlier row with the same mobile.
+    duplicate_of_row_index: int | None = None
+
+
+class AgentLeadBulkTotals(BaseModel):
+    rows: int
+    ready: int
+    created: int
+    already_introduced: int
+    duplicate: int
+    not_eligible: int
+    duplicate_in_file: int
+    invalid: int
+    unavailable: int
+
+
+class AgentLeadBulkResponse(BaseModel):
+    dry_run: bool
+    rows: list[AgentLeadBulkRowResult]
+    totals: AgentLeadBulkTotals
 
 
 class AgentLeadRead(BaseModel):

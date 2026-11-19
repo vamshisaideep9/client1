@@ -110,6 +110,23 @@ separately and needs no further API change.
   reads. A lead the 15-minute retry job already gave to another Telecaller
   before the resubmission keeps that Telecaller (unchanged rule: a lead
   being worked is not interrupted).
+- *Bulk lead submit.* `POST /api/v1/agent/leads/bulk` (Agents only, JSON
+  `{dry_run, rows[1..200]}`; the browser parses the sheet, no file reaches
+  the server). Rows: mobile normalised from `+91…`, `91…` or 10 digits
+  (spaces, dashes, dots, brackets ignored; must start 6-9), name, optional
+  email, description as notes, requirement text matched case-insensitively
+  to an active loan product (label or slug) or a property type (value or
+  label, plural accepted) on the Agent's own line; later repeats of a
+  mobile are `duplicate_in_file`. A dry run validates only and never looks
+  up, creates or records anything about a number. A real submit sends each
+  row through the single-introduction path in its own transaction
+  (outcomes `created`, `already_introduced`, `duplicate`,
+  `not_eligible`, `invalid`, `unavailable`, with the CS-024 reason labels
+  and attempt recording of a single submit). Hourly per-profile budgets
+  `AGENT_LEAD_BULK_SUBMITS_PER_HOUR` (5) and
+  `AGENT_LEAD_BULK_DRY_RUNS_PER_HOUR` (30); one `agent_leads_bulk_submitted`
+  audit entry per real upload with counts only (enum migration
+  `d3f5b7c9e1a2`).
 
 **In review — Batch 1: UI fixes (web)** (2026-11-19; PR
 [#387](https://github.com/brollysolutions/client1/pull/387), mirror
