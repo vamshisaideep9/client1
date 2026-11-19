@@ -5,14 +5,31 @@ Status: **Derived living implementation ledger**
 **In progress → In review — Batch 1: UI fixes (web)** (2026-11-19;
 client-reported), branch `fix/dialog-autoclose-and-mobile-hover` from
 `upstream/main` `e4d7c40e`. No requirement-percentage change.
-- Dialog auto-close root causes, mobile hover gating and the Telecaller greeting as described in
-  `implementation-plan.md` (Batch 1: UI fixes).
+- Dialog auto-close root causes, mobile hover gating, Telecaller greeting
+  and PAN-card name copy as described in `implementation-plan.md`
+  (Batch 1: UI fixes).
 - Reproduction (Playwright, `pnpm dev` on port 3167, mocked API, Sub Admin
   New contest form with typed values): clicking the form's own error toast
   closed the dialog and lost the input; clicking the overlay closed it; a
   401 followed by a `/auth/refresh` 500 signed the user out to `/`. A 401
   followed by a successful refresh, `visibilitychange` / `focus` events and
   choosing a Select option by touch left the same dialog node mounted.
+- Evidence (2026-11-19, this branch): `pnpm lint` and `pnpm typecheck`
+  pass; `pnpm test` 1106 passed (150 files; new `components/ui/dialog.test.tsx`
+  for `preventOutsideClose`, `isRefreshRejected` cases in `lib/auth.test.ts`,
+  `features/telecaller/telecaller-home.test.ts`). Playwright against
+  `pnpm dev` (port 3167, mocked API), 49 passed: new
+  `dialog-persistence.spec.ts` 4 (overlay and error-toast clicks keep the
+  typed contest form, Esc and Close still close it, a read-only detail
+  dialog still closes outside, a refresh 503 keeps the page and form, a
+  refresh 401 still signs out to `/`; tests 1 and 3 fail with the two fixes
+  reverted), `profile-menu-touch.spec.ts` 2 (tap opens and the menu stays
+  open at 390 px — fails without the fix; mouse hover still opens it),
+  `register-pan-name.spec.ts` 1, `telecaller-home-greeting.spec.ts` 1,
+  `settings-by-role.spec.ts` 6 (PAN wording for Clients only), plus
+  `contests-admin` 2, `contests-participant` 4, `contact-change` 10,
+  `sub-admin-teams` 6, `telecaller-request-workspace` 4,
+  `payout-gateway-simulator` 3, `staff-shell-quick-wins` 6.
 
 **In progress — Batch G PR 5: participant contests, home card and team
 progress (web)** (2026-11-17; CS-027), branch

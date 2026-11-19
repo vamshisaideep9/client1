@@ -101,6 +101,10 @@ change; no requirement or completion-percentage change). Branch
   ticker pause) now sits behind the same media query.
 - *Telecaller home*: heading `Hi, {first name}` (falls back to "Hi there")
   with "Welcome to your workspace.".
+- *Client name as per PAN card*: registration and the Client's settings
+  profile label the name fields "First name / Last name (as per PAN card)"
+  with one hint wired through `aria-describedby`. Copy only; staff and
+  Agent forms unchanged.
 
 **In progress — Batch G: contests (CS-027)** (2026-11-17; user-approved
 stakeholder feedback, batch G of A–G, the last batch; new module, both
