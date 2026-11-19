@@ -91,6 +91,14 @@ change; no requirement or completion-percentage change). Branch
   401 / 403); a transient failure keeps the page and fails only the
   request that triggered it. Token rotation itself was proven not to
   unmount anything; the route guards are unchanged.
+- *Mobile hover*: the top-bar account menu's hover-open / hover-close is
+  gated behind `(hover: hover) and (pointer: fine)` (`useMediaQuery`); a tap
+  used to open it and the tap's own pointer-leave closed it 150 ms later.
+  Tailwind 4.3 already wraps `hover:` / `group-hover:` in
+  `@media (hover: hover)`, so the sidebar, line switcher, account menu and
+  public navbar need nothing; the public navbar's Radix NavigationMenu
+  opens on mouse movement only. The one raw `:hover` rule (announcement
+  ticker pause) now sits behind the same media query.
 
 **In progress — Batch G: contests (CS-027)** (2026-11-17; user-approved
 stakeholder feedback, batch G of A–G, the last batch; new module, both

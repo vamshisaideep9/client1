@@ -5,7 +5,7 @@ Status: **Derived living implementation ledger**
 **In progress → In review — Batch 1: UI fixes (web)** (2026-11-19;
 client-reported), branch `fix/dialog-autoclose-and-mobile-hover` from
 `upstream/main` `e4d7c40e`. No requirement-percentage change.
-- Dialog auto-close root causes as described in
+- Dialog auto-close root causes and mobile hover gating as described in
   `implementation-plan.md` (Batch 1: UI fixes).
 - Reproduction (Playwright, `pnpm dev` on port 3167, mocked API, Sub Admin
   New contest form with typed values): clicking the form's own error toast

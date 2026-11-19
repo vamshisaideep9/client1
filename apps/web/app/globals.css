@@ -533,7 +533,11 @@
   animation: announcement-marquee var(--marquee-duration, 22s) linear infinite;
   will-change: transform;
 }
-.announcement-track:hover { animation-play-state: paused; }
+/* Same rule as Tailwind v4's hover: variant: only where a pointer can really
+   hover, so a tap on a phone does not leave the ticker stuck paused. */
+@media (hover: hover) {
+  .announcement-track:hover { animation-play-state: paused; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .announcement-track {
