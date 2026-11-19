@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from sqlalchemy import and_, func, or_, select, text, update
@@ -444,10 +444,36 @@ async def capture_agent_lead(
     requirement: dict[str, Any] | None,
 ) -> Lead:
     """Create/claim and automatically assign an Agent lead in one transaction."""
+    lead, _outcome = await capture_agent_lead_with_outcome(
+        mobile=mobile,
+        name=name,
+        business_line=business_line,
+        agent_profile_uuid=agent_profile_uuid,
+        requirement=requirement,
+    )
+    return lead
+
+
+# ``created``: a new lead row; ``claimed``: an open unclaimed enquiry for the
+# number became this Agent's; ``existing``: the number was already this
+# Agent's live lead (an idempotent retry).
+AgentCaptureOutcome = Literal["created", "claimed", "existing"]
+
+
+async def capture_agent_lead_with_outcome(
+    *,
+    mobile: str,
+    name: str,
+    business_line: str,
+    agent_profile_uuid: UUID,
+    requirement: dict[str, Any] | None,
+) -> tuple[Lead, AgentCaptureOutcome]:
+    """``capture_agent_lead`` plus which of the three branches it took."""
     if business_line not in _VALID_LINES:
         raise AgentLeadConflict
 
     notice: LeadAssignmentNotice | None = None
+    outcome: AgentCaptureOutcome = "created"
     try:
         async with AsyncSessionLocal() as session:
             await lock_lead_mobile(session, mobile)
@@ -520,6 +546,7 @@ async def capture_agent_lead(
                 session.add(lead)
                 await session.flush()
             elif lead.origin_agent_profile_uuid == agent_profile_uuid:
+                outcome = "existing"
                 # An Agent retry is idempotent. Once assignment locks the lead,
                 # do not allow the retry body to rewrite it.
                 if (
@@ -566,6 +593,7 @@ async def capture_agent_lead(
                     or lead.status not in _ASSIGNABLE_STATUSES
                 ):
                     raise AgentLeadConflict(EligibilityReason.ALREADY_LINKED)
+                outcome = "claimed"
                 lead.business_line = business_line
                 lead.origin = LeadOrigin.AGENT
                 lead.origin_agent_profile_uuid = agent_profile_uuid
@@ -617,7 +645,7 @@ async def capture_agent_lead(
 
     if notice is not None:
         await notify_lead_assignments([notice])
-    return lead
+    return lead, outcome
 
 
 class AgentLeadNotResubmittable(Exception):

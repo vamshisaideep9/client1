@@ -2,6 +2,18 @@
 
 Status: **Derived living implementation ledger**
 
+**In progress — Batch 2: Agent leads (API slice)** (2026-11-19; CS-028;
+client-reported), branch `feat/agent-lead-intake-api` stacked on batch 1.
+No requirement-percentage change.
+- Lead form fields (`requirement.email`, `requirement.property_type`) as
+  described in `implementation-plan.md` (Batch 2).
+- Evidence (2026-11-19, `python:3.13.14-slim-trixie` container on
+  `client1_default`, scratch database migrated to head): new
+  `test_agent_lead_requirement_keys.py` plus `test_agent_api.py` and
+  `test_agent_dashboard_refinements.py` 74 passed;
+  `test_lead_detail_ownership_api.py`, `test_lead_eligibility.py` and
+  `test_lead_auto_assignment.py` 56 passed.
+
 **In review — Batch 1: UI fixes (web)** (2026-11-19; client-reported;
 PR [#387](https://github.com/brollysolutions/client1/pull/387), mirror
 vamshisaideep9/client1#88), branch `fix/dialog-autoclose-and-mobile-hover` from

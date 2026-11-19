@@ -68,6 +68,22 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In progress — Batch 2: Agent leads (API slice)** (2026-11-19; client-
+reported; CS-028; both lines; no requirement or completion-percentage
+change). Branch `feat/agent-lead-intake-api`, stacked on batch 1
+(`fix/dialog-autoclose-and-mobile-hover`, PR #387) from `upstream/main`
+`e4d7c40e`. API, migrations and contract only; the web slice follows
+separately and needs no further API change.
+
+- *Lead form fields.* `AgentLeadCreate.requirement` accepts an optional
+  `email` (trimmed, lower-cased, at most 254 characters) and, for
+  real-estate Agents, a `property_type` (`PropertySubtype` value, stored
+  with a `property_type_label` snapshot like `interest_title`); a listing
+  may sit beside it (they must agree) but a loan product never. Both keys
+  are Agent-owned in the detail-ownership ledger; the Agent may change or
+  remove the email (and notes) while the lead is editable; only a platform
+  Admin's lead-details read shows the email.
+
 **In review — Batch 1: UI fixes (web)** (2026-11-19; PR
 [#387](https://github.com/brollysolutions/client1/pull/387), mirror
 vamshisaideep9/client1#88;

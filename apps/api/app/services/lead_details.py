@@ -113,15 +113,20 @@ def editable_paths(lead: Lead, actor: DetailActor) -> list[str]:
     ]
 
 
+# Requirement keys a lead-details read may show. Notes plus the labels the
+# server resolved for the listing / product / property type an Agent picked at
+# introduction (services/agent._resolve_interest). The optional email an Agent
+# or the public form recorded is contact data about the person, so only a
+# platform Admin's read carries it. Other keys stay internal.
+_SAFE_REQUIREMENT_KEYS = ("notes", "interest_title", "property_type", "property_type_label")
+_ADMIN_REQUIREMENT_KEYS = (*_SAFE_REQUIREMENT_KEYS, "email")
+
+
 def to_read(lead: Lead, actor: DetailActor) -> LeadDetailsRead:
     source_requirement = lead.requirement or {}
-    # Notes plus the server-resolved title of the listing/product an Agent
-    # picked at introduction (services/agent._resolve_interest). Other keys
-    # stay internal.
+    keys = _ADMIN_REQUIREMENT_KEYS if actor.role == "admin" else _SAFE_REQUIREMENT_KEYS
     safe_requirement = {
-        key: source_requirement[key]
-        for key in ("notes", "interest_title")
-        if key in source_requirement
+        key: source_requirement[key] for key in keys if key in source_requirement
     } or None
     safe_owners = {
         path: descriptor["role"]
@@ -201,10 +206,17 @@ async def patch_details(
         requested["requirement.notes"] = (
             payload.notes.strip() if payload.notes is not None else None
         )
+    if "email" in payload.model_fields_set:
+        # Only AgentLeadDetailsPatch carries an email, and only the
+        # originating Agent's edit builds one (already normalised).
+        if actor.role != "agent":
+            raise LeadDetailsForbidden
+        requested["requirement.email"] = getattr(payload, "email", None)
 
     changed_paths: list[str] = []
     for path, value in requested.items():
-        current_value = lead.name if path == "name" else (lead.requirement or {}).get("notes")
+        key = path.removeprefix("requirement.")
+        current_value = lead.name if path == "name" else (lead.requirement or {}).get(key)
         if current_value == value:
             continue
 
@@ -219,7 +231,10 @@ async def patch_details(
             changed_paths.append(path)
         else:
             requirement = dict(lead.requirement or {})
-            requirement["notes"] = value
+            if path == "requirement.email" and value is None:
+                requirement.pop("email", None)
+            else:
+                requirement[key] = value
             lead.requirement = requirement
             changed_paths.append(path)
 
