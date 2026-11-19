@@ -29,6 +29,7 @@ from app.api.v1.banners import router as banners_router
 from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.campaign_media import router as campaign_media_router
 from app.api.v1.client_lead_details import router as client_lead_details_router
+from app.api.v1.commission_rates import router as commission_rates_router
 from app.api.v1.commissions import router as commissions_router
 from app.api.v1.contact_change import admin_router as contact_change_admin_router
 from app.api.v1.contact_change import router as contact_change_router
@@ -202,6 +203,9 @@ app.include_router(admin_teams_router, prefix="/api/v1/admin/teams", tags=["team
 app.include_router(manager_router, prefix="/api/v1/manager", tags=["manager"])
 app.include_router(commissions_router, prefix="/api/v1/admin/commissions", tags=["commissions"])
 app.include_router(contests_router, prefix="/api/v1/contests", tags=["contests"])
+app.include_router(
+    commission_rates_router, prefix="/api/v1/commission-rates", tags=["commission-rates"]
+)
 app.include_router(my_contests_router, prefix="/api/v1/my-contests", tags=["contests"])
 app.include_router(
     fee_cashbacks_router, prefix="/api/v1/admin/fee-cashbacks", tags=["fee-cashbacks"]

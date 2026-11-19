@@ -184,6 +184,13 @@ class AuditAction(enum.StrEnum):
     # api/v1/agent.py once per non-dry-run upload: row counts per outcome
     # only, never a mobile, name or email.
     AGENT_LEADS_BULK_SUBMITTED = "agent_leads_bulk_submitted"
+    # CS-028 per-product commission rates (migration e4a6c8d0f2b3), written by
+    # services/commission_rates.py: rate / product ids, kind, bps or paise.
+    COMMISSION_RATE_PROPOSED = "commission_rate_proposed"
+    COMMISSION_RATE_SET = "commission_rate_set"
+    COMMISSION_RATE_APPROVED = "commission_rate_approved"
+    COMMISSION_RATE_REJECTED = "commission_rate_rejected"
+    COMMISSION_RATE_WITHDRAWN = "commission_rate_withdrawn"
 
 
 _ev = lambda x: [e.value for e in x]  # noqa: E731

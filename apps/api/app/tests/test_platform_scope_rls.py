@@ -59,6 +59,10 @@ _DOCUMENTED_SUB_ADMIN_EXCEPTIONS = {
     # the Sub Admin manages, never through the platform bypass.
     ("contests", "contests_select"),
     ("contest_results", "contest_results_select"),
+    # e4a6c8d0f2b3 (CS-028): a platform-Admin disjunct beside a Sub Admin read
+    # of every commission-rate row (maker-checker surface), never through the
+    # platform bypass.
+    ("product_commission_rates", "product_commission_rates_select"),
 }
 
 # Every current policy carrying a platform_scope branch. The original
@@ -158,6 +162,8 @@ _ALL_PLATFORM_SCOPE_POLICIES = {
     # a8d0f2b4c6e9 (CS-027): both require role 'admin' with the scope.
     ("contests", "contests_select"),
     ("contest_results", "contest_results_select"),
+    # e4a6c8d0f2b3 (CS-028): requires role 'admin' with the scope.
+    ("product_commission_rates", "product_commission_rates_select"),
 }
 
 

@@ -127,6 +127,35 @@ separately and needs no further API change.
   `AGENT_LEAD_BULK_DRY_RUNS_PER_HOUR` (30); one `agent_leads_bulk_submitted`
   audit entry per real upload with counts only (enum migration
   `d3f5b7c9e1a2`).
+- *Per-loan-product commission rate (maker-checker).* Migration
+  `e4a6c8d0f2b3` creates `product_commission_rates` (percent in basis
+  points 1..10000 XOR fixed paise up to the ₹10 crore commission cap, note
+  ≤ 280, status pending / approved / rejected / superseded / withdrawn,
+  maker and checker; one approved and one pending row per product; CHECK
+  that a Sub Admin's row is never checked by its maker; trigger keeping
+  terms and maker fixed and statuses moving forward only; cascades with an
+  unused product the Admin deletes). RLS forced: platform Admin and Sub
+  Admins read all rows, loans-line Agents read approved rows only, nobody
+  else reads any; the maker Sub Admin alone inserts a pending proposal and
+  withdraws it (UPDATE granted on status / version / updated_at only); no
+  DELETE grant. `services/commission_rates.py`: a Sub Admin proposes
+  (`PUT /api/v1/commission-rates/{loan_type_id}`, replacing their own
+  pending proposal; another Sub Admin's pending one is a 409), a platform
+  Admin's `PUT` is approved at once (themselves as checker) and supersedes
+  the current rate, `POST …/{rate_id}/approve | reject` (note required) by
+  a platform Admin who is not the maker, `POST …/{rate_id}/withdraw` by the
+  maker; `GET /api/v1/commission-rates` lists every loan-category product
+  with current, pending and up to 20 earlier entries with maker / checker
+  names. Audit `commission_rate_proposed | set | approved | rejected |
+  withdrawn`; notifications `commission_rate_submitted` (platform Admins)
+  and `commission_rate_reviewed` (the maker). `GET
+  /api/v1/agent/commission-rates` returns approved rates of active loan
+  products keyed by slug (empty for a real-estate Agent). The Admin's
+  eligible-deal queue (`GET /api/v1/admin/commissions/eligible`) now
+  carries each disbursed loan's product, its approved rate and a suggested
+  amount (fixed amount, or percent of the sanctioned amount — requested
+  when none — in integer paise rounded half up, capped); the commission is
+  still entered by the Admin. Rates appear on no public or Client read.
 
 **In review — Batch 1: UI fixes (web)** (2026-11-19; PR
 [#387](https://github.com/brollysolutions/client1/pull/387), mirror

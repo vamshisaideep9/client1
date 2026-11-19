@@ -33,6 +33,26 @@ No requirement-percentage change.
   using the budget, per-Agent submit and dry-run limits, non-Agents 403);
   with the Agent, refinements, eligibility, requirement-key, sticky and
   audit-log suites 153 passed.
+- Per-product commission rates (migration `e4a6c8d0f2b3`, up / down / up on
+  the scratch database): new `test_commission_rates_api.py` 19 passed
+  (propose → pending with the Admin fan-out, approve with checker name and
+  maker notification, supersede, Admin direct entry approved at once with a
+  waiting proposal kept, reject needs a note, the maker cannot check even
+  with an Admin token, own proposal replaced / another's blocked, withdraw
+  by the maker only, staff routes refuse line Admins / Agents / Clients /
+  Telecallers / anonymous, input validation and loan products only, loans
+  Agent sees approved rates of active products only and a real-estate
+  Agent none, absent from public catalogue / loan-type / Client reads,
+  suggestion maths table, eligible-deal pre-fill for percent, no-rate and
+  property rows) and `test_commission_rates_rls.py` 4 passed (read matrix
+  for platform / line Admin, Sub Admin, loans / real-estate Agent,
+  Telecaller, Employee, Client and anonymous; maker-only pending inserts;
+  maker-only withdrawal, column grant, no delete; CHECK, trigger and
+  unique indexes on the bypass session). Ledgers updated (business-line
+  classification, Admin coverage, platform-scope policy); with the
+  commission, commission RLS / payout, loan configuration, financial
+  product, notification, platform-scope, classification, coverage, RLS
+  coverage and route-authorization suites: 142 + 42 + 51 passed.
 - Evidence (2026-11-19, `python:3.13.14-slim-trixie` container on
   `client1_default`, scratch database migrated to head): new
   `test_agent_lead_requirement_keys.py` plus `test_agent_api.py` and

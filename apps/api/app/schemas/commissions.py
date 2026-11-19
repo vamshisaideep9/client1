@@ -23,6 +23,17 @@ from app.schemas.payments import PayoutDestinationInput, validate_destination
 DealType = Literal["loan_application", "property_deal"]
 
 
+class EligibleDealCommissionRate(BaseModel):
+    """The product's approved indicative rate (CS-028) at the time of reading."""
+
+    id: UUID
+    kind: Literal["percent", "fixed"]
+    # Basis points (150 = 1.5 %) for a percent rate; paise for a fixed one.
+    percent_bps: int | None
+    amount_paise: int | None
+    note: str | None
+
+
 class EligibleDeal(BaseModel):
     """One row in the Admin entry queue: a disbursed loan or a closed_won
     property deal with an origin agent and no live commission yet."""
@@ -39,6 +50,17 @@ class EligibleDeal(BaseModel):
     # so this is an event marker, not live status), closed_at for a property
     # deal (CLOSED genuinely is terminal there).
     eligible_since: datetime | None
+    # CS-028 pre-fill, loans only (null for property deals): the loan's
+    # product, its current approved rate, and the suggested commission —
+    # the fixed amount, or the percent of the sanctioned amount (requested
+    # when none was sanctioned) in integer paise rounded half up. The Admin
+    # still enters the commission amount; this only pre-fills it.
+    loan_type_id: UUID | None = None
+    product_label: str | None = None
+    commission_rate: EligibleDealCommissionRate | None = None
+    suggested_amount_paise: int | None = None
+    suggestion_basis: Literal["sanctioned", "requested", "fixed"] | None = None
+    basis_amount_paise: int | None = None
 
 
 class EligibleDealListResponse(BaseModel):

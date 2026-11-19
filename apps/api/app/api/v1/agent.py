@@ -41,6 +41,7 @@ from app.schemas.agent_payout_details import (
     AgentPayoutDetailsRead,
     AgentPayoutDetailsUpdate,
 )
+from app.schemas.commission_rates import AgentCommissionRatesResponse
 from app.schemas.commissions import (
     AgentEarningsResponse,
     AgentTransactionDetail,
@@ -51,6 +52,7 @@ from app.schemas.eligibility import EligibilitySummary, IntakeAttemptListRespons
 from app.services import agent_dashboard, agent_lead_bulk, lead_intake_attempts
 from app.services import agent_payout_cheque as payout_cheque
 from app.services import agent_payout_details as payout_details
+from app.services import commission_rates as commission_rate_service
 from app.services.agent import (
     AgentProfileNotFound,
     InvalidLeadInterest,
@@ -391,6 +393,24 @@ async def resubmit_lead(
         ) from exc
     modes = await effective_modes(db, FieldTargetRole.AGENT)
     return _to_agent_lead_read(lead, modes, agent_profile_uuid=agent_profile_uuid)
+
+
+@router.get("/commission-rates", response_model=AgentCommissionRatesResponse)
+async def commission_rates(
+    response: Response,
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+) -> AgentCommissionRatesResponse:
+    """Approved indicative commission rates of the active loan products, keyed
+    by product slug (CS-028). Empty for a real-estate Agent: RLS returns
+    approved rows to loans-line Agents only."""
+    response.headers["Cache-Control"] = "private, no-store"
+    _agent_profile_uuid(current_user)
+    if current_user.business_line != "loans":
+        return AgentCommissionRatesResponse(rates={})
+    return AgentCommissionRatesResponse(
+        rates=await commission_rate_service.approved_rates_for_agent(db)
+    )
 
 
 @router.get("/earnings", response_model=AgentEarningsResponse)

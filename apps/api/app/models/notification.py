@@ -62,6 +62,10 @@ class NotificationType(enum.StrEnum):
     CONTEST_REVIEWED = "contest_reviewed"
     CONTEST_LIVE = "contest_live"
     CONTEST_WON = "contest_won"
+    # CS-028 commission rates: a Sub Admin's proposal awaits review (platform
+    # Admins), or was approved / rejected (the proposing Sub Admin).
+    COMMISSION_RATE_SUBMITTED = "commission_rate_submitted"
+    COMMISSION_RATE_REVIEWED = "commission_rate_reviewed"
 
 
 _ev = lambda x: [e.value for e in x]  # noqa: E731
