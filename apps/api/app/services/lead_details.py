@@ -113,21 +113,104 @@ def editable_paths(lead: Lead, actor: DetailActor) -> list[str]:
     ]
 
 
-# Requirement keys a lead-details read may show. Notes plus the labels the
-# server resolved for the listing / product / property type an Agent picked at
-# introduction (services/agent._resolve_interest). The optional email an Agent
-# or the public form recorded is contact data about the person, so only a
-# platform Admin's read carries it. Other keys stay internal.
-_SAFE_REQUIREMENT_KEYS = ("notes", "interest_title", "property_type", "property_type_label")
-_ADMIN_REQUIREMENT_KEYS = (*_SAFE_REQUIREMENT_KEYS, "email")
+# ---------------------------------------------------------------------------
+# Requirement shaping: the ONE allowlist every role's lead read goes through
+# (CS-028 security review). Unknown keys never pass a read; each role sees
+# only the keys below.
+# ---------------------------------------------------------------------------
+
+# Every key a product path writes under ``leads.requirement``:
+# - the Agent lead form (services/agent._resolve_interest);
+AGENT_FORM_REQUIREMENT_KEYS = frozenset(
+    {
+        "notes",
+        "email",
+        "product_slug",
+        "property_id",
+        "property_type",
+        "property_type_label",
+        "interest_title",
+    }
+)
+# - the public lead form (api/v1/leads.py) and older "topic" captures.
+PUBLIC_FORM_REQUIREMENT_KEYS = frozenset(
+    {
+        "page",
+        "topic",
+        "product",
+        "property_ref",
+        "property_title",
+        "property_location",
+        "email",
+        "message",
+    }
+)
+# What the assigned Telecaller works the lead with: every known key, the
+# person's email included (they already see the mobile). It stays behind
+# the Admin's Telecaller "Requirement details" field rule (there is no
+# separate email rule), applied by the caller through project_values.
+_TELECALLER_REQUIREMENT_KEYS = AGENT_FORM_REQUIREMENT_KEYS | PUBLIC_FORM_REQUIREMENT_KEYS
+# Client and Admin lead-details reads: notes plus the labels the server
+# resolved for the listing / product / property type an Agent picked. Only a
+# platform Admin's read adds the email.
+_LEAD_DETAILS_REQUIREMENT_KEYS = frozenset(
+    {"notes", "interest_title", "property_type", "property_type_label"}
+)
+_ADMIN_REQUIREMENT_KEYS = _LEAD_DETAILS_REQUIREMENT_KEYS | {"email"}
+
+RequirementViewer = Literal["admin", "client", "agent", "telecaller"]
+
+
+def _owned_by_agent(lead: Lead, key: str, agent_profile_uuid: UUID | None) -> bool:
+    descriptor = (lead.detail_ownership or {}).get(f"requirement.{key}")
+    return (
+        agent_profile_uuid is not None
+        and isinstance(descriptor, dict)
+        and descriptor.get("role") == "agent"
+        and descriptor.get("subject_uuid") == str(agent_profile_uuid)
+    )
+
+
+def visible_requirement(
+    lead: Lead,
+    viewer: RequirementViewer,
+    *,
+    agent_profile_uuid: UUID | None = None,
+) -> dict[str, Any] | None:
+    """The part of ``lead.requirement`` a viewer may read, or None.
+
+    - ``admin`` (platform Admin lead details): notes, the resolved labels and
+      the email.
+    - ``client`` (and any other lead-details reader): notes and the resolved
+      labels; never the email.
+    - ``agent`` (the originating Agent): only Agent-form keys whose ownership
+      descriptor names this Agent, so an Agent who claimed an existing
+      enquiry never reads what the person, a Telecaller, another Agent or
+      the public form ("unclaimed" / "system") recorded.
+    - ``telecaller`` (the assigned Telecaller): every known key, email
+      included; the caller still applies the field-visibility rule.
+
+    Employees, Sub Admin team reads and the Agent history carry no
+    requirement at all.
+    """
+    source = lead.requirement or {}
+    if viewer == "admin":
+        allowed = _ADMIN_REQUIREMENT_KEYS
+    elif viewer == "telecaller":
+        allowed = _TELECALLER_REQUIREMENT_KEYS
+    elif viewer == "agent":
+        allowed = frozenset(
+            key
+            for key in AGENT_FORM_REQUIREMENT_KEYS
+            if _owned_by_agent(lead, key, agent_profile_uuid)
+        )
+    else:
+        allowed = _LEAD_DETAILS_REQUIREMENT_KEYS
+    return {key: value for key, value in source.items() if key in allowed} or None
 
 
 def to_read(lead: Lead, actor: DetailActor) -> LeadDetailsRead:
-    source_requirement = lead.requirement or {}
-    keys = _ADMIN_REQUIREMENT_KEYS if actor.role == "admin" else _SAFE_REQUIREMENT_KEYS
-    safe_requirement = {
-        key: source_requirement[key] for key in keys if key in source_requirement
-    } or None
+    safe_requirement = visible_requirement(lead, "admin" if actor.role == "admin" else "client")
     safe_owners = {
         path: descriptor["role"]
         for path, descriptor in (lead.detail_ownership or {}).items()

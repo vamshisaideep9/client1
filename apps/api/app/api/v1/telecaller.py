@@ -40,6 +40,7 @@ from app.schemas.telecaller import (
     TelecallerSiteVisitRead,
 )
 from app.services.field_visibility import effective_modes, project_values
+from app.services.lead_details import visible_requirement
 from app.services.lead_signals import facets, lead_signals, transaction_summary
 from app.services.loan_applications import (
     BankNotAvailableForLoanType,
@@ -226,7 +227,7 @@ async def list_leads(
                     "lead",
                     {
                         "name": lead.name,
-                        "requirement": lead.requirement,
+                        "requirement": visible_requirement(lead, "telecaller"),
                         "referrer": signals.referrer,
                     },
                 ),
@@ -330,7 +331,11 @@ async def get_lead(
         **project_values(
             modes,
             "lead",
-            {"name": lead.name, "requirement": lead.requirement, "referrer": signals.referrer},
+            {
+                "name": lead.name,
+                "requirement": visible_requirement(lead, "telecaller"),
+                "referrer": signals.referrer,
+            },
         ),
     )
 
@@ -365,7 +370,7 @@ async def patch_lead(
         **project_values(
             modes,
             "lead",
-            {"name": lead.name, "requirement": lead.requirement},
+            {"name": lead.name, "requirement": visible_requirement(lead, "telecaller")},
         ),
     )
 

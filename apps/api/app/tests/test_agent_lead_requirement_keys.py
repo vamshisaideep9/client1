@@ -24,13 +24,13 @@ from pydantic import ValidationError
 from app.models.lead import Lead, LeadStatus
 from app.models.property import Property, PropertySubtype
 from app.schemas.agent import AgentLeadCreate, AgentLeadUpdate, normalise_lead_email
-from app.services.lead_details import DetailActor, to_read
+from app.services.lead_details import DetailActor, to_read, visible_requirement
 from app.tests.test_agent_api import (  # noqa: F401 — autouse fixture
     _agent_token,
     _isolate_eligible_telecallers,
     _seed_agent,
 )
-from conftest import unique_mobile
+from conftest import full_registration, unique_mobile
 
 
 def _headers(token: str) -> dict[str, str]:
@@ -328,6 +328,226 @@ async def test_agent_edits_and_removes_their_lead_email(client: AsyncClient) -> 
         headers=headers,
     )
     assert fixed.status_code == 422, fixed.text
+
+
+# ---------------------------------------------------------------------------
+# Requirement visibility by role (one shared allowlist: visible_requirement)
+# ---------------------------------------------------------------------------
+
+
+def _mixed_lead(agent_uuid: uuid.UUID) -> Lead:
+    agent = {"role": "agent", "subject_uuid": str(agent_uuid)}
+    return Lead(
+        id=uuid.uuid4(),
+        mobile="+919876543210",
+        business_line="loans",
+        status=LeadStatus.ASSIGNED,
+        requirement={
+            "notes": "Agent note",
+            "email": "person@example.com",
+            "product_slug": "home-loan",
+            "interest_title": "Home Loan",
+            "message": "Public form message",
+            "page": "home",
+            "budget": "legacy free text",
+        },
+        detail_ownership={
+            "requirement.notes": agent,
+            "requirement.email": agent,
+            "requirement.product_slug": agent,
+            "requirement.interest_title": agent,
+            "requirement.message": {"role": "unclaimed", "subject_uuid": None},
+            "requirement.page": {"role": "system", "subject_uuid": None},
+            "requirement.budget": {"role": "legacy_locked", "subject_uuid": None},
+        },
+    )
+
+
+def test_role_matrix_of_the_shared_requirement_allowlist() -> None:
+    agent_uuid = uuid.uuid4()
+    lead = _mixed_lead(agent_uuid)
+    assert visible_requirement(lead, "agent", agent_profile_uuid=agent_uuid) == {
+        "notes": "Agent note",
+        "email": "person@example.com",
+        "product_slug": "home-loan",
+        "interest_title": "Home Loan",
+    }
+    # Another Agent, or an Agent read without a profile, owns nothing here.
+    assert visible_requirement(lead, "agent", agent_profile_uuid=uuid.uuid4()) is None
+    assert visible_requirement(lead, "agent") is None
+    # The assigned Telecaller works with every known key; unknown keys never pass.
+    assert visible_requirement(lead, "telecaller") == {
+        "notes": "Agent note",
+        "email": "person@example.com",
+        "product_slug": "home-loan",
+        "interest_title": "Home Loan",
+        "message": "Public form message",
+        "page": "home",
+    }
+    assert visible_requirement(lead, "admin") == {
+        "notes": "Agent note",
+        "email": "person@example.com",
+        "interest_title": "Home Loan",
+    }
+    assert visible_requirement(lead, "client") == {
+        "notes": "Agent note",
+        "interest_title": "Home Loan",
+    }
+
+
+@pytest.mark.asyncio
+async def test_claiming_agent_never_reads_keys_others_recorded(client: AsyncClient) -> None:
+    """An Agent attaching to an existing open enquiry sees only what they wrote."""
+    import app.db.session as _session_mod
+    from app.models.loan import LoanType
+
+    slug = f"claim-{uuid.uuid4().hex[:8]}"
+    mobile = unique_mobile()
+    async with _session_mod.AsyncSessionLocal() as db:
+        db.add(LoanType(name=slug, label="Claim Loan", active=True))
+        db.add(
+            Lead(
+                mobile=mobile,
+                business_line="loans",
+                origin="direct",
+                status=LeadStatus.RELEASED,
+                requirement={
+                    "email": "client-entered@example.com",
+                    "notes": "Telecaller note",
+                    "message": "Please call after 6",
+                    "page": "home-loan",
+                },
+                detail_ownership={
+                    "requirement.email": {"role": "client", "subject_uuid": str(uuid.uuid4())},
+                    "requirement.notes": {
+                        "role": "telecaller",
+                        "subject_uuid": str(uuid.uuid4()),
+                    },
+                    "requirement.message": {"role": "unclaimed", "subject_uuid": None},
+                    "requirement.page": {"role": "system", "subject_uuid": None},
+                },
+            )
+        )
+        await db.commit()
+
+    auth_uuid, agent_uuid = await _seed_agent("loans")
+    headers = _headers(_agent_token(auth_uuid, agent_uuid))
+    res = await client.post(
+        "/api/v1/agent/leads",
+        json={
+            "mobile": mobile,
+            "name": "Claimed",
+            "requirement": {"email": "agent-typed@example.com", "product_slug": slug},
+        },
+        headers=headers,
+    )
+    assert res.status_code == 201, res.text
+    expected = {"product_slug": slug, "interest_title": "Claim Loan"}
+    assert res.json()["requirement"] == expected
+    listed = await client.get("/api/v1/agent/leads", headers=headers)
+    row = next(item for item in listed.json() if item["id"] == res.json()["id"])
+    assert row["requirement"] == expected
+    detail = await client.get(f"/api/v1/agent/leads/{res.json()['id']}", headers=headers)
+    assert detail.json()["requirement"] == expected
+    # The client-owned email was neither shown nor overwritten.
+    stored = await _load_lead(res.json()["id"])
+    assert stored.requirement["email"] == "client-entered@example.com"
+
+
+@pytest.mark.asyncio
+async def test_email_reaches_assigned_telecaller_and_admin_only(client: AsyncClient) -> None:
+    import app.db.session as _session_mod
+    from app.models.profile import StaffRole
+    from app.models.task import Task, TaskStatus, TaskType
+    from app.tests.contest_support import headers, seed_staff, token_for
+
+    email = f"lead-{uuid.uuid4().hex[:8]}@example.com"
+    tc_user, telecaller = await seed_staff(StaffRole.TELECALLER, business_line="loans")
+    other_user, other = await seed_staff(StaffRole.TELECALLER, business_line="loans")
+    emp_user, employee = await seed_staff(StaffRole.EMPLOYEE, business_line="loans")
+    admin_user, admin_profile = await seed_staff(StaffRole.ADMIN)
+    async with _session_mod.AsyncSessionLocal() as db:
+        lead = Lead(
+            mobile=unique_mobile(),
+            name="Contactable",
+            business_line="loans",
+            origin="direct",
+            status=LeadStatus.ASSIGNED,
+            assigned_telecaller_profile_uuid=telecaller.id,
+            requirement={"email": email, "message": "Call me"},
+            detail_ownership={
+                "requirement.email": {"role": "unclaimed", "subject_uuid": None},
+                "requirement.message": {"role": "unclaimed", "subject_uuid": None},
+            },
+        )
+        db.add(lead)
+        await db.flush()
+        task = Task(
+            raised_by_staff_profile_uuid=telecaller.id,
+            assigned_employee_profile_uuid=employee.id,
+            business_line="loans",
+            task_type=TaskType.DOCUMENT_COLLECTION,
+            lead_uuid=lead.id,
+            status=TaskStatus.ASSIGNED,
+        )
+        db.add(task)
+        await db.commit()
+        lead_id, task_id = str(lead.id), str(task.id)
+
+    tc_headers = headers(
+        token_for(tc_user, "telecaller", business_line="loans", staff_profile=telecaller)
+    )
+    detail = await client.get(f"/api/v1/telecaller/leads/{lead_id}", headers=tc_headers)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["requirement"] == {"email": email, "message": "Call me"}
+    listed = await client.get("/api/v1/telecaller/leads", headers=tc_headers)
+    row = next(item for item in listed.json() if item["id"] == lead_id)
+    assert row["requirement"]["email"] == email
+
+    other_headers = headers(
+        token_for(other_user, "telecaller", business_line="loans", staff_profile=other)
+    )
+    hidden = await client.get(f"/api/v1/telecaller/leads/{lead_id}", headers=other_headers)
+    assert hidden.status_code == 404
+    other_list = await client.get("/api/v1/telecaller/leads", headers=other_headers)
+    assert email not in other_list.text
+
+    emp_headers = headers(
+        token_for(emp_user, "employee", business_line="loans", staff_profile=employee)
+    )
+    task_read = await client.get(f"/api/v1/employee/tasks/{task_id}", headers=emp_headers)
+    assert task_read.status_code == 200, task_read.text
+    assert email not in task_read.text
+
+    admin_headers = headers(
+        token_for(admin_user, "admin", platform_scope="true", staff_profile=admin_profile)
+    )
+    admin_read = await client.get(f"/api/v1/admin/leads/{lead_id}/details", headers=admin_headers)
+    assert admin_read.status_code == 200, admin_read.text
+    assert admin_read.json()["requirement"] == {"email": email}
+
+
+@pytest.mark.asyncio
+async def test_client_never_reads_the_email_on_their_journey(client: AsyncClient) -> None:
+    from sqlalchemy import select
+
+    import app.db.session as _session_mod
+
+    token, mobile = await full_registration(client, lines=["loans"])
+    async with _session_mod.AsyncSessionLocal() as db:
+        lead = await db.scalar(
+            select(Lead).where(Lead.mobile == mobile, Lead.business_line == "loans")
+        )
+        assert lead is not None
+        lead.requirement = {"email": "client@example.com", "notes": "Own note"}
+        await db.commit()
+
+    res = await client.get(
+        "/api/v1/client/lead-details/loans", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["requirement"] == {"notes": "Own note"}
+    assert "client@example.com" not in res.text
 
 
 @pytest.mark.asyncio

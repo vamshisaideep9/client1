@@ -64,6 +64,7 @@ from app.services.agent import (
 )
 from app.services.eligibility import agent_lead_eligibility, reason_label
 from app.services.field_visibility import effective_modes, project_values
+from app.services.lead_details import visible_requirement
 from app.services.lead_signals import EMPTY_SIGNALS, LeadSignals, facets, lead_signals
 from app.services.leads import is_agent_lead_resubmittable
 
@@ -81,6 +82,8 @@ def _to_agent_lead_read(
     lead: Lead,
     modes: dict[tuple[str, str], FieldVisibilityMode],
     signals: LeadSignals | None = None,
+    *,
+    agent_profile_uuid: UUID,
 ) -> AgentLeadRead:
     within_window = lead.expires_at is None or lead.expires_at > datetime.now(UTC)
     eligibility, reason = agent_lead_eligibility(lead.agent_expired_at)
@@ -106,7 +109,13 @@ def _to_agent_lead_read(
         **project_values(
             modes,
             "lead",
-            {"name": lead.name, "requirement": lead.requirement},
+            {
+                "name": lead.name,
+                # Only the requirement keys this Agent owns (CS-028).
+                "requirement": visible_requirement(
+                    lead, "agent", agent_profile_uuid=agent_profile_uuid
+                ),
+            },
         ),
     )
 
@@ -174,7 +183,7 @@ async def create_lead(
             "Choose a published property or product from your business line.",
         ) from exc
     modes = await effective_modes(db, FieldTargetRole.AGENT)
-    return _to_agent_lead_read(lead, modes)
+    return _to_agent_lead_read(lead, modes, agent_profile_uuid=agent_profile_uuid)
 
 
 @router.get("/leads", response_model=list[AgentLeadRead], response_model_exclude_unset=True)
@@ -194,7 +203,15 @@ async def list_leads(
     # Product and property facts for the list filters, through the confined
     # reader's Agent branch (own introduced leads on the Agent's line only).
     signals = await lead_signals(db, leads)
-    return [_to_agent_lead_read(lead, modes, signals.get(lead.id, EMPTY_SIGNALS)) for lead in leads]
+    return [
+        _to_agent_lead_read(
+            lead,
+            modes,
+            signals.get(lead.id, EMPTY_SIGNALS),
+            agent_profile_uuid=agent_profile_uuid,
+        )
+        for lead in leads
+    ]
 
 
 @router.get("/lead-eligibility", response_model=EligibilitySummary)
@@ -235,7 +252,7 @@ async def get_lead(
     if lead is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found.")
     modes = await effective_modes(db, FieldTargetRole.AGENT)
-    return _to_agent_lead_read(lead, modes)
+    return _to_agent_lead_read(lead, modes, agent_profile_uuid=agent_profile_uuid)
 
 
 @router.patch("/leads/{lead_id}", response_model=AgentLeadRead, response_model_exclude_unset=True)
@@ -264,7 +281,7 @@ async def patch_lead(
             "and it can no longer be edited.",
         ) from exc
     modes = await effective_modes(db, FieldTargetRole.AGENT)
-    return _to_agent_lead_read(lead, modes)
+    return _to_agent_lead_read(lead, modes, agent_profile_uuid=agent_profile_uuid)
 
 
 @router.post(
@@ -295,7 +312,7 @@ async def resubmit_lead(
             "hasn't registered can be resubmitted.",
         ) from exc
     modes = await effective_modes(db, FieldTargetRole.AGENT)
-    return _to_agent_lead_read(lead, modes)
+    return _to_agent_lead_read(lead, modes, agent_profile_uuid=agent_profile_uuid)
 
 
 @router.get("/earnings", response_model=AgentEarningsResponse)

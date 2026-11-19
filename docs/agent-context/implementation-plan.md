@@ -81,8 +81,18 @@ separately and needs no further API change.
   with a `property_type_label` snapshot like `interest_title`); a listing
   may sit beside it (they must agree) but a loan product never. Both keys
   are Agent-owned in the detail-ownership ledger; the Agent may change or
-  remove the email (and notes) while the lead is editable; only a platform
-  Admin's lead-details read shows the email.
+  remove the email (and notes) while the lead is editable.
+- *Requirement visibility (security review of the above).* Every role's
+  lead read now shapes `requirement` through one allowlist,
+  `services/lead_details.visible_requirement`: the originating Agent sees
+  only Agent-form keys whose ownership names them (an Agent who claimed an
+  existing enquiry no longer reads what the person, a Telecaller, another
+  Agent or the public form recorded); the assigned Telecaller sees every
+  known key, the email included, behind the existing Telecaller
+  "Requirement details" field rule; a platform Admin's lead details add the
+  email to notes and labels; a Client's lead details never show it.
+  Unknown keys pass no read. Employees, Sub Admin team reads and the Agent
+  history carry no requirement at all (unchanged).
 
 **In review — Batch 1: UI fixes (web)** (2026-11-19; PR
 [#387](https://github.com/brollysolutions/client1/pull/387), mirror

@@ -5,8 +5,14 @@ Status: **Derived living implementation ledger**
 **In progress — Batch 2: Agent leads (API slice)** (2026-11-19; CS-028;
 client-reported), branch `feat/agent-lead-intake-api` stacked on batch 1.
 No requirement-percentage change.
-- Lead form fields (`requirement.email`, `requirement.property_type`) as
-  described in `implementation-plan.md` (Batch 2).
+- Lead form fields (`requirement.email`, `requirement.property_type`) and
+  the per-role requirement allowlist as described in
+  `implementation-plan.md` (Batch 2). Role matrix tests in
+  `test_agent_lead_requirement_keys.py` (owner Agent, claiming Agent,
+  assigned / other Telecaller, Employee, Client, Admin) pass; the
+  neighbouring lead suites (Agent, Telecaller, Admin assign / release,
+  ownership, Employee, assignment, leads RLS, facets, history, team
+  manager) 231 passed.
 - Evidence (2026-11-19, `python:3.13.14-slim-trixie` container on
   `client1_default`, scratch database migrated to head): new
   `test_agent_lead_requirement_keys.py` plus `test_agent_api.py` and
