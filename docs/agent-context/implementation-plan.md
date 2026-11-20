@@ -1,6 +1,6 @@
 # Living implementation plan
 
-**Verified for delivery - Batch 3 web: staff specialties and role identifiers**
+**Delivered for review - Batch 3 web: staff specialties and role identifiers**
 (2026-11-20), branch `feat/staff-specialty-badges-web`, stacked on final API
 `5e392e00` ([upstream #390](https://github.com/brollysolutions/client1/pull/390),
 [mirror #91](https://github.com/vamshisaideep9/client1/pull/91)).
@@ -29,7 +29,9 @@
   has 63 advisories in four unchanged locked packages, so Node audit was not
   reached. The parent's shared-label fixture correction passes 20 routing tests
   locally and preserves complete 2,920-node coverage; hosted verification reruns
-  on the correction. No green hosted gate or merge is claimed. Web PR links pending.
+  on the correction. No green hosted gate or merge is claimed. Web [upstream #391](https://github.com/brollysolutions/client1/pull/391) and
+  [mirror #92](https://github.com/vamshisaideep9/client1/pull/92) are open against
+  their respective main branches. Both copies carry the identical web head.
 
 No requirement-percentage change. Next: review the Batch 3 stack and resolve the
 inherited dependency gate before merging. Batches 4-6 have not started.
