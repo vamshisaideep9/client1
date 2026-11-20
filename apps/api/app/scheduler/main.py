@@ -23,6 +23,7 @@ import app.db.session as db_session
 from app.core.config import settings
 from app.jobs.assign_unassigned_employee_work import assign_unassigned_employee_work
 from app.jobs.assign_unassigned_leads import assign_unassigned_leads
+from app.jobs.attendance_rollover import attendance_rollover
 from app.jobs.audit_paid_payouts import audit_paid_payouts
 from app.jobs.backfill_customer_codes import backfill_customer_codes
 from app.jobs.backfill_referral_codes import backfill_referral_codes
@@ -291,6 +292,15 @@ def build_scheduler() -> AsyncIOScheduler:
         # homepage's 60s ISR window puts a banner live within ~6 min of its
         # starts_at. Cost is 4 indexed UPDATEs matching 0 rows most ticks.
         id="cms_activation",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    add_operational_job(
+        attendance_rollover,
+        trigger="interval",
+        minutes=5,
+        id="attendance_rollover",
         max_instances=1,
         coalesce=True,
         replace_existing=True,

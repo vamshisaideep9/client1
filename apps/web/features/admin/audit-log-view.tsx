@@ -412,6 +412,8 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   // CS-027 contests.
   contest_created: { label: "Contest created", icon: Trophy, tone: "bg-loans-soft text-brand-link" },
   contest_updated: { label: "Contest updated", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  attendance_updated: { label: "Attendance updated", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  attendance_exported: { label: "Attendance exported", icon: FileCheck2, tone: "bg-loans-soft text-brand-link" },
   contest_submitted: { label: "Contest submitted", icon: Trophy, tone: "bg-loans-soft text-brand-link" },
   contest_deleted: { label: "Contest deleted", icon: Eraser, tone: "bg-muted text-text-secondary" },
   contest_approved: { label: "Contest approved", icon: BadgeCheck, tone: "bg-success/10 text-success" },

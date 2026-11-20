@@ -28,9 +28,7 @@ FR-16 does not ask for.
 
 from __future__ import annotations
 
-import csv
 import io
-from collections.abc import Generator
 from dataclasses import replace
 from datetime import date
 from decimal import Decimal
@@ -61,6 +59,8 @@ from app.schemas.reporting import (
 )
 from app.schemas.telecaller import PropertySubtypeLiteral
 from app.services import reporting
+from app.services.csv_export import csv_cell as _csv_cell
+from app.services.csv_export import csv_chunks as _csv_chunks
 from app.services.staff_analytics import AMOUNT_LIMIT
 
 router = APIRouter()
@@ -227,36 +227,6 @@ def _map_sort_error(exc: reporting.InvalidSortField) -> HTTPException:
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail=f"Cannot sort by {exc}.",
     )
-
-
-_FORMULA_LEAD_CHARS = ("=", "+", "-", "@", "\t", "\r")
-
-
-def _csv_cell(value: object) -> str:
-    """Defends against CSV/formula injection (OWASP): `agent_name` is free-text
-    supplied by the agent themself at registration, not by the admin who later
-    opens this export. A name starting with =, +, -, @, tab, or CR is opened
-    as a live formula by Excel/Sheets/LibreOffice — prefixing a leading quote
-    forces it to render as inert text instead. Applied to every cell, not
-    just agent_name, since a future column could add another free-text field."""
-    s = str(value)
-    if s and s[0] in _FORMULA_LEAD_CHARS:
-        return "'" + s
-    return s
-
-
-def _csv_chunks(rows: list[dict], header: list[str]) -> Generator[bytes, None, None]:
-    yield "﻿".encode()  # UTF-8 BOM so Excel reads the rupee glyph / non-ASCII names intact
-    buf = io.StringIO()
-    writer = csv.writer(buf)
-    writer.writerow(header)
-    yield buf.getvalue().encode("utf-8")
-
-    for row in rows:
-        buf = io.StringIO()
-        writer = csv.writer(buf)
-        writer.writerow([_csv_cell(row.get(col, "")) for col in header])
-        yield buf.getvalue().encode("utf-8")
 
 
 def _export_filename(

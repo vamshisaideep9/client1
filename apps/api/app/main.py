@@ -24,6 +24,7 @@ from app.api.v1.admin_vehicle_arrangements import router as admin_vehicle_arrang
 from app.api.v1.agent import router as agent_router
 from app.api.v1.agent_applications import router as agent_applications_router
 from app.api.v1.agent_invites import router as agent_invites_router
+from app.api.v1.attendance import router as attendance_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.banners import router as banners_router
 from app.api.v1.bookmarks import router as bookmarks_router
@@ -203,6 +204,7 @@ app.include_router(admin_teams_router, prefix="/api/v1/admin/teams", tags=["team
 app.include_router(manager_router, prefix="/api/v1/manager", tags=["manager"])
 app.include_router(commissions_router, prefix="/api/v1/admin/commissions", tags=["commissions"])
 app.include_router(contests_router, prefix="/api/v1/contests", tags=["contests"])
+app.include_router(attendance_router, prefix="/api/v1/attendance", tags=["attendance"])
 app.include_router(
     commission_rates_router, prefix="/api/v1/commission-rates", tags=["commission-rates"]
 )
