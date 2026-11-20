@@ -10,6 +10,8 @@
 - Seven focused PostgreSQL checks, including schema-wide RLS, passed.
   The migration has one head and passed scratch upgrade/downgrade/upgrade.
   Next priority is the personal attendance dashboard.
+- The platform-scope inventory covers the shared, read-only attendance
+  policy and holiday metadata. Person-level records retain live reach checks.
 
 **Implemented — Batch 5 web: contest schedules, prizes and Admin editing**
 
