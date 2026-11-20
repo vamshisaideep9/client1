@@ -7,6 +7,7 @@
   history. Staff can request leave or corrections and cancel eligible requests.
 - Mobile Playwright passed the setup-pending, check-in and half-day leave flow.
   Next priority is the manager and Admin attendance workspace.
+- Role navigation covers the two staff roles on both business lines.
 
 **Implemented — Batch 6 API: attendance, regularisation and leave**
 
@@ -18,6 +19,8 @@
 - Seven focused PostgreSQL checks, including schema-wide RLS, passed.
   The migration has one head and passed scratch upgrade/downgrade/upgrade.
   Next priority is the personal attendance dashboard.
+- The platform-scope inventory covers the shared, read-only attendance
+  policy and holiday metadata. Person-level records retain live reach checks.
 
 **Implemented — Batch 5 web: contest schedules, prizes and Admin editing**
 
@@ -39,6 +42,8 @@
   date-message regressions were corrected and passed the exact rerun. Ruff
   lint and formatting, generated API contracts and scratch migration
   upgrade/downgrade/upgrade passed. Next priority is the Batch 5 contest UI.
+- Hosted API verification ran 2,927 tests. The platform-scope inventory
+  now includes the Batch 4 payout-membership read policy that it reported.
 
 **Merged upstream — Batch 4: grouped commission payouts and transaction history**
 based on merged Batch 3. The API is merged upstream

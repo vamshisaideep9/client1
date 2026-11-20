@@ -4,11 +4,14 @@
 leave balance and requests, correction form, and request history. The API
 parent is [upstream #396](https://github.com/brollysolutions/client1/pull/396)
 and [mirror #97](https://github.com/vamshisaideep9/client1/pull/97).
+Navigation and direct-route tests cover staff access for both business lines.
 
 **Implemented — Batch 6 API:** attendance clock, effective-dated policy,
 reviewed leave and corrections, rollover, roster and audited CSV. Focused
 checks cover no-policy gating, concurrent check-in, overnight checkout,
 current manager reach, preserved original punches and override history.
+The platform-scope inventory explicitly covers the policy and holiday
+metadata roles.
 
 **Implemented — Batch 5 web:** minute-level contest controls and across-role
 schedule display, versioned Admin editing, and Admin item award recording.
@@ -20,6 +23,8 @@ versioned Admin edits. Covered by targeted contest and payout tests against
 PostgreSQL with Redis and a migration round-trip. Participant and Admin UI
 follows in the next slice. The current editor submits the existing all-day
 cash defaults against the regenerated contract.
+The hosted API run passed 2,926 cases and identified one stale policy
+inventory entry from Batch 4. The inventory now covers that policy.
 
 **Merged upstream — Batch 4: grouped commission payouts and transaction history**
 (2026-11-20). API PRs
