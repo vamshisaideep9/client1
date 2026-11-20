@@ -13,7 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { PayoutDestinationFields } from "@/features/admin/payout-destination-fields";
+import {
+  PayoutDestinationFields,
+  type SavedDestinationTarget,
+} from "@/features/admin/payout-destination-fields";
 import type { ApiResponse } from "@/lib/api/client";
 import { apiIssuesToFieldErrors, focusFirstInvalidField } from "@/lib/form-validation";
 import {
@@ -39,6 +42,7 @@ export function MoneyPayoutDialog({
   submitLabel,
   conflictTitle,
   onSubmit,
+  savedDestinationTarget = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,6 +53,7 @@ export function MoneyPayoutDialog({
   submitLabel: string;
   conflictTitle: string;
   onSubmit: (form: PayoutDestinationFormState) => Promise<ApiResponse<unknown>>;
+  savedDestinationTarget?: SavedDestinationTarget | null;
 }) {
   const [form, setForm] = React.useState<PayoutDestinationFormState>(EMPTY_DESTINATION);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -114,7 +119,7 @@ export function MoneyPayoutDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : resetAndClose())}>
-      <DialogContent ref={contentRef} className="max-w-lg">
+      <DialogContent preventOutsideClose ref={contentRef} className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -127,6 +132,7 @@ export function MoneyPayoutDialog({
             errors={errors}
             onChange={set}
             disabled={busy}
+            savedDestinationTarget={savedDestinationTarget}
           />
         </div>
         <DialogFooter>

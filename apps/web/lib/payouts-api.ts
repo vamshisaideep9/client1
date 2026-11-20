@@ -44,6 +44,23 @@ export async function rejectPayout(id: string, reason: string): Promise<ApiRespo
   });
 }
 
+export type SimulatedGatewayEvent = Schemas["PayoutGatewaySimulation"]["event"];
+
+/**
+ * Development-only RazorpayX test mode: apply a chosen gateway outcome. The
+ * API returns 404 unless the simulator is enabled on a mock-payments server,
+ * so the UI only offers it for events listed in `payout.simulate_events`.
+ */
+export async function simulatePayoutGateway(
+  id: string,
+  event: SimulatedGatewayEvent,
+): Promise<ApiResponse<Payout>> {
+  return apiRequest<Payout>(`/api/v1/payouts/${id}/simulate-gateway`, {
+    method: "POST",
+    body: { event },
+  });
+}
+
 export async function issueManualCheque(
   id: string,
   reference: string,
@@ -87,4 +104,36 @@ export async function searchPayoutRecipients(
   );
   if (!res.ok) return res;
   return { ok: true, status: res.status, data: res.data.recipients };
+}
+
+export type SavedPayoutDestination = Schemas["SavedPayoutDestinationRead"];
+
+/**
+ * The bank account / UPI ID an Agent saved, for prefilling one payout. Every
+ * call is audited server-side, so only fetch on an explicit maker action.
+ */
+export async function getSavedPayoutDestination(
+  target: { recipientUserUuid: string } | { agentProfileUuid: string },
+): Promise<ApiResponse<SavedPayoutDestination>> {
+  const path =
+    "agentProfileUuid" in target
+      ? `/api/v1/payouts/agents/${encodeURIComponent(target.agentProfileUuid)}/saved-destination`
+      : `/api/v1/payouts/recipients/${encodeURIComponent(target.recipientUserUuid)}/saved-destination`;
+  return apiRequest<SavedPayoutDestination>(path);
+}
+
+export type CancelledCheque = Schemas["CancelledChequeRead"];
+
+/**
+ * A short-lived link to the cancelled cheque an Agent attached to their payout
+ * details. Same access as the saved-destination prefill; every view is audited.
+ */
+export async function getCancelledCheque(
+  target: { recipientUserUuid: string } | { agentProfileUuid: string },
+): Promise<ApiResponse<CancelledCheque>> {
+  const path =
+    "agentProfileUuid" in target
+      ? `/api/v1/payouts/agents/${encodeURIComponent(target.agentProfileUuid)}/cancelled-cheque`
+      : `/api/v1/payouts/recipients/${encodeURIComponent(target.recipientUserUuid)}/cancelled-cheque`;
+  return apiRequest<CancelledCheque>(path);
 }

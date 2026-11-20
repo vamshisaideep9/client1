@@ -163,6 +163,11 @@ async def submit_application(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="One of your documents isn't a supported file type. Please try again.",
         ) from exc
+    except service.DocumentNotAccepted as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="One of your documents couldn't be accepted. Please upload a different file.",
+        ) from exc
     except service.StorageUnavailable as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
