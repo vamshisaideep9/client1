@@ -5763,6 +5763,17 @@
           "provider": {
             "$ref": "#/components/schemas/PayoutProvider"
           },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
           "requested_at": {
             "format": "date-time",
             "title": "Requested At",
@@ -5967,7 +5978,7 @@
         "type": "object"
       },
       "AgentTransactionItem": {
-        "description": "What a payout paid. Each payout pays exactly one commission today.",
+        "description": "A commission covered by a payment.",
         "properties": {
           "amount_paise": {
             "title": "Amount Paise",
@@ -8555,6 +8566,33 @@
         "title": "BroadcastResponse",
         "type": "object"
       },
+      "BulkCommissionPayoutRequest": {
+        "properties": {
+          "commission_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Commission Ids",
+            "type": "array"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/PayoutDestinationInput"
+          },
+          "destination_type": {
+            "$ref": "#/components/schemas/PayoutDestination"
+          }
+        },
+        "required": [
+          "destination_type",
+          "destination",
+          "commission_ids"
+        ],
+        "title": "BulkCommissionPayoutRequest",
+        "type": "object"
+      },
       "CallDisposition": {
         "enum": [
           "connected",
@@ -9320,8 +9358,75 @@
         "title": "CommissionListResponse",
         "type": "object"
       },
+      "CommissionPayoutGroup": {
+        "properties": {
+          "agent_code": {
+            "title": "Agent Code",
+            "type": "string"
+          },
+          "agent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Name"
+          },
+          "agent_profile_uuid": {
+            "format": "uuid",
+            "title": "Agent Profile Uuid",
+            "type": "string"
+          },
+          "business_line": {
+            "title": "Business Line",
+            "type": "string"
+          },
+          "pending_amount_paise": {
+            "title": "Pending Amount Paise",
+            "type": "integer"
+          },
+          "pending_count": {
+            "title": "Pending Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "agent_profile_uuid",
+          "agent_code",
+          "agent_name",
+          "business_line",
+          "pending_count",
+          "pending_amount_paise"
+        ],
+        "title": "CommissionPayoutGroup",
+        "type": "object"
+      },
+      "CommissionPayoutGroupList": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/CommissionPayoutGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "groups",
+          "total"
+        ],
+        "title": "CommissionPayoutGroupList",
+        "type": "object"
+      },
       "CommissionPayoutRequest": {
-        "description": "No amount, no recipient: both come from the commission row\n(services/commissions.py::attach_payout), never the request body \u2014 same\ninvariant as ReferralPayoutRequest. The idempotency key is derived\nserver-side from the commission id (`com-{uuid.hex}`), not accepted from\nthe client, for the identical reason ReferralPayoutRequest's docstring\nrecords: a client-chosen key let two concurrent \"Pay commission\" clicks\neach pick a fresh key and both slip past create_payout's dedupe guard.",
+        "description": "Destination supplied by the maker. The locked commissions determine the payment.",
         "properties": {
           "destination": {
             "$ref": "#/components/schemas/PayoutDestinationInput"
@@ -11403,6 +11508,40 @@
         ],
         "title": "ContestWinMode",
         "type": "string"
+      },
+      "CoveredCommission": {
+        "properties": {
+          "amount_paise": {
+            "title": "Amount Paise",
+            "type": "integer"
+          },
+          "deal_type": {
+            "enum": [
+              "loan_application",
+              "property_deal"
+            ],
+            "title": "Deal Type",
+            "type": "string"
+          },
+          "deal_uuid": {
+            "format": "uuid",
+            "title": "Deal Uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "deal_type",
+          "deal_uuid",
+          "amount_paise"
+        ],
+        "title": "CoveredCommission",
+        "type": "object"
       },
       "DealPropertySummary": {
         "properties": {
@@ -27456,6 +27595,65 @@
         "title": "TelecallerSiteVisitRead",
         "type": "object"
       },
+      "TransactionDetail": {
+        "properties": {
+          "amount_paise": {
+            "title": "Amount Paise",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "display_id": {
+            "title": "Display Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "payment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TransactionPaymentTrail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/TransactionStatus"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransactionType"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "amount_paise",
+          "currency",
+          "description",
+          "created_at",
+          "display_id",
+          "payment"
+        ],
+        "title": "TransactionDetail",
+        "type": "object"
+      },
       "TransactionListResponse": {
         "properties": {
           "transactions": {
@@ -27470,6 +27668,97 @@
           "transactions"
         ],
         "title": "TransactionListResponse",
+        "type": "object"
+      },
+      "TransactionPaymentTrail": {
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "destination_hint": {
+            "title": "Destination Hint",
+            "type": "string"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "method": {
+            "$ref": "#/components/schemas/PayoutDestination"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "reversed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reversed At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PayoutStatus"
+          }
+        },
+        "required": [
+          "status",
+          "method",
+          "destination_hint",
+          "reference",
+          "requested_at",
+          "approved_at",
+          "issued_at",
+          "paid_at",
+          "reversed_at"
+        ],
+        "title": "TransactionPaymentTrail",
         "type": "object"
       },
       "TransactionRead": {
@@ -27513,6 +27802,42 @@
           "created_at"
         ],
         "title": "TransactionRead",
+        "type": "object"
+      },
+      "TransactionSearchResponse": {
+        "properties": {
+          "paid_amount_paise": {
+            "title": "Paid Amount Paise",
+            "type": "integer"
+          },
+          "processing_count": {
+            "title": "Processing Count",
+            "type": "integer"
+          },
+          "referral_count": {
+            "title": "Referral Count",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "transactions": {
+            "items": {
+              "$ref": "#/components/schemas/TransactionRead"
+            },
+            "title": "Transactions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "transactions",
+          "total",
+          "paid_amount_paise",
+          "processing_count",
+          "referral_count"
+        ],
+        "title": "TransactionSearchResponse",
         "type": "object"
       },
       "TransactionStatus": {
@@ -29117,6 +29442,16 @@
           },
           {
             "in": "query",
+            "name": "awaiting_payout",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Awaiting Payout",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
@@ -29216,6 +29551,53 @@
         ]
       }
     },
+    "/api/v1/admin/commissions/bulk-payout": {
+      "post": {
+        "description": "Create one payout from selected pending commissions for the same Agent.",
+        "operationId": "create_bulk_commission_payout_api_v1_admin_commissions_bulk_payout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkCommissionPayoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionPayoutResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Bulk Commission Payout",
+        "tags": [
+          "commissions"
+        ]
+      }
+    },
     "/api/v1/admin/commissions/eligible": {
       "get": {
         "operationId": "list_eligible_api_v1_admin_commissions_eligible_get",
@@ -29277,6 +29659,121 @@
         ]
       }
     },
+    "/api/v1/admin/commissions/payouts/{payout_id}/items": {
+      "get": {
+        "operationId": "list_covered_commissions_api_v1_admin_commissions_payouts__payout_id__items_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payout_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Payout Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoveredCommission"
+                  },
+                  "title": "Response List Covered Commissions Api V1 Admin Commissions Payouts  Payout Id  Items Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Covered Commissions",
+        "tags": [
+          "commissions"
+        ]
+      }
+    },
+    "/api/v1/admin/commissions/pending-payout-groups": {
+      "get": {
+        "description": "Group every unlinked pending commission by Agent and business line.",
+        "operationId": "list_pending_payout_groups_api_v1_admin_commissions_pending_payout_groups_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 2147483647,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionPayoutGroupList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Pending Payout Groups",
+        "tags": [
+          "commissions"
+        ]
+      }
+    },
     "/api/v1/admin/commissions/{commission_id}/cancel": {
       "post": {
         "operationId": "cancel_commission_api_v1_admin_commissions__commission_id__cancel_post",
@@ -29330,7 +29827,7 @@
     },
     "/api/v1/admin/commissions/{commission_id}/payout": {
       "post": {
-        "description": "Turns one pending commission into a real payout. Amount and recipient\ncome from the commission row, never from the request body \u2014 only the\ndestination the agent actually receives money at is caller-supplied.\nApproval is a separate step at POST /payouts/{id}/approve: this endpoint\nis the maker, never the checker.",
+        "description": "Create a payout for a single pending commission.",
         "operationId": "create_commission_payout_api_v1_admin_commissions__commission_id__payout_post",
         "parameters": [
           {
@@ -51088,6 +51585,236 @@
           }
         ],
         "summary": "List Transactions",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/api/v1/transactions/search": {
+      "get": {
+        "description": "Search visible ledger entries. Metrics cover the full filtered result.",
+        "operationId": "search_transactions_api_v1_transactions_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TransactionType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status_filter",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TransactionStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status Filter"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_amount_paise",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 10000000000,
+                  "minimum": -10000000000,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Amount Paise"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_amount_paise",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 10000000000,
+                  "minimum": -10000000000,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Amount Paise"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 2147483647,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionSearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Search Transactions",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/api/v1/transactions/{transaction_id}": {
+      "get": {
+        "operationId": "transaction_detail_api_v1_transactions__transaction_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Transaction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Transaction Detail",
         "tags": [
           "transactions"
         ]

@@ -52,6 +52,7 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     # across both, matching banners/offers rather than operational row rules.
     "campaign_media_assets": ClassificationMode.GLOBAL_CONTENT,
     "client_profiles": ClassificationMode.OPERATIONAL,
+    "commission_payout_items": ClassificationMode.DERIVED,
     "commissions": ClassificationMode.OPERATIONAL,
     "contact_share_links": ClassificationMode.DERIVED,
     "content_blocks": ClassificationMode.GLOBAL_CONTENT,

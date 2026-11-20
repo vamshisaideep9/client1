@@ -143,14 +143,15 @@ async def _find_paid_divergences(
     see module docstring."""
     stmt = (
         select(Payout.id, Payout.ledger_transaction_id)
-        .join(source_model, payout_uuid_col == Payout.id)
         .where(
             Payout.type == payout_type,
             Payout.status == PayoutStatus.PAID,
             Payout.updated_at < cutoff,
-            status_col == status_value,
+            select(source_model.id)
+            .where(payout_uuid_col == Payout.id, status_col == status_value)
+            .exists(),
         )
-        .order_by(Payout.updated_at)
+        .order_by(Payout.updated_at, Payout.id)
         .limit(_LINK_SCAN_LIMIT)
     )
     rows = (await session.execute(stmt)).all()
@@ -172,13 +173,13 @@ async def _find_release_divergences(
     match."""
     stmt = (
         select(Payout.id)
-        .join(source_model, payout_uuid_col == Payout.id)
         .where(
             Payout.type == payout_type,
             Payout.status.in_(_TERMINAL_DEAD_STATUSES),
+            select(source_model.id).where(payout_uuid_col == Payout.id).exists(),
             Payout.updated_at < cutoff,
         )
-        .order_by(Payout.updated_at)
+        .order_by(Payout.updated_at, Payout.id)
         .limit(_LINK_SCAN_LIMIT)
     )
     return list((await session.scalars(stmt)).all())

@@ -14,7 +14,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.models.payout import PayoutDestination, PayoutProvider, PayoutStatus
 from app.models.transaction import TransactionStatus, TransactionType
@@ -169,6 +169,7 @@ class AgentPayoutTrail(BaseModel):
     provider: PayoutProvider
     # Already masked at payout creation (never the raw UPI ID or account).
     destination_hint: str
+    reference: str | None = None
     requested_at: datetime
     approved_at: datetime | None
     issued_at: datetime | None
@@ -181,7 +182,7 @@ class AgentPayoutTrail(BaseModel):
 
 
 class AgentTransactionItem(BaseModel):
-    """What a payout paid. Each payout pays exactly one commission today."""
+    """A commission covered by a payment."""
 
     commission_id: UUID
     amount_paise: int
@@ -214,13 +215,7 @@ class AgentTransactionDetail(BaseModel):
 
 
 class CommissionPayoutRequest(BaseModel):
-    """No amount, no recipient: both come from the commission row
-    (services/commissions.py::attach_payout), never the request body — same
-    invariant as ReferralPayoutRequest. The idempotency key is derived
-    server-side from the commission id (`com-{uuid.hex}`), not accepted from
-    the client, for the identical reason ReferralPayoutRequest's docstring
-    records: a client-chosen key let two concurrent "Pay commission" clicks
-    each pick a fresh key and both slip past create_payout's dedupe guard."""
+    """Destination supplied by the maker. The locked commissions determine the payment."""
 
     destination_type: PayoutDestination
     destination: PayoutDestinationInput
@@ -233,3 +228,38 @@ class CommissionPayoutRequest(BaseModel):
 
 class CommissionPayoutResponse(BaseModel):
     payout_id: UUID
+
+
+MAX_COMMISSION_PAYOUT_ITEMS = 200
+
+
+class BulkCommissionPayoutRequest(CommissionPayoutRequest):
+    commission_ids: list[UUID] = Field(min_length=1, max_length=MAX_COMMISSION_PAYOUT_ITEMS)
+
+    @field_validator("commission_ids")
+    @classmethod
+    def _unique_commissions(cls, ids: list[UUID]) -> list[UUID]:
+        if len(set(ids)) != len(ids):
+            raise ValueError("Select each commission only once.")
+        return ids
+
+
+class CoveredCommission(BaseModel):
+    id: UUID
+    deal_type: DealType
+    deal_uuid: UUID
+    amount_paise: int
+
+
+class CommissionPayoutGroup(BaseModel):
+    agent_profile_uuid: UUID
+    agent_code: str
+    agent_name: str | None
+    business_line: str
+    pending_count: int
+    pending_amount_paise: int
+
+
+class CommissionPayoutGroupList(BaseModel):
+    groups: list[CommissionPayoutGroup]
+    total: int

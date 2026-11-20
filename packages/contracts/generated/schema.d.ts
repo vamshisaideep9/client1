@@ -287,6 +287,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/commissions/bulk-payout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Bulk Commission Payout
+         * @description Create one payout from selected pending commissions for the same Agent.
+         */
+        post: operations["create_bulk_commission_payout_api_v1_admin_commissions_bulk_payout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/commissions/eligible": {
         parameters: {
             query?: never;
@@ -296,6 +316,43 @@ export interface paths {
         };
         /** List Eligible */
         get: operations["list_eligible_api_v1_admin_commissions_eligible_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/commissions/payouts/{payout_id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Covered Commissions */
+        get: operations["list_covered_commissions_api_v1_admin_commissions_payouts__payout_id__items_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/commissions/pending-payout-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Pending Payout Groups
+         * @description Group every unlinked pending commission by Agent and business line.
+         */
+        get: operations["list_pending_payout_groups_api_v1_admin_commissions_pending_payout_groups_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -332,11 +389,7 @@ export interface paths {
         put?: never;
         /**
          * Create Commission Payout
-         * @description Turns one pending commission into a real payout. Amount and recipient
-         *     come from the commission row, never from the request body — only the
-         *     destination the agent actually receives money at is caller-supplied.
-         *     Approval is a separate step at POST /payouts/{id}/approve: this endpoint
-         *     is the maker, never the checker.
+         * @description Create a payout for a single pending commission.
          */
         post: operations["create_commission_payout_api_v1_admin_commissions__commission_id__payout_post"];
         delete?: never;
@@ -5709,6 +5762,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/transactions/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Transactions
+         * @description Search visible ledger entries. Metrics cover the full filtered result.
+         */
+        get: operations["search_transactions_api_v1_transactions_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transactions/{transaction_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Transaction Detail */
+        get: operations["transaction_detail_api_v1_transactions__transaction_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -7726,6 +7816,8 @@ export interface components {
             /** Paid At */
             paid_at: string | null;
             provider: components["schemas"]["PayoutProvider"];
+            /** Reference */
+            reference?: string | null;
             /**
              * Requested At
              * Format: date-time
@@ -7790,7 +7882,7 @@ export interface components {
         };
         /**
          * AgentTransactionItem
-         * @description What a payout paid. Each payout pays exactly one commission today.
+         * @description A commission covered by a payment.
          */
         AgentTransactionItem: {
             /** Amount Paise */
@@ -8594,6 +8686,13 @@ export interface components {
             /** Recipients */
             recipients: number;
         };
+        /** BulkCommissionPayoutRequest */
+        BulkCommissionPayoutRequest: {
+            /** Commission Ids */
+            commission_ids: string[];
+            destination: components["schemas"]["PayoutDestinationInput"];
+            destination_type: components["schemas"]["PayoutDestination"];
+        };
         /**
          * CallDisposition
          * @enum {string}
@@ -8855,15 +8954,34 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** CommissionPayoutGroup */
+        CommissionPayoutGroup: {
+            /** Agent Code */
+            agent_code: string;
+            /** Agent Name */
+            agent_name: string | null;
+            /**
+             * Agent Profile Uuid
+             * Format: uuid
+             */
+            agent_profile_uuid: string;
+            /** Business Line */
+            business_line: string;
+            /** Pending Amount Paise */
+            pending_amount_paise: number;
+            /** Pending Count */
+            pending_count: number;
+        };
+        /** CommissionPayoutGroupList */
+        CommissionPayoutGroupList: {
+            /** Groups */
+            groups: components["schemas"]["CommissionPayoutGroup"][];
+            /** Total */
+            total: number;
+        };
         /**
          * CommissionPayoutRequest
-         * @description No amount, no recipient: both come from the commission row
-         *     (services/commissions.py::attach_payout), never the request body — same
-         *     invariant as ReferralPayoutRequest. The idempotency key is derived
-         *     server-side from the commission id (`com-{uuid.hex}`), not accepted from
-         *     the client, for the identical reason ReferralPayoutRequest's docstring
-         *     records: a client-chosen key let two concurrent "Pay commission" clicks
-         *     each pick a fresh key and both slip past create_payout's dedupe guard.
+         * @description Destination supplied by the maker. The locked commissions determine the payment.
          */
         CommissionPayoutRequest: {
             destination: components["schemas"]["PayoutDestinationInput"];
@@ -9613,6 +9731,26 @@ export interface components {
          * @enum {string}
          */
         ContestWinMode: "threshold" | "top_n";
+        /** CoveredCommission */
+        CoveredCommission: {
+            /** Amount Paise */
+            amount_paise: number;
+            /**
+             * Deal Type
+             * @enum {string}
+             */
+            deal_type: "loan_application" | "property_deal";
+            /**
+             * Deal Uuid
+             * Format: uuid
+             */
+            deal_uuid: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
         /** DealPropertySummary */
         DealPropertySummary: {
             /**
@@ -14956,10 +15094,56 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** TransactionDetail */
+        TransactionDetail: {
+            /** Amount Paise */
+            amount_paise: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /** Description */
+            description: string;
+            /** Display Id */
+            display_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            payment: components["schemas"]["TransactionPaymentTrail"] | null;
+            status: components["schemas"]["TransactionStatus"];
+            type: components["schemas"]["TransactionType"];
+        };
         /** TransactionListResponse */
         TransactionListResponse: {
             /** Transactions */
             transactions: components["schemas"]["TransactionRead"][];
+        };
+        /** TransactionPaymentTrail */
+        TransactionPaymentTrail: {
+            /** Approved At */
+            approved_at: string | null;
+            /** Destination Hint */
+            destination_hint: string;
+            /** Issued At */
+            issued_at: string | null;
+            method: components["schemas"]["PayoutDestination"];
+            /** Paid At */
+            paid_at: string | null;
+            /** Reference */
+            reference: string | null;
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
+            /** Reversed At */
+            reversed_at: string | null;
+            status: components["schemas"]["PayoutStatus"];
         };
         /** TransactionRead */
         TransactionRead: {
@@ -14981,6 +15165,19 @@ export interface components {
             id: string;
             status: components["schemas"]["TransactionStatus"];
             type: components["schemas"]["TransactionType"];
+        };
+        /** TransactionSearchResponse */
+        TransactionSearchResponse: {
+            /** Paid Amount Paise */
+            paid_amount_paise: number;
+            /** Processing Count */
+            processing_count: number;
+            /** Referral Count */
+            referral_count: number;
+            /** Total */
+            total: number;
+            /** Transactions */
+            transactions: components["schemas"]["TransactionRead"][];
         };
         /**
          * TransactionStatus
@@ -15707,6 +15904,7 @@ export interface operations {
                 status_filter?: components["schemas"]["CommissionStatus"] | null;
                 business_line?: ("loans" | "real_estate") | null;
                 agent_profile_uuid?: string | null;
+                awaiting_payout?: boolean;
                 limit?: number;
                 offset?: number;
             };
@@ -15769,6 +15967,39 @@ export interface operations {
             };
         };
     };
+    create_bulk_commission_payout_api_v1_admin_commissions_bulk_payout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkCommissionPayoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionPayoutResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_eligible_api_v1_admin_commissions_eligible_get: {
         parameters: {
             query?: {
@@ -15788,6 +16019,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EligibleDealListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_covered_commissions_api_v1_admin_commissions_payouts__payout_id__items_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payout_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoveredCommission"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pending_payout_groups_api_v1_admin_commissions_pending_payout_groups_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionPayoutGroupList"];
                 };
             };
             /** @description Validation Error */
@@ -26828,6 +27122,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TransactionListResponse"];
+                };
+            };
+        };
+    };
+    search_transactions_api_v1_transactions_search_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                type?: components["schemas"]["TransactionType"] | null;
+                status_filter?: components["schemas"]["TransactionStatus"] | null;
+                date_from?: string | null;
+                date_to?: string | null;
+                min_amount_paise?: number | null;
+                max_amount_paise?: number | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionSearchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transaction_detail_api_v1_transactions__transaction_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transaction_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

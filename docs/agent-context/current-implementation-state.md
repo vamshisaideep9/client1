@@ -711,8 +711,8 @@ lines, Agents stay line-scoped):**
 - *Transaction detail.* A commission transaction shows the payout method with
   its masked hint, when it was requested, approved, issued (cheque), paid or
   reversed, who requested and who approved it (name and role), and the one
-  commission it paid. Each payout pays exactly one commission today; bundled
-  payouts are a separate money-layer feature.
+  commission it paid. CS-030 adds grouped commission payouts and preserves
+  their covered items after a reversal.
 - *Lead history.* Only for a lead the Agent introduced, on their line:
   applications, service enquiries, property deals, enquiries, site visits,
   call outcomes with telecaller notes, and a status timeline. Status reasons,
@@ -976,6 +976,24 @@ module; "Does not fit" items 6, 11, 12 and 13 of the batch plan):**
   team's progress and members.
 
 Evidence is listed in `feature-status.md` under Batch G.
+
+### CS-030 — Grouped commission payouts and transaction history
+
+- Platform Admin can group pending, unlinked commissions by Agent and line,
+  then raise one payout for up to 200 selected commissions from one group.
+  Single and grouped creation use the same ordered source row locks. The
+  recipient and integer-paise amount come from those rows. The payout and
+  its covered items commit with every claim before a transfer can start.
+- Existing payout caps and approval rules apply to the combined amount.
+  Reconciliation repairs a payout once even when several source rows need
+  repair. A reversal releases every active claim for retry and preserves the
+  original covered amounts. Migration `c9e1a3b5d7f2` backfills available links.
+- Transaction search returns paginated rows and totals over the full filtered
+  result. Details follow existing ledger ownership and oversight rules.
+  Masked payout trails are limited to the owner and platform Admin. Agent
+  details continue to apply Agent field visibility to deal and staff data.
+  The payment reference is the available provider reference. Cheque details
+  use the existing masked destination.
 
 ### CS-029 — Telecaller loan specialties and scoped staff identifiers
 
