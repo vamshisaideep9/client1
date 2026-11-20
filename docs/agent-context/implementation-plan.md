@@ -33,6 +33,8 @@
   date-message regressions were corrected and passed the exact rerun. Ruff
   lint and formatting, generated API contracts and scratch migration
   upgrade/downgrade/upgrade passed. Next priority is the Batch 5 contest UI.
+- Hosted API verification ran 2,927 tests. The platform-scope inventory
+  now includes the Batch 4 payout-membership read policy that it reported.
 
 **Merged upstream — Batch 4: grouped commission payouts and transaction history**
 based on merged Batch 3. The API is merged upstream
