@@ -15,30 +15,25 @@ review evidence, rather than pixel baselines or proof of a live API integration.
 | Sub Admin: proposal awaiting review | 390px | [Rates](subadmin-rates-390.png) |
 | Product workspace: saved commission after an error and retry | 390px | [Commission](product-agent-commission-390.png) |
 
-Fresh terminal verification for the unchanged runtime candidate:
+Fresh terminal verification:
 
-- `pnpm lint` and `pnpm typecheck`: exit 0.
-- `pnpm test`: exit 0, 153 files and 1,113 tests passed.
-- `pnpm build` in Node 22 Alpine: exit 0, all 118 pages generated.
-  All eight production font hashes match the prior verified artifact.
-- `pnpm test:e2e e2e/agent-lead-intake.spec.ts` against the production bundle:
-  exit 0, all ten scenarios passed. API responses are explicitly mocked.
-- After the API's final permission/audit correction, the three affected fixtures
-  were aligned and rerun: all three passed on the unchanged production artifact,
-  with fresh fixture lint/typecheck. The Agent fixture uses only its DTO fields;
-  pending proposals have no review identity; direct Admin entry has no checker
-  and visibly updates the approved rate. These repeat existing scenarios.
-- The same standalone artifact passes the additional embedded product-commission
-  scenario: a failed save keeps rate and note, retry succeeds, and no product
-  update is sent. The unrelated Save product action is absent on this tab.
-  The first follow-up test expected an internal 503 detail; it now correctly
-  asserts the client's deliberately generic retry error. Runtime behavior did
-  not change for that test correction.
-- New and neighboring browser journeys have 36 distinct passing scenarios across
-  segmented development/production runs. A prior combined run failed two checks;
-  the 320px Edit reachability issue and the public-navigation test wait were
-  corrected and the affected checks passed. This is not a claim that one final
-  combined 36-test run passed.
+- `pnpm lint`, `pnpm typecheck` and `pnpm test`: exit 0; 153 files / 1,113 tests.
+- `pnpm build` in Node 22 Alpine: exit 0, all 118 pages generated. All eight
+  production font hashes match the prior verified artifact.
+- The unpublished restack onto final API `e70b18c3` preserves all runtime files
+  from verified candidate `2010d74a`. The final API and contracts are inherited
+  byte-for-byte. Fresh post-restack changed-test ESLint and typecheck exit 0.
+- Final combined standalone-production Playwright run: **11 passed**, exit 0,
+  3.1 minutes, covering the ten intake cases and the embedded commission case.
+  API responses are explicitly mocked. The embedded case preserves rate/note
+  after a failed save, retries successfully and sends no product PATCH.
+- An earlier combined attempt passed ten cases but timed out awaiting the email
+  detail page's full `load` event, with the expected form already rendered.
+  Its unchanged traced rerun passed. The test now waits for DOM readiness,
+  fills/saves the form and asserts the exact email-only PATCH; all eleven then
+  pass together. No application code changed for that readiness adjustment.
+- New and neighboring journeys have 36 distinct passing scenarios across
+  segmented runs. This is not a final combined 36-test pass.
 
 The design review retains the existing dashboard colors, fonts, spacing and
 Radix controls. Mobile results remain readable without horizontal scrolling.

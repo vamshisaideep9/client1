@@ -1,31 +1,28 @@
 # Feature implementation status
 
-**In progress — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
-branch `feat/agent-lead-intake-web`, child of API checkpoint `9a60ded9`.
-The approved intake, resubmission, browser-only spreadsheet and commission-rate
-workflows are implemented and production verification passes; PR delivery waits
-for the parent API slice.
-Final embedded-flow review reproduced an unrelated Save product action on the
-Agent commission tab. Its visibility is now limited to the product-editing tabs;
-a new 390px rate-save error/retry regression passes against the standalone
-production server, preserving both values and making no product PATCH.
-Follow-up lint/typecheck, all 1,113 unit tests and all 118 production pages pass;
-all eight font hashes match the prior build.
-Rate fixtures now match the final standalone Admin and approved-only Agent DTO
-semantics; the three updated production-browser scenarios and fresh fixture
-lint/typecheck pass, with no additional UI implementation change.
-Web lint/typecheck pass; Vitest 153 files / 1,113 tests pass. Ten new browser
-scenarios pass, with 36 distinct journeys supported by passing segmented
-evidence. Review fixed an email-only edit trying to clear hidden notes, an extra
-row action making Edit unreachable at 320px, and phone result visibility.
-Final 320/390px result and refused-refresh checks: 2 passed. Public navigation
-after a rejected refresh now waits for rendering after separately asserting
-immediate removal of protected content. Node 22 Alpine production build passes
-all 118 pages, all ten new production-browser scenarios pass, and the standalone
-server also passes the embedded product-rate case. Runtime candidate `2010d74a`;
-six synthetic screenshots and verification commands are in
-`apps/web/e2e/review/agent-lead-intake/README.md`. Next: Batch 3 API after both
-Batch 2 PR deliveries. No completion-percentage change.
+**Verified — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
+branch `feat/agent-lead-intake-web`, stacked on API `e70b18c3`:
+[upstream #388](https://github.com/brollysolutions/client1/pull/388),
+[mirror #89](https://github.com/vamshisaideep9/client1/pull/89).
+The email/property intake, local spreadsheet workflow, resubmission filters/badges,
+approved commission display, proposal/review and editable suggestion are complete;
+web PR delivery is pending. No completion-percentage change.
+
+Web lint/typecheck and 1,113 unit tests (153 files) pass. The Node 22 Alpine
+production build generates all 118 pages; all eight font hashes match the prior
+artifact. Restacking changes no runtime file relative to verified candidate
+`2010d74a` and inherits the final API/contracts unchanged. Fresh post-restack
+changed-test lint/typecheck pass. The final combined production-browser run is
+**11 passed**, exit 0, 3.1 minutes, using synthetic API mocks. The email-only test
+waits for DOM readiness and retains its exact request assertion after an earlier
+full-load timeout with the form already rendered. There are 36 distinct passing
+new/neighboring journeys across segmented runs, not a final combined 36-test pass.
+
+Security/design review covers hidden-note preservation, formula-safe bounded
+spreadsheets, generated contract consumers, mobile result cards and the embedded
+commission error/retry without an unrelated product save. Six synthetic screenshots
+and evidence are in `apps/web/e2e/review/agent-lead-intake/README.md`.
+Stop after Batch 2 delivery; next is Batch 3 API in a new session.
 
 Status: **Derived living implementation ledger**
 

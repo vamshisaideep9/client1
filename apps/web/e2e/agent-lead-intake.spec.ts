@@ -83,7 +83,7 @@ test("email-only editing leaves hidden notes untouched", async ({ page }) => {
     if (route.request().method() === "PATCH") saved = route.request().postDataJSON();
     await route.fulfill({ json: { ...lead(), editable: true, requirement: { product_slug: "personal-loan", ...(saved ? { email: "new@example.com" } : {}) } } });
   });
-  await page.goto(`/dashboard/leads/${LEAD_ID}`);
+  await page.goto(`/dashboard/leads/${LEAD_ID}`, { waitUntil: "domcontentloaded" });
   await page.getByLabel("Email (optional)").fill("new@example.com");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect.poll(() => saved).toEqual({ requirement: { email: "new@example.com" } });

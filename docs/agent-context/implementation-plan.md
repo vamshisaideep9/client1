@@ -1,48 +1,41 @@
 # Living implementation plan
 
-**In progress — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
-branch `feat/agent-lead-intake-web` stacked on API checkpoint `9a60ded9`.
-Acceptance: email/property-type intake, approved commission display and review,
-resubmission filters/badges, browser-only spreadsheet preview/submission/results
-and editable commission prefill. Preserve generated contracts, field visibility,
-private-route noindex and the existing dashboard design; no dependency or API
-change. Verify web lint/typecheck/unit/build, focused Playwright and responsive
-design/security review before both repository PRs. Parent API verification and
-delivery remain in progress independently; web delivery follows them.
+**Verified — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
+branch `feat/agent-lead-intake-web`, stacked on API `e70b18c3`:
+[upstream #388](https://github.com/brollysolutions/client1/pull/388),
+[mirror #89](https://github.com/vamshisaideep9/client1/pull/89).
+Web PR delivery is pending. No requirement-percentage change.
 
-- Implemented: Agent email/property-type intake (a listing remains optional),
-  approved rate and note in the product dialog, resubmission filters/badges in
-  Agent and Telecaller lists, local CSV/XLSX parsing with a 200-row preview,
-  valid-row-only submission and formula-safe result download. Phones show each
-  result as a card. No files reach the API.
-- Implemented: Sub Admin proposals/withdrawals and Admin immediate entry and
-  review in the new rates workspace; each loan product has an Agent commission
-  tab. Per-deal commission suggestions remain editable. Email-only editing
-  omits unchanged/hidden notes, preserving the ownership ledger.
-- Final embedded-flow review reproduced an unrelated Save product action on the
-  Agent commission tab against the production bundle. Product-save controls now
-  appear only on the Details and Application form tabs. A new 390px browser
-  regression also exercises rate-save failure/retry without a product PATCH;
-  lint/typecheck and all 1,113 unit tests pass for this bounded follow-up.
-  Its Node 22 Alpine production build passes all 118 pages. The ten intake
-  scenarios and the additional embedded rate-save error/retry case pass against
-  the standalone production server; all eight font hashes match the prior build.
-- Contract-fixture follow-up: the Agent mock carries only the Agent DTO fields;
-  pending proposals have no review identity; direct Admin entries have no checker.
-  The three updated scenarios pass against the unchanged production artifact,
-  with fresh fixture lint/typecheck. No additional UI implementation change.
-- Fresh evidence: web lint and typecheck pass; full Vitest 153 files / 1,113
-  tests pass. New Playwright intake suite 10 passed; 36 distinct new/neighboring
-  browser journeys have passing segmented evidence after the 320px row-action
-  fix and functional sign-out wait correction. Final mobile-result check at
-  320/390px and refused-refresh check: 2 passed. Screenshot review at
-  320/390/768/1440px; existing tokens/primitives, no new motion or dependency.
-  Node 22 Alpine production build passes all 118 pages. All ten new browser
-  scenarios pass against that production bundle; the standalone server also
-  passes the embedded product-rate regression. Runtime candidate `2010d74a`;
-  six final synthetic screenshots and commands are recorded in
-  `apps/web/e2e/review/agent-lead-intake/README.md`. API delivery remains the
-  prerequisite for shipping this stacked web slice. Next: Batch 3 API.
+- Implemented: Agent email/property-type intake with an optional matching listing,
+  approved commission rate/note in the product dialog, Agent/Telecaller
+  resubmission filters and badges, browser-only CSV/XLSX templates and parsing,
+  a 200-row preview, valid-row submission and formula-safe results. Mobile results
+  use readable cards. Email-only edits preserve untouched or hidden notes.
+- Implemented: Sub Admin proposals/withdrawal, Admin review and immediate rate
+  entry, a commission section per loan product and editable per-deal suggestions.
+  The product workspace offers its product-save action only on product-editing
+  tabs; the commission action preserves values after an error and supports retry.
+- Verification: web lint/typecheck and all 1,113 Vitest tests (153 files) pass;
+  the Node 22 Alpine production build generates all 118 pages. The restack
+  preserves every runtime file from verified candidate `2010d74a`, and inherits
+  the API/contracts without changes. Fresh post-restack changed-test lint and
+  typecheck pass. All eight generated font hashes match the prior artifact.
+- Final production Playwright run: **11 passed together**, exit 0, 3.1 minutes,
+  using synthetic API mocks. This covers intake, CSV/XLSX, both resubmission
+  filters, Admin/Sub Admin rates, the editable suggestion and embedded error/retry.
+  The email-only regression waits for DOM readiness and still asserts the exact
+  PATCH body; a prior full-load wait timed out after its form had rendered.
+  There are 36 distinct new/neighboring journeys with segmented passing evidence;
+  no final combined 36-test pass is claimed.
+- Design/security review retains existing tokens, private-route boundaries and
+  responsive controls, with no new dependency or motion. Six synthetic screenshots
+  at 320/390/768/1440px and verification details are in
+  `apps/web/e2e/review/agent-lead-intake/README.md`. Server authorization, ledger
+  ownership, maker/checker and privacy behavior are covered by the parent API's
+  2,884 passing database-backed tests and its documented historical limit.
+
+After Batch 2 delivery, stop this session. Next priority: Batch 3 API in a new
+session; Batches 3–6 have not started.
 
 Status: **Derived, actively maintained plan**
 

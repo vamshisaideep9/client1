@@ -979,14 +979,18 @@ Evidence is listed in `feature-status.md` under Batch G.
 
 ### CS-028 — Agent lead form fields, sticky resubmission, bulk submit and product commission rates
 
-Web slice (2026-11-20, `feat/agent-lead-intake-web`): generated-type wrappers,
+Web slice (2026-11-20, `feat/agent-lead-intake-web`, parent API `e70b18c3`):
 Agent email/property type with optional matching listing, approved rate/note,
-resubmission filters and badges, local CSV/XLSX templates and parsing, row preview
-and valid-row-only submission, formula-safe CSV result download. Admin/Sub Admin
-rate management includes maker/checker review and a per-product commission tab;
-deal entry pre-fills the approved suggestion and remains editable. Email-only
-updates omit untouched/hidden notes. Existing design and private-route boundaries
-remain; no dependency or API change. Verification is recorded in the living files.
+resubmission filters/badges, local CSV/XLSX templates and bounded parsing,
+row preview and valid-row submission, formula-safe result download and mobile
+result cards. Admin/Sub Admin rate management includes maker/checker review and
+a per-product commission tab; per-deal suggestions remain editable. Email-only
+edits preserve untouched/hidden notes. The commission tab has its own save action,
+with error/retry preserving inputs. No dependency or API change in this slice.
+The unchanged runtime passes 1,113 unit tests and the 118-page Node 22 build;
+the final combined production-browser run passes all 11 scenarios with synthetic
+API mocks. Post-restack lint/typecheck and runtime/API/contract identity checks
+pass. Web PR delivery is pending; stop afterward and resume Batch 3 next session.
 
 **Decision (2026-11-19, client-reported batch 2 "Agent leads"; both lines;
 amends CS-017's resubmission and the FR-8.1 commission entry; the detailed
