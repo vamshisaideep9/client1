@@ -27,7 +27,8 @@ from app.schemas.offers import (
     OfferRejectRequest,
     OfferUpdate,
 )
-from app.schemas.personalization import AudienceRules, audience_rules_to_storage
+from app.schemas.personalization import AudienceRules
+from app.services import pincodes as pincode_service
 from app.services.audit_log import record as record_audit
 from app.services.banners import IMAGE_MAX_BYTES, UnsupportedImageType, presign_banner_image_upload
 from app.services.campaign_media import (
@@ -43,6 +44,19 @@ from app.services.offers import (
 )
 
 router = APIRouter()
+
+
+async def _stored_audience_rules(db: AsyncSession, rules: AudienceRules) -> dict:
+    """CS-026: every pincode and city target must be on the reference list."""
+    try:
+        return await pincode_service.audience_rules_for_storage(db, rules)
+    except pincode_service.UnknownAudiencePlaces as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Choose places from the list: {exc}.",
+        ) from exc
+
+
 _EDITABLE_STATUSES = (OfferStatus.DRAFT, OfferStatus.REJECTED)
 
 
@@ -95,7 +109,7 @@ async def create_offer(
     values = payload.model_dump(exclude={"audience_rules"})
     if media_asset is not None:
         values["image_key"] = media_asset.image_ref
-    values["audience_rules"] = audience_rules_to_storage(payload.audience_rules)
+    values["audience_rules"] = await _stored_audience_rules(db, payload.audience_rules)
     offer = Offer(created_by_uuid=current_user.id, **values)
     db.add(offer)
     await db.flush()
@@ -177,7 +191,7 @@ async def update_offer(
             ) from exc
     values = payload.model_dump(exclude_unset=True, exclude={"audience_rules", "expected_version"})
     if "audience_rules" in payload.model_fields_set and payload.audience_rules is not None:
-        values["audience_rules"] = audience_rules_to_storage(payload.audience_rules)
+        values["audience_rules"] = await _stored_audience_rules(db, payload.audience_rules)
     if "media_asset_id" in payload.model_fields_set:
         values["image_key"] = media_asset.image_ref if media_asset else None
     for field, value in values.items():

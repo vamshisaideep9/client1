@@ -42,6 +42,9 @@ import {
   type MobileChangeProof,
 } from "@/lib/admin-api";
 
+import { ContactHistoryButton } from "./contact-history-dialog";
+import { StaffContactRequests } from "./staff-contact-requests";
+
 const PROOF_LABEL: Record<MobileChangeProof, string> = {
   verified_email: "Verified account email",
   existing_kyc: "Existing approved KYC",
@@ -189,14 +192,23 @@ export function MobileChangeQueue() {
   }
 
   return (
-    <section className="space-y-3 rounded-2xl border border-brand-cta/25 bg-brand-cta-tint/25 p-5">
-      <div className="flex items-start justify-between gap-3">
+    <section
+      aria-labelledby="contact-change-requests-heading"
+      className="space-y-5 rounded-2xl border border-brand-cta/25 bg-brand-cta-tint/25 p-5"
+    >
+      <div className="flex items-center gap-2">
+        <ShieldCheck className="h-5 w-5 text-brand-link" aria-hidden="true" />
+        <h2 id="contact-change-requests-heading" className="font-semibold text-text-primary">
+          Contact change requests
+        </h2>
+      </div>
+
+      <StaffContactRequests />
+
+      <div className="flex items-start justify-between gap-3 border-t border-border pt-5">
         <div>
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-brand-link" />
-            <h2 className="font-semibold text-text-primary">Mobile-number reviews</h2>
-          </div>
-          <p className="mt-1 text-sm text-text-secondary">
+          <h3 className="text-sm font-semibold text-text-primary">Lost number</h3>
+          <p className="text-sm text-text-secondary">
             A different Admin must perform final approval after identity verification.
           </p>
         </div>
@@ -252,7 +264,7 @@ export function MobileChangeQueue() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && close()}>
-        <DialogContent ref={dialogRef} className={REVIEW_WORKSPACE_CLASS}
+        <DialogContent preventOutsideClose ref={dialogRef} className={REVIEW_WORKSPACE_CLASS}
           onCloseAutoFocus={(event) => {
             if (triggerRef.current?.isConnected) {
               event.preventDefault();
@@ -266,6 +278,12 @@ export function MobileChangeQueue() {
                 <DialogDescription>
                   {active.requester_name} · {active.current_mobile} → {active.requested_mobile}
                 </DialogDescription>
+                <div className="pt-2">
+                  <ContactHistoryButton
+                    authUserUuid={active.auth_user_uuid}
+                    name={active.requester_name}
+                  />
+                </div>
               </DialogHeader>
 
               <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain pr-1">

@@ -1,0 +1,4299 @@
+{
+  "source": {
+    "file": "Bank loan policy.xlsx",
+    "as_of": "2026-08-31",
+    "provenance": "User-supplied lender policy workbook (last saved 2026-08-31). Term cells are verbatim, whitespace-collapsed; only provider identities are normalised. Development seed data, not provider-confirmed terms."
+  },
+  "providers": {
+    "AU Small Finance Bank": {
+      "provider_type": "small_finance_bank"
+    },
+    "Aadhar Housing Finance": {
+      "provider_type": "hfc"
+    },
+    "Adani Capital": {
+      "provider_type": "nbfc"
+    },
+    "Aditya Birla Capital": {
+      "provider_type": "nbfc"
+    },
+    "Ambit Finvest": {
+      "provider_type": "nbfc"
+    },
+    "Anand Rathi Global Finance": {
+      "provider_type": "nbfc"
+    },
+    "Arka Fincorp": {
+      "provider_type": "nbfc"
+    },
+    "Auxilo Finserve": {
+      "provider_type": "nbfc"
+    },
+    "Avanse Financial Services": {
+      "provider_type": "nbfc"
+    },
+    "Axis Bank": {
+      "provider_type": "bank"
+    },
+    "Axis Finance": {
+      "provider_type": "nbfc"
+    },
+    "Bajaj Finance": {
+      "provider_type": "nbfc"
+    },
+    "Bajaj General": {
+      "provider_type": "other"
+    },
+    "Bajaj Housing Finance": {
+      "provider_type": "hfc"
+    },
+    "Bandhan Bank": {
+      "provider_type": "bank"
+    },
+    "Bank of Baroda": {
+      "provider_type": "bank"
+    },
+    "Bank of India": {
+      "provider_type": "bank"
+    },
+    "Bank of Maharashtra": {
+      "provider_type": "bank"
+    },
+    "Capital India Finance": {
+      "provider_type": "nbfc"
+    },
+    "Capri Global Capital": {
+      "provider_type": "nbfc"
+    },
+    "Capsave Finance": {
+      "provider_type": "nbfc"
+    },
+    "Care Health": {
+      "provider_type": "other"
+    },
+    "Cent Bank Home Finance": {
+      "provider_type": "hfc"
+    },
+    "Central Bank of India": {
+      "provider_type": "bank"
+    },
+    "Cholamandalam Finance": {
+      "provider_type": "nbfc"
+    },
+    "City Union Bank": {
+      "provider_type": "bank"
+    },
+    "Clix Capital": {
+      "provider_type": "nbfc"
+    },
+    "Credila Financial Services": {
+      "provider_type": "nbfc"
+    },
+    "Credit Saison India": {
+      "provider_type": "nbfc"
+    },
+    "CreditVidya": {
+      "provider_type": "fintech"
+    },
+    "DBS Bank": {
+      "provider_type": "bank"
+    },
+    "DCB Bank": {
+      "provider_type": "bank"
+    },
+    "Deutsche Bank": {
+      "provider_type": "bank"
+    },
+    "Dhanvarsha Finvest": {
+      "provider_type": "nbfc"
+    },
+    "Easy Home Finance": {
+      "provider_type": "hfc"
+    },
+    "Edelweiss": {
+      "provider_type": "nbfc"
+    },
+    "Empower": {
+      "provider_type": "fintech"
+    },
+    "Equitas Small Finance Bank": {
+      "provider_type": "small_finance_bank"
+    },
+    "FatakPay": {
+      "provider_type": "fintech"
+    },
+    "Federal Bank": {
+      "provider_type": "bank"
+    },
+    "Fibe (EarlySalary)": {
+      "provider_type": "fintech"
+    },
+    "Finnable": {
+      "provider_type": "fintech"
+    },
+    "Finplex": {
+      "provider_type": "fintech"
+    },
+    "FlexiLoans": {
+      "provider_type": "fintech"
+    },
+    "Future Generali": {
+      "provider_type": "other"
+    },
+    "GIC Housing Finance": {
+      "provider_type": "hfc"
+    },
+    "Godrej Capital": {
+      "provider_type": "nbfc"
+    },
+    "Godrej Housing Finance": {
+      "provider_type": "hfc"
+    },
+    "Gosree Finance": {
+      "provider_type": "nbfc"
+    },
+    "Grihum Housing Finance": {
+      "provider_type": "hfc"
+    },
+    "HDFC Bank": {
+      "provider_type": "bank"
+    },
+    "HDFC ERGO": {
+      "provider_type": "other"
+    },
+    "Hero FinCorp": {
+      "provider_type": "nbfc"
+    },
+    "Hero Housing Finance": {
+      "provider_type": "hfc"
+    },
+    "Hinduja Housing Finance": {
+      "provider_type": "hfc"
+    },
+    "Home Credit India": {
+      "provider_type": "nbfc"
+    },
+    "ICICI Bank": {
+      "provider_type": "bank"
+    },
+    "ICICI Home Finance": {
+      "provider_type": "hfc"
+    },
+    "ICICI Lombard": {
+      "provider_type": "other"
+    },
+    "IDBI Bank": {
+      "provider_type": "bank"
+    },
+    "IDFC First Bank": {
+      "provider_type": "bank"
+    },
+    "IIFL Finance": {
+      "provider_type": "nbfc"
+    },
+    "IIFL Home Finance": {
+      "provider_type": "hfc"
+    },
+    "IKF Finance": {
+      "provider_type": "nbfc"
+    },
+    "InCred Finance": {
+      "provider_type": "nbfc"
+    },
+    "India Shelter Finance": {
+      "provider_type": "hfc"
+    },
+    "Indifi": {
+      "provider_type": "fintech"
+    },
+    "IndoStar Capital Finance": {
+      "provider_type": "nbfc"
+    },
+    "IndusInd Bank": {
+      "provider_type": "bank"
+    },
+    "JM Financial Home Loans": {
+      "provider_type": "hfc"
+    },
+    "Jana Small Finance Bank": {
+      "provider_type": "small_finance_bank"
+    },
+    "Jio Finance": {
+      "provider_type": "nbfc"
+    },
+    "Karnataka Bank": {
+      "provider_type": "bank"
+    },
+    "Karur Vysya Bank": {
+      "provider_type": "bank"
+    },
+    "Kotak Mahindra Bank": {
+      "provider_type": "bank"
+    },
+    "KrazyBee": {
+      "provider_type": "fintech"
+    },
+    "Kuhoo": {
+      "provider_type": "fintech"
+    },
+    "L&T Finance": {
+      "provider_type": "nbfc"
+    },
+    "Lendingkart": {
+      "provider_type": "fintech"
+    },
+    "Liberty General": {
+      "provider_type": "other"
+    },
+    "MAS Financial Services": {
+      "provider_type": "nbfc"
+    },
+    "Mahaveer Finance": {
+      "provider_type": "nbfc"
+    },
+    "Mahindra Finance": {
+      "provider_type": "nbfc"
+    },
+    "Mahindra Home Finance": {
+      "provider_type": "hfc"
+    },
+    "Manappuram Finance": {
+      "provider_type": "nbfc"
+    },
+    "ManipalCigna Health": {
+      "provider_type": "other"
+    },
+    "Mintifi": {
+      "provider_type": "fintech"
+    },
+    "Motilal Oswal Home Finance": {
+      "provider_type": "hfc"
+    },
+    "Muthoot Homefin": {
+      "provider_type": "hfc"
+    },
+    "NeoGrowth": {
+      "provider_type": "nbfc"
+    },
+    "Niva Bupa": {
+      "provider_type": "other"
+    },
+    "Northern Arc Capital": {
+      "provider_type": "nbfc"
+    },
+    "Open Capital": {
+      "provider_type": "fintech"
+    },
+    "PNB Capital Services": {
+      "provider_type": "nbfc"
+    },
+    "PNB Housing Finance": {
+      "provider_type": "hfc"
+    },
+    "Piramal Finance": {
+      "provider_type": "nbfc"
+    },
+    "Poonawalla Fincorp": {
+      "provider_type": "nbfc"
+    },
+    "Prayaan Capital": {
+      "provider_type": "nbfc"
+    },
+    "Profectus Capital": {
+      "provider_type": "nbfc"
+    },
+    "Propelld": {
+      "provider_type": "fintech"
+    },
+    "Protium": {
+      "provider_type": "nbfc"
+    },
+    "RBL Bank": {
+      "provider_type": "bank"
+    },
+    "Religare Housing Development Finance": {
+      "provider_type": "hfc"
+    },
+    "Repco Home Finance": {
+      "provider_type": "hfc"
+    },
+    "SBM Bank India": {
+      "provider_type": "bank"
+    },
+    "SMFG India Credit": {
+      "provider_type": "nbfc"
+    },
+    "SMFG India Home Finance": {
+      "provider_type": "hfc"
+    },
+    "SVA Karma Finance": {
+      "provider_type": "nbfc"
+    },
+    "Samman Capital": {
+      "provider_type": "hfc"
+    },
+    "Satin Housing Finance": {
+      "provider_type": "hfc"
+    },
+    "Shinhan Bank": {
+      "provider_type": "bank"
+    },
+    "Shriram Finance": {
+      "provider_type": "nbfc"
+    },
+    "Shubham Housing Finance": {
+      "provider_type": "hfc"
+    },
+    "South Indian Bank": {
+      "provider_type": "bank"
+    },
+    "Standard Chartered Bank": {
+      "provider_type": "bank"
+    },
+    "State Bank of India": {
+      "provider_type": "bank"
+    },
+    "Sundaram Finance": {
+      "provider_type": "nbfc"
+    },
+    "Sundaram Home Finance": {
+      "provider_type": "hfc"
+    },
+    "Suryoday Small Finance Bank": {
+      "provider_type": "small_finance_bank"
+    },
+    "Tata AIG": {
+      "provider_type": "other"
+    },
+    "Tata Capital": {
+      "provider_type": "nbfc"
+    },
+    "Tata Capital Housing Finance": {
+      "provider_type": "hfc"
+    },
+    "Truhome Finance": {
+      "provider_type": "hfc"
+    },
+    "Tyger Capital": {
+      "provider_type": "nbfc"
+    },
+    "U GRO Capital": {
+      "provider_type": "nbfc"
+    },
+    "UBI Services": {
+      "provider_type": "other"
+    },
+    "Ujjivan Small Finance Bank": {
+      "provider_type": "small_finance_bank"
+    },
+    "Unico Housing Finance": {
+      "provider_type": "hfc"
+    },
+    "Unity Small Finance Bank": {
+      "provider_type": "small_finance_bank"
+    },
+    "Utkarsh Small Finance Bank": {
+      "provider_type": "small_finance_bank"
+    },
+    "Varthana": {
+      "provider_type": "nbfc"
+    },
+    "Vastu Finserve": {
+      "provider_type": "nbfc"
+    },
+    "Vastu Housing Finance": {
+      "provider_type": "hfc"
+    },
+    "Vistaar Finance": {
+      "provider_type": "nbfc"
+    },
+    "Yes Bank": {
+      "provider_type": "bank"
+    },
+    "slice Small Finance Bank": {
+      "provider_type": "small_finance_bank"
+    }
+  },
+  "products": [
+    {
+      "product": "personal-loan",
+      "sheet": "PL",
+      "offers": [
+        {
+          "source_name": "Axis Bank",
+          "provider": "Axis Bank",
+          "variant": null,
+          "terms": {
+            "amount": "50K to 40L",
+            "tenure": "12M to 84M",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9.99.% TO 21%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "720+"
+          }
+        },
+        {
+          "source_name": "HDFC",
+          "provider": "HDFC Bank",
+          "variant": null,
+          "terms": {
+            "amount": "50K to 40L",
+            "tenure": "12M to 60M",
+            "processing_fee": "up to 2.5%",
+            "interest_rate": "9.99.% TO 24%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700 +"
+          }
+        },
+        {
+          "source_name": "ICICI",
+          "provider": "ICICI Bank",
+          "variant": null,
+          "terms": {
+            "amount": "50K to 50L",
+            "tenure": "12M to 72M",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9.99.% TO 24%",
+            "age": "20Y to 65Y",
+            "min_net_monthly_salary": "30K",
+            "cibil": "700 +"
+          }
+        },
+        {
+          "source_name": "KOTAK",
+          "provider": "Kotak Mahindra Bank",
+          "variant": null,
+          "terms": {
+            "amount": "50K to 1CR",
+            "tenure": "12M to 72M",
+            "processing_fee": "Up to 5%",
+            "interest_rate": "9.99.% TO 24%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700 +"
+          }
+        },
+        {
+          "source_name": "BANDAN",
+          "provider": "Bandhan Bank",
+          "variant": null,
+          "terms": {
+            "amount": "50K to 25L",
+            "tenure": "12M to 60M",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "9.49.% TO 21%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700 +"
+          }
+        },
+        {
+          "source_name": "IndusInd",
+          "provider": "IndusInd Bank",
+          "variant": null,
+          "terms": {
+            "amount": "30K TO 50L",
+            "tenure": "12M to 60M",
+            "processing_fee": "Up to 3.5%",
+            "interest_rate": "10.49% TO 24%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "730+"
+          }
+        },
+        {
+          "source_name": "IDFC FIRST",
+          "provider": "IDFC First Bank",
+          "variant": null,
+          "terms": {
+            "amount": "50K to 1CR",
+            "tenure": "9M TO 84M",
+            "processing_fee": "Up to 3.5%",
+            "interest_rate": "9.99.% TO 24%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "710"
+          }
+        },
+        {
+          "source_name": "YES BANK",
+          "provider": "Yes Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 50L",
+            "tenure": "12M to 60M",
+            "processing_fee": "up to 2.5%",
+            "interest_rate": "10.85% to 26%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700"
+          }
+        },
+        {
+          "source_name": "BAJAJ FINSERVE",
+          "provider": "Bajaj Finance",
+          "variant": null,
+          "terms": {
+            "amount": "20K to 55L",
+            "tenure": "12M to 108M",
+            "processing_fee": "up to 6%",
+            "interest_rate": "11% to 34%",
+            "age": "21Y to 80Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "650"
+          }
+        },
+        {
+          "source_name": "CHOLAMANDALAM",
+          "provider": "Cholamandalam Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 35L",
+            "tenure": "12M TO 84M",
+            "processing_fee": "up to 6%",
+            "interest_rate": "10% to 28%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "10k to 20k",
+            "cibil": "675"
+          }
+        },
+        {
+          "source_name": "FINNABLE",
+          "provider": "Finnable",
+          "variant": null,
+          "terms": {
+            "amount": "25K to 40L",
+            "tenure": "6M to 60M",
+            "processing_fee": "up to 6%",
+            "interest_rate": "16% to 36%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "15k",
+            "cibil": "650"
+          }
+        },
+        {
+          "source_name": "SMFG",
+          "provider": "SMFG India Credit",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 30L",
+            "tenure": "12M to 60M",
+            "processing_fee": "up to 6%",
+            "interest_rate": "13% to 36%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "700"
+          }
+        },
+        {
+          "source_name": "L&T",
+          "provider": "L&T Finance",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 30L",
+            "tenure": "12M to 72M",
+            "processing_fee": "up to 4%",
+            "interest_rate": "10.50% to 36%",
+            "age": "21Y to 58Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700"
+          }
+        },
+        {
+          "source_name": "PIRAMAL",
+          "provider": "Piramal Finance",
+          "variant": null,
+          "terms": {
+            "amount": "25k to 25L",
+            "tenure": "3M to 60M",
+            "processing_fee": "up to 6%",
+            "interest_rate": "12% to 36%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "15k",
+            "cibil": "700"
+          }
+        },
+        {
+          "source_name": "POONAMWALA",
+          "provider": "Poonawalla Fincorp",
+          "variant": null,
+          "terms": {
+            "amount": "30k to 50L",
+            "tenure": "12M TO 84M",
+            "processing_fee": "up to 3%",
+            "interest_rate": "9.99% to 26%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "680"
+          }
+        },
+        {
+          "source_name": "SHRIRAM FINANCE",
+          "provider": "Shriram Finance",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 10L",
+            "tenure": "12M to 60M",
+            "processing_fee": "up to 5%",
+            "interest_rate": "11% 36%",
+            "age": "21y to 60y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "650"
+          }
+        },
+        {
+          "source_name": "SOUTHINDIAN BANK",
+          "provider": "South Indian Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 30L",
+            "tenure": "12M to 60M",
+            "processing_fee": "up to 4%",
+            "interest_rate": "10.5% to 24%",
+            "age": "21y to 60y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "740"
+          }
+        },
+        {
+          "source_name": "INCRED",
+          "provider": "InCred Finance",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 15L",
+            "tenure": "12M to 60M",
+            "processing_fee": "up to 5%",
+            "interest_rate": "10% to 36%",
+            "age": "21y to 60y",
+            "min_net_monthly_salary": "15k",
+            "cibil": "650"
+          }
+        },
+        {
+          "source_name": "TATA CAPITAL",
+          "provider": "Tata Capital",
+          "variant": null,
+          "terms": {
+            "amount": "75k to 35L",
+            "tenure": "12M to 72M",
+            "processing_fee": "up to 5%",
+            "interest_rate": "10.99% to 35%",
+            "age": "21Y to 58Y",
+            "min_net_monthly_salary": "15k",
+            "cibil": "750"
+          }
+        },
+        {
+          "source_name": "SATE BANK OF MAURITIUS (SBM) BANK",
+          "provider": "SBM Bank India",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 25L",
+            "tenure": "10M to 60M",
+            "processing_fee": "up to 2%",
+            "interest_rate": "12.35% to 18%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "650"
+          }
+        },
+        {
+          "source_name": "UTKARSH",
+          "provider": "Utkarsh Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1.5L to 20L",
+            "tenure": "12M to 84M",
+            "processing_fee": "up to 2%",
+            "interest_rate": "14% to 23%",
+            "age": "23y to 58",
+            "min_net_monthly_salary": "20k",
+            "cibil": "650"
+          }
+        },
+        {
+          "source_name": "EARLY SALARY( Fibe)",
+          "provider": "Fibe (EarlySalary)",
+          "variant": null,
+          "terms": {
+            "amount": "5k to 10L",
+            "tenure": "3M to 36M",
+            "processing_fee": "up to 2%",
+            "interest_rate": "16% to 30%",
+            "age": "19Y to 55Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "nill"
+          }
+        },
+        {
+          "source_name": "EQUITAS",
+          "provider": "Equitas Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 20L",
+            "tenure": "12M to 60M",
+            "processing_fee": "up to 3%",
+            "interest_rate": "10.49% to 16%",
+            "age": "23Y to 60Y",
+            "min_net_monthly_salary": "40k",
+            "cibil": "728"
+          }
+        },
+        {
+          "source_name": "CREDIT VIDYA",
+          "provider": "CreditVidya",
+          "variant": null,
+          "terms": {
+            "amount": "25k to 7.5L",
+            "tenure": "6M to 36M",
+            "processing_fee": "up to 4%",
+            "interest_rate": "15% to 36%",
+            "age": "19Y to 60Y",
+            "min_net_monthly_salary": "18k",
+            "cibil": "650"
+          }
+        },
+        {
+          "source_name": "Aditya Birla",
+          "provider": "Aditya Birla Capital",
+          "variant": null,
+          "terms": {
+            "amount": "1lL to 50L",
+            "tenure": "12M to 84M",
+            "processing_fee": "up to 4%",
+            "interest_rate": "10.99% to 28%",
+            "age": "21y to 60 y",
+            "min_net_monthly_salary": "15k",
+            "cibil": "750"
+          }
+        },
+        {
+          "source_name": "AU Small finace",
+          "provider": "AU Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "25k to 10L",
+            "tenure": "12M to 60M",
+            "processing_fee": "up to 4%",
+            "interest_rate": "10.99% to 30%",
+            "age": "23Y to 60Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "750"
+          }
+        },
+        {
+          "source_name": "MAS FINACIALS",
+          "provider": "MAS Financial Services",
+          "variant": null,
+          "terms": {
+            "amount": "up to 5L",
+            "tenure": "up to 36M",
+            "processing_fee": "up to 5%",
+            "interest_rate": "13% to 30%",
+            "age": "21y to 58 y",
+            "min_net_monthly_salary": "12k",
+            "cibil": "700"
+          }
+        },
+        {
+          "source_name": "FATAKPAY",
+          "provider": "FatakPay",
+          "variant": null,
+          "terms": {
+            "amount": "1.5k TO 5L",
+            "tenure": "3M to 48M",
+            "processing_fee": "up to 6%",
+            "interest_rate": "12% to 36%",
+            "age": "21y to 55 y",
+            "min_net_monthly_salary": "15k",
+            "cibil": "650"
+          }
+        }
+      ]
+    },
+    {
+      "product": "business-loan",
+      "sheet": "BL",
+      "offers": [
+        {
+          "source_name": "Axis Bank",
+          "provider": "Axis Bank",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 75 L",
+            "secured_amount": "up to 5cr",
+            "tenure": "60 M TO 84M",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "10.75% to 22%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "3 Lacks",
+            "min_turnover": "40 L",
+            "cibil": "700+",
+            "business_vintage": "3 years."
+          }
+        },
+        {
+          "source_name": "HDFC",
+          "provider": "HDFC Bank",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 1 cr",
+            "tenure": "48 m to 60 m",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "10.75% to 22.50%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "3 Lacks",
+            "min_turnover": "40 lakh",
+            "cibil": "700+",
+            "business_vintage": "3 years."
+          }
+        },
+        {
+          "source_name": "ICICI",
+          "provider": "ICICI Bank",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 50 L",
+            "tenure": "Up to 60 m",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "13.25% to 19.25%",
+            "age": "23 y to 65 y",
+            "min_net_income": "3 Lacks",
+            "min_turnover": "40 L",
+            "cibil": "700+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "KOTAK",
+          "provider": "Kotak Mahindra Bank",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 1 cr",
+            "secured_amount": "up to 5cr",
+            "tenure": "Up to 72 m",
+            "processing_fee": "up to 5%",
+            "interest_rate": "9.50% to 32%",
+            "age": "25Y TO 65Y",
+            "min_net_income": "3 Lacks",
+            "min_turnover": "40 L",
+            "cibil": "750+",
+            "business_vintage": "3 years"
+          }
+        },
+        {
+          "source_name": "BANDAN",
+          "provider": "Bandhan Bank",
+          "variant": null,
+          "terms": {
+            "amount": "15k to 15 cr",
+            "tenure": "Up to 84 m",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9.52% to 25.91%",
+            "age": "23 y to 65 y",
+            "min_net_income": "3 Lacks",
+            "min_turnover": "40 L",
+            "cibil": "700+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "IndusInd",
+          "provider": "IndusInd Bank",
+          "variant": null,
+          "terms": {
+            "amount": "4L to 5cr",
+            "tenure": "Up to 60 m",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "13% to 22%",
+            "age": "21Y TO 70Y",
+            "min_net_income": "3 Lacks",
+            "min_turnover": "1cr",
+            "cibil": "680+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "IDFC FIRST",
+          "provider": "IDFC First Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1 L to 1 cr",
+            "tenure": "up to 48",
+            "processing_fee": "Up to 3.5%",
+            "interest_rate": "12.99% to 24%",
+            "age": "28 y to 68y",
+            "min_net_income": "3 Lacks",
+            "min_turnover": "30 lakh",
+            "cibil": "700+",
+            "business_vintage": "3 years"
+          }
+        },
+        {
+          "source_name": "YES BANK",
+          "provider": "Yes Bank",
+          "variant": null,
+          "terms": {
+            "amount": "Up to ₹75 Lakh",
+            "tenure": "Up to 60 m",
+            "processing_fee": "up to 2.75%",
+            "interest_rate": "15.99% to 24.25%",
+            "age": "22y to 65y",
+            "min_net_income": "3 Lacks",
+            "min_turnover": "30 lakh",
+            "cibil": "700+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "BAJAJ FINSERVE",
+          "provider": "Bajaj Finance",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 80L",
+            "tenure": "up to 96 m",
+            "processing_fee": "up to 4.72%",
+            "interest_rate": "14% to 23.50%",
+            "age": "21Y to 80Y",
+            "min_net_income": "3 Lacks",
+            "min_turnover": "30 lakh",
+            "cibil": "650+",
+            "business_vintage": "3 years"
+          }
+        },
+        {
+          "source_name": "CHOLAMANDALAM",
+          "provider": "Cholamandalam Finance",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 35L",
+            "secured_amount": "up to 15cr",
+            "tenure": "Up to 60 m",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "14% to 28%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "3 Lacks",
+            "min_turnover": "30 lakh",
+            "cibil": "700+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "FINNABLE",
+          "provider": "Finnable",
+          "variant": null,
+          "terms": {
+            "amount": "25k to 10L",
+            "tenure": "6m to 60 m",
+            "processing_fee": "up to 5% +",
+            "interest_rate": "16.00% to 35.99%",
+            "age": "21Y TO 60Y",
+            "min_net_income": "na",
+            "min_turnover": "na",
+            "cibil": "675 +",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "SMFG",
+          "provider": "SMFG India Credit",
+          "variant": null,
+          "terms": {
+            "amount": "up to 1 cr",
+            "tenure": "12m to 60 m",
+            "processing_fee": "up to 6.5% +",
+            "interest_rate": "13% to 33%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "2 Lacks",
+            "min_turnover": "10 lakh",
+            "cibil": "705+",
+            "business_vintage": "3 years"
+          }
+        },
+        {
+          "source_name": "L&T",
+          "provider": "L&T Finance",
+          "variant": null,
+          "terms": {
+            "amount": "50K to 50L",
+            "secured_amount": "50k to 2 cr",
+            "tenure": "12m to 60 m",
+            "processing_fee": "Up to 4%",
+            "interest_rate": "10% to 15.5%",
+            "age": "24y to 65y",
+            "min_net_income": "na",
+            "min_turnover": "40 L",
+            "cibil": "700+",
+            "business_vintage": "3 years"
+          }
+        },
+        {
+          "source_name": "PIRAMAL",
+          "provider": "Piramal Finance",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 30L",
+            "tenure": "12 m up to 10 y",
+            "processing_fee": "Up to 5%",
+            "interest_rate": "12% to 25%",
+            "age": "21y to 75y",
+            "min_net_income": "1.5 L",
+            "min_turnover": "25 L",
+            "cibil": "750+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "POONAMWALA",
+          "provider": "Poonawalla Fincorp",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 1 cr",
+            "tenure": "6m to 60m",
+            "processing_fee": "Up to 3.5%",
+            "interest_rate": "15% to 28%",
+            "age": "24y to 65 y",
+            "min_net_income": "na",
+            "min_turnover": "6 Lakh",
+            "cibil": "750+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "SHRIRAM FINANCE",
+          "provider": "Shriram Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1 L to 10 cr",
+            "tenure": "12m to 84 m",
+            "processing_fee": "Up to 5%",
+            "interest_rate": "12% to 36%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "20 Lakhs",
+            "cibil": "700+",
+            "business_vintage": "3 years"
+          }
+        },
+        {
+          "source_name": "SOUTHINDIAN BANK",
+          "provider": "South Indian Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 50L",
+            "tenure": "12m to 60 m",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "11.50% to 16.55%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "na",
+            "cibil": "650+",
+            "business_vintage": "1 years"
+          }
+        },
+        {
+          "source_name": "INCRED",
+          "provider": "InCred Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1 lakh to ₹10+ crore",
+            "tenure": "12m to 60 m",
+            "processing_fee": "Up to 5%",
+            "interest_rate": "14% to 36%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "1.5 lakh",
+            "min_turnover": "40 lakh",
+            "cibil": "650+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "TATA CAPITAL",
+          "provider": "Tata Capital",
+          "variant": null,
+          "terms": {
+            "amount": "40K to 90L",
+            "tenure": "12m to 36 m",
+            "processing_fee": "Up to 3.5%",
+            "interest_rate": "12% to 36%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "na",
+            "cibil": "675+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "SATE BANK OF MAURITIUS (SBM) BANK",
+          "provider": "SBM Bank India",
+          "variant": null,
+          "terms": {
+            "amount": "30k to 25L",
+            "tenure": "12m to 60 m",
+            "processing_fee": "Up to 4%",
+            "interest_rate": "14% to 22%",
+            "age": "20Y TO 65Y",
+            "min_net_income": "1.5 L",
+            "min_turnover": "na",
+            "cibil": "650+",
+            "business_vintage": "1 years"
+          }
+        },
+        {
+          "source_name": "UTKARSH",
+          "provider": "Utkarsh Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "75k to 30L",
+            "tenure": "12m to 60 m",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "21% to 23%",
+            "age": "25Y TO 60Y",
+            "min_net_income": "na",
+            "min_turnover": "na",
+            "cibil": "700+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "EARLY SALARY( Fibe)",
+          "provider": "Fibe (EarlySalary)",
+          "variant": null,
+          "terms": {
+            "amount": "5k to 10L",
+            "tenure": "3m to 36m",
+            "processing_fee": "Up to 5%",
+            "interest_rate": "16% to 30%",
+            "age": "19Y to 55Y",
+            "min_net_income": "na",
+            "min_turnover": "na",
+            "cibil": "na",
+            "business_vintage": "na"
+          }
+        },
+        {
+          "source_name": "EQUITAS",
+          "provider": "Equitas Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 75L",
+            "tenure": "12m to 60 m",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "18% to 36%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "na",
+            "cibil": "700+",
+            "business_vintage": "1 years"
+          }
+        },
+        {
+          "source_name": "CREDIT VIDYA",
+          "provider": "CreditVidya",
+          "variant": null,
+          "terms": {
+            "amount": "50K to 7.50L",
+            "tenure": "3m to 60m",
+            "processing_fee": "Up to 5%",
+            "interest_rate": "18% to 36%",
+            "age": "18y to 65y",
+            "min_net_income": "2 lakhs",
+            "min_turnover": "5 lakhs",
+            "cibil": "650+",
+            "business_vintage": "6 months"
+          }
+        },
+        {
+          "source_name": "Aditya Birla",
+          "provider": "Aditya Birla Capital",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 1cr",
+            "tenure": "12m to 48m",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "13% to 22%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "5 lakhs",
+            "cibil": "650+",
+            "business_vintage": "1 years"
+          }
+        },
+        {
+          "source_name": "AU Small finace",
+          "provider": "AU Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "2 L to 10L",
+            "tenure": "12m to 60 m",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "18% to 24%",
+            "age": "18y to 65y",
+            "min_net_income": "2 lakhs",
+            "min_turnover": "na",
+            "cibil": "700+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "MAS FINACIALS",
+          "provider": "MAS Financial Services",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 1cr",
+            "tenure": "12m to 48 m",
+            "processing_fee": "Up to 4%",
+            "interest_rate": "14% to 24%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "na",
+            "cibil": "700+",
+            "business_vintage": "3 years"
+          }
+        },
+        {
+          "source_name": "FATAKPAY",
+          "provider": "FatakPay",
+          "variant": null,
+          "terms": {
+            "amount": "60k to 5L",
+            "tenure": "3m to 36m",
+            "processing_fee": "Up to 6%",
+            "interest_rate": "12% to 42%",
+            "age": "21Y TO 55Y",
+            "min_net_income": "na",
+            "min_turnover": "na",
+            "cibil": "650+",
+            "business_vintage": "na"
+          }
+        },
+        {
+          "source_name": "IIFL",
+          "provider": "IIFL Finance",
+          "variant": null,
+          "terms": {
+            "amount": "2 L to 75L",
+            "tenure": "12m to 60 m",
+            "processing_fee": "Up to 9%",
+            "interest_rate": "11% to 44%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "na",
+            "cibil": "700+",
+            "business_vintage": "6 months"
+          }
+        },
+        {
+          "source_name": "INDIFI FINACE",
+          "provider": "Indifi",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 1CR",
+            "tenure": "3m to 36m",
+            "processing_fee": "up to 4%",
+            "interest_rate": "18% to 30%+",
+            "age": "21Y TO 65Y",
+            "min_net_income": "1.5 L",
+            "min_turnover": "5 lakhs",
+            "cibil": "650+",
+            "business_vintage": "6 months"
+          }
+        },
+        {
+          "source_name": "KVB NEO",
+          "provider": "Karur Vysya Bank",
+          "variant": "KVB Neo",
+          "terms": {
+            "amount": "50k to 50L",
+            "tenure": "12m to 60 m",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "10% to 16%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "40 lakhs",
+            "cibil": "720+",
+            "business_vintage": "1 years"
+          }
+        },
+        {
+          "source_name": "CREDIT SAISON",
+          "provider": "Credit Saison India",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 50L",
+            "tenure": "12m to 48 m",
+            "processing_fee": "Up to 3.5%",
+            "interest_rate": "16% to 21%",
+            "age": "21Y TO 60Y",
+            "min_net_income": "na",
+            "min_turnover": "5 lakhs",
+            "cibil": "650+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "DHANAVARSHA",
+          "provider": "Dhanvarsha Finvest",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 25L",
+            "tenure": "12m to 36 m",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "16% to 25%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "25 Lakhs",
+            "cibil": "675+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "EDELWEISS",
+          "provider": "Edelweiss",
+          "variant": null,
+          "terms": {
+            "amount": "3.5L to 4.50 CR",
+            "tenure": "12m to 48 m",
+            "processing_fee": "Up to 3.5%",
+            "interest_rate": "18% to 28%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "25 lakh",
+            "cibil": "700+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "FINPLEX",
+          "provider": "Finplex",
+          "variant": null,
+          "terms": {
+            "amount": "3 L to 40 L",
+            "tenure": "12 m to 36 m",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "10.75% to 22%",
+            "age": "25Y TO 60Y",
+            "min_net_income": "na",
+            "min_turnover": "40 lakh",
+            "cibil": "700+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "FLEXI LOANS",
+          "provider": "FlexiLoans",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 50L",
+            "tenure": "12m to 42m",
+            "processing_fee": "Up to 4%",
+            "interest_rate": "18% to 28%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "2 Lakhs",
+            "cibil": "650+",
+            "business_vintage": "1 years"
+          }
+        },
+        {
+          "source_name": "GODREJ CAPITAL",
+          "provider": "Godrej Capital",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 75L",
+            "tenure": "12m to 72 m",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "17% to 28%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "2 Lakhs",
+            "cibil": "700+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "GOSREE FINANCE",
+          "provider": "Gosree Finance",
+          "variant": null,
+          "terms": {
+            "amount": "up to ₹5 lakh",
+            "tenure": "12m to 36 m",
+            "processing_fee": "4% +",
+            "interest_rate": "From 16% p.a.",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "na",
+            "cibil": "700+",
+            "business_vintage": "1 years"
+          }
+        },
+        {
+          "source_name": "KRAZYBEE",
+          "provider": "KrazyBee",
+          "variant": null,
+          "terms": {
+            "amount": "6K to 1 CR",
+            "tenure": "6m to 48m",
+            "processing_fee": "Up to 4.7%",
+            "interest_rate": "12% to 27.5%",
+            "age": "21Y TO 60Y",
+            "min_net_income": "25000",
+            "min_turnover": "2 Lakhs",
+            "cibil": "700+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "lending Kart",
+          "provider": "Lendingkart",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 2 CR",
+            "tenure": "1m to 36 m",
+            "processing_fee": "up to 5%",
+            "interest_rate": "13.50% to 35.00%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "1.5 Lakhs",
+            "min_turnover": "na",
+            "cibil": "650+",
+            "business_vintage": "6 Months"
+          }
+        },
+        {
+          "source_name": "OPEN CAPITAL",
+          "provider": "Open Capital",
+          "variant": null,
+          "terms": {
+            "amount": "up to 30 Lakhs",
+            "tenure": "12m to 60 m",
+            "processing_fee": "up to 4%",
+            "interest_rate": "15% to 18%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "6 Lakhs",
+            "cibil": "685+",
+            "business_vintage": "1 years"
+          }
+        },
+        {
+          "source_name": "PROTIUM",
+          "provider": "Protium",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 50L",
+            "tenure": "12 m to 36 m",
+            "processing_fee": "up to 7%",
+            "interest_rate": "18% to 34%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "10 Lakhs",
+            "cibil": "650+",
+            "business_vintage": "1 years"
+          }
+        },
+        {
+          "source_name": "MAS FINANCIALS",
+          "provider": "MAS Financial Services",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 1 Crore",
+            "tenure": "12 m to 48 m",
+            "processing_fee": "up to 4%",
+            "interest_rate": "14% to 24%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "na",
+            "cibil": "700+",
+            "business_vintage": "1 years"
+          }
+        },
+        {
+          "source_name": "NEOGROWTH",
+          "provider": "NeoGrowth",
+          "variant": null,
+          "terms": {
+            "amount": "1 L to 75 L",
+            "tenure": "6 m to 36 m",
+            "processing_fee": "up to 5%",
+            "interest_rate": "15.00% to 40%",
+            "age": "18Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "12 Lakhs",
+            "cibil": "650+",
+            "business_vintage": "1 years"
+          }
+        },
+        {
+          "source_name": "SVA KRARMA FINCE PVT",
+          "provider": "SVA Karma Finance",
+          "variant": null,
+          "terms": {
+            "amount": "2 L to 25L",
+            "tenure": "12 m to 36 m",
+            "processing_fee": "up to 4%",
+            "interest_rate": "24% to 30%",
+            "age": "21Y to 58Y",
+            "min_net_income": "na",
+            "min_turnover": "15 Lakhs",
+            "cibil": "650+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "U GRO BL",
+          "provider": "U GRO Capital",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 50L",
+            "tenure": "12 m to 36 m",
+            "processing_fee": "Up to 4%",
+            "interest_rate": "16% to 22%",
+            "age": "21Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "30 Lakhs",
+            "cibil": "700+",
+            "business_vintage": "3 years"
+          }
+        },
+        {
+          "source_name": "UNITY SMALL",
+          "provider": "Unity Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 50L",
+            "tenure": "12m to 36 m",
+            "processing_fee": "Up to 3.5%",
+            "interest_rate": "15.50% to 26.00% (44.90%)",
+            "age": "21Y TO 65Y",
+            "min_net_income": "3 Lakhs",
+            "min_turnover": "na",
+            "cibil": "650+",
+            "business_vintage": "3 years"
+          }
+        },
+        {
+          "source_name": "AMBIT",
+          "provider": "Ambit Finvest",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 50L",
+            "tenure": "up to 36m",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "12% to 16%",
+            "age": "23Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "50 Lakhs",
+            "cibil": "675 +",
+            "business_vintage": "3 years"
+          }
+        },
+        {
+          "source_name": "ARKA FINCORP",
+          "provider": "Arka Fincorp",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 50L",
+            "tenure": "Up to 36 m",
+            "processing_fee": "Up to 4%",
+            "interest_rate": "10% to 36%",
+            "age": "23Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "1CR",
+            "cibil": "700+",
+            "business_vintage": "3 years"
+          }
+        },
+        {
+          "source_name": "DEUTSCHE BANK",
+          "provider": "Deutsche Bank",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 50L",
+            "tenure": "Up to 36 m",
+            "processing_fee": "Up to 4%",
+            "interest_rate": "16% to 19%",
+            "age": "23Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "na",
+            "cibil": "750+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "HERO FINCORPO",
+          "provider": "Hero FinCorp",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 50L",
+            "tenure": "12 m to 48 m",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "14% to 30%",
+            "age": "25Y TO 65Y",
+            "min_net_income": "na",
+            "min_turnover": "10L",
+            "cibil": "700+",
+            "business_vintage": "2 years"
+          }
+        },
+        {
+          "source_name": "SCB BANK",
+          "provider": "Standard Chartered Bank",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 1 CR",
+            "tenure": "12m to 48 m",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "14.50% to 18.30%",
+            "age": "22Y to 58Y",
+            "min_net_income": "2 Lakhs",
+            "min_turnover": "40 Lakhs",
+            "cibil": "700+",
+            "business_vintage": "2 years"
+          }
+        }
+      ]
+    },
+    {
+      "product": "home-loan",
+      "sheet": "HL",
+      "offers": [
+        {
+          "source_name": "AADHAAR - HL",
+          "provider": "Aadhar Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 1 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 1.5%",
+            "interest_rate": "11.75% to 17.00%",
+            "age": "18Y to 60Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "600+"
+          }
+        },
+        {
+          "source_name": "ADANI CAPITAL-HL",
+          "provider": "Adani Capital",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 30L",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "12% to 16%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "ADITYA BIRLA",
+          "provider": "Aditya Birla Capital",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 25CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 1.75%",
+            "interest_rate": "7.75% to 14.75%",
+            "age": "21Y to 75Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "AU SMALL FINANCE BANK",
+          "provider": "AU Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 5CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "8% to 17%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "AXIS",
+          "provider": "Axis Bank",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 5CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 1%",
+            "interest_rate": "8.75% to 11.60%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "AXIS FINANCE",
+          "provider": "Axis Finance",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 10 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 1%",
+            "interest_rate": "8.75% to 14%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "15k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "BANK OF BARODA HOUSING LOAN",
+          "provider": "Bank of Baroda",
+          "variant": null,
+          "terms": {
+            "amount": "up to 7.5 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 0.25%",
+            "interest_rate": "7.20% to 9.25%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "701+"
+          }
+        },
+        {
+          "source_name": "BAJAJ HOUSING FINANCE",
+          "provider": "Bajaj Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "4L to 15CR",
+            "tenure": "1Y to 32Y",
+            "processing_fee": "up to 4%",
+            "interest_rate": "7.70% to 10.65%",
+            "age": "23y to 67 y",
+            "min_net_monthly_salary": "30k",
+            "cibil": "725+"
+          }
+        },
+        {
+          "source_name": "BANDHAN",
+          "provider": "Bandhan Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 5CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 1%",
+            "interest_rate": "8.4% to 13.52%",
+            "age": "21Y to 75Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "BANK OF INDIA",
+          "provider": "Bank of India",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 5CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 0.5%",
+            "interest_rate": "7.10% to 10.35%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "BANK OF MAHARASHTRA",
+          "provider": "Bank of Maharashtra",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 15 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 0.5%",
+            "interest_rate": "7.10% to 9.90%",
+            "age": "21Y to 75Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "CHOLAMANDALAM",
+          "provider": "Cholamandalam Finance",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 5CR",
+            "tenure": "5Y to 30Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "10.50% to 19.00%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "CAPITAL INDIA",
+          "provider": "Capital India Finance",
+          "variant": null,
+          "terms": {
+            "amount": "min 5L to--",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 4%",
+            "interest_rate": "9.00% to 26.00%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "CAPRI GLOBAL",
+          "provider": "Capri Global Capital",
+          "variant": null,
+          "terms": {
+            "amount": "2 L to 50 L",
+            "tenure": "1Y to 25Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "9.50% to 24.0%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "600+"
+          }
+        },
+        {
+          "source_name": "CENT BANK HOME FINANCE",
+          "provider": "Cent Bank Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 2 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 0.5%",
+            "interest_rate": "9.85% to 11.65%",
+            "age": "18Y to 80Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "CENTRAL BANK OF INDIA",
+          "provider": "Central Bank of India",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 5CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 0.50%",
+            "interest_rate": "7.10% to 9.15%",
+            "age": "18Y to 75Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "750+"
+          }
+        },
+        {
+          "source_name": "DBS",
+          "provider": "DBS Bank",
+          "variant": null,
+          "terms": {
+            "amount": "11L to 5CR",
+            "tenure": "1Y to 25Y",
+            "processing_fee": "up to 1%",
+            "interest_rate": "8.55% to 8.70%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "DCB BANK",
+          "provider": "DCB Bank",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 3 CR",
+            "tenure": "1Y to 25Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "8.75% to 14.50%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "DEUTSCHE BANK",
+          "provider": "Deutsche Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 25CR",
+            "tenure": "5Y to 20Y",
+            "processing_fee": "up to 1%",
+            "interest_rate": "8.50% to 10.00%",
+            "age": "23Y to 65Y",
+            "min_net_monthly_salary": "40K",
+            "cibil": "750+"
+          }
+        },
+        {
+          "source_name": "EASY HOME FINANCE",
+          "provider": "Easy Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 75L",
+            "tenure": "5Y to 25Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "8.99% to 18%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "GIC HOUSING FINANCE",
+          "provider": "GIC Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "min 1L to--",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 0.50%",
+            "interest_rate": "8.20% to 12%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "GODREJ HOUSING",
+          "provider": "Godrej Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 10 cr",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "7.60% to 11%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "GRIHUM HOUSING",
+          "provider": "Grihum Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 5CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9% to 22%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "20K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "FEDERAL BANK",
+          "provider": "Federal Bank",
+          "variant": null,
+          "terms": {
+            "amount": "Up to 15 Cr",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "8.75% up to 12%",
+            "age": "21Y to 80Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "HDFC BANK",
+          "provider": "HDFC Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 10CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 1.5%",
+            "interest_rate": "7.75% to 9.50%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "HERO HOUSING FINANCE",
+          "provider": "Hero Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 3CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "9.50% to 18%",
+            "age": "21Y to 75Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "HINDUJA HOUSING FINANCE",
+          "provider": "Hinduja Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 1CR",
+            "tenure": "1Y to 25Y",
+            "processing_fee": "up to 1%",
+            "interest_rate": "10.50% to 14.50%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "ICICI BANK",
+          "provider": "ICICI Bank",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 10CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "8.50% to 10.05%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "ICICI HFC",
+          "provider": "ICICI Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 5CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "8.50% to 11.50%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "12k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "IDBI BANK",
+          "provider": "IDBI Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 10CR",
+            "tenure": "5y to 30 y",
+            "processing_fee": "up to 1%",
+            "interest_rate": "7.35% to 12.25%",
+            "age": "22Y to 70Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "IDFC FIRST BANK",
+          "provider": "IDFC First Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 10CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "8% to 22%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "IIFL - HL",
+          "provider": "IIFL Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "2 L to 2 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 1.75%",
+            "interest_rate": "8.75% to 17%",
+            "age": "18Y to 75Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "IKF FINANCE - HL & LAP",
+          "provider": "IKF Finance",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 1 CR",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 2.50%",
+            "interest_rate": "11.75% to 15.75%",
+            "age": "24Y to 70Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "INDIASHELTER",
+          "provider": "India Shelter Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 50L",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "up to 4%",
+            "interest_rate": "11% to 20%",
+            "age": "18Y to 70 Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "INDUSIND",
+          "provider": "IndusInd Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 10CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 1%",
+            "interest_rate": "8.35% to 11.50%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "JANA SMALL FINANCE-HL",
+          "provider": "Jana Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "up to 3CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9.75% to 16.75%",
+            "age": "25Y to 75Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "JIO FINANCE-HL",
+          "provider": "Jio Finance",
+          "variant": null,
+          "terms": {
+            "amount": "10 L to 10 CR",
+            "tenure": "5Y to 35Y",
+            "processing_fee": "up to 1%",
+            "interest_rate": "7.75% to 14%",
+            "age": "23Y to 70Y",
+            "min_net_monthly_salary": "20K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "JM Financial Home Ltd-HL",
+          "provider": "JM Financial Home Loans",
+          "variant": null,
+          "terms": {
+            "amount": "1 L to 50L",
+            "tenure": "1Y to 25Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "10% to 19%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "KOTAK - HL",
+          "provider": "Kotak Mahindra Bank",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 40CR",
+            "tenure": "1Y to 25Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "7.60% to 9.45%",
+            "age": "18Y to 65Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "L & T FINANCE - HL",
+          "provider": "L&T Finance",
+          "variant": null,
+          "terms": {
+            "amount": "20L to 10CR",
+            "tenure": "3y to 30 y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "8.70% to 17%",
+            "age": "23Y to 70Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "MANAPPURAM",
+          "provider": "Manappuram Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 50L",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "11.75% to 26%",
+            "age": "21y to 65Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "MAHINDRA HOME FINANCE - AHL",
+          "provider": "Mahindra Home Finance",
+          "variant": "Affordable",
+          "terms": {
+            "amount": "5L to 5CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 3.5%",
+            "interest_rate": "8.50% to 26.00%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "MOTILAL - HL",
+          "provider": "Motilal Oswal Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 50L",
+            "tenure": "5 Y to 25Y",
+            "processing_fee": "up to 1.50%",
+            "interest_rate": "11.75% to 17.00%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "12K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "MUTHOOT HOME FINANCE LTD",
+          "provider": "Muthoot Homefin",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 50L",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "11.25% to 18%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "PIRAMAL - HL",
+          "provider": "Piramal Finance",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 2CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 5%",
+            "interest_rate": "9.99% to 13%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "12K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "PNB HOUSING",
+          "provider": "PNB Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "8 L to ----",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 1%",
+            "interest_rate": "7.50% to 10%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "611+"
+          }
+        },
+        {
+          "source_name": "PRAYAAN CAPITAL - HL",
+          "provider": "Prayaan Capital",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 30L",
+            "tenure": "1Y to 10Y",
+            "processing_fee": "na",
+            "interest_rate": "18% to 24%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "RBL BANK - HL",
+          "provider": "RBL Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 15 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "9% to 12.55%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "REPCO",
+          "provider": "Repco Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1 L to ----",
+            "tenure": "1Y to 25Y",
+            "processing_fee": "up to 1%",
+            "interest_rate": "9% to 12.55%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "SAMMAN CAPITAL",
+          "provider": "Samman Capital",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 5 Cr",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "8.75% to 15%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "675+"
+          }
+        },
+        {
+          "source_name": "SATIN HOUSING",
+          "provider": "Satin Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 40L",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "9.00% to 25.00%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "STATE BANK OF INDIA",
+          "provider": "State Bank of India",
+          "variant": null,
+          "terms": {
+            "amount": "50K to 40 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 0.50%",
+            "interest_rate": "7.25% p.a. to 8.45%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "12K",
+            "cibil": "550+"
+          }
+        },
+        {
+          "source_name": "SBM BANK",
+          "provider": "SBM Bank India",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 30L",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "10.95% to 12.60%",
+            "age": "23Y to 65Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SCB BANK - HL",
+          "provider": "Standard Chartered Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 35 cr",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 1%",
+            "interest_rate": "7.99% to 14.00%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SHINHAN BANK - HL",
+          "provider": "Shinhan Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 75L",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 1%",
+            "interest_rate": "7.15% to ----",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SMFG (FULLERTON GRUHSHAKTI )- AHL",
+          "provider": "SMFG India Home Finance",
+          "variant": "Affordable",
+          "terms": {
+            "amount": "5 L to 5 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "9.25% to 14%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SMFG GRUHSHAKTI",
+          "provider": "SMFG India Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5 L to 5 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "9.25% to 12%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SOUTH INDIAN BANK",
+          "provider": "South Indian Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5 L to 15 CR",
+            "tenure": "5Y to 30Y",
+            "processing_fee": "up to 0.50%",
+            "interest_rate": "7.75% to 9.75%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SUNDHARAM BNP Paribhas Home finance LTD",
+          "provider": "Sundaram Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "2 L to 4 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 1%",
+            "interest_rate": "6.90% to 10.50%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SHUBHAM HOUSING FINANCE",
+          "provider": "Shubham Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1 L to 50L",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "10.45% to 20.60%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "SURYODAYA BANK-HL",
+          "provider": "Suryoday Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 10 Cr",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "10.00% to 13.00%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "TATA HFL- HL",
+          "provider": "Tata Capital Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 7.50Cr",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "8.50% to 13.00%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "30K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "TRUE HOME- HL",
+          "provider": "Truhome Finance",
+          "variant": null,
+          "terms": {
+            "amount": "3 L to 10 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 1.5%",
+            "interest_rate": "8.5% to 21.00%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "30K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "UNICO HOUSING FINANCE-HL",
+          "provider": "Unico Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1 L to 5 cr",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "10% to 25%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "30K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "UJJIVAN - HL",
+          "provider": "Ujjivan Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 75L",
+            "tenure": "3Y to 20Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9.50% to 18.99%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "750+"
+          }
+        },
+        {
+          "source_name": "VASTU FINANCE HL",
+          "provider": "Vastu Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 1CR",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "10.25% to 19.50%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "750+"
+          }
+        },
+        {
+          "source_name": "VISTAAR-HL",
+          "provider": "Vistaar Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 50L",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "up to 2.50%",
+            "interest_rate": "13.00% to 21.00%",
+            "age": "25Y to 70Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "YES Bank - HL",
+          "provider": "Yes Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 10CR",
+            "tenure": "1Y to 35Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9% to 14%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "750+"
+          }
+        }
+      ]
+    },
+    {
+      "product": "loan-against-property",
+      "sheet": "LAP",
+      "offers": [
+        {
+          "source_name": "AADHAAR",
+          "provider": "Aadhar Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 75L",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9.99% to 18.00%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "600+"
+          }
+        },
+        {
+          "source_name": "AADHAAR - UTKARSH LAP",
+          "provider": "Aadhar Housing Finance",
+          "variant": "Utkarsh LAP",
+          "terms": {
+            "amount": "2L to 3 CR",
+            "tenure": "3 Y to 15Y",
+            "processing_fee": "up to 2.5%",
+            "interest_rate": "10% to 16.5%",
+            "age": "21Y 70Y",
+            "min_net_monthly_salary": "10k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "ADITYA BIRLA",
+          "provider": "Aditya Birla Capital",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 75L",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "8.85% up to 18.49%",
+            "age": "21Y 70Y",
+            "min_net_monthly_salary": "7k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "AMBIT",
+          "provider": "Ambit Finvest",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 3Cr",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 2.5%",
+            "interest_rate": "12% to 28%",
+            "age": "23Y to 65Y",
+            "min_net_monthly_salary": "case-to-case",
+            "cibil": "675+"
+          }
+        },
+        {
+          "source_name": "ANAND RATHI",
+          "provider": "Anand Rathi Global Finance",
+          "variant": null,
+          "terms": {
+            "amount": "20L to 3CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 1.5%",
+            "interest_rate": "12% to 14%",
+            "age": "24Y to 70Y",
+            "min_net_monthly_salary": "case-to-case",
+            "cibil": "600+"
+          }
+        },
+        {
+          "source_name": "ARKA FINCORP",
+          "provider": "Arka Fincorp",
+          "variant": null,
+          "terms": {
+            "amount": "7 L to 5 CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "10% to 24%.",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "case-to-case",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "AU SMALL FINANCE BANK",
+          "provider": "AU Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 5 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9% to 22%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "AXIS BANK",
+          "provider": "Axis Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5 L to 5CR",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 1%",
+            "interest_rate": "9.25% to 11.25%",
+            "age": "24Y to 65Y",
+            "min_net_monthly_salary": "30k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "AXIS FINANCE",
+          "provider": "Axis Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 10 CR",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9.25% to 11%",
+            "age": "24Y to 65Y",
+            "min_net_monthly_salary": "30k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "BAJAJ HOUSING FINANCE",
+          "provider": "Bajaj Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5 L to 15 CR",
+            "tenure": "1Y to 17 Y",
+            "processing_fee": "up to 4%",
+            "interest_rate": "8.50% to 13.50%",
+            "age": "18Y to 85Y",
+            "min_net_monthly_salary": "case-to-case",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "BAJAJ FINSERV",
+          "provider": "Bajaj Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 15.5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 3.54%",
+            "interest_rate": "8% to 14%",
+            "age": "18Y to 85Y",
+            "min_net_monthly_salary": "12k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "BANDHAN",
+          "provider": "Bandhan Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 15Cr",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 1%",
+            "interest_rate": "10.14% to 16.17%",
+            "age": "21Y to 75Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "CAPRI GLOBAL",
+          "provider": "Capri Global Capital",
+          "variant": null,
+          "terms": {
+            "amount": "3L to 5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "12% to 24%",
+            "age": "21Y to 75Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "CITY UNION BANK",
+          "provider": "City Union Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1 L to 20 CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 0.35%",
+            "interest_rate": "11.00% to 12.00%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "CHOLAMANDALAM",
+          "provider": "Cholamandalam Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 7.5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "10% to 19%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "15k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "CLIX CAPITAL",
+          "provider": "Clix Capital",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 1.50Cr",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "12.5% to 18%",
+            "age": "18Y to 65Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "CAPITAL INDIA",
+          "provider": "Capital India Finance",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "11% to 28%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "CREDIT SAISON INDIA",
+          "provider": "Credit Saison India",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 10CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 3.5%",
+            "interest_rate": "9.75% to 28%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "20K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "DBS",
+          "provider": "DBS Bank",
+          "variant": null,
+          "terms": {
+            "amount": "11L to 5 CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "7% to 18%",
+            "age": "18Y to 65Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "DCB BANK - LAP",
+          "provider": "DCB Bank",
+          "variant": null,
+          "terms": {
+            "amount": "2 L to 10CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "8.25% to 20.60%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "DEUTSCHE BANK",
+          "provider": "Deutsche Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 15cr",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9.75% to 13%",
+            "age": "23Y to 65Y",
+            "min_net_monthly_salary": "25k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "EASY HOME FINANCE - LAP",
+          "provider": "Easy Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 75L",
+            "tenure": "5Y to 25Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "8.99% to 18.00%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "12k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "FEDERAL BANK",
+          "provider": "Federal Bank",
+          "variant": null,
+          "terms": {
+            "amount": "50k to 20CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 1%",
+            "interest_rate": "9.50% to 14.00%",
+            "age": "24Y to 70Y",
+            "min_net_monthly_salary": "case-to-case",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "GIC HOUSING FINANCE",
+          "provider": "GIC Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 3 CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "case-to-case",
+            "interest_rate": "8.80% to 10.80%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "case-to-case",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "GODREJ CAPITAL",
+          "provider": "Godrej Capital",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 35CR",
+            "tenure": "3Y to 25Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "9.50% to 14%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "GOSREE FINANCE",
+          "provider": "Gosree Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5 L to 5 CR",
+            "tenure": "1Y to 20 Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "case-to-case",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "case-to-case",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "GRIHUM HOUSING",
+          "provider": "Grihum Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5 L to 5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "case-to-case",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "20K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "HDFC BANK",
+          "provider": "HDFC Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 50 CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 1%",
+            "interest_rate": "7.50% to 13.00%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "750+"
+          }
+        },
+        {
+          "source_name": "HERO FINCORP",
+          "provider": "Hero FinCorp",
+          "variant": null,
+          "terms": {
+            "amount": "20L to 7.5CR",
+            "tenure": "3Y to 15Y",
+            "processing_fee": "Up to 1%",
+            "interest_rate": "11% to 17%",
+            "age": "25Y to 75Y",
+            "min_net_monthly_salary": "case-to-case",
+            "cibil": "750+"
+          }
+        },
+        {
+          "source_name": "HERO HOUSING FINANCE",
+          "provider": "Hero Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "10 L to 1cr",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "9.50% to 22%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "HINDUJA HOUSING FINANCE",
+          "provider": "Hinduja Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 1CR",
+            "tenure": "1Y to 25Y",
+            "processing_fee": "up to 1%",
+            "interest_rate": "10.50% to 15.50%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "HOME CREDIT",
+          "provider": "Home Credit India",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 75L",
+            "tenure": "3Y to 15Y",
+            "processing_fee": "up to 5%",
+            "interest_rate": "12% to 17%",
+            "age": "23Y to 65Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "ICICI BANK",
+          "provider": "ICICI Bank",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "10.60% to 12.25%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "ICICI HFC",
+          "provider": "ICICI Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 3Cr",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "10.60% to 12.25%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "12k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "IDFC FIRST",
+          "provider": "IDFC First Bank",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 15CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "8.75% to 20%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "20K",
+            "cibil": "750+"
+          }
+        },
+        {
+          "source_name": "IIFL Home Loans",
+          "provider": "IIFL Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 10CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "10.65% to 16%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "12k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "IIFL Finance",
+          "provider": "IIFL Finance",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 10CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 5%",
+            "interest_rate": "11.00% to 18.00%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "12k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "INCRED",
+          "provider": "InCred Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 1CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 5%",
+            "interest_rate": "13% to 17%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "INDUSIND",
+          "provider": "IndusInd Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 25CR",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "8.50% to 13.50%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "JANA SMALL FINANCE",
+          "provider": "Jana Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 15CR",
+            "tenure": "1y to 30Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "11.50% to 23.00%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "JIO FINANCE-LAP",
+          "provider": "Jio Finance",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 10CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 4%",
+            "interest_rate": "9% to 15%",
+            "age": "23Y to 75Y",
+            "min_net_monthly_salary": "12k",
+            "cibil": "680+"
+          }
+        },
+        {
+          "source_name": "JM Financial Home Ltd",
+          "provider": "JM Financial Home Loans",
+          "variant": null,
+          "terms": {
+            "amount": "case-to-case",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "11% to 18%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "case-to-case",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "KOTAK - LAP",
+          "provider": "Kotak Mahindra Bank",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 1%",
+            "interest_rate": "9.50% to 12.5%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "15k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "L & T FINANCE",
+          "provider": "L&T Finance",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 20CR",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9% to 14%",
+            "age": "23Y to 70Y",
+            "min_net_monthly_salary": "case-to-case",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "KRAZY BEE",
+          "provider": "KrazyBee",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 1CR",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 4.7%",
+            "interest_rate": "12% to 25%",
+            "age": "21Y 70Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "MAHINDRA FIN",
+          "provider": "Mahindra Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 4%",
+            "interest_rate": "70% to 80%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "case-to-case",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "MANAPPURAM",
+          "provider": "Manappuram Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 50 L",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "13% to 22%",
+            "age": "18Y to 65Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "560+"
+          }
+        },
+        {
+          "source_name": "MAS FINANCIALS",
+          "provider": "MAS Financial Services",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 3.00%",
+            "interest_rate": "11.00% to 27.00%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "case-to-case",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "MINTIFI-LAP",
+          "provider": "Mintifi",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 3.00%",
+            "interest_rate": "8% to 14%",
+            "age": "21Y 70Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "MOTILAL - LAP",
+          "provider": "Motilal Oswal Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 50 L",
+            "tenure": "5Y to 25Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "11.75% to 17%",
+            "age": "21Y 70Y",
+            "min_net_monthly_salary": "21K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "MUTHOOT HOME FINANCE LTD",
+          "provider": "Muthoot Homefin",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 30L",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "up to 3.00%",
+            "interest_rate": "14.50% to 15.25%",
+            "age": "21Y 70Y",
+            "min_net_monthly_salary": "12k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "Northern Arc Capital Limited",
+          "provider": "Northern Arc Capital",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 1CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 3.5%",
+            "interest_rate": "13.00% to 26.00%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "12k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "PIRAMAL - LAP",
+          "provider": "Piramal Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 3CR",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 4%",
+            "interest_rate": "11% to 15%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "750+"
+          }
+        },
+        {
+          "source_name": "POONAWALA FIN CORP",
+          "provider": "Poonawalla Fincorp",
+          "variant": null,
+          "terms": {
+            "amount": "50L to 25CR",
+            "tenure": "3Y to 15Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9% to 24%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "12k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "PNB HOUSING - LAP",
+          "provider": "PNB Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 20CR",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "up to 1%",
+            "interest_rate": "8.75% to 15.25%",
+            "age": "21Y 70Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "611+"
+          }
+        },
+        {
+          "source_name": "PRAYAAN CAPITAL - LAP",
+          "provider": "Prayaan Capital",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 30L",
+            "tenure": "1Y to 10Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "18% to 30%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "PROFECTUS CAPITAL - LAP",
+          "provider": "Profectus Capital",
+          "variant": null,
+          "terms": {
+            "amount": "20L to 5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "13.75% to 16.55%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "PROTIUM - LAP",
+          "provider": "Protium",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 4%",
+            "interest_rate": "9% to 25%",
+            "age": "21Y 70Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "RBL BANK - LAP",
+          "provider": "RBL Bank",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 15CR",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 2%",
+            "interest_rate": "9.00% to 11.55%",
+            "age": "23Y to 60Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "RELIGARE HOUSING",
+          "provider": "Religare Housing Development Finance",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 30 L",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 4%",
+            "interest_rate": "11% to 14%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "20K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "REPCO",
+          "provider": "Repco Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 1CR",
+            "tenure": "1Y to 25Y",
+            "processing_fee": "up to 1%",
+            "interest_rate": "9.60% to 12.75%",
+            "age": "18Y to 70Y",
+            "min_net_monthly_salary": "12K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SBM BANK",
+          "provider": "SBM Bank India",
+          "variant": null,
+          "terms": {
+            "amount": "case-to-case",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "10.55% to 17.64%",
+            "age": "23Y to 65Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "Standard Chartered Bank (SCB)",
+          "provider": "Standard Chartered Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 15CR",
+            "tenure": "3Y to 15Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "9% to 14%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "40K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SHINHAN BANK - LAP",
+          "provider": "Shinhan Bank",
+          "variant": null,
+          "terms": {
+            "amount": "case-to-case",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 1%",
+            "interest_rate": "case-to-case",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SHRIRAM CITY",
+          "provider": "Shriram Finance",
+          "variant": "Shriram City",
+          "terms": {
+            "amount": "1L to 10CR",
+            "tenure": "1Y to 25Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "9% to 15%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SHRIRAM FINANCE LTD",
+          "provider": "Shriram Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 10CR",
+            "tenure": "1Y to 25Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "9% to 18%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SHRIRAM HOUSING(TRUE HOME)-LAP",
+          "provider": "Truhome Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 10CR",
+            "tenure": "1Y to 25Y",
+            "processing_fee": "up to 8%",
+            "interest_rate": "9% to 21%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "30k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SMFG (FULLERTON GRUHSHAKTI )- LAP",
+          "provider": "SMFG India Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 1CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "13% to 24%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SMFG (FULLERTON INDIA )- Main LAP",
+          "provider": "SMFG India Credit",
+          "variant": "Main LAP",
+          "terms": {
+            "amount": "5L to 5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "9.00% to to 24%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "20K",
+            "cibil": "750+"
+          }
+        },
+        {
+          "source_name": "SLICE BANK",
+          "provider": "slice Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 50L",
+            "tenure": "case-to-case",
+            "processing_fee": "up to 5%",
+            "interest_rate": "case-to-case",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "20k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SUNDHARAM BNP Paribhas Home finance LTD",
+          "provider": "Sundaram Home Finance",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 5CR",
+            "tenure": "12M to 120M",
+            "processing_fee": "up to 1%",
+            "interest_rate": "case-to-case",
+            "age": "18Y to 65Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SOUTH INDIAN BANK - LAP",
+          "provider": "South Indian Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 10CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "case-to-case",
+            "age": "18Y to 65Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "SURYODAYA BANK",
+          "provider": "Suryoday Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 5CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "10.00% to 16.00%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "680+"
+          }
+        },
+        {
+          "source_name": "TATA FSL - LAP",
+          "provider": "Tata Capital",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 10CR",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "9% to 17%",
+            "age": "23Y to 65Y",
+            "min_net_monthly_salary": "15k",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "TATA HFL",
+          "provider": "Tata Capital Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 10CR",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "9% to 17%",
+            "age": "23Y to 65Y",
+            "min_net_monthly_salary": "15k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "TYGER CAPITAL-LAP",
+          "provider": "Tyger Capital",
+          "variant": null,
+          "terms": {
+            "amount": "2L to 75K",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "14% to 24%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "10K",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "U GRO Capita",
+          "provider": "U GRO Capital",
+          "variant": null,
+          "terms": {
+            "amount": "10L to 5CR",
+            "tenure": "5Y to 15Y",
+            "processing_fee": "Up to 4%",
+            "interest_rate": "10% to 18%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "UJJIVAN SMALL FINANCE BANK",
+          "provider": "Ujjivan Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 10CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "10% to 19%",
+            "age": "22Y to 65Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "UNICO HOUSING FINANCE-LAP",
+          "provider": "Unico Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "1l to 10CR",
+            "tenure": "1Y to 30Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "10% to 25%",
+            "age": "21Y to 60Y",
+            "min_net_monthly_salary": "20K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "UNITY SMALL FINANCE BANK - LAP",
+          "provider": "Unity Small Finance Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 5Cr",
+            "tenure": "5Y to 15Y",
+            "processing_fee": "up to 3%",
+            "interest_rate": "10% to 28%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "20K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "UTKARSH SMALL FINANCE BANK - MLAP",
+          "provider": "Utkarsh Small Finance Bank",
+          "variant": "Micro LAP",
+          "terms": {
+            "amount": "2L to 10 CR",
+            "tenure": "3Y to 15Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "10% to 16%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "20K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "VARTHANA - LAP",
+          "provider": "Varthana",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 10CR",
+            "tenure": "1Y to 12Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "9% to 16%",
+            "age": "26Y to 70Y",
+            "min_net_monthly_salary": "case-to-case",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "VASTU FINANCE LAP",
+          "provider": "Vastu Housing Finance",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 5CR",
+            "tenure": "1Y to 20Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "12% to 20%",
+            "age": "21Y to 70Y",
+            "min_net_monthly_salary": "15K",
+            "cibil": "650+"
+          }
+        },
+        {
+          "source_name": "VASTU FINSERVE",
+          "provider": "Vastu Finserve",
+          "variant": null,
+          "terms": {
+            "amount": "1L to 1CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "Up to 3%",
+            "interest_rate": "12% to 22%",
+            "age": "21Y to 65Y",
+            "min_net_monthly_salary": "12k",
+            "cibil": "700+"
+          }
+        },
+        {
+          "source_name": "YES Bank - LAP",
+          "provider": "Yes Bank",
+          "variant": null,
+          "terms": {
+            "amount": "5L to 15CR",
+            "tenure": "1Y to 15Y",
+            "processing_fee": "up to 2%",
+            "interest_rate": "8% to 12%",
+            "age": "23Y to 65Y",
+            "min_net_monthly_salary": "25K",
+            "cibil": "700+"
+          }
+        }
+      ]
+    },
+    {
+      "product": "car-loan",
+      "sheet": "CL",
+      "offers": [
+        {
+          "source_name": "FEDERAL BANK",
+          "provider": "Federal Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "HDFC BANK",
+          "provider": "HDFC Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "YES BANK",
+          "provider": "Yes Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "ICICI NEW CAR",
+          "provider": "ICICI Bank",
+          "variant": "New car",
+          "terms": {}
+        },
+        {
+          "source_name": "BANDHAN",
+          "provider": "Bandhan Bank",
+          "variant": null,
+          "terms": {}
+        }
+      ]
+    },
+    {
+      "product": "vehicle-loan",
+      "sheet": "CE and CV",
+      "offers": [
+        {
+          "source_name": "BAJAJ FINANCE",
+          "provider": "Bajaj Finance",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "IDFC FIRST BANK",
+          "provider": "IDFC First Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "ICICI BANK",
+          "provider": "ICICI Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "BANDHAN",
+          "provider": "Bandhan Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "KARNATAKA BANK",
+          "provider": "Karnataka Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "SURYODHAYA",
+          "provider": "Suryoday Small Finance Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "YES BANK",
+          "provider": "Yes Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "MAHAVEER FINANCE",
+          "provider": "Mahaveer Finance",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "TATA",
+          "provider": "Tata Capital",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "HDFC",
+          "provider": "HDFC Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "SUNDARAM FINANCE",
+          "provider": "Sundaram Finance",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "INDOSTAR( Used only)",
+          "provider": "IndoStar Capital Finance",
+          "variant": "Used vehicles only",
+          "terms": {}
+        }
+      ]
+    },
+    {
+      "product": "education-loan",
+      "sheet": "EL",
+      "offers": [
+        {
+          "source_name": "AVANSE EDUCATIONAL LOANS(INTERNATIONAL",
+          "provider": "Avanse Financial Services",
+          "variant": "International",
+          "terms": {}
+        },
+        {
+          "source_name": "IDFC FIRST BANK",
+          "provider": "IDFC First Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "AUXILO",
+          "provider": "Auxilo Finserve",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "KUHOO",
+          "provider": "Kuhoo",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "CREDILA FINANCIAL SERVICES LTD",
+          "provider": "Credila Financial Services",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "INCRED",
+          "provider": "InCred Finance",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "AXIS BANK",
+          "provider": "Axis Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "POONAWALLA",
+          "provider": "Poonawalla Fincorp",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "PROPELLED",
+          "provider": "Propelld",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "YES BANK",
+          "provider": "Yes Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "EMPOWER",
+          "provider": "Empower",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "TATA",
+          "provider": "Tata Capital",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "ICICI",
+          "provider": "ICICI Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "AVANSE EDUCATIONAL LOANS(DOMESTIC)",
+          "provider": "Avanse Financial Services",
+          "variant": "Domestic",
+          "terms": {}
+        },
+        {
+          "source_name": "CREDILA FINANCIAL SERVICES LTD(DOMESTIC)",
+          "provider": "Credila Financial Services",
+          "variant": "Domestic",
+          "terms": {}
+        },
+        {
+          "source_name": "EMPOWER",
+          "provider": "Empower",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "PNB CAPITAL SERVICES LTD",
+          "provider": "PNB Capital Services",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "UBI SERIVICES",
+          "provider": "UBI Services",
+          "variant": null,
+          "terms": {}
+        }
+      ]
+    },
+    {
+      "product": "school-funding",
+      "sheet": "School Funding",
+      "offers": [
+        {
+          "source_name": "PROTIUM",
+          "provider": "Protium",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "AVANSE",
+          "provider": "Avanse Financial Services",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "CLIX CAPITAL-Unsecured",
+          "provider": "Clix Capital",
+          "variant": "Unsecured",
+          "terms": {}
+        },
+        {
+          "source_name": "PROFECTUS CAPITAL",
+          "provider": "Profectus Capital",
+          "variant": null,
+          "terms": {}
+        }
+      ]
+    },
+    {
+      "product": "equipment-financing",
+      "sheet": "Equipment LOAN",
+      "offers": [
+        {
+          "source_name": "EDELWEISS - EQUIPMENT",
+          "provider": "Edelweiss",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "PROFECTUS CAPITAL - EQUIPMENT",
+          "provider": "Profectus Capital",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "YES BANK - EQUIPMENT",
+          "provider": "Yes Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "CLIX(Health Equipment)",
+          "provider": "Clix Capital",
+          "variant": "Health equipment",
+          "terms": {}
+        },
+        {
+          "source_name": "POONAWALA",
+          "provider": "Poonawalla Fincorp",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "U GRO",
+          "provider": "U GRO Capital",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "PROTIUM",
+          "provider": "Protium",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "BAJAJ(",
+          "provider": "Bajaj Finance",
+          "variant": null,
+          "terms": {}
+        }
+      ]
+    },
+    {
+      "product": "od-and-dod",
+      "sheet": "Secured ( OD & DOD)",
+      "offers": [
+        {
+          "source_name": "AXIS - OD",
+          "provider": "Axis Bank",
+          "variant": "OD",
+          "terms": {}
+        },
+        {
+          "source_name": "AU SMALL FINANCE BANK",
+          "provider": "AU Small Finance Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "BANDHAN BANK",
+          "provider": "Bandhan Bank",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "KOTAK - OD",
+          "provider": "Kotak Mahindra Bank",
+          "variant": "OD",
+          "terms": {}
+        },
+        {
+          "source_name": "YES BANK -DOD",
+          "provider": "Yes Bank",
+          "variant": "DOD",
+          "terms": {}
+        },
+        {
+          "source_name": "ICICI BANK -OD",
+          "provider": "ICICI Bank",
+          "variant": "OD",
+          "terms": {}
+        },
+        {
+          "source_name": "HDFC BANK -DOD",
+          "provider": "HDFC Bank",
+          "variant": "DOD",
+          "terms": {}
+        },
+        {
+          "source_name": "EQUITAS - OD",
+          "provider": "Equitas Small Finance Bank",
+          "variant": "OD",
+          "terms": {}
+        },
+        {
+          "source_name": "UTKARSH SMALL FINANCE BANK -OD/DLOD",
+          "provider": "Utkarsh Small Finance Bank",
+          "variant": "OD/DLOD",
+          "terms": {}
+        },
+        {
+          "source_name": "CAPSAVE FINNACE",
+          "provider": "Capsave Finance",
+          "variant": null,
+          "terms": {}
+        }
+      ]
+    },
+    {
+      "product": "travel-insurance",
+      "sheet": "Travel Insurance",
+      "offers": [
+        {
+          "source_name": "TATA AIG",
+          "provider": "Tata AIG",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "Bajaj Allianz",
+          "provider": "Bajaj General",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "Future Generali",
+          "provider": "Future Generali",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "Care Health",
+          "provider": "Care Health",
+          "variant": null,
+          "terms": {}
+        }
+      ]
+    },
+    {
+      "product": "health-insurance",
+      "sheet": "Health Insurance",
+      "offers": [
+        {
+          "source_name": "Care Health",
+          "provider": "Care Health",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "Cigna TTK",
+          "provider": "ManipalCigna Health",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "NIVA Bupa",
+          "provider": "Niva Bupa",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "ICICI Lombard",
+          "provider": "ICICI Lombard",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "HDFC ERGO",
+          "provider": "HDFC ERGO",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "TATA AIG",
+          "provider": "Tata AIG",
+          "variant": null,
+          "terms": {}
+        }
+      ]
+    },
+    {
+      "product": "property-insurance",
+      "sheet": "Property Insurance",
+      "offers": [
+        {
+          "source_name": "ICICI Lombard",
+          "provider": "ICICI Lombard",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "Bajaj General",
+          "provider": "Bajaj General",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "Tata AIG General",
+          "provider": "Tata AIG",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "Future Generali",
+          "provider": "Future Generali",
+          "variant": null,
+          "terms": {}
+        },
+        {
+          "source_name": "Liberty General",
+          "provider": "Liberty General",
+          "variant": null,
+          "terms": {}
+        }
+      ]
+    }
+  ]
+}

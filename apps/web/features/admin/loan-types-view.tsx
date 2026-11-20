@@ -385,9 +385,9 @@ export function LoanTypesView() {
         searchLabel="Search financial products"
         searchPlaceholder="Search product or category"
         statusOptions={STATUS_OPTIONS}
-        statusLabel="states"
+        statusLabel="Status"
         kindOptions={CATEGORY_OPTIONS}
-        kindLabel="Categories"
+        kindLabel="Category"
         showLine={false}
         showDates={false}
         note="Open a row to edit its form and publication settings. Deactivate preserves history; delete is available only for unused products."
@@ -443,7 +443,7 @@ export function LoanTypesView() {
       </DashboardPanel>
 
       <Dialog open={creating} onOpenChange={setCreating}>
-        <DialogContent className="max-w-md">
+        <DialogContent preventOutsideClose className="max-w-md">
           <DialogHeader>
             <DialogTitle>New financial product</DialogTitle>
             <DialogDescription>

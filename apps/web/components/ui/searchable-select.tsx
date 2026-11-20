@@ -18,12 +18,14 @@ export function SearchableSelect({
   options,
   placeholder,
   className,
+  disabled = false,
 }: {
   value: string | undefined;
   onChange: (value: string | undefined) => void;
   options: string[];
   placeholder: string;
   className?: string;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
 
@@ -37,8 +39,9 @@ export function SearchableSelect({
       <PopoverTrigger asChild>
         <button
           type="button"
+          disabled={disabled}
           className={cn(
-            "flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+            "flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
             !value && "text-muted-foreground",
             className,
           )}

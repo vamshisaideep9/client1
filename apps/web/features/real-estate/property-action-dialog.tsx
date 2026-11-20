@@ -171,7 +171,7 @@ export function PropertyActionDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent>
+      <DialogContent preventOutsideClose>
         <DialogHeader>
           <DialogTitle className="font-heading">
             {isSiteVisit ? "Book a site visit" : "Enquire about this property"}

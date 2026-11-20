@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DASHBOARD_ICONS } from "@/features/dashboard/dashboard-icons";
+import { FilterSelect } from "@/features/dashboard/filter-select";
 import {
   DashboardHeader,
   DashboardPage,
@@ -238,7 +239,7 @@ export function UserProvisioningView() {
           }
         }}
       >
-        <DialogContent showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
           <WorkspaceDialogHeader
             title={result ? "Staff account created" : "Create staff account"}
             description={
@@ -761,12 +762,12 @@ function StaffAccessContent({
           { value: "delegated", label: "Payout access enabled" },
           { value: "not_delegated", label: "No payout delegation" },
         ]}
-        statusLabel="delegation states"
+        statusLabel="Payout delegation"
         kindOptions={[
           { value: "admin", label: "Admin" },
           { value: "sub_admin", label: "Sub Admin" },
         ]}
-        kindLabel="roles"
+        kindLabel="Role"
         showLine={false}
         showDates={false}
         onClear={() => {
@@ -776,16 +777,15 @@ function StaffAccessContent({
         hasExternalFilters={mainFilter !== "all"}
         note={`${filteredEntries.length} of ${access.entries.length} access records shown.`}
         extra={
-          <Select value={mainFilter} onValueChange={setMainFilter}>
-            <SelectTrigger aria-label="Filter by Admin hierarchy">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Any Admin hierarchy</SelectItem>
-              <SelectItem value="main">Main Admin only</SelectItem>
-              <SelectItem value="additional">Additional staff only</SelectItem>
-            </SelectContent>
-          </Select>
+          <FilterSelect
+            label="Admin hierarchy"
+            value={mainFilter}
+            options={[
+              { value: "main", label: "Main Admin only" },
+              { value: "additional", label: "Additional staff only" },
+            ]}
+            onValueChange={setMainFilter}
+          />
         }
       />
 

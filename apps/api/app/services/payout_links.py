@@ -72,10 +72,11 @@ import app.db.session as db_session
 from app.core.config import settings
 from app.models.audit_log import AuditAction
 from app.models.commission import Commission, CommissionStatus
+from app.models.contest import ContestPaymentStatus, ContestResult
 from app.models.fee_cashback import FeeCashback, FeeCashbackStatus
 from app.models.payout import Payout, PayoutStatus, PayoutType
 from app.models.referral import Referral, ReferralStatus
-from app.services import commissions, fee_cashbacks, referrals
+from app.services import commissions, contest_payouts, fee_cashbacks, referrals
 from app.services.audit_log import record as record_audit
 
 logger = logging.getLogger("scheduler")
@@ -101,6 +102,10 @@ async def apply_paid_link(
         await fee_cashbacks.mark_paid_from_payout(
             payout_id=payout_id, transaction_id=transaction_id
         )
+    elif payout_type == PayoutType.CONTEST_REWARD:
+        await contest_payouts.mark_paid_from_payout(
+            payout_id=payout_id, transaction_id=transaction_id
+        )
 
 
 async def apply_release_link(*, payout_type: PayoutType, payout_id: uuid.UUID) -> None:
@@ -115,6 +120,8 @@ async def apply_release_link(*, payout_type: PayoutType, payout_id: uuid.UUID) -
         await commissions.release_payout_link(payout_id=payout_id)
     elif payout_type == PayoutType.CASHBACK:
         await fee_cashbacks.release_payout_link(payout_id=payout_id)
+    elif payout_type == PayoutType.CONTEST_REWARD:
+        await contest_payouts.release_payout_link(payout_id=payout_id)
 
 
 async def _grace_cutoff() -> datetime:
@@ -218,6 +225,13 @@ _SOURCES = (
         FeeCashback.payout_uuid,
         FeeCashback.status,
         FeeCashbackStatus.PENDING,
+    ),
+    (
+        PayoutType.CONTEST_REWARD,
+        ContestResult,
+        ContestResult.payout_uuid,
+        ContestResult.payment_status,
+        ContestPaymentStatus.PAYOUT_PENDING.value,
     ),
 )
 _SOURCE_BY_TYPE = {
