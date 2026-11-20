@@ -1,6 +1,6 @@
 # Living implementation plan
 
-**In progress — Batch 3: staff specialty routing and profile metadata (API slice)**
+**Verified for delivery — Batch 3: staff specialty routing and profile metadata (API slice)**
 (2026-11-20), branch `feat/staff-specialty-routing-api`, based on merged Batch 2
 `78567697` (upstream #388/#389). API/contracts first; web follows separately.
 Acceptance: optional Admin-managed Loans/dual-line Telecaller specialties;
@@ -8,24 +8,35 @@ independent specialist, unspecialised and all-eligible rotations; unchanged
 existing/sticky assignments; task-scoped counterpart names/codes; own and
 Admin-visible role/team metadata with dual-line teams retained. No directory
 grant, counterpart contact expansion, dependency, payout or attendance change.
-Verification planned: migrated PostgreSQL routing/concurrency/RLS/API tests,
-up/down/up, full API gate, generated contracts and compatible web gate.
-PRs pending; no new passing evidence or requirement-percentage change claimed.
+Verification: all **2,920 collected API tests have passing results**, with no
+missing, duplicate, skipped, errored or failed cases in the final evidence.
+Four isolated synthetic PostgreSQL/Redis groups cover 676/704/768/772 tests.
+The first group initially failed a new retry test because earlier test data
+filled its bounded queue; the test now prioritizes its lead using the existing
+scheduler-test pattern and asserts that the worker visits it. Its whole file
+and every unreached file pass together (37 tests); unchanged passing files are
+retained. This is segmented full coverage, not a single uninterrupted run.
+Earlier deprecated 422 constants are corrected. Ruff/format (645 files), one
+head `b7d9f1a3c5e7`, populated downgrade/upgrade preserving legacy cursor
+IDs/timestamps and both contract scripts pass. API-compatible web lint/typecheck,
+1,113 unit tests and the 118-page Node 22 production build pass. Code/security
+review found no outstanding actionable defect. PR links pending; no percentage
+change. Next priority: complete the separate Batch 3 web slice.
 
-API checkpoint: fresh synthetic PostgreSQL runs pass 63 neighboring tests,
-37 routing/metadata/team tests, and 25 capture/metadata/form tests (overlapping
-runs, not additive totals). Populated downgrade/upgrade preserves legacy cursor
-IDs/timestamps. Ruff/format and one head pass on the frozen Linux snapshot.
-Both contract scripts run; the audit-label consumer is updated. Full API and
-web compatibility gates are still running; this is not a completed delivery.
+Rollout: quiesce assignment and update API and the single scheduler together
+after migration; old workers cannot share the new cursor keys. Downgrade loses
+optional specialties/additional pool history and retains legacy all-pool rotation;
+rollback application builds must understand the retained audit action. No deployment.
 
-**In review — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
+**Merged upstream — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
 branch `feat/agent-lead-intake-web`, stacked on API `e70b18c3`:
 [upstream #388](https://github.com/brollysolutions/client1/pull/388),
 [mirror #89](https://github.com/vamshisaideep9/client1/pull/89).
-Web PRs: [upstream #389](https://github.com/brollysolutions/client1/pull/389),
-[mirror #90](https://github.com/vamshisaideep9/client1/pull/90), both against
-`main`, with repository/base/head identities independently verified.
+Web [upstream #389](https://github.com/brollysolutions/client1/pull/389) merged as
+`78567697`; [mirror #90](https://github.com/vamshisaideep9/client1/pull/90)
+remains open against `main`, refreshed to that merged history. API upstream #388
+merged as `66caddde`; mirror #89 remains open at that merged history. Mirror states
+and heads were rechecked while continuing Batch 3.
 No requirement-percentage change.
 
 - Implemented: Agent email/property-type intake with an optional matching listing,
@@ -56,11 +67,11 @@ No requirement-percentage change.
   ownership, maker/checker and privacy behavior are covered by the parent API's
   2,884 passing database-backed tests and its documented historical limit.
 
-Hosted CI: the upstream PR reports no check runs; mirror verify, secret-scan and
+Hosted CI at Batch 2 delivery: the upstream PR reported no check runs; mirror verify, secret-scan and
 dependency-audit jobs cannot start because of account billing/spending restrictions
 (all three annotations confirmed; verify has zero steps). GitGuardian is neutral.
-Local verification above passes. Next priority: Batch 3 API; Batches 3–6 have not
-started.
+Local verification above passed. The next priority at that delivery was Batch 3
+API, now in progress above; Batches 4–6 have not started.
 
 Status: **Derived, actively maintained plan**
 
@@ -130,7 +141,7 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In review — Batch 2: Agent leads (API slice)** (2026-11-19; client-
+**Merged upstream — Batch 2: Agent leads (API slice)** (2026-11-19; client-
 reported; CS-028; both lines; no requirement or completion-percentage
 change). Branch `feat/agent-lead-intake-api` is based on `upstream/main`
 `5c785a77`, after Batch 1 PR #387 merged. History alignment changed no

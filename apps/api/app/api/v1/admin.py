@@ -308,7 +308,7 @@ async def create_staff_user(
         )
     except InvalidLoanSpecialty as exc:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Choose an active loan product for this Telecaller.",
         ) from exc
     except StaffAlreadyExists as exc:
@@ -711,7 +711,7 @@ async def update_staff_loan_specialty(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Active Telecaller not found.") from exc
     except InvalidLoanSpecialty as exc:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Choose an active loan product for a Loans Telecaller.",
         ) from exc
     return (await role_profiles_for_users(db, [auth_user_uuid])).get(auth_user_uuid, [])

@@ -244,3 +244,40 @@ async def test_own_role_codes_all_roles(client: AsyncClient, role):
         row = next(item for item in res.json()["role_profiles"] if item["role"] == role)
         assert row["profile_uuid"] == str(profile)
         assert row["code"]
+
+
+@pytest.mark.asyncio
+async def test_specialty_label_reaches_owner_and_only_their_current_manager(client: AsyncClient):
+    from app.models.loan import LoanType
+
+    manager_token, _, manager, _ = await _sub_admin(client)
+    other_token, *_ = await _sub_admin(client)
+    user, staff = await seed_line_staff("telecaller", "both")
+    async with sessions.AsyncSessionLocal() as db:
+        product = LoanType(name=f"metadata-{uuid4().hex}", label="Synthetic specialty loan")
+        db.add(product)
+        await db.flush()
+        await db.execute(
+            update(StaffProfile)
+            .where(StaffProfile.id == staff)
+            .values(loan_specialty_id=product.id)
+        )
+        await db.commit()
+    team = await seed_team(manager, [staff])
+    own = await client.get("/api/v1/auth/me", headers=_headers(token(user, staff, line="both")))
+    assert own.status_code == 200, own.text
+    own_profile = own.json()["role_profiles"][0]
+    assert own_profile["loan_specialty_id"] == str(product.id)
+    assert own_profile["loan_specialty_label"] == product.label
+    roster = await client.get("/api/v1/manager/teams", headers=_headers(manager_token))
+    assert roster.status_code == 200, roster.text
+    member = next(t for t in roster.json()["teams"] if t["id"] == str(team))["members"][0]
+    assert member["loan_specialty_id"] == str(product.id)
+    assert member["loan_specialty_label"] == product.label
+    unrelated = await client.get("/api/v1/manager/teams", headers=_headers(other_token))
+    assert unrelated.status_code == 200
+    assert str(staff) not in unrelated.text
+    denied = await client.get(
+        f"/api/v1/manager/teams/{team}/members/{staff}/work", headers=_headers(other_token)
+    )
+    assert denied.status_code == 404

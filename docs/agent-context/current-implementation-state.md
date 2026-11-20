@@ -995,8 +995,11 @@ both teams for dual-line staff. Admin directory metadata is batched; manager
 rosters remain limited to their reached staff. Web surfaces reuse the approved
 operational design and display server-assigned codes rather than deriving IDs.
 
-API work is in progress on `feat/staff-specialty-routing-api`; verification and
-delivery evidence belong in the living plan/status. No payout, attendance,
+API work on `feat/staff-specialty-routing-api` has complete segmented evidence
+for all 2,920 tests, a populated migration rollback, generated contracts and the
+compatible web gate; exact results and resolved test failures are in the living
+plan/status. Delivery links follow there. Assignment must be quiesced while the
+API and single scheduler move together to the new cursor key. No payout, attendance,
 public-page or dependency scope is included in this decision.
 
 ### CS-028 — Agent lead form fields, sticky resubmission, bulk submit and product commission rates
@@ -1012,10 +1015,13 @@ with error/retry preserving inputs. No dependency or API change in this slice.
 The unchanged runtime passes 1,113 unit tests and the 118-page Node 22 build;
 the final combined production-browser run passes all 11 scenarios with synthetic
 API mocks. Post-restack lint/typecheck and runtime/API/contract identity checks
-pass. Web PRs [#389](https://github.com/brollysolutions/client1/pull/389) and
-[mirror #90](https://github.com/vamshisaideep9/client1/pull/90) are open against
-`main` with matching heads; hosted mirror jobs are blocked before startup by the
-account billing/spending restriction. Remaining Round 2 scope starts with Batch 3.
+pass. Web [upstream #389](https://github.com/brollysolutions/client1/pull/389)
+merged as `78567697`; [mirror #90](https://github.com/vamshisaideep9/client1/pull/90)
+remains open against `main`, refreshed to that merged history. API upstream #388
+merged as `66caddde` and mirror #89 remains open at that merged history. These
+states were rechecked while continuing Batch 3. Hosted mirror jobs were blocked
+by billing/spending restrictions at Batch 2 delivery. Batch 3 continues from this
+merged baseline.
 
 **Decision (2026-11-19, client-reported batch 2 "Agent leads"; both lines;
 amends CS-017's resubmission and the FR-8.1 commission entry; the detailed

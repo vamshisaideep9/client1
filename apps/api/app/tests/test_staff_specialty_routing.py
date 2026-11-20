@@ -2,6 +2,7 @@
 
 import asyncio
 from collections import Counter
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
@@ -174,6 +175,10 @@ async def test_retry_resolves_existing_application_and_preserves_assignment() ->
         mobile=user.mobile, client_profile_uuid=profile.id, business_line="loans"
     )
     async with sessions.AsyncSessionLocal() as db:
+        queued = await db.get(Lead, lead_id)
+        # The retry worker intentionally visits only the oldest 200 leads.
+        # Give this scenario priority over earlier integration-test data.
+        queued.created_at = datetime(2000, 1, 1, tzinfo=UTC)
         db.add(
             LoanApplication(
                 lead_uuid=lead_id,
@@ -187,8 +192,8 @@ async def test_retry_resolves_existing_application_and_preserves_assignment() ->
     general, specialist = await _seed_telecaller(), await _seed_telecaller()
     await specialize(specialist, p.id)
     async with sessions.AsyncSessionLocal() as db:
-        await _assign_batch(db)
-        await db.commit()
+        _, notices = await _assign_batch(db)
+        assert any(notice.lead_id == lead_id for notice in notices)
     async with sessions.AsyncSessionLocal() as db:
         lead = await db.get(Lead, lead_id)
         assert lead.assigned_telecaller_profile_uuid == specialist.id
@@ -418,3 +423,35 @@ async def test_sticky_resubmit_ignores_changed_specialty_and_leaves_pools_unchan
             ).all()
         )
         assert before == after
+
+
+@pytest.mark.asyncio
+async def test_card_enquiry_uses_all_pool_despite_an_existing_unassigned_loan(
+    client: AsyncClient,
+) -> None:
+    from app.tests.test_financial_product_forms_api import _credit_card_answers, _products
+    from conftest import full_registration, loan_application_payload
+
+    auth, _ = await full_registration(client, lines=["loans"])
+    payload = await loan_application_payload(client, auth)
+    application = await client.post(
+        "/api/v1/loans/applications", headers=_headers(auth), json=payload
+    )
+    assert application.status_code == 201, application.text
+    general, specialist = await _seed_telecaller(), await _seed_telecaller()
+    await specialize(specialist, UUID(payload["loan_type_id"]))
+    card = next(item for item in await _products(client, auth) if item["name"] == "credit-cards")
+    enquiry = await client.post(
+        "/api/v1/loans/enquiries",
+        headers=_headers(auth),
+        json={
+            "product_id": card["id"],
+            "form_version": card["form_version"],
+            "answers": _credit_card_answers(),
+        },
+    )
+    assert enquiry.status_code == 201, enquiry.text
+    async with sessions.AsyncSessionLocal() as db:
+        row = await db.get(LoanApplication, UUID(application.json()["id"]))
+        lead = await db.get(Lead, row.lead_uuid)
+        assert lead.assigned_telecaller_profile_uuid == general.id
