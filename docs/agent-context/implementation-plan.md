@@ -68,7 +68,7 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
-**In progress — Batch 2: Agent leads (API slice)** (2026-11-19; client-
+**In review — Batch 2: Agent leads (API slice)** (2026-11-19; client-
 reported; CS-028; both lines; no requirement or completion-percentage
 change). Branch `feat/agent-lead-intake-api`, stacked on batch 1
 (`fix/dialog-autoclose-and-mobile-hover`, PR #387) from `upstream/main`
@@ -163,62 +163,51 @@ separately and needs no further API change.
 - *Contract.* `packages/contracts` regenerated; the web app received only
   the type-only label / icon entries and test fixtures the new enum values
   and required lead fields need. Decision recorded as CS-028.
-- *Final review checkpoint (2026-11-20).* The unused-product deletion
-  regression passes. The original ownership migration's backfill was run
-  against transaction-local pre-ledger rows: the originating Agent still
-  reads their notes and a claiming Agent cannot read the public enquiry's
-  email or notes. Review found that account closure retained the new lead
-  email. Additive migration `f5b7d9e1a3c4` extends the existing confined
-  closure function to erase email from the deleted person's active and
-  historical leads (mobile or Client profile), preserve third-party
-  prospects, and remember the assignee it clears. No new grants or policy.
-  Upgrade / downgrade / upgrade succeeds with one head. Final database
-  regression/full-suite checks and PR delivery are in progress; the next
-  slice is Batch 2 web. Fresh web lint, typecheck and 1,106 unit tests pass;
-  contract regeneration has no diff. These are checks, not a release claim.
-- *Isolated contract/compatibility follow-up (2026-11-20).* Final review
-  found that the requested top-level `AgentLeadCreate.email` was silently
-  ignored, although nested email worked. The optional normalized field now
-  folds into the same `requirement.email` ownership/storage path; matching
-  nested input is compatible and conflicting nonblank addresses are rejected.
-  A valid name plus explicit `requirement: null` keeps the legacy owned-notes
-  clear without clearing email or fixed interests; foreign notes still deny
-  the whole update. Product-deletion coverage now asserts both rates exist
-  before deleting. The runtime test's obsolete API-image Alpine expectation
-  now matches its already-patched `3.5.9-r0`, with no image-pin change. The
-  follow-up is isolated from frozen candidate `9a60ded9` while its full gate
-  runs. Production-runtime script tests pass (14 cases). Changed-file Ruff
-  check/format and a pure email
-  normalization probe pass; API/ownership regressions and regenerated contract
-  remain pending after that gate. Completion impact and next slice unchanged.
-- *Final-gate recovery (2026-11-20).* Frozen candidate `9a60ded9` completed:
-  2,865 passed / three failed in 7,637.50 seconds (exit 1). The observed
-  failures were stale strict assertions: the historical loan-copy revision
-  was asserted to remain the newest head, and public response allowlists
-  omitted already-approved video fields and developer name. The assertions
-  now require one head containing the historical revision and keep explicit
-  public-field allowlists. The reviewed email/notes follow-up is integrated;
-  both contracts are regenerated. Targeted regressions precede a new frozen
-  Linux-source full gate; none of these pending checks is claimed as passing.
-- *Original-brief policy correction (2026-11-20).* The running full gate was
-  intentionally interrupted after 1,144 passes (KeyboardInterrupt / exit 2),
-  not accepted as a passing gate. Review identified two derived-scope
-  mismatches: unrelated Sub Admins could read pending/history rows, and an
-  Admin direct entry fabricated a self-checker. The bounded correction keeps
-  maker workflow rows private, gives eligible loans/both-line Telecallers and
-  Employees approved-only RLS reads, and records direct Admin entry without a
-  checker while enforcing a global checker-not-maker constraint. Additive
-  migration, focused regressions and a replacement full gate are in progress.
-- *Correction evidence and historical limit.* The focused correction gate
-  passes 29 tests, including real RLS and a temporary-table upgrade / downgrade
-  / upgrade that preserves every non-review column and genuine distinct
-  reviews. The populated database's real-trigger migration roundtrip also
-  succeeds. All 640 API files pass Ruff/format; both generated contracts change
-  only the management operation description. Final full verification remains
-  pending. The legacy ownership test proves the original backfill and claims
-  after it; pre-ledger claimed public rows can retain merged fields attributed
-  to the recorded Agent. No accepted/claim per-key audit can safely reconstruct
-  that inherited history. Current/new claims remain protected by ownership.
+- *Final API verification (2026-11-20).* Frozen candidate `5c5c4467`
+  (API tree `250ed0078b10be2487c667a1345a4cbb3cbf6336`) passes the full
+  PostgreSQL/Redis-backed suite: **2,884 passed, zero failed/errors/skipped**
+  in 6,276.70 seconds, exit 0, with `CI=1`. The Docker execution, terminal
+  command result and JUnit agree. All 640 API files pass Ruff/format and
+  Alembic reports one head, `a6c8e0f2b4d6`.
+- *Final behavior and security review.* Optional top-level and nested email
+  share one owned storage key and reject conflicting addresses. Legacy valid-
+  name/null-requirement updates clear owned notes only. Account deletion
+  erases the deleted person's lead email, including closed history and old-
+  mobile profile-bound rows, while preserving third-party prospects. The
+  original-brief correction narrows Sub Admin reads to approved/own workflow
+  rows, gives eligible loans/both-line staff approved-only reads, and enforces
+  a global checker-not-maker CHECK. Direct Admin entry is standalone with no
+  fabricated checker/review timestamp and uses creation time as its effective
+  approval date. The approved-date fallback and audit mode are covered.
+- *Targeted and migration evidence.* The 189-test lead/ownership/intake/rate
+  gate passes before the final policy correction; the final correction gate
+  passes 29 tests and operational/classification/RLS/route coverage passes 28.
+  A populated real-trigger downgrade/upgrade preserves all 28 rate rows
+  exactly; the temporary-table upgrade/downgrade/upgrade also preserves terms,
+  status, version, timestamps and genuine distinct reviews. Email-erasure
+  upgrade/downgrade/upgrade passes; erased email is intentionally irreversible.
+  Both generation scripts pass with zero drift. The policy correction changes
+  only an OpenAPI operation description; schemas, paths, auth and wire shapes
+  remain identical. Web lint/typecheck, 1,106 unit tests and the Node 22 Linux
+  production build (116 pages) pass for the unchanged web runtime. The safe
+  script gate covers 102 distinct passing cases; Linux reruns resolve the
+  three Windows platform skips.
+- *Earlier runs are superseded.* Candidate `9a60ded9` had 2,865 passes and
+  three stale assertions, now corrected while retaining strict migration
+  ancestry and public-field leak guards. The follow-up run was intentionally
+  interrupted after 1,144 passes (KeyboardInterrupt/exit 2) to correct the
+  original-brief policy mismatch; it is not a passing gate.
+- *Historical provenance limit.* The legacy test verifies the original
+  ownership backfill and subsequent claims. A public row already claimed
+  before that ledger can retain earlier merged input attributed to its
+  recorded Agent; no accepted/claim per-key audit can safely reconstruct those
+  indistinguishable fields. Current/new claims preserve other creators'
+  ownership. Review found no remaining actionable issue in the final change;
+  this inherited limit is recorded rather than inventing provenance.
+- *Delivery.* API PR publication and independent upstream/mirror readback are
+  in progress. Completion percentages are unchanged. Next: Batch 2 web; the
+  user requested this session stop after Batch 2, with Batches 3–6 deferred
+  to a new session.
 
 **In review — Batch 1: UI fixes (web)** (2026-11-19; PR
 [#387](https://github.com/brollysolutions/client1/pull/387), mirror

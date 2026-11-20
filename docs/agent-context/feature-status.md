@@ -2,55 +2,49 @@
 
 Status: **Derived living implementation ledger**
 
-**In progress — Batch 2: Agent leads (API slice)** (2026-11-19; CS-028;
-client-reported), branch `feat/agent-lead-intake-api` stacked on batch 1.
-No requirement-percentage change.
-- Final review (2026-11-20): legacy ownership-backfill compatibility is
-  covered against pre-ledger rows; the originating Agent keeps their notes
-  and claiming a public enquiry does not expose its old fields. The pending
-  unused-product deletion test passes. A newly found deletion gap is fixed
-  by additive migration `f5b7d9e1a3c4`: the deleted person's lead email is
-  erased, including closed history and old-mobile profile-bound journeys;
-  other people's prospects remain. The cleared assignee is remembered.
-  Migration up / down / up succeeds and there is one head. Final API
-  verification and both PRs are pending. Fresh web lint/typecheck and all
-  1,106 unit tests pass; regenerated contracts have no diff. Next: Batch 2
-  web after API delivery.
-- Isolated follow-up (2026-11-20): the requested optional top-level email
-  now normalizes into `requirement.email`, preserving nested clients and
-  rejecting conflicting addresses. The legacy valid-name plus null-
-  requirement notes-clear is retained with ownership checks and without
-  clearing email/interests. Deletion-test setup is explicitly asserted;
-  the API-image test now expects its existing patched Alpine `3.5.9-r0`
-  rather than `3.5.8-r0`, without changing the image or weakening the pin.
-  All 14 production-runtime script cases pass on the corrected expectation.
-  New schema and API regressions are added; changed-file Ruff check/format
-  and a pure validation probe pass, while DB regressions and contract
-  regeneration await the frozen full candidate's terminal result. No
-  completion-percentage change; next remains Batch 2 web.
-- Full-gate recovery (2026-11-20): candidate `9a60ded9` terminated exit 1,
-  with 2,865 passes and three stale assertions (historical migration as latest
-  head, public banner video fields, public property developer name). The
-  corrected tests retain one-head ancestry and explicit public-field leak
-  guards. The reviewed compatibility follow-up is integrated and both
-  contracts regenerated. Targeted and final Linux-source full checks remain
-  pending; the original failed run is not a passing gate.
-- Original-brief policy correction (2026-11-20): the replacement full gate
-  was intentionally interrupted after 1,144 passes (exit 2 / KeyboardInterrupt),
-  not treated as a passing gate. Unrelated Sub Admin workflow visibility and
-  fabricated direct-Admin self-checkers are being corrected with an additive
-  migration; eligible loans/both-line TC/Employee reads become approved-only.
-  Targeted authorization/audit/rollback checks and a fresh full gate are pending.
-- Correction evidence: 29 focused tests pass, including narrowed role/line
-  RLS, global checker inequality, standalone Admin audit/date fallback and
-  normalization/rollback preservation. The populated real-trigger downgrade
-  / upgrade succeeds. All 640 API files pass Ruff/format. Both contracts have
-  only operation-description metadata changes, with no wire shape change;
-  replacement full verification remains pending. Historical limit: the legacy
-  test covers the original ownership backfill and subsequent claims. A row
-  already claimed before that ledger can have prior merged input attributed
-  to the recorded Agent, without a per-key acceptance/claim audit to prove
-  authorship. Current/new claims remain isolated; no provenance is invented.
+**In review — Batch 2: Agent leads (API slice)** (2026-11-20; CS-028;
+client-reported), branch `feat/agent-lead-intake-api` stacked on Batch 1.
+API PR publication/readback is in progress; no requirement-percentage change.
+
+- Final frozen candidate `5c5c4467` passes **2,884 API tests, zero failed,
+  errors or skipped**, in 6,276.70 seconds (exit 0), using fresh synthetic
+  PostgreSQL data, Redis and `CI=1`. Docker exit, command result and JUnit
+  independently agree. API tree: `250ed0078b10be2487c667a1345a4cbb3cbf6336`.
+  All 640 API files pass Ruff/format; one Alembic head `a6c8e0f2b4d6`.
+- Final policy correction: Sub Admins read approved rates and their own
+  workflow rows only; eligible loans/both-line TC/Employee reads are approved-
+  only. Any recorded checker differs from its maker. Direct Admin entry has
+  no fabricated reviewer/timestamp and records `admin_standalone`; the Agent
+  approval date falls back to creation time. Final focused correction: 29
+  passed; operational/classification/RLS/route coverage: 28 passed. The populated
+  real-trigger downgrade/upgrade leaves all 28 rate rows identical, preserving
+  terms, status, version, timestamps and genuine distinct reviews.
+- Lead email/deletion, original-backfill compatibility, sticky resubmission,
+  bulk intake and rates passed the 189-test targeted gate before the policy
+  correction, then the full final suite above. Top-level/nested email share
+  one owned key; conflicting input is rejected. The legacy name/null-
+  requirement notes-clear respects ownership and preserves email/interests.
+  Deletion erases the deleted person's active/historical lead email while
+  preserving third-party prospects; its migration up/down/up passes.
+- Both contract scripts pass with no drift. The final policy correction only
+  changes an operation description; all schemas, paths, auth and request/
+  response shapes remain unchanged. Web lint/typecheck, 1,106 unit tests and
+  the Node 22 Linux production build (116 pages) pass for the unchanged web
+  runtime. Safe script regressions: 102 distinct passes, including Linux
+  reruns resolving the three Windows platform skips.
+- Earlier full runs are not substituted for the final result: `9a60ded9`
+  had 2,865 passes / three stale assertions, now fixed without weakening the
+  guards; the superseded follow-up was intentionally interrupted after
+  1,144 passes (exit 2) for the original-brief policy correction.
+- Review/security: no remaining actionable finding. Historical limit: the
+  original backfill attributes known fields by recorded Agent origin, so
+  already-claimed pre-ledger rows can retain earlier merged input with that
+  descriptor. No per-key acceptance/claim audit proves their authorship; the
+  regression verifies the actual backfill and subsequent claims. Current/new
+  claims remain isolated. This inherited limit is explicitly disclosed.
+- Next: Batch 2 web. The session stops after Batch 2 as requested; Batches
+  3–6 resume in a new session.
+
 - Lead form fields (`requirement.email`, `requirement.property_type`) and
   the per-role requirement allowlist as described in
   `implementation-plan.md` (Batch 2). Role matrix tests in
