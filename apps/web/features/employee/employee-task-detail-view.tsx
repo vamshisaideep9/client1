@@ -33,6 +33,7 @@ import { formatReferrer, INTEREST_LABEL, LOAN_STATUS_LABEL } from "@/features/te
 import { DISPOSITION_LABEL } from "@/features/telecaller/telecaller-lead-status";
 
 import { EmployeeTaskDocumentPanel } from "./employee-task-document-panel";
+import { StaffCounterpart } from "@/features/dashboard/staff-counterpart";
 import { EmployeeTaskFeedbackPanel } from "./employee-task-feedback-panel";
 import { ReopenTaskDialog } from "./reopen-task-dialog";
 import { ManagerNotesPanel } from "@/features/team/manager-notes-panel";
@@ -217,6 +218,7 @@ export function EmployeeTaskDetailView({ taskId }: { taskId: string }) {
         }
       >
         <h2 className="sr-only">Lead contact</h2>
+        <div className="mb-3"><StaffCounterpart label="Telecaller" name={task.raised_by_telecaller_name} code={task.raised_by_telecaller_code} /></div>
         {task.lead_contact_mode === "allow" && task.lead_mobile ? (
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-text-secondary">{formatMobile(task.lead_mobile)}</span>

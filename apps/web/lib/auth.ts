@@ -71,6 +71,7 @@ export type ClientLineProfile = {
 };
 
 export type Me = {
+  roleProfiles?: Schemas["RoleProfileRead"][];
   firstName: string;
   lastName: string;
   mobile: string;
@@ -343,6 +344,7 @@ export async function login(
 
 function mapMe(d: Schemas["MeResponse"]): Me {
   return {
+    roleProfiles: d.role_profiles ?? [],
     firstName: d.first_name,
     lastName: d.last_name,
     mobile: d.mobile,

@@ -1009,6 +1009,15 @@ fallback. The test now creates a unique product for its public-label assertion;
 a duplicate-label reproduction and the full 20-test routing file pass after
 the correction. Inherited Python dependency-audit findings remain a failed gate.
 
+The web slice implements specialty create/edit with safe retry/clear and delayed
+save handling, shared assigned-code/specialty/team badges and task counterparts.
+Its unchanged runtime passes lint/typecheck, 1,119 unit tests, the 118-page Node 22
+production build, eight original-font comparisons and all 26 production-browser
+journeys together. Seven inspected synthetic screenshots and review limits are
+in `apps/web/e2e/review/staff-specialty/README.md`. No dependency, new motion,
+public route or authorization expansion is included. Web delivery links are in
+the living plan/status; Batches 4-6 remain unstarted.
+
 ### CS-028 — Agent lead form fields, sticky resubmission, bulk submit and product commission rates
 
 Web slice (2026-11-20, `feat/agent-lead-intake-web`, parent API `e70b18c3`):

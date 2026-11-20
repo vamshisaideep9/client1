@@ -77,6 +77,7 @@ export const FORM_SURFACE_REGISTRY = {
   "features/admin/financial-product-workspace.tsx": "mutation",
   "features/admin/lead-details-dialog.tsx": "mutation",
   "features/admin/listing-approvals-view.tsx": "mutation",
+  "features/admin/loan-specialty-select.tsx": "composite",
   "features/admin/loan-types-view.tsx": "mutation",
   "features/admin/mobile-change-queue.tsx": "mutation",
   "features/admin/money-payout-dialog.tsx": "mutation",

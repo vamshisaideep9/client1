@@ -215,6 +215,13 @@ describe("registerInitiate()", () => {
 });
 
 describe("profile mapping", () => {
+  it("retains server role codes and both team lines without deriving identifiers", async () => {
+    const roleProfiles = [{ profile_uuid: "10000000-0000-4000-8000-000000000001", role: "telecaller", code: "TC-REAL-CODE", business_line: "both", loan_specialty_id: "20000000-0000-4000-8000-000000000001", loan_specialty_label: "Home Loan", teams: [{ business_line: "loans", name: "Loan team" }, { business_line: "real_estate", name: "Property team" }] }];
+    vi.stubGlobal("fetch", mockFetch(200, { first_name: "Test", last_name: "Staff", mobile: "+919000000007", email: null, email_verified: false, profiles: [], role_profiles: roleProfiles }));
+    const res = await getMe();
+    expect(res.ok && res.data.roleProfiles).toEqual(roleProfiles);
+  });
+
   it("maps nullable optional profile fields", async () => {
     vi.stubGlobal(
       "fetch",
@@ -241,6 +248,7 @@ describe("profile mapping", () => {
     expect(res.ok).toBe(true);
     if (res.ok) {
       expect(res.data.email).toBeNull();
+      expect(res.data.roleProfiles).toEqual([]);
       expect(res.data.gender).toBe("prefer_not_to_say");
       expect(res.data.incomeAmountMinor).toBe(12_500_000);
       expect(res.data.location).toBe("Kondapur, Hyderabad");

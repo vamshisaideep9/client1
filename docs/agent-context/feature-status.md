@@ -1,5 +1,39 @@
 # Feature implementation status
 
+**Verified for delivery - Batch 3 web: staff specialties and role identifiers**
+(2026-11-20), branch `feat/staff-specialty-badges-web`, stacked on final API
+`5e392e00` ([upstream #390](https://github.com/brollysolutions/client1/pull/390),
+[mirror #91](https://github.com/vamshisaideep9/client1/pull/91)).
+
+- Implemented: specialty provisioning/editing, incompatible role/line clearing,
+  catalogue loading/empty/error/retry, retained save input and directory refresh.
+  Successful saves follow server metadata; delayed saves preserve another open
+  account. Shared role badges use actual assigned codes, specialty and both team
+  lines in menus/settings, Admin accounts and reached manager member detail.
+  Both task directions show counterpart names/codes without adding contacts.
+- Verification: full lint/typecheck and **1,119 units in 154 files pass**; Node 22
+  Linux production build passes all **118 pages**, with all eight original font
+  hashes preserved. Final Playwright run: **26 passed together**, exit 0, 1.6 minutes
+  (18 new and eight neighboring journeys), with synthetic API fixtures. The first
+  run's single failure was an assertion expecting raw 503 detail; it now asserts
+  the shared client's exact safe generic message and retains retry-body/input
+  assertions. Application source did not change after the build. Targeted E2E
+  lint passes. API/contracts remain identical to the final parent after restacking.
+- Seven final screenshots at 320/390/768/1440px were inspected. Approved tokens,
+  original fonts, private routes and staff profile locks remain. No dependency,
+  new motion or public route change. Design/Apple and code/security review found
+  no outstanding actionable finding in the changed surfaces. Manual screenreader,
+  physical-device, large-text/zoom and narrow account-edit visual checks were not
+  run. Evidence: `apps/web/e2e/review/staff-specialty/README.md`.
+- Hosted CI is separate: the parent secret scan passed; inherited Python audit
+  has 63 advisories in four unchanged locked packages, so Node audit was not
+  reached. The parent's shared-label fixture correction passes 20 routing tests
+  locally and preserves complete 2,920-node coverage; hosted verification reruns
+  on the correction. No green hosted gate or merge is claimed. Web PR links pending.
+
+No requirement-percentage change. Next: review the Batch 3 stack and resolve the
+inherited dependency gate before merging. Batches 4-6 have not started.
+
 **Delivered for review — Batch 3 API** (2026-11-20), branch
 `feat/staff-specialty-routing-api`, baseline `78567697` after upstream #388/#389
 merged. Scope: Admin-managed Telecaller loan specialty and independent routing
