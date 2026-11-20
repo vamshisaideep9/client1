@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, PhoneCall, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { FilterSelect } from "@/features/dashboard/filter-select";
+import { ResubmissionBadge } from "@/features/dashboard/resubmission-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardHeader, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
 import { EMPTY_FILTERS, FilterBar } from "@/features/dashboard/filter-bar";
@@ -25,6 +27,8 @@ import {
   lineScope,
   rowsHiddenTransactionParts,
   scopedLeadSignalFilters,
+  RESUBMISSION_OPTIONS,
+  type ResubmissionFilter,
 } from "./lead-signal-filters";
 import {
   DEFAULT_TELECALLER_LEAD_FILTERS,
@@ -198,6 +202,8 @@ export function TelecallerLeadsView() {
             searchPlaceholder="Name or mobile"
             statusOptions={STATUS_FILTER_OPTIONS}
             showLine={false}
+            extra={<FilterSelect label="Resubmission" value={filters.resubmission} options={RESUBMISSION_OPTIONS}
+              onValueChange={(value) => patchFilters({ resubmission: value as ResubmissionFilter })} />}
             dateFromLabel="Follow-up from date"
             dateToLabel="Follow-up to date"
             more={leadSignalFilterGroups({ filters, scope, options, onChange: patchFilters })}
@@ -262,6 +268,7 @@ export function TelecallerLeadsView() {
                             {lead.name ?? "Unnamed lead"}
                           </p>
                           <p className="text-xs text-text-secondary">{formatMobile(lead.mobile)}</p>
+                          <ResubmissionBadge count={lead.resubmit_count} at={lead.last_resubmitted_at} />
                           {lead.latest_request ? (
                             <p className="mt-1 text-xs text-text-secondary">
                               <span className="font-medium text-text-primary">

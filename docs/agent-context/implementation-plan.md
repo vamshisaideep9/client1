@@ -1,5 +1,32 @@
 # Living implementation plan
 
+**In progress — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
+branch `feat/agent-lead-intake-web` stacked on API checkpoint `9a60ded9`.
+Acceptance: email/property-type intake, approved commission display and review,
+resubmission filters/badges, browser-only spreadsheet preview/submission/results
+and editable commission prefill. Preserve generated contracts, field visibility,
+private-route noindex and the existing dashboard design; no dependency or API
+change. Verify web lint/typecheck/unit/build, focused Playwright and responsive
+design/security review before both repository PRs. Parent API verification and
+delivery remain in progress independently; web delivery follows them.
+
+- Implemented: Agent email/property-type intake (a listing remains optional),
+  approved rate and note in the product dialog, resubmission filters/badges in
+  Agent and Telecaller lists, local CSV/XLSX parsing with a 200-row preview,
+  valid-row-only submission and formula-safe result download. Phones show each
+  result as a card. No files reach the API.
+- Implemented: Sub Admin proposals/withdrawals and Admin immediate entry and
+  review in the new rates workspace; each loan product has an Agent commission
+  tab. Per-deal commission suggestions remain editable. Email-only editing
+  omits unchanged/hidden notes, preserving the ownership ledger.
+- Fresh evidence: web lint and typecheck pass; full Vitest 153 files / 1,113
+  tests pass. New Playwright intake suite 10 passed; 35 distinct new/neighboring
+  browser journeys have passing segmented evidence after the 320px row-action
+  fix and functional sign-out wait correction. Final mobile-result check at
+  320/390px and refused-refresh check: 2 passed. Screenshot review at
+  320/390/768/1440px; existing tokens/primitives, no new motion or dependency.
+  Production build and final production-browser check remain pending.
+
 Status: **Derived, actively maintained plan**
 
 As of: **2026-09-14**

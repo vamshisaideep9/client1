@@ -390,7 +390,7 @@ export function LoanTypesView() {
         kindLabel="Category"
         showLine={false}
         showDates={false}
-        note="Open a row to edit its form and publication settings. Deactivate preserves history; delete is available only for unused products."
+        note="Open a row to edit its form, publication settings and agent commission. Deactivate preserves history; delete is available only for unused products."
       />
 
       <DashboardPanel

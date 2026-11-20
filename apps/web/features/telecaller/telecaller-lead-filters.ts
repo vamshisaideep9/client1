@@ -10,6 +10,8 @@ import {
   DEFAULT_LEAD_SIGNAL_FILTERS,
   leadSignalFiltersActive,
   matchesLeadSignals,
+  matchesResubmission,
+  type ResubmissionFilter,
   type LeadSignalFilters,
   type LeadSignalValues,
 } from "./lead-signal-filters";
@@ -22,6 +24,7 @@ export type TelecallerLeadFilters = LeadSignalFilters & {
   followUpTo: string; // "YYYY-MM-DD"
   /** "Follow-ups due": open leads whose next follow-up is now or overdue (`?followUp=due`). */
   followUpDue: boolean;
+  resubmission: ResubmissionFilter;
 };
 
 export const DEFAULT_TELECALLER_LEAD_FILTERS: TelecallerLeadFilters = {
@@ -31,6 +34,7 @@ export const DEFAULT_TELECALLER_LEAD_FILTERS: TelecallerLeadFilters = {
   followUpFrom: "",
   followUpTo: "",
   followUpDue: false,
+  resubmission: "all",
 };
 
 /** The URL value the home "View all follow-ups" link uses. */
@@ -53,6 +57,7 @@ export function telecallerLeadFiltersActive(filters: TelecallerLeadFilters): boo
     filters.followUpFrom !== "" ||
     filters.followUpTo !== "" ||
     filters.followUpDue ||
+    filters.resubmission !== "all" ||
     leadSignalFiltersActive(filters)
   );
 }
@@ -81,6 +86,7 @@ export function filterTelecallerLeads(
   const query = filters.search.trim().toLocaleLowerCase();
   return leads.filter((lead) => {
     if (filters.status !== "all" && lead.status !== filters.status) return false;
+    if (!matchesResubmission(lead.resubmit_count, filters.resubmission)) return false;
     if (filters.followUpDue && !isFollowUpDue(lead, now)) return false;
     if (!isInDateRange(lead.next_follow_up_at, filters.followUpFrom, filters.followUpTo)) return false;
     if (!matchesLeadSignals(telecallerSignalValues(lead), filters)) return false;

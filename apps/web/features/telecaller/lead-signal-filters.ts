@@ -51,6 +51,15 @@ export type LeadSignalValues = {
 
 export type ReferrerSource = "direct" | "agent" | "client";
 
+export type ResubmissionFilter = "all" | "yes" | "no";
+export const RESUBMISSION_OPTIONS = [
+  { value: "yes", label: "Resubmitted" },
+  { value: "no", label: "Not resubmitted" },
+];
+export function matchesResubmission(count: number | undefined, filter: ResubmissionFilter): boolean {
+  return filter === "all" || (filter === "yes" ? (count ?? 0) > 0 : (count ?? 0) === 0);
+}
+
 export type LeadSignalFilters = {
   loanStatus: "all" | LoanStatus;
   /** "not_called" keeps leads with no logged call. */

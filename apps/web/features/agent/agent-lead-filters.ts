@@ -9,6 +9,8 @@ import {
   DEFAULT_LEAD_SIGNAL_FILTERS,
   lineScope,
   matchesLeadSignals,
+  matchesResubmission,
+  type ResubmissionFilter,
   scopedLeadSignalFilters,
   type LeadSignalFilters,
   type LeadSignalScope,
@@ -29,6 +31,7 @@ export type AgentLeadFilters = LeadSignalFilters & {
   search: string;
   status: string;
   eligibility: string;
+  resubmission: ResubmissionFilter;
 };
 
 export const DEFAULT_AGENT_LEAD_FILTERS: AgentLeadFilters = {
@@ -36,6 +39,7 @@ export const DEFAULT_AGENT_LEAD_FILTERS: AgentLeadFilters = {
   search: "",
   status: "all",
   eligibility: "all",
+  resubmission: "all",
 };
 
 /** Agents are line-scoped, so every row shares one line; none without rows. */
@@ -62,6 +66,7 @@ export function filterAgentLeads<T extends AgentLead>(
     (lead) =>
       (filters.status === "all" || lead.status === filters.status) &&
       matchesEligibility(lead, filters.eligibility) &&
+      matchesResubmission(lead.resubmit_count, filters.resubmission) &&
       matchesSearch(lead, filters.search) &&
       matchesLeadSignals({ facets: lead.facets }, signals),
   );

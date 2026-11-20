@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { CLOSE_BUTTON_CLASS } from "@/components/ui/close-button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { optionsFromLabels } from "@/features/dashboard/filter-options";
 import { DateRangeFields, FilterSelect } from "@/features/dashboard/filter-select";
 import type { AdminPendingItem } from "@/lib/admin-api";
@@ -23,6 +25,39 @@ import { cn } from "@/lib/utils";
 
 import { filterPendingReview, type PendingReviewFilters } from "./admin-home-pending-review";
 import { PendingReviewList, REVIEW_KIND_LABEL, REVIEW_LINE_LABEL } from "./pending-review-list";
+
+/** Shared maker-checker decision surface. The API remains the authorization wall. */
+export function PendingDecisionDialog({ title, description, children, onClose, onApprove, onReject }: {
+  title: string; description: string; children: React.ReactNode; onClose: () => void;
+  onApprove: () => Promise<string | null>; onReject: (note: string) => Promise<string | null>;
+}) {
+  const [note, setNote] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+  const [busy, setBusy] = React.useState(false);
+  const noteId = React.useId();
+  async function decide(approve: boolean) {
+    if (busy) return;
+    if (!approve && !note.trim()) { setError("Add feedback before rejecting."); return; }
+    setBusy(true); setError(null);
+    const message = approve ? await onApprove() : await onReject(note.trim());
+    if (message) { setError(message); setBusy(false); }
+  }
+  return <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
+    <DialogContent preventOutsideClose>
+      <DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>{description}</DialogDescription></DialogHeader>
+      {children}
+      <div className="grid gap-2"><Label htmlFor={noteId}>Feedback (required to reject)</Label>
+        <Textarea id={noteId} value={note} onChange={(event) => { setNote(event.target.value); setError(null); }} maxLength={500} />
+      </div>
+      {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button variant="outline" disabled={busy} onClick={onClose}>Cancel</Button>
+        <Button variant="outline" disabled={busy} onClick={() => void decide(false)}>Reject proposal</Button>
+        <Button disabled={busy} onClick={() => void decide(true)}>{busy ? "Saving…" : "Approve proposal"}</Button>
+      </div>
+    </DialogContent>
+  </Dialog>;
+}
 
 const EMPTY_FILTERS: PendingReviewFilters = {
   search: "",
