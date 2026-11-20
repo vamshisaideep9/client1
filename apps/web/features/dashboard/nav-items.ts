@@ -34,6 +34,7 @@ const CAPABILITIES = {
   admin: { roles: ["admin"] },
   staffInsights: { roles: ["telecaller", "employee", "agent", "sub_admin"] },
   staffAttendance: { roles: ["telecaller", "employee"] },
+  attendanceManagement: { roles: ["sub_admin", "admin"] },
   // CS-027: the people contests can target (managers follow theirs in My team).
   contestParticipant: { roles: ["agent", "telecaller", "employee"] },
   payouts: { roles: ["admin", "sub_admin"], staffFeature: "payout_requests" },
@@ -386,6 +387,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     section: "workspace",
   },
   {
+    key: "attendance-management",
+    label: "Attendance",
+    href: "/dashboard/attendance-management",
+    icon: DASHBOARD_ICONS.attendance,
+    capability: "attendanceManagement",
+    section: "people",
+  },
+  {
     key: "campaign-approvals",
     label: "Campaign approvals",
     href: "/dashboard/campaign-approvals",
@@ -628,6 +637,7 @@ export const DASHBOARD_ROUTE_RULES: readonly DashboardRouteRule[] = [
   { path: "/dashboard/fee-cashbacks", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/insights", exact: true, capabilities: ["staffInsights"] },
   { path: "/dashboard/attendance", exact: true, capabilities: ["staffAttendance"] },
+  { path: "/dashboard/attendance-management", exact: true, capabilities: ["attendanceManagement"] },
   { path: "/dashboard/finance", exact: true, capabilities: ["subAdmin"] },
   { path: "/dashboard/leads", capabilities: ["agent", "telecaller"] },
   { path: "/dashboard/loan-applications", exact: true, capabilities: ["admin"] },
