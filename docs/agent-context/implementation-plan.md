@@ -1,10 +1,13 @@
 # Living implementation plan
 
-**Verified — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
+**In review — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
 branch `feat/agent-lead-intake-web`, stacked on API `e70b18c3`:
 [upstream #388](https://github.com/brollysolutions/client1/pull/388),
 [mirror #89](https://github.com/vamshisaideep9/client1/pull/89).
-Web PR delivery is pending. No requirement-percentage change.
+Web PRs: [upstream #389](https://github.com/brollysolutions/client1/pull/389),
+[mirror #90](https://github.com/vamshisaideep9/client1/pull/90), both against
+`main`, with repository/base/head identities independently verified.
+No requirement-percentage change.
 
 - Implemented: Agent email/property-type intake with an optional matching listing,
   approved commission rate/note in the product dialog, Agent/Telecaller
@@ -34,8 +37,11 @@ Web PR delivery is pending. No requirement-percentage change.
   ownership, maker/checker and privacy behavior are covered by the parent API's
   2,884 passing database-backed tests and its documented historical limit.
 
-After Batch 2 delivery, stop this session. Next priority: Batch 3 API in a new
-session; Batches 3–6 have not started.
+Hosted CI: the upstream PR reports no check runs; mirror verify, secret-scan and
+dependency-audit jobs cannot start because of account billing/spending restrictions
+(all three annotations confirmed; verify has zero steps). GitGuardian is neutral.
+Local verification above passes. Next priority: Batch 3 API; Batches 3–6 have not
+started.
 
 Status: **Derived, actively maintained plan**
 

@@ -34,6 +34,10 @@ Fresh terminal verification:
   pass together. No application code changed for that readiness adjustment.
 - New and neighboring journeys have 36 distinct passing scenarios across
   segmented runs. This is not a final combined 36-test pass.
+- Hosted CI: the upstream PR has no check runs. Mirror verify, secret-scan and
+  dependency-audit jobs are blocked before startup by account billing/spending
+  restrictions; all three annotations were checked and verify ran zero steps.
+  GitGuardian is neutral. These are not passing hosted checks.
 
 The design review retains the existing dashboard colors, fonts, spacing and
 Radix controls. Mobile results remain readable without horizontal scrolling.
