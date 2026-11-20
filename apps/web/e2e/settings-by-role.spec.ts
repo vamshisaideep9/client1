@@ -47,6 +47,18 @@ for (const { role, editable, personalization } of CASES) {
     }
 
     await expect(page.getByRole("heading", { name: /Personali[sz]ed/ })).toHaveCount(personalization ? 1 : 0);
+
+    // Only a Client's name must match their PAN card.
+    if (role === "client") {
+      const first = page.getByLabel("First name (as per PAN card)");
+      await expect(first).toBeEditable();
+      await expect(first).toHaveAccessibleDescription(/exactly as it appears on your PAN card/);
+      await expect(page.getByLabel("Last name (as per PAN card)")).toHaveAccessibleDescription(
+        /exactly as it appears on your PAN card/,
+      );
+    } else {
+      await expect(page.getByText(/PAN card/)).toHaveCount(0);
+    }
     await page.screenshot({ path: testInfo.outputPath(`settings-${role}.png`), fullPage: true });
   });
 }

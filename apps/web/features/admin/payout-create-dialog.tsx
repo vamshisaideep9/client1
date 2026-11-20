@@ -142,7 +142,7 @@ export function PayoutCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : resetAndClose())}>
-      <DialogContent ref={contentRef} className="max-w-lg">
+      <DialogContent preventOutsideClose ref={contentRef} className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Raise a payout</DialogTitle>
           <DialogDescription>

@@ -131,7 +131,7 @@ function TeamFormDialog({
 
   return (
     <Dialog open={mode !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent className="max-w-lg">
+      <DialogContent preventOutsideClose className="max-w-lg">
         <form onSubmit={submit} noValidate>
           <DialogHeader>
             <DialogTitle>{editing ? "Edit team" : "New team"}</DialogTitle>
@@ -280,7 +280,7 @@ function AddMemberDialog({
   const roleWord = team?.member_role === "employee" ? "Employee" : "Telecaller";
   return (
     <Dialog open={team !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent className="max-w-md">
+      <DialogContent preventOutsideClose className="max-w-md">
         <form onSubmit={submit} noValidate>
           <DialogHeader>
             <DialogTitle>Add to {team?.name}</DialogTitle>

@@ -231,7 +231,7 @@ function AgentSetupLinksSection({ active }: { active: boolean }) {
       </DashboardPanel>
 
       <Dialog open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent showCloseButton={false} className={PANEL_DIALOG_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_CLASS}>
           {selected ? (
             <>
               <WorkspaceDialogHeader
@@ -514,7 +514,7 @@ export function AgentQueueView() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && setActiveId(null)}>
-        <DialogContent showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
           {active ? (
             <>
               <WorkspaceDialogHeader

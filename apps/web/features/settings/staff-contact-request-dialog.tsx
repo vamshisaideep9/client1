@@ -92,7 +92,7 @@ export function StaffContactRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent preventOutsideClose className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Request a contact change</DialogTitle>
           <DialogDescription>

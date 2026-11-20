@@ -278,11 +278,19 @@ function ProfileForm({
     }
   }
 
+  // Clients' names must match their PAN card; staff and Agent names do not.
+  const panHintId = includePersonalDetails ? "name-pan-hint" : undefined;
+  const describedBy = (errorId: string, hasError: boolean) =>
+    [panHintId, hasError ? errorId : undefined].filter(Boolean).join(" ") || undefined;
+
   return (
     <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-6 rounded-xl border border-border bg-card p-6">
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="first-name">First name<RequiredIndicator /></Label>
+          <Label htmlFor="first-name">
+            {includePersonalDetails ? "First name (as per PAN card)" : "First name"}
+            <RequiredIndicator />
+          </Label>
           <Input
             id="first-name"
             value={firstName}
@@ -290,12 +298,15 @@ function ProfileForm({
             maxLength={100}
             autoComplete="given-name"
             aria-invalid={Boolean(fieldErrors.firstName)}
-            aria-describedby={fieldErrors.firstName ? "first-name-error" : undefined}
+            aria-describedby={describedBy("first-name-error", Boolean(fieldErrors.firstName))}
           />
           <FieldError id="first-name-error">{fieldErrors.firstName}</FieldError>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="last-name">Last name<RequiredIndicator /></Label>
+          <Label htmlFor="last-name">
+            {includePersonalDetails ? "Last name (as per PAN card)" : "Last name"}
+            <RequiredIndicator />
+          </Label>
           <Input
             id="last-name"
             value={lastName}
@@ -303,10 +314,15 @@ function ProfileForm({
             maxLength={100}
             autoComplete="family-name"
             aria-invalid={Boolean(fieldErrors.lastName)}
-            aria-describedby={fieldErrors.lastName ? "last-name-error" : undefined}
+            aria-describedby={describedBy("last-name-error", Boolean(fieldErrors.lastName))}
           />
           <FieldError id="last-name-error">{fieldErrors.lastName}</FieldError>
         </div>
+        {panHintId ? (
+          <p id={panHintId} className="-mt-2 text-sm text-text-secondary sm:col-span-2">
+            Enter your name exactly as it appears on your PAN card.
+          </p>
+        ) : null}
         <p className="text-xs text-text-secondary sm:col-span-2">
           Your phone number and email are changed in “Phone and email” below.
         </p>

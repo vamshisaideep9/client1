@@ -629,7 +629,7 @@ export function BannersView({
       )}
 
       <Dialog open={active !== null} onOpenChange={closeWorkspace}>
-        <DialogContent ref={dialogRef} showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}>
+        <DialogContent preventOutsideClose ref={dialogRef} showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}>
           {active && draft ? (
             <>
               <CmsWorkspaceHeader
@@ -818,7 +818,7 @@ export function BannersView({
 
       {!isAdmin ? (
         <Dialog open={createOpen} onOpenChange={closeCreate}>
-          <DialogContent showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}>
+          <DialogContent preventOutsideClose showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}>
             <CmsWorkspaceHeader title="New banner" description="Select governed artwork and preview the campaign before Admin review." />
             <div className="min-h-0 overflow-y-auto py-2">
               <BannerForm embedded onDirtyChange={setCreateDirty} onCreated={() => { setCreateDirty(false); setCreateOpen(false); void reload(); }} />

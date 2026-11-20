@@ -440,6 +440,16 @@ async function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
   return result;
 }
 
+// True only when /auth/refresh definitively refused the session (the API
+// answers 401 for a missing, expired, reused or revoked refresh token, or a
+// suspended account; 403 is treated the same). A network failure or timeout
+// (0), a rate limit (429) or a server fault (5xx) says nothing about the
+// session, so the caller must not sign the user out over one: doing so
+// unmounted the whole dashboard, and every open form with it.
+export function isRefreshRejected(status: number): boolean {
+  return status === 401 || status === 403;
+}
+
 // POST /auth/refresh → rotates the refresh cookie, returns a fresh access token.
 // No body: the httponly refresh_token cookie rides along via credentials:include.
 export async function refresh(): Promise<AuthResult<AuthTokens>> {

@@ -151,7 +151,7 @@ export function BannerTemplateManager() {
       </section>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}>
           <CmsWorkspaceHeader
             title="Banner artwork templates"
             description="Replacing artwork creates a new immutable version; existing campaigns retain their reviewed version."

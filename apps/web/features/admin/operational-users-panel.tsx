@@ -346,7 +346,7 @@ export function OperationalUsersPanel({ compact = false }: { compact?: boolean }
       />
 
       <Dialog open={pendingUser !== null} onOpenChange={(open) => !open && setPendingUser(null)}>
-        <DialogContent>
+        <DialogContent preventOutsideClose>
           {pendingUser ? (
             <>
               <DialogHeader>

@@ -496,7 +496,7 @@ function RegisterPageContent() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="firstName" className="text-[15px]">
-                  First name
+                  First name (as per PAN card)
                 </Label>
                 <Input
                   id="firstName"
@@ -506,7 +506,7 @@ function RegisterPageContent() {
                   autoComplete="given-name"
                   placeholder="Jane"
                   aria-invalid={!!errors.firstName}
-                  aria-describedby={errors.firstName ? "firstName-error" : undefined}
+                  aria-describedby={errors.firstName ? "name-pan-hint firstName-error" : "name-pan-hint"}
                   disabled={!interactive || submitting}
                   className="h-12 rounded-lg text-base"
                 />
@@ -518,7 +518,7 @@ function RegisterPageContent() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName" className="text-[15px]">
-                  Last name
+                  Last name (as per PAN card)
                 </Label>
                 <Input
                   id="lastName"
@@ -528,7 +528,7 @@ function RegisterPageContent() {
                   autoComplete="family-name"
                   placeholder="Doe"
                   aria-invalid={!!errors.lastName}
-                  aria-describedby={errors.lastName ? "lastName-error" : undefined}
+                  aria-describedby={errors.lastName ? "name-pan-hint lastName-error" : "name-pan-hint"}
                   disabled={!interactive || submitting}
                   className="h-12 rounded-lg text-base"
                 />
@@ -538,6 +538,9 @@ function RegisterPageContent() {
                   </p>
                 )}
               </div>
+              <p id="name-pan-hint" className="text-sm text-text-secondary sm:col-span-2">
+                Enter your name exactly as it appears on your PAN card.
+              </p>
             </div>
 
             <div className="space-y-2">

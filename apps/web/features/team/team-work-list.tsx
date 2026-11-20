@@ -182,7 +182,7 @@ function MoveDialog({
 
   return (
     <Dialog open={target !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent className="max-w-md">
+      <DialogContent preventOutsideClose className="max-w-md">
         <form onSubmit={submit} noValidate>
           <DialogHeader>
             <DialogTitle>Move to a teammate</DialogTitle>
@@ -288,7 +288,7 @@ function EditDialog({
   const statuses = LEAD_EDIT_STATUSES.filter((value) => value !== current?.status);
   return (
     <Dialog open={target !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent className="max-w-md">
+      <DialogContent preventOutsideClose className="max-w-md">
         <form onSubmit={submit} noValidate>
           <DialogHeader>
             <DialogTitle>{isLead ? "Change lead status" : "Change task"}</DialogTitle>
@@ -500,7 +500,7 @@ function DetailDialog({
 
   return (
     <Dialog open={target !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
+      <DialogContent preventOutsideClose className="max-h-[85vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{target?.label}</DialogTitle>
           <DialogDescription>

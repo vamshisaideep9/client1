@@ -153,7 +153,7 @@ export function LeadDetailsDialog({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-lg">
+      <DialogContent preventOutsideClose className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Correct lead details</DialogTitle>
           <DialogDescription>

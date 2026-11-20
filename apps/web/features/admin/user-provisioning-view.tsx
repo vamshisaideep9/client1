@@ -239,7 +239,7 @@ export function UserProvisioningView() {
           }
         }}
       >
-        <DialogContent showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
           <WorkspaceDialogHeader
             title={result ? "Staff account created" : "Create staff account"}
             description={

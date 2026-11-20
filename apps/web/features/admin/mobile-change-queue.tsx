@@ -264,7 +264,7 @@ export function MobileChangeQueue() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && close()}>
-        <DialogContent ref={dialogRef} className={REVIEW_WORKSPACE_CLASS}
+        <DialogContent preventOutsideClose ref={dialogRef} className={REVIEW_WORKSPACE_CLASS}
           onCloseAutoFocus={(event) => {
             if (triggerRef.current?.isConnected) {
               event.preventDefault();

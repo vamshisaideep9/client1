@@ -261,7 +261,7 @@ export function OffersView({
       )}
 
       <Dialog open={active !== null} onOpenChange={closeWorkspace}>
-        <DialogContent showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}>
           {active && canEdit ? <>
             <CmsWorkspaceHeader title={active.title} description={`${STATUS_LABEL[active.status]} · Correct every requested field before resubmitting`} />
             <div className="min-h-0 overflow-y-auto py-2">
@@ -312,7 +312,7 @@ export function OffersView({
         </DialogContent>
       </Dialog>
 
-      {isAdmin ? null : <Dialog open={createOpen} onOpenChange={closeCreate}><DialogContent showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}><CmsWorkspaceHeader title="New dashboard offer" description="Create a complete private draft before sending it to Admin." /><div className="min-h-0 overflow-y-auto py-2"><OfferForm embedded onDirtyChange={setCreateDirty} onCreated={() => { setCreateDirty(false); setCreateOpen(false); void reload(); }} /></div></DialogContent></Dialog>}
+      {isAdmin ? null : <Dialog open={createOpen} onOpenChange={closeCreate}><DialogContent preventOutsideClose showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}><CmsWorkspaceHeader title="New dashboard offer" description="Create a complete private draft before sending it to Admin." /><div className="min-h-0 overflow-y-auto py-2"><OfferForm embedded onDirtyChange={setCreateDirty} onCreated={() => { setCreateDirty(false); setCreateOpen(false); void reload(); }} /></div></DialogContent></Dialog>}
     </DashboardPage>
   );
 }

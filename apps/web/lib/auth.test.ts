@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   deleteAccount,
   getMe,
+  isRefreshRejected,
   login,
   registerInitiate,
   resendOtp,
@@ -29,6 +30,19 @@ function tokenWith(claims: Record<string, unknown>): string {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe("isRefreshRejected()", () => {
+  it("treats only an explicit refusal as the end of the session", () => {
+    expect(isRefreshRejected(401)).toBe(true);
+    expect(isRefreshRejected(403)).toBe(true);
+  });
+
+  it("keeps the session through a network failure, rate limit or server fault", () => {
+    for (const status of [0, 408, 429, 500, 502, 503, 504]) {
+      expect(isRefreshRejected(status)).toBe(false);
+    }
+  });
 });
 
 describe("login()", () => {

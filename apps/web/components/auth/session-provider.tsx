@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { registerTokenGetter, registerTokenRefresher } from "@/lib/api/client";
 import {
+  isRefreshRejected,
   refresh as refreshSession,
   type AuthTokens,
   type StaffBusinessLine,
@@ -183,7 +184,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(result.data);
         return result.data.accessToken;
       }
-      clear();
+      // Sign out locally only when the server refused the session. A blip
+      // (offline, timeout, 5xx) leaves the session in place: the request
+      // that triggered this still fails with its own error, the next call
+      // tries the refresh again, and the page — with any open form — stays
+      // mounted instead of being replaced by the sign-in redirect.
+      if (isRefreshRejected(result.status)) clear();
       return null;
     });
   }

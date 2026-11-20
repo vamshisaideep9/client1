@@ -75,7 +75,7 @@ export function StaffAccountDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className={PANEL_DIALOG_CLASS}>
+      <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_CLASS}>
         {user ? (
           <>
             <WorkspaceDialogHeader

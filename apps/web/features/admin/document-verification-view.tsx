@@ -341,7 +341,7 @@ export function DocumentVerificationView() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && setActiveKey(null)}>
-        <DialogContent showCloseButton={false} className={WORKSPACE_DIALOG_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={WORKSPACE_DIALOG_CLASS}>
           {active ? (
             <>
               <WorkspaceDialogHeader
