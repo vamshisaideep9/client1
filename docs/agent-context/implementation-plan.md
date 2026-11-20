@@ -172,6 +172,21 @@ separately and needs no further API change.
   regression/full-suite checks and PR delivery are in progress; the next
   slice is Batch 2 web. Fresh web lint, typecheck and 1,106 unit tests pass;
   contract regeneration has no diff. These are checks, not a release claim.
+- *Isolated contract/compatibility follow-up (2026-11-20).* Final review
+  found that the requested top-level `AgentLeadCreate.email` was silently
+  ignored, although nested email worked. The optional normalized field now
+  folds into the same `requirement.email` ownership/storage path; matching
+  nested input is compatible and conflicting nonblank addresses are rejected.
+  A valid name plus explicit `requirement: null` keeps the legacy owned-notes
+  clear without clearing email or fixed interests; foreign notes still deny
+  the whole update. Product-deletion coverage now asserts both rates exist
+  before deleting. The runtime test's obsolete API-image Alpine expectation
+  now matches its already-patched `3.5.9-r0`, with no image-pin change. The
+  follow-up is isolated from frozen candidate `9a60ded9` while its full gate
+  runs. Production-runtime script tests pass (14 cases). Changed-file Ruff
+  check/format and a pure email
+  normalization probe pass; API/ownership regressions and regenerated contract
+  remain pending after that gate. Completion impact and next slice unchanged.
 
 **In review — Batch 1: UI fixes (web)** (2026-11-19; PR
 [#387](https://github.com/brollysolutions/client1/pull/387), mirror

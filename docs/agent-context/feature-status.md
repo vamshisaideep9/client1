@@ -16,6 +16,18 @@ No requirement-percentage change.
   verification and both PRs are pending. Fresh web lint/typecheck and all
   1,106 unit tests pass; regenerated contracts have no diff. Next: Batch 2
   web after API delivery.
+- Isolated follow-up (2026-11-20): the requested optional top-level email
+  now normalizes into `requirement.email`, preserving nested clients and
+  rejecting conflicting addresses. The legacy valid-name plus null-
+  requirement notes-clear is retained with ownership checks and without
+  clearing email/interests. Deletion-test setup is explicitly asserted;
+  the API-image test now expects its existing patched Alpine `3.5.9-r0`
+  rather than `3.5.8-r0`, without changing the image or weakening the pin.
+  All 14 production-runtime script cases pass on the corrected expectation.
+  New schema and API regressions are added; changed-file Ruff check/format
+  and a pure validation probe pass, while DB regressions and contract
+  regeneration await the frozen full candidate's terminal result. No
+  completion-percentage change; next remains Batch 2 web.
 - Lead form fields (`requirement.email`, `requirement.property_type`) and
   the per-role requirement allowlist as described in
   `implementation-plan.md` (Batch 2). Role matrix tests in

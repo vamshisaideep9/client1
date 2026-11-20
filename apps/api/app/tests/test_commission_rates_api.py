@@ -539,8 +539,12 @@ async def test_deleting_an_unused_product_removes_its_rates(client: AsyncClient)
     product = await _product()
     admin, _ = await _admin()
     maker, _ = await _sub_admin()
-    await client.put(f"{URL}/{product.id}", json=_percent(100), headers=admin)
-    await client.put(f"{URL}/{product.id}", json=_percent(120), headers=maker)
+    approved = await client.put(f"{URL}/{product.id}", json=_percent(100), headers=admin)
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["current"]["percent_bps"] == 100
+    proposed = await client.put(f"{URL}/{product.id}", json=_percent(120), headers=maker)
+    assert proposed.status_code == 200, proposed.text
+    assert proposed.json()["pending"]["percent_bps"] == 120
 
     res = await client.delete(f"/api/v1/admin/loan-types/{product.id}", headers=admin)
     assert res.status_code == 204, res.text

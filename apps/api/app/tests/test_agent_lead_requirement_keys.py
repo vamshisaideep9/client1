@@ -103,6 +103,46 @@ def test_email_is_trimmed_lower_cased_and_optional() -> None:
 
 
 @pytest.mark.parametrize(
+    "top,nested,expected",
+    [
+        (" Ravi@Example.com ", None, "ravi@example.com"),
+        (" Ravi@Example.com ", "ravi@example.com", "ravi@example.com"),
+        (" Ravi@Example.com ", "  ", "ravi@example.com"),
+        ("  ", "nested@example.com", "nested@example.com"),
+        (None, "nested@example.com", "nested@example.com"),
+        (None, None, None),
+        ("  ", None, None),
+    ],
+)
+def test_top_level_email_and_nested_email_share_one_normalised_storage_path(
+    top: str | None, nested: str | None, expected: str | None
+) -> None:
+    payload = AgentLeadCreate(
+        mobile="+919876543210",
+        name="Ravi",
+        email=top,
+        requirement={"email": nested} if nested is not None else None,
+    )
+    assert payload.requirement == ({"email": expected} if expected else None)
+
+
+@pytest.mark.parametrize("email", ["not-an-email", 42, f"{'a' * 250}@example.com"])
+def test_invalid_top_level_email_is_not_silently_ignored(email: object) -> None:
+    with pytest.raises(ValidationError):
+        AgentLeadCreate(mobile="+919876543210", name="Ravi", email=email)
+
+
+def test_conflicting_top_level_and_nested_emails_are_rejected() -> None:
+    with pytest.raises(ValidationError, match="must match"):
+        AgentLeadCreate(
+            mobile="+919876543210",
+            name="Ravi",
+            email="top@example.com",
+            requirement={"email": "nested@example.com"},
+        )
+
+
+@pytest.mark.parametrize(
     "email",
     ["not-an-email", "a@b", "two@@example.com", 42, f"{'a' * 250}@example.com"],
 )
@@ -221,6 +261,87 @@ async def test_loans_agent_records_email_and_product(client: AsyncClient) -> Non
         "role": "agent",
         "subject_uuid": agent_uuid,
     }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("line", ["loans", "real_estate"])
+async def test_top_level_email_is_stored_and_owned_under_requirement(
+    client: AsyncClient, line: str
+) -> None:
+    auth_uuid, agent_uuid = await _seed_agent(line)
+    response = await client.post(
+        "/api/v1/agent/leads",
+        json={
+            "mobile": unique_mobile(),
+            "name": "Email contact",
+            "email": "  Contact@Example.com ",
+            "requirement": {"notes": "Call after 6"},
+        },
+        headers=_headers(_agent_token(auth_uuid, agent_uuid, line)),
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["requirement"] == {
+        "email": "contact@example.com",
+        "notes": "Call after 6",
+    }
+    lead = await _load_lead(response.json()["id"])
+    assert lead.requirement["email"] == "contact@example.com"
+    assert lead.detail_ownership["requirement.email"] == {
+        "role": "agent",
+        "subject_uuid": agent_uuid,
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("foreign_notes", [False, True])
+async def test_name_with_null_requirement_preserves_legacy_notes_clear_and_ownership(
+    client: AsyncClient, foreign_notes: bool
+) -> None:
+    import app.db.session as session_module
+    from app.models.loan import LoanType
+
+    slug = f"legacy-null-{uuid.uuid4().hex[:8]}"
+    async with session_module.AsyncSessionLocal() as db:
+        db.add(LoanType(name=slug, label="Legacy null loan", active=True))
+        await db.commit()
+    auth_uuid, agent_uuid = await _seed_agent("loans")
+    headers = _headers(_agent_token(auth_uuid, agent_uuid))
+    created = await client.post(
+        "/api/v1/agent/leads",
+        json={
+            "mobile": unique_mobile(),
+            "name": "Original name",
+            "requirement": {
+                "notes": "Original note",
+                "email": "keep@example.com",
+                "product_slug": slug,
+            },
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    lead_id = created.json()["id"]
+    if foreign_notes:
+        async with session_module.AsyncSessionLocal() as db:
+            lead = await db.get(Lead, uuid.UUID(lead_id))
+            lead.detail_ownership = {
+                **lead.detail_ownership,
+                "requirement.notes": {"role": "client", "subject_uuid": str(uuid.uuid4())},
+            }
+            await db.commit()
+
+    changed = await client.patch(
+        f"/api/v1/agent/leads/{lead_id}",
+        json={"name": "Renamed", "requirement": None},
+        headers=headers,
+    )
+    assert changed.status_code == (409 if foreign_notes else 200), changed.text
+    stored = await _load_lead(lead_id)
+    assert stored.name == ("Original name" if foreign_notes else "Renamed")
+    assert stored.requirement["notes"] == ("Original note" if foreign_notes else None)
+    assert stored.requirement["email"] == "keep@example.com"
+    assert stored.requirement["product_slug"] == slug
+    assert stored.requirement["interest_title"] == "Legacy null loan"
 
 
 @pytest.mark.asyncio

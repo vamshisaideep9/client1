@@ -130,8 +130,8 @@ class ProductionRuntimeContractTests(unittest.TestCase):
             "7bff3c3776ec467fc1437960f2c469d8beb30f536a6465a3350c647ccd260ec2 AS uv-bin",
             dockerfile,
         )
-        self.assertIn('"libcrypto3=3.5.8-r0"', dockerfile)
-        self.assertIn('"libssl3=3.5.8-r0"', dockerfile)
+        self.assertIn('"libcrypto3=3.5.9-r0"', dockerfile)
+        self.assertIn('"libssl3=3.5.9-r0"', dockerfile)
         self.assertIn('"sqlite-libs=3.53.4-r0"', dockerfile)
         self.assertNotIn("apt-get", dockerfile)
         self.assertIn('ENV PATH="/app/.venv/bin:${PATH}"', production_stage)

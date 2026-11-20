@@ -266,6 +266,10 @@ async def update_lead_for_agent(
     agent_profile_uuid: UUID,
 ) -> Lead:
     requirement = payload.requirement or {}
+    # Legacy clients send a valid name with requirement:null to clear notes.
+    # Keep that behavior without clearing the new email or fixed interest keys.
+    if "requirement" in payload.model_fields_set and payload.requirement is None:
+        requirement = {"notes": None}
     details = AgentLeadDetailsPatch.model_validate(
         {
             **({"name": payload.name} if "name" in payload.model_fields_set else {}),

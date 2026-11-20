@@ -15,6 +15,7 @@ from pydantic import (
     StringConstraints,
     TypeAdapter,
     ValidationError,
+    field_validator,
     model_validator,
 )
 
@@ -126,6 +127,10 @@ def _normalise_email_key(requirement: dict[str, Any]) -> None:
 class AgentLeadCreate(BaseModel):
     mobile: Annotated[str, Field(pattern=r"^\+[1-9]\d{6,14}$")]
     name: LeadName
+    # The top-level form field is folded into requirement.email so capture,
+    # ownership, visibility and deletion have one storage path. Nested email
+    # remains accepted for existing clients and the bulk-introduction path.
+    email: Annotated[EmailStr, Field(max_length=LEAD_EMAIL_MAX_LENGTH)] | None = None
     # Agent-authored context: free-text notes, an optional email, and
     # optionally the one listing or property type (real estate) or product
     # (loans) the person is interested in. The service confirms the chosen
@@ -133,9 +138,16 @@ class AgentLeadCreate(BaseModel):
     # records its label for the telecaller.
     requirement: dict[str, Any] | None = None
 
+    @field_validator("email", mode="before")
+    @classmethod
+    def _email(cls, value: object) -> str | None:
+        return normalise_lead_email(value)
+
     @model_validator(mode="after")
     def _known_requirement_shape(self) -> AgentLeadCreate:
         if self.requirement is None:
+            if self.email is not None:
+                self.requirement = {"email": str(self.email)}
             return self
         unknown = set(self.requirement) - _AGENT_REQUIREMENT_KEYS
         if unknown:
@@ -145,6 +157,11 @@ class AgentLeadCreate(BaseModel):
             )
         _validate_notes(self.requirement)
         _normalise_email_key(self.requirement)
+        if self.email is not None:
+            nested_email = self.requirement.get("email")
+            if nested_email is not None and nested_email != self.email:
+                raise ValueError("Email and requirement.email must match when both are supplied.")
+            self.requirement["email"] = str(self.email)
         property_id = self.requirement.get("property_id")
         if property_id is not None:
             try:

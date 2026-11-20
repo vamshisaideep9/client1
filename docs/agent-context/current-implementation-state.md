@@ -990,6 +990,12 @@ Round 2 brief and stacked-PR delivery were confirmed on 2026-11-20):**
   requirement, owned by the Agent in the detail-ownership ledger; the Agent
   may change or remove the email and notes while the lead is editable; the
   product, listing and property type are fixed at introduction.
+- *Input compatibility.* The optional top-level `email` and the existing
+  nested `requirement.email` normalize into that one stored key. Matching
+  nonblank values are accepted; conflicting ones are rejected. A legacy
+  update carrying a valid name and `requirement: null` clears owned notes
+  only, preserving email and the fixed interest fields; another creator's
+  notes remain protected and cause the whole update to fail.
 - *Email deletion.* Account deletion erases the person's lead email from
   active and historical journeys selected by their verified mobile or
   Client profile. Deleting a referring Agent does not erase another
