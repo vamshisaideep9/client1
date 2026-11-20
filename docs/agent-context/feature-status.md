@@ -3,14 +3,20 @@
 **In progress — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
 branch `feat/agent-lead-intake-web`, child of API checkpoint `9a60ded9`.
 The approved intake, resubmission, browser-only spreadsheet and commission-rate
-workflows are implemented; production verification and PR delivery are pending.
+workflows are implemented and production verification passes; PR delivery waits
+for the parent API slice.
 Web lint/typecheck pass; Vitest 153 files / 1,113 tests pass. Ten new browser
 scenarios pass, with 35 distinct journeys supported by passing segmented
 evidence. Review fixed an email-only edit trying to clear hidden notes, an extra
 row action making Edit unreachable at 320px, and phone result visibility.
 Final 320/390px result and refused-refresh checks: 2 passed. Public navigation
 after a rejected refresh now waits for rendering after separately asserting
-immediate removal of protected content. No completion-percentage change.
+immediate removal of protected content. Node 22 Alpine production build passes
+all 118 pages, all ten new production-browser scenarios pass, and the standalone
+server passes the Excel smoke plus five screenshot journeys. Runtime candidate
+`e48d19f0`; synthetic visual evidence is in
+`apps/web/e2e/review/agent-lead-intake/README.md`. Next: Batch 3 API after both
+Batch 2 PR deliveries. No completion-percentage change.
 
 Status: **Derived living implementation ledger**
 

@@ -25,7 +25,12 @@ delivery remain in progress independently; web delivery follows them.
   fix and functional sign-out wait correction. Final mobile-result check at
   320/390px and refused-refresh check: 2 passed. Screenshot review at
   320/390/768/1440px; existing tokens/primitives, no new motion or dependency.
-  Production build and final production-browser check remain pending.
+  Node 22 Alpine production build passes all 118 pages. All ten new browser
+  scenarios pass against that production bundle; the standalone server also
+  passes the Excel upload smoke and five screenshot journeys. Runtime candidate
+  `e48d19f0`; final synthetic screenshots and commands are recorded in
+  `apps/web/e2e/review/agent-lead-intake/README.md`. API delivery remains the
+  prerequisite for shipping this stacked web slice. Next: Batch 3 API.
 
 Status: **Derived, actively maintained plan**
 
