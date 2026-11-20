@@ -179,7 +179,7 @@ export function FinancialProductWorkspace({
             <WorkspaceDialogHeader
               title={product.label}
               description={`${CATEGORY_LABEL[product.category]} · Form v${product.form_version} · ${formatLastUpdated(product.updated_at)}`}
-              actions={tab !== "providers" ? (
+              actions={tab === "details" || tab === "form" ? (
                 <Button size="sm" onClick={() => void save()} disabled={busy}>
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                   Save product

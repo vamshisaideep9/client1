@@ -5,6 +5,10 @@ branch `feat/agent-lead-intake-web`, child of API checkpoint `9a60ded9`.
 The approved intake, resubmission, browser-only spreadsheet and commission-rate
 workflows are implemented and production verification passes; PR delivery waits
 for the parent API slice.
+Final embedded-flow review reproduced an unrelated Save product action on the
+Agent commission tab. Its visibility is now limited to the product-editing tabs;
+a new 390px rate-save error/retry regression is awaiting production verification.
+Follow-up lint/typecheck and all 1,113 unit tests pass.
 Web lint/typecheck pass; Vitest 153 files / 1,113 tests pass. Ten new browser
 scenarios pass, with 35 distinct journeys supported by passing segmented
 evidence. Review fixed an email-only edit trying to clear hidden notes, an extra

@@ -19,6 +19,12 @@ delivery remain in progress independently; web delivery follows them.
   review in the new rates workspace; each loan product has an Agent commission
   tab. Per-deal commission suggestions remain editable. Email-only editing
   omits unchanged/hidden notes, preserving the ownership ledger.
+- Final embedded-flow review reproduced an unrelated Save product action on the
+  Agent commission tab against the production bundle. Product-save controls now
+  appear only on the Details and Application form tabs. A new 390px browser
+  regression also exercises rate-save failure/retry without a product PATCH;
+  lint/typecheck and all 1,113 unit tests pass for this bounded follow-up.
+  Its production build/browser verification is pending.
 - Fresh evidence: web lint and typecheck pass; full Vitest 153 files / 1,113
   tests pass. New Playwright intake suite 10 passed; 35 distinct new/neighboring
   browser journeys have passing segmented evidence after the 320px row-action
