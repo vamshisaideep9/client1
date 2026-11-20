@@ -52,6 +52,7 @@ from app.services.loan_applications import (
     apply_progress_update,
 )
 from app.services.loan_applications import InvalidStatusTransition as InvalidLoanStatusTransition
+from app.services.profile_metadata import task_staff_for_ids
 from app.services.property_deals import (
     ClientNotRegistered,
     LeadNotRealEstateLine,
@@ -305,6 +306,7 @@ async def get_lead(
         ]
 
     tasks = await list_tasks_for_lead(db, lead_id)
+    task_staff = await task_staff_for_ids(db, (task.id for task in tasks))
     requests = (await request_summaries_for_leads(db, [lead_id]))[lead_id]
     signals = (await lead_signals(db, [lead]))[lead.id]
 
@@ -330,7 +332,12 @@ async def get_lead(
         property_enquiries=property_enquiries,
         site_visits=site_visits,
         property_deals=property_deals,
-        tasks=[TaskRead.model_validate(t, from_attributes=True) for t in tasks],
+        tasks=[
+            TaskRead.model_validate(t, from_attributes=True).model_copy(
+                update=task_staff[t.id].model_dump() if t.id in task_staff else {}
+            )
+            for t in tasks
+        ],
         manager_notes=await work_notes(db, lead_id=lead.id),
         **project_values(
             modes,
@@ -644,7 +651,10 @@ async def create_task(
     if lead is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found.")
     task = await raise_task(db, lead, staff_profile_uuid, payload)
-    return TaskRead.model_validate(task, from_attributes=True)
+    staff = await task_staff_for_ids(db, [task.id])
+    return TaskRead.model_validate(task, from_attributes=True).model_copy(
+        update=staff[task.id].model_dump() if task.id in staff else {}
+    )
 
 
 @router.get("/home", response_model=TelecallerHomeResponse, response_model_exclude_unset=True)

@@ -1,5 +1,24 @@
 # Living implementation plan
 
+**In progress — Batch 3: staff specialty routing and profile metadata (API slice)**
+(2026-11-20), branch `feat/staff-specialty-routing-api`, based on merged Batch 2
+`78567697` (upstream #388/#389). API/contracts first; web follows separately.
+Acceptance: optional Admin-managed Loans/dual-line Telecaller specialties;
+independent specialist, unspecialised and all-eligible rotations; unchanged
+existing/sticky assignments; task-scoped counterpart names/codes; own and
+Admin-visible role/team metadata with dual-line teams retained. No directory
+grant, counterpart contact expansion, dependency, payout or attendance change.
+Verification planned: migrated PostgreSQL routing/concurrency/RLS/API tests,
+up/down/up, full API gate, generated contracts and compatible web gate.
+PRs pending; no new passing evidence or requirement-percentage change claimed.
+
+API checkpoint: fresh synthetic PostgreSQL runs pass 63 neighboring tests,
+37 routing/metadata/team tests, and 25 capture/metadata/form tests (overlapping
+runs, not additive totals). Populated downgrade/upgrade preserves legacy cursor
+IDs/timestamps. Ruff/format and one head pass on the frozen Linux snapshot.
+Both contract scripts run; the audit-label consumer is updated. Full API and
+web compatibility gates are still running; this is not a completed delivery.
+
 **In review — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
 branch `feat/agent-lead-intake-web`, stacked on API `e70b18c3`:
 [upstream #388](https://github.com/brollysolutions/client1/pull/388),

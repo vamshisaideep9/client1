@@ -1,5 +1,18 @@
 # Feature implementation status
 
+**In progress — Batch 3 API** (2026-11-20), branch
+`feat/staff-specialty-routing-api`, baseline `78567697` after upstream #388/#389
+merged. Scope: Admin-managed Telecaller loan specialty and independent routing
+pools, task-confined staff name/code projection, own/Admin profile metadata and
+dual-line team names. Existing assignments, sticky resubmit, staff profile locks
+and contact privacy remain invariants. API/contracts precede the web slice.
+Fresh verification and PRs pending; no requirement-percentage change.
+
+Checkpoint evidence: 63 neighboring, 37 routing/metadata/team and 25 additional
+capture/metadata/form tests pass in overlapping synthetic database runs;
+populated migration rollback/re-upgrade preserves legacy rotation. Frozen Linux
+Ruff/format and one-head checks pass. Full API/web gates and delivery are pending.
+
 **In review — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
 branch `feat/agent-lead-intake-web`, stacked on API `e70b18c3`:
 [upstream #388](https://github.com/brollysolutions/client1/pull/388),

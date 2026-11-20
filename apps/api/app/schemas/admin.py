@@ -7,9 +7,10 @@ from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from app.schemas.financial_products import FormAnswers, ProductFormDefinition
+from app.schemas.profile_metadata import RoleProfileRead
 
 # ---------------------------------------------------------------------------
 # Staff provisioning
@@ -28,6 +29,7 @@ class StaffCreateRequest(BaseModel):
     # admin/sub_admin are platform-scoped (business_line omitted); telecaller
     # and employee are line-scoped (loans, real_estate, or both is required).
     business_line: Literal["loans", "real_estate", "both"] | None = None
+    loan_specialty_id: UUID | None = None
 
     @field_validator("email")
     @classmethod
@@ -36,6 +38,10 @@ class StaffCreateRequest(BaseModel):
 
     @model_validator(mode="after")
     def check_business_line_matches_role(self) -> StaffCreateRequest:
+        if self.loan_specialty_id is not None and (
+            self.role != "telecaller" or self.business_line not in ("loans", "both")
+        ):
+            raise ValueError("Only Loans or dual-line Telecallers may have a loan specialty.")
         if self.role in ("admin", "sub_admin"):
             if self.business_line is not None:
                 raise ValueError("Platform Admin staff must not provide a business_line.")
@@ -46,6 +52,7 @@ class StaffCreateRequest(BaseModel):
 
 
 class StaffCreateResponse(BaseModel):
+    loan_specialty_id: UUID | None = None
     first_name: str
     last_name: str
     mobile: str
@@ -80,6 +87,12 @@ class StaffAccessListResponse(BaseModel):
 class StaffFeatureUpdateRequest(BaseModel):
     feature: StaffFeatureLiteral
     enabled: bool
+
+
+class StaffSpecialtyUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    loan_specialty_id: UUID | None
 
 
 # ---------------------------------------------------------------------------
@@ -147,6 +160,7 @@ class AdminClientProfileRead(BaseModel):
 
 
 class AdminUserRead(BaseModel):
+    role_profiles: list[RoleProfileRead] = Field(default_factory=list)
     id: UUID
     first_name: str
     last_name: str

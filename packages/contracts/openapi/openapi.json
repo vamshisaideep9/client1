@@ -3006,6 +3006,13 @@
             ],
             "title": "Mobile"
           },
+          "role_profiles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleProfileRead"
+            },
+            "title": "Role Profiles",
+            "type": "array"
+          },
           "roles": {
             "items": {
               "enum": [
@@ -6635,6 +6642,7 @@
           "agent_approved",
           "agent_rejected",
           "staff_created",
+          "staff_specialty_updated",
           "staff_feature_granted",
           "staff_feature_revoked",
           "staff_invite_created",
@@ -12050,6 +12058,28 @@
       },
       "EmployeeTaskRead": {
         "properties": {
+          "assigned_employee_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Employee Code"
+          },
+          "assigned_employee_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Employee Name"
+          },
           "business_line": {
             "enum": [
               "loans",
@@ -12220,6 +12250,28 @@
               }
             ],
             "title": "Outcome"
+          },
+          "raised_by_telecaller_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raised By Telecaller Code"
+          },
+          "raised_by_telecaller_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raised By Telecaller Name"
           },
           "status": {
             "enum": [
@@ -15711,6 +15763,13 @@
             },
             "title": "Profiles",
             "type": "array"
+          },
+          "role_profiles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleProfileRead"
+            },
+            "title": "Role Profiles",
+            "type": "array"
           }
         },
         "required": [
@@ -18711,6 +18770,28 @@
           "sections"
         ],
         "title": "ProductFormDefinition",
+        "type": "object"
+      },
+      "ProfileTeamRead": {
+        "properties": {
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "business_line",
+          "name"
+        ],
+        "title": "ProfileTeamRead",
         "type": "object"
       },
       "ProjectResidenceDetails": {
@@ -22310,6 +22391,84 @@
         "title": "ResidentialConfiguration",
         "type": "string"
       },
+      "RoleProfileRead": {
+        "properties": {
+          "business_line": {
+            "anyOf": [
+              {
+                "enum": [
+                  "loans",
+                  "real_estate",
+                  "both"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Line"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "loan_specialty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Specialty Id"
+          },
+          "loan_specialty_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Specialty Label"
+          },
+          "profile_uuid": {
+            "format": "uuid",
+            "title": "Profile Uuid",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "admin",
+              "sub_admin",
+              "telecaller",
+              "employee",
+              "agent"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "teams": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileTeamRead"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "profile_uuid",
+          "role",
+          "code",
+          "business_line"
+        ],
+        "title": "RoleProfileRead",
+        "type": "object"
+      },
       "SaleType": {
         "description": "New-vs-resale, meaningful only for a sale listing.\n\nOptional on the detail models because a rent/lease listing has no sale type.\nIt is not freely optional though: ``SubmissionFacts`` requires it when\n``listing_intent`` is ``sale`` and rejects it when the intent is ``rent``,\nso a sale listing can still never omit it.",
         "enum": [
@@ -22845,6 +23004,18 @@
             "title": "Last Name",
             "type": "string"
           },
+          "loan_specialty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Specialty Id"
+          },
           "mobile": {
             "pattern": "^\\+[1-9]\\d{6,14}$",
             "title": "Mobile",
@@ -22901,6 +23072,18 @@
           "last_name": {
             "title": "Last Name",
             "type": "string"
+          },
+          "loan_specialty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Specialty Id"
           },
           "mobile": {
             "title": "Mobile",
@@ -23028,6 +23211,28 @@
           "role"
         ],
         "title": "StaffInvitePreview",
+        "type": "object"
+      },
+      "StaffSpecialtyUpdateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "loan_specialty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Specialty Id"
+          }
+        },
+        "required": [
+          "loan_specialty_id"
+        ],
+        "title": "StaffSpecialtyUpdateRequest",
         "type": "object"
       },
       "StaffTeamCreate": {
@@ -24973,6 +25178,28 @@
       },
       "TaskRead": {
         "properties": {
+          "assigned_employee_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Employee Code"
+          },
+          "assigned_employee_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Employee Name"
+          },
           "assigned_employee_profile_uuid": {
             "anyOf": [
               {
@@ -25022,6 +25249,28 @@
               }
             ],
             "title": "Notes"
+          },
+          "raised_by_telecaller_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raised By Telecaller Code"
+          },
+          "raised_by_telecaller_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raised By Telecaller Name"
           },
           "status": {
             "enum": [
@@ -25432,6 +25681,29 @@
             "title": "Last Name",
             "type": "string"
           },
+          "loan_specialty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Specialty Id"
+          },
+          "loan_specialty_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Specialty Label"
+          },
           "staff_code": {
             "title": "Staff Code",
             "type": "string"
@@ -25746,6 +26018,29 @@
           "last_name": {
             "title": "Last Name",
             "type": "string"
+          },
+          "loan_specialty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Specialty Id"
+          },
+          "loan_specialty_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Specialty Label"
           },
           "staff_code": {
             "title": "Staff Code",
@@ -36318,6 +36613,68 @@
           }
         ],
         "summary": "Create Staff Invite Link",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{auth_user_uuid}/loan-specialty": {
+      "patch": {
+        "operationId": "update_staff_loan_specialty_api_v1_admin_users__auth_user_uuid__loan_specialty_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "auth_user_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Auth User Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffSpecialtyUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RoleProfileRead"
+                  },
+                  "title": "Response Update Staff Loan Specialty Api V1 Admin Users  Auth User Uuid  Loan Specialty Patch",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Staff Loan Specialty",
         "tags": [
           "admin"
         ]

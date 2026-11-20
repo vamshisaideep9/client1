@@ -977,6 +977,28 @@ module; "Does not fit" items 6, 11, 12 and 13 of the batch plan):**
 
 Evidence is listed in `feature-status.md` under Batch G.
 
+### CS-029 — Telecaller loan specialties and scoped staff identifiers
+
+**Decision (2026-11-20; Round 2 Batch 3):** Admins may optionally assign an
+active loan product as the specialty of a Loans or dual-line Telecaller, on
+provisioning or later account editing. Existing staff start unspecialised.
+For a known active loan product, automatic assignment tries same-line/dual-line
+specialists, then unspecialised Loans Telecallers, then all eligible Telecallers.
+Each actual candidate pool rotates independently. Unknown/ambiguous products use
+the all-eligible pool. Real Estate keeps its line rotation. Current assignments
+are preserved; sticky Agent resubmission still precedes specialty routing.
+
+Task participants may read their actual counterpart's name and assigned code,
+without counterpart phone/email or a staff-directory grant. Own profile metadata
+includes staff/Agent codes, specialty and each active team's name/line, including
+both teams for dual-line staff. Admin directory metadata is batched; manager
+rosters remain limited to their reached staff. Web surfaces reuse the approved
+operational design and display server-assigned codes rather than deriving IDs.
+
+API work is in progress on `feat/staff-specialty-routing-api`; verification and
+delivery evidence belong in the living plan/status. No payout, attendance,
+public-page or dependency scope is included in this decision.
+
 ### CS-028 — Agent lead form fields, sticky resubmission, bulk submit and product commission rates
 
 Web slice (2026-11-20, `feat/agent-lead-intake-web`, parent API `e70b18c3`):

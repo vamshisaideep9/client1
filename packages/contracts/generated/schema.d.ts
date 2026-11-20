@@ -1534,6 +1534,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/users/{auth_user_uuid}/loan-specialty": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Staff Loan Specialty */
+        patch: operations["update_staff_loan_specialty_api_v1_admin_users__auth_user_uuid__loan_specialty_patch"];
+        trace?: never;
+    };
     "/api/v1/admin/users/{auth_user_uuid}/status": {
         parameters: {
             query?: never;
@@ -6821,6 +6838,8 @@ export interface components {
             last_name: string;
             /** Mobile */
             mobile: string | null;
+            /** Role Profiles */
+            role_profiles?: components["schemas"]["RoleProfileRead"][];
             /** Roles */
             roles: ("admin" | "sub_admin" | "agent" | "telecaller" | "employee" | "client")[];
             /**
@@ -8025,7 +8044,7 @@ export interface components {
          *     `services/fee_cashbacks.py` (FR-6.6 processing-fee cashback).
          * @enum {string}
          */
-        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "contact_history_viewed" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded" | "contest_created" | "contest_updated" | "contest_submitted" | "contest_deleted" | "contest_approved" | "contest_rejected" | "contest_cancelled" | "contest_went_live" | "contest_ended" | "contest_recalculated" | "contest_finalized" | "contest_prize_payout_requested" | "contest_prize_marked_paid" | "agent_leads_bulk_submitted" | "commission_rate_proposed" | "commission_rate_set" | "commission_rate_approved" | "commission_rate_rejected" | "commission_rate_withdrawn";
+        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_specialty_updated" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "contact_history_viewed" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded" | "contest_created" | "contest_updated" | "contest_submitted" | "contest_deleted" | "contest_approved" | "contest_rejected" | "contest_cancelled" | "contest_went_live" | "contest_ended" | "contest_recalculated" | "contest_finalized" | "contest_prize_payout_requested" | "contest_prize_marked_paid" | "agent_leads_bulk_submitted" | "commission_rate_proposed" | "commission_rate_set" | "commission_rate_approved" | "commission_rate_rejected" | "commission_rate_withdrawn";
         /** AuditLogListResponse */
         AuditLogListResponse: {
             /** Entries */
@@ -9867,6 +9886,10 @@ export interface components {
         };
         /** EmployeeTaskRead */
         EmployeeTaskRead: {
+            /** Assigned Employee Code */
+            assigned_employee_code?: string | null;
+            /** Assigned Employee Name */
+            assigned_employee_name?: string | null;
             /**
              * Business Line
              * @enum {string}
@@ -9912,6 +9935,10 @@ export interface components {
             notes: string | null;
             /** Outcome */
             outcome: ("clear" | "flagged" | "inconclusive") | null;
+            /** Raised By Telecaller Code */
+            raised_by_telecaller_code?: string | null;
+            /** Raised By Telecaller Name */
+            raised_by_telecaller_name?: string | null;
             /**
              * Status
              * @enum {string}
@@ -11066,6 +11093,8 @@ export interface components {
             place: components["schemas"]["PincodePlaceRead"] | null;
             /** Profiles */
             profiles: components["schemas"]["ClientProfileSummary"][];
+            /** Role Profiles */
+            role_profiles?: components["schemas"]["RoleProfileRead"][];
         };
         /**
          * MeUpdateRequest
@@ -11972,6 +12001,16 @@ export interface components {
         ProductFormDefinition: {
             /** Sections */
             sections: components["schemas"]["FormSectionDefinition"][];
+        };
+        /** ProfileTeamRead */
+        ProfileTeamRead: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** Name */
+            name: string;
         };
         /** ProjectResidenceDetails */
         ProjectResidenceDetails: {
@@ -13164,6 +13203,29 @@ export interface components {
          * @enum {string}
          */
         ResidentialConfiguration: "1_bhk" | "2_bhk" | "2_5_bhk" | "3_bhk" | "3_5_bhk" | "4_bhk" | "5_plus_bhk" | "studio";
+        /** RoleProfileRead */
+        RoleProfileRead: {
+            /** Business Line */
+            business_line: ("loans" | "real_estate" | "both") | null;
+            /** Code */
+            code: string;
+            /** Loan Specialty Id */
+            loan_specialty_id?: string | null;
+            /** Loan Specialty Label */
+            loan_specialty_label?: string | null;
+            /**
+             * Profile Uuid
+             * Format: uuid
+             */
+            profile_uuid: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "admin" | "sub_admin" | "telecaller" | "employee" | "agent";
+            /** Teams */
+            teams?: components["schemas"]["ProfileTeamRead"][];
+        };
         /**
          * SaleType
          * @description New-vs-resale, meaningful only for a sale listing.
@@ -13388,6 +13450,8 @@ export interface components {
             first_name: string;
             /** Last Name */
             last_name: string;
+            /** Loan Specialty Id */
+            loan_specialty_id?: string | null;
             /** Mobile */
             mobile: string;
             /**
@@ -13409,6 +13473,8 @@ export interface components {
             first_name: string;
             /** Last Name */
             last_name: string;
+            /** Loan Specialty Id */
+            loan_specialty_id?: string | null;
             /** Mobile */
             mobile: string;
             /**
@@ -13465,6 +13531,11 @@ export interface components {
             first_name: string;
             /** Role */
             role: string;
+        };
+        /** StaffSpecialtyUpdateRequest */
+        StaffSpecialtyUpdateRequest: {
+            /** Loan Specialty Id */
+            loan_specialty_id: string | null;
         };
         /** StaffTeamCreate */
         StaffTeamCreate: {
@@ -14099,6 +14170,10 @@ export interface components {
         };
         /** TaskRead */
         TaskRead: {
+            /** Assigned Employee Code */
+            assigned_employee_code?: string | null;
+            /** Assigned Employee Name */
+            assigned_employee_name?: string | null;
             /** Assigned Employee Profile Uuid */
             assigned_employee_profile_uuid: string | null;
             /**
@@ -14120,6 +14195,10 @@ export interface components {
             lead_uuid: string;
             /** Notes */
             notes: string | null;
+            /** Raised By Telecaller Code */
+            raised_by_telecaller_code?: string | null;
+            /** Raised By Telecaller Name */
+            raised_by_telecaller_name?: string | null;
             /**
              * Status
              * @enum {string}
@@ -14259,6 +14338,10 @@ export interface components {
             first_name: string;
             /** Last Name */
             last_name: string;
+            /** Loan Specialty Id */
+            loan_specialty_id?: string | null;
+            /** Loan Specialty Label */
+            loan_specialty_label?: string | null;
             /** Staff Code */
             staff_code: string;
             /**
@@ -14373,6 +14456,10 @@ export interface components {
             first_name: string;
             /** Last Name */
             last_name: string;
+            /** Loan Specialty Id */
+            loan_specialty_id?: string | null;
+            /** Loan Specialty Label */
+            loan_specialty_label?: string | null;
             /** Staff Code */
             staff_code: string;
             /**
@@ -18274,6 +18361,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaffInviteLinkRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_staff_loan_specialty_api_v1_admin_users__auth_user_uuid__loan_specialty_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auth_user_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffSpecialtyUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleProfileRead"][];
                 };
             };
             /** @description Validation Error */

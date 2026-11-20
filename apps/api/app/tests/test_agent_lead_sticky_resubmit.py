@@ -75,7 +75,7 @@ async def _load(lead_id: uuid.UUID) -> Lead:
 
 async def _set_cursor(telecaller_id: uuid.UUID | None) -> None:
     async with db_session.AsyncSessionLocal() as db:
-        cursor = await db.get(LeadAssignmentCursor, "loans")
+        cursor = await db.get(LeadAssignmentCursor, ("loans", "all"))
         if cursor is None:
             db.add(
                 LeadAssignmentCursor(
@@ -89,7 +89,7 @@ async def _set_cursor(telecaller_id: uuid.UUID | None) -> None:
 
 async def _cursor() -> uuid.UUID | None:
     async with db_session.AsyncSessionLocal() as db:
-        cursor = await db.get(LeadAssignmentCursor, "loans")
+        cursor = await db.get(LeadAssignmentCursor, ("loans", "all"))
         return cursor.last_telecaller_profile_uuid if cursor else None
 
 

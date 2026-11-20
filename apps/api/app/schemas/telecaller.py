@@ -10,6 +10,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from app.schemas.financial_products import FormAnswers, ProductFormDefinition
+from app.schemas.profile_metadata import TaskStaffRead
 
 LeadStatusLiteral = Literal["new", "assigned", "working", "converted", "closed", "released"]
 LoanStatusLiteral = Literal[
@@ -369,7 +370,7 @@ class TaskCreate(BaseModel):
         return self
 
 
-class TaskRead(BaseModel):
+class TaskRead(TaskStaffRead):
     id: UUID
     lead_uuid: UUID
     task_type: TaskTypeLiteral

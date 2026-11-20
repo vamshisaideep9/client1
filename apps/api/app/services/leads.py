@@ -36,6 +36,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.audit_log import AuditAction
 from app.models.lead import Lead, LeadAssignmentCursor, LeadOrigin, LeadStatus
 from app.models.lead_intake_attempt import IntakeActorType
+from app.models.loan import LoanApplication, LoanType
 from app.models.notification import NotificationType
 from app.models.profile import (
     AgentProfile,
@@ -192,7 +193,7 @@ async def lock_assignment_lines(db: AsyncSession, business_lines: set[str]) -> N
 
 
 async def _select_round_robin_telecaller(
-    db: AsyncSession, business_line: str
+    db: AsyncSession, business_line: str, product_id: UUID | None = None
 ) -> StaffProfile | None:
     """Select and advance one durable same-line rotation turn.
 
@@ -204,26 +205,39 @@ async def _select_round_robin_telecaller(
         (
             await db.scalars(
                 select(StaffProfile)
+                .join(User, User.id == StaffProfile.auth_user_uuid)
                 .where(
                     StaffProfile.role == StaffRole.TELECALLER,
                     StaffProfile.status == ProfileStatus.ACTIVE,
                     StaffProfile.business_line.in_((business_line, "both")),
+                    User.status.not_in(("soft_deleted", "suspended")),
                 )
                 .order_by(StaffProfile.created_at, StaffProfile.id)
-                .with_for_update()
+                .with_for_update(of=StaffProfile)
             )
         ).all()
     )
     if not telecallers:
         return None
 
+    pool = "all"
+    if business_line == "loans" and product_id is not None:
+        specialists = [tc for tc in telecallers if tc.loan_specialty_id == product_id]
+        unspecialised = [tc for tc in telecallers if tc.loan_specialty_id is None]
+        if specialists:
+            telecallers, pool = specialists, f"product:{product_id}"
+        elif unspecialised:
+            telecallers, pool = unspecialised, "unspecialised"
+
     cursor = await db.scalar(
         select(LeadAssignmentCursor)
-        .where(LeadAssignmentCursor.business_line == business_line)
+        .where(
+            LeadAssignmentCursor.business_line == business_line, LeadAssignmentCursor.pool == pool
+        )
         .with_for_update()
     )
     if cursor is None:
-        cursor = LeadAssignmentCursor(business_line=business_line)
+        cursor = LeadAssignmentCursor(business_line=business_line, pool=pool)
         db.add(cursor)
 
     selected = telecallers[0]
@@ -245,7 +259,31 @@ async def _select_round_robin_telecaller(
     return selected
 
 
-async def auto_assign_locked_lead(db: AsyncSession, lead: Lead) -> LeadAssignmentNotice | None:
+async def _routing_product_id(db: AsyncSession, lead: Lead, product_id: UUID | None) -> UUID | None:
+    """Resolve active lending products only; ambiguous or unknown hints use all staff."""
+    if lead.business_line != "loans":
+        return None
+    stmt = select(LoanType.id).where(LoanType.active.is_(True), LoanType.category == "loan")
+    requirement = lead.requirement or {}
+    if product_id is not None:
+        stmt = stmt.where(LoanType.id == product_id)
+    elif isinstance(requirement.get("product_slug"), str):
+        stmt = stmt.where(LoanType.name == requirement["product_slug"])
+    elif isinstance(requirement.get("product"), str):
+        stmt = stmt.where(func.lower(LoanType.label) == requirement["product"].strip().lower())
+    else:
+        stmt = (
+            stmt.join(LoanApplication, LoanApplication.loan_type_id == LoanType.id)
+            .where(LoanApplication.lead_uuid == lead.id)
+            .distinct()
+        )
+    matches = list(await db.scalars(stmt.limit(2)))
+    return matches[0] if len(matches) == 1 else None
+
+
+async def auto_assign_locked_lead(
+    db: AsyncSession, lead: Lead, *, product_id: UUID | None = None
+) -> LeadAssignmentNotice | None:
     """Assign one caller-owned locked lead without committing or notifying."""
     if (
         lead.assigned_telecaller_profile_uuid is not None
@@ -255,7 +293,8 @@ async def auto_assign_locked_lead(db: AsyncSession, lead: Lead) -> LeadAssignmen
         return None
 
     await _lock_assignment_line(db, lead.business_line)
-    telecaller = await _select_round_robin_telecaller(db, lead.business_line)
+    product_id = await _routing_product_id(db, lead, product_id)
+    telecaller = await _select_round_robin_telecaller(db, lead.business_line, product_id)
     if telecaller is None:
         return None
 
@@ -829,6 +868,7 @@ async def _ensure_client_line_lead(
     business_line: str,
     client_profile_uuid: UUID,
     name: str | None = None,
+    product_id: UUID | None = None,
 ) -> tuple[Lead, LeadAssignmentNotice | None]:
     if business_line not in _VALID_LINES:
         raise ValueError("Unsupported Client journey line.")
@@ -874,7 +914,7 @@ async def _ensure_client_line_lead(
             lead.detail_ownership = ownership
         lead.updated_at = datetime.now(UTC)
 
-    return lead, await auto_assign_locked_lead(db, lead)
+    return lead, await auto_assign_locked_lead(db, lead, product_id=product_id)
 
 
 async def bind_registered_client_leads(
@@ -919,7 +959,7 @@ async def bind_registered_client_leads(
 
 
 async def ensure_client_line_lead(
-    *, mobile: str, client_profile_uuid: UUID, business_line: str
+    *, mobile: str, client_profile_uuid: UUID, business_line: str, product_id: UUID | None = None
 ) -> UUID:
     """Hard-require one claimed Client journey and retry automatic assignment."""
     notice: LeadAssignmentNotice | None
@@ -937,6 +977,7 @@ async def ensure_client_line_lead(
             mobile=mobile,
             business_line=business_line,
             client_profile_uuid=client_profile_uuid,
+            product_id=product_id,
         )
         await session.commit()
     if notice is not None:
@@ -965,11 +1006,14 @@ async def ensure_client_line_lead_for_user(
     )
 
 
-async def resolve_loans_lead(mobile: str, client_profile_uuid: UUID) -> UUID:
+async def resolve_loans_lead(
+    mobile: str, client_profile_uuid: UUID, *, product_id: UUID | None = None
+) -> UUID:
     return await ensure_client_line_lead(
         mobile=mobile,
         client_profile_uuid=client_profile_uuid,
         business_line="loans",
+        product_id=product_id,
     )
 
 
