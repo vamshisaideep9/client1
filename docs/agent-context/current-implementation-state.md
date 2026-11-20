@@ -1003,9 +1003,14 @@ Round 2 brief and stacked-PR delivery were confirmed on 2026-11-20):**
   separate; a deleted person's lead email is erased immediately, rather
   than retained until a financial purge.
 - *Who reads a lead's requirement.* One allowlist for every read: the
-  originating Agent sees only what they wrote (an Agent who claimed an
-  existing open enquiry never reads what the person, a Telecaller or the
-  public form recorded); the assigned Telecaller sees every known key,
+  originating Agent sees keys attributed to them in the ownership ledger.
+  Current/new claims preserve other creators' ownership and do not expose
+  their input. The old backfill attributes known fields by recorded Agent
+  origin; a public row already claimed before that ledger can contain earlier
+  merged input with that same descriptor. No accepted/claim per-key audit can
+  reconstruct those indistinguishable fields safely. The legacy regression
+  verifies the original backfill and subsequent claims, rather than proving
+  authorship of every pre-ledger claimed key. The assigned Telecaller sees every known key,
   the email included, behind the existing Telecaller "Requirement details"
   field rule (there is no separate email rule); a platform Admin's lead
   details show notes, the resolved labels and the email; a Client's lead
@@ -1036,9 +1041,13 @@ Round 2 brief and stacked-PR delivery were confirmed on 2026-11-20):**
   Admin's entry waits for a platform Admin who did not make it (approve,
   or reject with a note; the maker may withdraw it, and a new proposal
   replaces their own earlier one); a platform Admin's own entry applies at
-  once. Loans Agents see the approved rate of the product they pick;
-  nobody else outside Admin and Sub Admin sees rates, and they are never
-  public. The per-deal commission is still entered by the Admin, now
+  once as standalone entry with no checker or review timestamp. Any recorded
+  checker must differ from its maker. A platform Admin sees all workflow rows;
+  a Sub Admin sees approved rates and their own workflow rows only. Loans
+  Agents and eligible loans/both-line Telecallers and Employees have approved-
+  only RLS reads; the management API remains Admin/Sub Admin and the Agent
+  endpoint remains Agent-only. Rates are never public. The per-deal commission
+  is still entered by the Admin, now
   pre-filled with the rate applied to the sanctioned amount (the requested
   amount when none was sanctioned) or the fixed amount.
 

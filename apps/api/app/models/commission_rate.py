@@ -3,7 +3,7 @@
 A Sub Admin proposes a rate for a loan product (``pending_approval``); a
 platform Admin who is not the maker approves it (the previous ``approved``
 row becomes ``superseded``) or rejects it with a note. A platform Admin's
-own entry is approved at once with themselves as checker. The maker may
+own entry is approved at once without a checker. The maker may
 withdraw a pending proposal, and a new proposal from the same Sub Admin
 replaces (withdraws) their earlier one.
 
@@ -16,7 +16,10 @@ still entered by the Admin (``models/commission.py``).
 Rows are append-only in substance: the trigger
 ``trg_product_commission_rates_transition`` keeps terms and maker fixed and
 allows only ``pending_approval -> approved | rejected | withdrawn`` and
-``approved -> superseded``. Access rules are in migration ``e4a6c8d0f2b3``.
+``approved -> superseded``. Access rules are narrowed by ``a6c8e0f2b4d6``:
+Sub Admins read approved rates and their own workflow rows; eligible loans-line
+staff and Agents read approved rates only. Recorded checkers always differ
+from the maker, including on the bypass connection.
 """
 
 from __future__ import annotations
@@ -25,7 +28,7 @@ import enum
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -51,6 +54,19 @@ def _now() -> datetime:
 
 class ProductCommissionRate(Base):
     __tablename__ = "product_commission_rates"
+    __table_args__ = (
+        CheckConstraint(
+            "checker_uuid IS NULL OR checker_uuid <> created_by_uuid",
+            name="checker_not_maker",
+        ),
+        CheckConstraint(
+            "status NOT IN ('approved', 'rejected', 'superseded') "
+            "OR (checker_uuid IS NOT NULL AND reviewed_at IS NOT NULL) "
+            "OR (created_by_role = 'admin' AND status IN ('approved', 'superseded') "
+            "AND checker_uuid IS NULL AND reviewed_at IS NULL AND review_note IS NULL)",
+            name="reviewed_has_checker",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     loan_type_id: Mapped[uuid.UUID] = mapped_column(

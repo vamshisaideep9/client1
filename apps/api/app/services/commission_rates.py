@@ -218,8 +218,8 @@ def _to_read(
 async def list_for_staff(
     db: AsyncSession, *, viewer_uuid: uuid.UUID, loan_type_id: uuid.UUID | None = None
 ) -> list[ProductCommissionRates]:
-    """Every loan product with its current, pending and earlier rates (platform
-    Admin and Sub Admin, request session)."""
+    """Loan products with the rates RLS allows: Admins see all; Sub Admins
+    see approved rates and only their own pending/history workflow rows."""
     product_stmt = select(LoanType).where(LoanType.category == _LOAN_CATEGORY)
     rate_stmt = select(ProductCommissionRate)
     if loan_type_id is not None:
@@ -295,7 +295,7 @@ async def approved_rates_for_agent(db: AsyncSession) -> dict[str, AgentCommissio
             percent_bps=rate.percent_bps,
             amount_paise=rate.amount_paise,
             note=rate.note,
-            approved_at=rate.reviewed_at,
+            approved_at=rate.reviewed_at or rate.created_at,
         )
         for rate, product in rows.all()
     }
@@ -429,22 +429,21 @@ async def set_by_admin(
     admin_uuid: uuid.UUID,
     admin_role: str,
 ) -> ProductCommissionRate:
-    """A platform Admin's own entry: approved at once (checker = themselves),
+    """A platform Admin's own standalone entry: approved with no checker,
     the previous approved rate superseded. A pending Sub Admin proposal is
     left for the Admin to approve or reject."""
     async with db_session.AsyncSessionLocal() as session:
         await _lock_product(session, loan_type_id)
         await _loan_product(session, loan_type_id)
         superseded = await _supersede_current(session, loan_type_id)
-        now = datetime.now(UTC)
         rate = ProductCommissionRate(
             loan_type_id=loan_type_id,
             **_terms(data),
             status=APPROVED,
             created_by_uuid=admin_uuid,
             created_by_role="admin",
-            checker_uuid=admin_uuid,
-            reviewed_at=now,
+            checker_uuid=None,
+            reviewed_at=None,
         )
         session.add(rate)
         await session.flush()
@@ -454,7 +453,10 @@ async def set_by_admin(
             AuditAction.COMMISSION_RATE_SET,
             actor_uuid=admin_uuid,
             actor_role=admin_role,
-            detail={"superseded_rate_id": str(superseded) if superseded else None},
+            detail={
+                "approval_mode": "admin_standalone",
+                "superseded_rate_id": str(superseded) if superseded else None,
+            },
         )
         await session.commit()
         return rate

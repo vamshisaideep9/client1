@@ -642,9 +642,9 @@ ADMIN_OPERATIONAL_COVERAGE: dict[str, AdminCoverageEntry] = {
         audit_coverage=CoverageState.COVERED,
         api_surfaces=("/api/v1/commission-rates", "/api/v1/agent/commission-rates"),
         ui_surfaces=("/dashboard/commission-rates",),
-        rls_expectation="Platform Admin and Sub Admins read every row; loans-line Agents read approved rows only; nobody else reads any. Only the maker Sub Admin inserts a pending proposal and withdraws it (column grant: status, version, updated_at); Admin entries, approvals and rejections run on the bypass session; no delete grant.",
-        audit_expectation="Propose, set, approve, reject and withdraw append commission_rate_* events with ids, kind and bps or paise.",
-        rationale="A Sub Admin's rate needs a different platform Admin's approval (CHECK and service); rates are indicative and only pre-fill the Admin's per-deal commission entry.",
+        rls_expectation="Platform Admin reads all; Sub Admins read approved rates and their own workflow rows. Loans Agents and eligible loans/both-line Telecallers and Employees read approved rates only. Only the maker Sub Admin inserts a pending proposal and withdraws it (column grant: status, version, updated_at); Admin commands use the bypass session; no delete grant.",
+        audit_expectation="Propose, set, approve, reject and withdraw append commission_rate_* events with ids, kind and bps or paise. Direct Admin entry records admin_standalone with no fabricated checker or review timestamp.",
+        rationale="Every recorded checker differs from its maker (global CHECK and service); Admin direct entry is explicitly standalone. Rates are indicative and only pre-fill the Admin's per-deal commission entry.",
     ),
     "pincodes": _entry(
         domain="India pincode reference list (CS-026)",

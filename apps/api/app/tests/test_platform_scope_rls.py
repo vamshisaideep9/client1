@@ -59,9 +59,9 @@ _DOCUMENTED_SUB_ADMIN_EXCEPTIONS = {
     # the Sub Admin manages, never through the platform bypass.
     ("contests", "contests_select"),
     ("contest_results", "contest_results_select"),
-    # e4a6c8d0f2b3 (CS-028): a platform-Admin disjunct beside a Sub Admin read
-    # of every commission-rate row (maker-checker surface), never through the
-    # platform bypass.
+    # a6c8e0f2b4d6 (CS-028): a platform-Admin disjunct beside a Sub Admin's
+    # approved/own-workflow reads; eligible loans-line staff and Agents read
+    # approved rates without the platform bypass.
     ("product_commission_rates", "product_commission_rates_select"),
 }
 

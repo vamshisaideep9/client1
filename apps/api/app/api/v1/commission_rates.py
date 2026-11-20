@@ -56,7 +56,8 @@ async def list_rates(
     db: AsyncSession = Depends(get_db),
 ) -> CommissionRateListResponse:
     """Every loan product with its approved rate, any proposal awaiting
-    approval, and up to 20 earlier entries with maker and checker names."""
+    approval, and up to 20 earlier entries with maker and checker names.
+    Sub Admins see only approved rates and their own workflow rows."""
     response.headers["Cache-Control"] = "private, no-store"
     products = await service.list_for_staff(db, viewer_uuid=current_user.id)
     return CommissionRateListResponse(products=products)

@@ -181,11 +181,20 @@ async def test_admin_entry_is_approved_immediately(client: AsyncClient) -> None:
     current = res.json()["current"]
     assert current["status"] == "approved"
     assert current["created_by_role"] == "admin"
-    assert current["checker_name"] == current["created_by_name"] == "Checker Admin"
+    assert current["created_by_name"] == "Checker Admin"
+    assert current["checker_name"] is None
+    assert current["reviewed_at"] is None
     assert current["amount_paise"] == 2_500_00
     # A waiting Sub Admin proposal is left for the Admin to decide.
     assert res.json()["pending"]["id"] == pending_id
     assert await _audit_actions(current["id"]) == [AuditAction.COMMISSION_RATE_SET.value]
+    async with db_session.AsyncSessionLocal() as db:
+        audit = await db.scalar(
+            select(AuditLog).where(AuditLog.entity_uuid == uuid.UUID(current["id"]))
+        )
+        assert audit.detail["approval_mode"] == "admin_standalone"
+    agent = await client.get("/api/v1/agent/commission-rates", headers=await _loans_agent())
+    assert agent.json()["rates"][product.name]["approved_at"] == current["created_at"]
 
 
 async def test_reject_needs_a_note(client: AsyncClient) -> None:
@@ -249,6 +258,18 @@ async def test_proposals_replace_own_and_respect_others(client: AsyncClient) -> 
 
     blocked = await client.put(f"{URL}/{product.id}", json=_percent(130), headers=other)
     assert blocked.status_code == 409, blocked.text
+    hidden = await client.get(URL, headers=other)
+    [other_product] = [
+        row for row in hidden.json()["products"] if row["loan_type_id"] == str(product.id)
+    ]
+    assert other_product["pending"] is None
+    assert other_product["history"] == []
+    own = await client.get(URL, headers=maker)
+    [own_product] = [
+        row for row in own.json()["products"] if row["loan_type_id"] == str(product.id)
+    ]
+    assert own_product["pending"]["id"] == second.json()["pending"]["id"]
+    assert own_product["history"][0]["id"] == first["pending"]["id"]
 
 
 async def test_maker_withdraws_their_pending_proposal(client: AsyncClient) -> None:
@@ -260,7 +281,7 @@ async def test_maker_withdraws_their_pending_proposal(client: AsyncClient) -> No
         await client.put(f"{URL}/{product.id}", json=_percent(100), headers=maker)
     ).json()["pending"]["id"]
 
-    assert (await client.post(f"{URL}/{pending_id}/withdraw", headers=other)).status_code == 403
+    assert (await client.post(f"{URL}/{pending_id}/withdraw", headers=other)).status_code == 404
     assert (await client.post(f"{URL}/{pending_id}/withdraw", headers=admin)).status_code == 403
     res = await client.post(f"{URL}/{pending_id}/withdraw", headers=maker)
     assert res.status_code == 200, res.text

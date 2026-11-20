@@ -1,10 +1,11 @@
 """CS-028 product_commission_rates RLS, grants and trigger (migration e4a6c8d0f2b3).
 
-Platform Admins and Sub Admins read every row; a loans-line Agent reads only
-approved rows; nobody else reads any. Only the maker Sub Admin inserts a
+Platform Admins read every row; Sub Admins read approved and own workflow
+rows; eligible loans/both-line staff and loans Agents read approved only.
+Only the maker Sub Admin inserts a
 pending proposal and withdraws it (column grant: status, version,
 updated_at); nobody deletes; terms never change and statuses only move
-forward; a Sub Admin's row is never checked by its maker.
+forward; a recorded checker never equals the maker, including Admin rows.
 """
 
 from __future__ import annotations
@@ -44,8 +45,8 @@ async def _rate(loan_type_id: uuid.UUID, status: str, maker: uuid.UUID, role: st
             status=status,
             created_by_uuid=maker,
             created_by_role=role,
-            checker_uuid=(checker or maker) if reviewed else None,
-            reviewed_at=datetime.now(UTC) if reviewed else None,
+            checker_uuid=checker if reviewed else None,
+            reviewed_at=datetime.now(UTC) if reviewed and checker is not None else None,
             review_note="No" if status == "rejected" else None,
             **extra,
         )
@@ -87,17 +88,24 @@ async def test_who_reads_which_rows(client) -> None:
         await _visible(s["product"], user_uuid=s["admin"].id, role="admin", platform_scope="true")
         == every
     )
+
+    assert (
+        await _visible(
+            s["product"],
+            user_uuid=s["maker_user"].id,
+            role="sub_admin",
+            staff_profile_uuid=s["maker"].id,
+        )
+        == every
+    )
     assert (
         await _visible(s["product"], user_uuid=s["admin"].id, role="admin", platform_scope="line")
         == set()
     )
     sub_user, sub = await seed_staff(StaffRole.SUB_ADMIN)
-    assert (
-        await _visible(
-            s["product"], user_uuid=sub_user.id, role="sub_admin", staff_profile_uuid=sub.id
-        )
-        == every
-    )
+    assert await _visible(
+        s["product"], user_uuid=sub_user.id, role="sub_admin", staff_profile_uuid=sub.id
+    ) == {s["approved"]}
 
     loans_user, loans_agent = await seed_agent("loans")
     assert await _visible(
@@ -125,14 +133,21 @@ async def test_who_reads_which_rows(client) -> None:
     )
 
     for role in ("telecaller", "employee"):
-        staff_user, staff = await seed_staff(StaffRole(role), business_line="loans")
+        for line in ("loans", "both", "real_estate"):
+            staff_user, staff = await seed_staff(StaffRole(role), business_line=line)
+            assert await _visible(
+                s["product"],
+                user_uuid=staff_user.id,
+                role=role,
+                business_line=line,
+                staff_profile_uuid=staff.id,
+            ) == ({s["approved"]} if line in ("loans", "both") else set())
         assert (
             await _visible(
                 s["product"],
                 user_uuid=staff_user.id,
                 role=role,
                 business_line="loans",
-                staff_profile_uuid=staff.id,
             )
             == set()
         )
@@ -155,6 +170,7 @@ _INSERT = (
 async def test_only_the_maker_sub_admin_inserts_a_pending_proposal(client) -> None:
     product = await _product()
     maker_user, maker = await seed_staff(StaffRole.SUB_ADMIN)
+    admin = await seed_user("Platform", "Admin")
     context = {"user_uuid": maker_user.id, "role": "sub_admin", "staff_profile_uuid": maker.id}
     base = {
         "product": product,
@@ -166,16 +182,15 @@ async def test_only_the_maker_sub_admin_inserts_a_pending_proposal(client) -> No
     }
 
     for forged in (
-        {"status": "approved", "checker": uuid.uuid4(), "reviewed": datetime.now(UTC)},
+        {"status": "approved", "checker": admin.id, "reviewed": datetime.now(UTC)},
         {"maker": (await seed_user("Other", "Person")).id},
         {"role": "admin"},
     ):
         with pytest.raises(DBAPIError):
             await as_role(_INSERT, params={**base, **forged}, **context)
 
-    admin = await seed_user("Platform", "Admin")
     agent_user, agent = await seed_agent("loans")
-    for other_context, maker_id in (
+    denied_contexts = [
         ({"user_uuid": admin.id, "role": "admin", "platform_scope": "true"}, admin.id),
         (
             {
@@ -186,7 +201,21 @@ async def test_only_the_maker_sub_admin_inserts_a_pending_proposal(client) -> No
             },
             agent_user.id,
         ),
-    ):
+    ]
+    for role in (StaffRole.TELECALLER, StaffRole.EMPLOYEE):
+        staff_user, staff = await seed_staff(role, business_line="loans")
+        denied_contexts.append(
+            (
+                {
+                    "user_uuid": staff_user.id,
+                    "role": role.value,
+                    "business_line": "loans",
+                    "staff_profile_uuid": staff.id,
+                },
+                staff_user.id,
+            )
+        )
+    for other_context, maker_id in denied_contexts:
         with pytest.raises(DBAPIError):
             await as_role(
                 _INSERT,
@@ -195,8 +224,8 @@ async def test_only_the_maker_sub_admin_inserts_a_pending_proposal(client) -> No
                     "maker": maker_id,
                     "role": "admin",
                     "status": "approved",
-                    "checker": maker_id,
-                    "reviewed": datetime.now(UTC),
+                    "checker": None,
+                    "reviewed": None,
                 },
                 **other_context,
             )
@@ -269,6 +298,17 @@ async def test_constraints_and_trigger_hold_on_the_bypass_session(client) -> Non
     await _refused(
         "UPDATE product_commission_rates SET status = 'approved', checker_uuid = "
         "created_by_uuid, reviewed_at = now() WHERE id = :id",
+        id=s["pending"],
+    )
+    # The bypass connection cannot fabricate an Admin self-checker either.
+    await _refused(
+        "UPDATE product_commission_rates SET checker_uuid = created_by_uuid, "
+        "reviewed_at = now() WHERE id = :id",
+        id=s["approved"],
+    )
+    # A Sub Admin's reviewed row cannot use the standalone Admin exception.
+    await _refused(
+        "UPDATE product_commission_rates SET status = 'approved' WHERE id = :id",
         id=s["pending"],
     )
     # Terms never change; final statuses stay final.

@@ -35,6 +35,22 @@ No requirement-percentage change.
   guards. The reviewed compatibility follow-up is integrated and both
   contracts regenerated. Targeted and final Linux-source full checks remain
   pending; the original failed run is not a passing gate.
+- Original-brief policy correction (2026-11-20): the replacement full gate
+  was intentionally interrupted after 1,144 passes (exit 2 / KeyboardInterrupt),
+  not treated as a passing gate. Unrelated Sub Admin workflow visibility and
+  fabricated direct-Admin self-checkers are being corrected with an additive
+  migration; eligible loans/both-line TC/Employee reads become approved-only.
+  Targeted authorization/audit/rollback checks and a fresh full gate are pending.
+- Correction evidence: 29 focused tests pass, including narrowed role/line
+  RLS, global checker inequality, standalone Admin audit/date fallback and
+  normalization/rollback preservation. The populated real-trigger downgrade
+  / upgrade succeeds. All 640 API files pass Ruff/format. Both contracts have
+  only operation-description metadata changes, with no wire shape change;
+  replacement full verification remains pending. Historical limit: the legacy
+  test covers the original ownership backfill and subsequent claims. A row
+  already claimed before that ledger can have prior merged input attributed
+  to the recorded Agent, without a per-key acceptance/claim audit to prove
+  authorship. Current/new claims remain isolated; no provenance is invented.
 - Lead form fields (`requirement.email`, `requirement.property_type`) and
   the per-role requirement allowlist as described in
   `implementation-plan.md` (Batch 2). Role matrix tests in

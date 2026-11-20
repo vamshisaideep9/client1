@@ -132,21 +132,25 @@ separately and needs no further API change.
   points 1..10000 XOR fixed paise up to the ₹10 crore commission cap, note
   ≤ 280, status pending / approved / rejected / superseded / withdrawn,
   maker and checker; one approved and one pending row per product; CHECK
-  that a Sub Admin's row is never checked by its maker; trigger keeping
+  that a recorded checker never equals its maker; trigger keeping
   terms and maker fixed and statuses moving forward only; cascades with an
-  unused product the Admin deletes). RLS forced: platform Admin and Sub
-  Admins read all rows, loans-line Agents read approved rows only, nobody
-  else reads any; the maker Sub Admin alone inserts a pending proposal and
+  unused product the Admin deletes). Additive `a6c8e0f2b4d6` corrects the
+  original derived policy. RLS forced: platform Admin reads all rows; a Sub
+  Admin reads approved rates and their own workflow rows; loans-line Agents
+  and eligible loans/both-line Telecallers and Employees read approved rows
+  only. Other roles read none; the maker Sub Admin alone inserts a proposal and
   withdraws it (UPDATE granted on status / version / updated_at only); no
   DELETE grant. `services/commission_rates.py`: a Sub Admin proposes
   (`PUT /api/v1/commission-rates/{loan_type_id}`, replacing their own
   pending proposal; another Sub Admin's pending one is a 409), a platform
-  Admin's `PUT` is approved at once (themselves as checker) and supersedes
+  Admin's `PUT` is approved at once (standalone, no checker) and supersedes
   the current rate, `POST …/{rate_id}/approve | reject` (note required) by
   a platform Admin who is not the maker, `POST …/{rate_id}/withdraw` by the
   maker; `GET /api/v1/commission-rates` lists every loan-category product
-  with current, pending and up to 20 earlier entries with maker / checker
-  names. Audit `commission_rate_proposed | set | approved | rejected |
+  with current, visible pending and up to 20 visible earlier entries with maker
+  / checker names. Direct Admin entry has no fabricated review identity and
+  uses creation time as its effective approval date. Audit
+  `commission_rate_proposed | set | approved | rejected |
   withdrawn`; notifications `commission_rate_submitted` (platform Admins)
   and `commission_rate_reviewed` (the maker). `GET
   /api/v1/agent/commission-rates` returns approved rates of active loan
@@ -196,6 +200,25 @@ separately and needs no further API change.
   public-field allowlists. The reviewed email/notes follow-up is integrated;
   both contracts are regenerated. Targeted regressions precede a new frozen
   Linux-source full gate; none of these pending checks is claimed as passing.
+- *Original-brief policy correction (2026-11-20).* The running full gate was
+  intentionally interrupted after 1,144 passes (KeyboardInterrupt / exit 2),
+  not accepted as a passing gate. Review identified two derived-scope
+  mismatches: unrelated Sub Admins could read pending/history rows, and an
+  Admin direct entry fabricated a self-checker. The bounded correction keeps
+  maker workflow rows private, gives eligible loans/both-line Telecallers and
+  Employees approved-only RLS reads, and records direct Admin entry without a
+  checker while enforcing a global checker-not-maker constraint. Additive
+  migration, focused regressions and a replacement full gate are in progress.
+- *Correction evidence and historical limit.* The focused correction gate
+  passes 29 tests, including real RLS and a temporary-table upgrade / downgrade
+  / upgrade that preserves every non-review column and genuine distinct
+  reviews. The populated database's real-trigger migration roundtrip also
+  succeeds. All 640 API files pass Ruff/format; both generated contracts change
+  only the management operation description. Final full verification remains
+  pending. The legacy ownership test proves the original backfill and claims
+  after it; pre-ledger claimed public rows can retain merged fields attributed
+  to the recorded Agent. No accepted/claim per-key audit can safely reconstruct
+  that inherited history. Current/new claims remain protected by ownership.
 
 **In review — Batch 1: UI fixes (web)** (2026-11-19; PR
 [#387](https://github.com/brollysolutions/client1/pull/387), mirror

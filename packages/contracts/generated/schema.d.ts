@@ -2859,6 +2859,7 @@ export interface paths {
          * List Rates
          * @description Every loan product with its approved rate, any proposal awaiting
          *     approval, and up to 20 earlier entries with maker and checker names.
+         *     Sub Admins see only approved rates and their own workflow rows.
          */
         get: operations["list_rates_api_v1_commission_rates_get"];
         put?: never;

@@ -40393,7 +40393,7 @@
     },
     "/api/v1/commission-rates": {
       "get": {
-        "description": "Every loan product with its approved rate, any proposal awaiting\napproval, and up to 20 earlier entries with maker and checker names.",
+        "description": "Every loan product with its approved rate, any proposal awaiting\napproval, and up to 20 earlier entries with maker and checker names.\nSub Admins see only approved rates and their own workflow rows.",
         "operationId": "list_rates_api_v1_commission_rates_get",
         "responses": {
           "200": {
