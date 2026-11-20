@@ -24,17 +24,19 @@ delivery remain in progress independently; web delivery follows them.
   appear only on the Details and Application form tabs. A new 390px browser
   regression also exercises rate-save failure/retry without a product PATCH;
   lint/typecheck and all 1,113 unit tests pass for this bounded follow-up.
-  Its production build/browser verification is pending.
+  Its Node 22 Alpine production build passes all 118 pages. The ten intake
+  scenarios and the additional embedded rate-save error/retry case pass against
+  the standalone production server; all eight font hashes match the prior build.
 - Fresh evidence: web lint and typecheck pass; full Vitest 153 files / 1,113
-  tests pass. New Playwright intake suite 10 passed; 35 distinct new/neighboring
+  tests pass. New Playwright intake suite 10 passed; 36 distinct new/neighboring
   browser journeys have passing segmented evidence after the 320px row-action
   fix and functional sign-out wait correction. Final mobile-result check at
   320/390px and refused-refresh check: 2 passed. Screenshot review at
   320/390/768/1440px; existing tokens/primitives, no new motion or dependency.
   Node 22 Alpine production build passes all 118 pages. All ten new browser
   scenarios pass against that production bundle; the standalone server also
-  passes the Excel upload smoke and five screenshot journeys. Runtime candidate
-  `e48d19f0`; final synthetic screenshots and commands are recorded in
+  passes the embedded product-rate regression. Runtime candidate `2010d74a`;
+  six final synthetic screenshots and commands are recorded in
   `apps/web/e2e/review/agent-lead-intake/README.md`. API delivery remains the
   prerequisite for shipping this stacked web slice. Next: Batch 3 API.
 

@@ -7,18 +7,20 @@ workflows are implemented and production verification passes; PR delivery waits
 for the parent API slice.
 Final embedded-flow review reproduced an unrelated Save product action on the
 Agent commission tab. Its visibility is now limited to the product-editing tabs;
-a new 390px rate-save error/retry regression is awaiting production verification.
-Follow-up lint/typecheck and all 1,113 unit tests pass.
+a new 390px rate-save error/retry regression passes against the standalone
+production server, preserving both values and making no product PATCH.
+Follow-up lint/typecheck, all 1,113 unit tests and all 118 production pages pass;
+all eight font hashes match the prior build.
 Web lint/typecheck pass; Vitest 153 files / 1,113 tests pass. Ten new browser
-scenarios pass, with 35 distinct journeys supported by passing segmented
+scenarios pass, with 36 distinct journeys supported by passing segmented
 evidence. Review fixed an email-only edit trying to clear hidden notes, an extra
 row action making Edit unreachable at 320px, and phone result visibility.
 Final 320/390px result and refused-refresh checks: 2 passed. Public navigation
 after a rejected refresh now waits for rendering after separately asserting
 immediate removal of protected content. Node 22 Alpine production build passes
 all 118 pages, all ten new production-browser scenarios pass, and the standalone
-server passes the Excel smoke plus five screenshot journeys. Runtime candidate
-`e48d19f0`; synthetic visual evidence is in
+server also passes the embedded product-rate case. Runtime candidate `2010d74a`;
+six synthetic screenshots and verification commands are in
 `apps/web/e2e/review/agent-lead-intake/README.md`. Next: Batch 3 API after both
 Batch 2 PR deliveries. No completion-percentage change.
 

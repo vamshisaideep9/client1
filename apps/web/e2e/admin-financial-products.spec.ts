@@ -113,8 +113,10 @@ test("product commission editing preserves failed input and never saves the prod
   await form.getByLabel("Percent of disbursed amount (%)").fill("0.75");
   await form.getByLabel("Note for agents (optional)").fill("Paid after disbursal");
   await form.getByRole("button", { name: "Set commission", exact: true }).click();
-  await expect(form.getByRole("alert")).toContainText("Synthetic rate save failed");
+  await expect(form.getByRole("alert")).toContainText("Please try again");
   await expect(form.getByLabel("Percent of disbursed amount (%)")).toHaveValue("0.75");
+  await expect(form.getByLabel("Note for agents (optional)")).toHaveValue("Paid after disbursal");
+  expect(saveAttempts).toBe(1);
   await form.getByRole("button", { name: "Set commission", exact: true }).click();
   await expect(form).toHaveCount(0);
   await expect(workspace.getByText("0.75% of disbursed amount", { exact: true })).toBeVisible();
