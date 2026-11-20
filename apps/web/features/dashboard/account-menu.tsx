@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 
 import { useLine } from "./line-provider";
 import { useMe } from "./me-provider";
+import { OwnRoleBadge, roleProfileFor } from "./role-badge";
 
 // Help and legal destinations retain the authenticated workspace.
 const HELP_LINKS = [
@@ -55,7 +56,7 @@ export function AccountMenu({
   onNavigate?: () => void;
 }) {
   const router = useRouter();
-  const { clear } = useAuth();
+  const { session, clear } = useAuth();
   const { me } = useMe();
   const { activeLine } = useLine();
   const [signingOut, setSigningOut] = React.useState(false);
@@ -63,7 +64,9 @@ export function AccountMenu({
   if (!me) return null;
 
   const fullName = `${me.firstName} ${me.lastName}`.trim() || "Your account";
-  const customerCode = me.profiles.find((p) => p.businessLine === activeLine)?.customerCode;
+  const customerCode = session?.role === "client"
+    ? me.profiles.find((p) => p.businessLine === activeLine)?.customerCode
+    : session ? roleProfileFor(me.roleProfiles, session.role, session.businessLine)?.code : undefined;
 
   async function handleLogout() {
     if (signingOut) return;
@@ -126,6 +129,7 @@ export function AccountMenu({
             </div>
           </div>
 
+          <div className="px-2.5 py-2"><OwnRoleBadge /></div>
           <DropdownMenuSeparator />
 
           <DropdownMenuItem onSelect={() => go("/dashboard/settings")}>

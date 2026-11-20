@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, Bell } from "lucide-react";
 
 import { DashboardPageSkeleton } from "@/features/dashboard/dashboard-page-skeleton";
+import { StaffCounterpart } from "@/features/dashboard/staff-counterpart";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { DASHBOARD_ICONS } from "@/features/dashboard/dashboard-icons";
 import {
@@ -159,9 +160,12 @@ export function EmployeeHome() {
                     href={`/dashboard/tasks/${task.id}`}
                     className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm transition-colors hover:border-brand-cta"
                   >
+                    <span className="min-w-0 space-y-1">
                     <span className="flex items-center gap-2 font-medium text-text-primary">
                       <DASHBOARD_ICONS.tasks className="h-4 w-4 text-brand-link" aria-hidden="true" />
                       {task.lead_name ?? task.lead_mobile}
+                    </span>
+                    <StaffCounterpart label="Telecaller" name={task.raised_by_telecaller_name} code={task.raised_by_telecaller_code} />
                     </span>
                     <span className="text-xs text-text-secondary">{formatDateTime(task.due_at)}</span>
                   </Link>

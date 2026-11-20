@@ -52,6 +52,7 @@ import { isValidMobile, toE164 } from "@/lib/phone";
 
 import { TempCredentialPanel } from "./temp-credential-panel";
 import { OperationalUsersPanel } from "./operational-users-panel";
+import { LoanSpecialtySelect } from "./loan-specialty-select";
 
 type StaffRole = StaffCreateRequest["role"];
 type AccessStatus = "loading" | "ready" | "restricted" | "error";
@@ -80,6 +81,7 @@ const EMPTY_FORM = {
   email: "",
   role: "sub_admin" as StaffRole,
   business_line: "" as "" | "loans" | "real_estate" | "both",
+  loan_specialty_id: "",
 };
 
 export function UserProvisioningView() {
@@ -96,6 +98,7 @@ export function UserProvisioningView() {
   const formRef = React.useRef<HTMLFormElement>(null);
 
   const needsLine = form.role !== "admin" && form.role !== "sub_admin";
+  const canSpecialize = form.role === "telecaller" && (form.business_line === "loans" || form.business_line === "both");
   const visibleRoleOptions = access
     ? ROLE_OPTIONS
     : ROLE_OPTIONS.filter((option) => option.value !== "admin");
@@ -117,7 +120,11 @@ export function UserProvisioningView() {
   }, [refreshAccess]);
 
   function setField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      if (next.role !== "telecaller" || !["loans", "both"].includes(next.business_line)) next.loan_specialty_id = "";
+      return next;
+    });
     setFieldErrors((current) => {
       if (!current[key]) return current;
       const next = { ...current };
@@ -156,6 +163,7 @@ export function UserProvisioningView() {
       mobile: toE164(form.mobile),
       email: form.email.trim(),
       role: form.role,
+      loan_specialty_id: canSpecialize ? form.loan_specialty_id || null : null,
       business_line: needsLine
         ? (form.business_line as "loans" | "real_estate" | "both")
         : null,
@@ -333,6 +341,7 @@ export function UserProvisioningView() {
                           ...prev,
                           role: value as StaffRole,
                           business_line: "",
+                          loan_specialty_id: "",
                         }))
                       }
                     >
@@ -387,6 +396,8 @@ export function UserProvisioningView() {
                     </div>
                   )}
                 </div>
+
+                {canSpecialize && <LoanSpecialtySelect id="create-loan-specialty" value={form.loan_specialty_id} onChange={(value) => setField("loan_specialty_id", value)} disabled={submitting} />}
 
                 <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs leading-5 text-text-secondary">
                   A one-use setup link is generated after creation. If link creation needs a retry,

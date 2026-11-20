@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 
 import { employeeSignalValues, filterTasksByLeadSignals } from "./employee-task-filters";
 import { useEmployeeTasks } from "./use-employee-tasks";
+import { StaffCounterpart } from "@/features/dashboard/staff-counterpart";
 
 const STATUS_STYLE: Record<string, string> = {
   assigned: "bg-brand-cta-tint text-brand-link",
@@ -198,6 +199,7 @@ export function EmployeeTasksView() {
                             ? "Contact via secure invitation"
                             : "Contact details hidden")}
                       </p>
+                      <StaffCounterpart label="Telecaller" name={task.raised_by_telecaller_name} code={task.raised_by_telecaller_code} />
                       {task.lead_last_disposition ? (
                         <p className="mt-1 text-xs text-text-secondary">
                           Last call: {DISPOSITION_LABEL[task.lead_last_disposition] ?? task.lead_last_disposition}

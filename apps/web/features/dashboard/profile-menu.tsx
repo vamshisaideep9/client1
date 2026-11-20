@@ -19,6 +19,7 @@ import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 import { useMe } from "./me-provider";
+import { OwnRoleBadge } from "./role-badge";
 
 // Hover-open is a desktop nicety. On touch screens a tap opens the menu and a
 // tap outside closes it; emulated mouse and pointer-leave events after a tap
@@ -142,6 +143,7 @@ export function ProfileMenu() {
             </>
           )}
 
+          <div className="px-2.5 py-2"><OwnRoleBadge /></div>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => router.push("/dashboard/settings")}>
             <Settings />

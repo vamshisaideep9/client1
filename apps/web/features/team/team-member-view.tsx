@@ -28,6 +28,7 @@ import {
 import { TeamAnalyticsFilterBar, useHiddenFilters, useTeamAnalyticsRequest } from "./team-analytics-filter-bar";
 import { TeamWorkList } from "./team-work-list";
 import { useLoad } from "./use-load";
+import { RoleBadge } from "@/features/dashboard/role-badge";
 
 function MemberAnalytics({ team, memberId }: { team: StaffTeam; memberId: string }) {
   const [range, setRange] = React.useState<DateRangeValue>(() =>
@@ -90,6 +91,12 @@ export function TeamMemberView({ teamId, memberId }: { teamId: string; memberId:
             description={`${team.name} · ${teamLabel(team)} · ${member.staff_code}`}
           />
           <div className="space-y-6">
+            <RoleBadge role={team.member_role} profile={{
+              profile_uuid: member.staff_profile_uuid, role: team.member_role, code: member.staff_code,
+              business_line: member.business_line === "both" ? "both" : team.business_line,
+              teams: [{ name: team.name, business_line: team.business_line }],
+              loan_specialty_id: member.loan_specialty_id, loan_specialty_label: member.loan_specialty_label,
+            }} />
             <DashboardPanel
               title={team.member_role === "telecaller" ? "Leads" : "Field tasks"}
               description={`${personName(member)}'s ${team.member_role === "telecaller" ? "leads" : "tasks"}, most recently updated first. Open one to read and add notes, change it, or move it to a teammate.`}

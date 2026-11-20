@@ -15,6 +15,7 @@ import { apiIssuesToFieldErrors, focusFirstInvalidField } from "@/lib/form-valid
 import type { Task, TaskCreate } from "@/lib/telecaller-api";
 
 import { validateFieldTask } from "./telecaller-lead-detail-validation";
+import { StaffCounterpart } from "@/features/dashboard/staff-counterpart";
 
 const STATUS_LABEL: Record<string, string> = {
   unassigned: "Unassigned",
@@ -153,6 +154,7 @@ export function TelecallerTasksSection({
               >
                 <div>
                   <p className="text-sm text-text-primary">{task.notes || "Document collection"}</p>
+                  <StaffCounterpart label="Employee" name={task.assigned_employee_name} code={task.assigned_employee_code} fallback={task.assigned_employee_profile_uuid ? "Not available" : "Awaiting assignment"} />
                   {task.due_at ? (
                     <p className="mt-1 text-xs text-text-secondary">
                       Due: {formatDateTime(task.due_at)}

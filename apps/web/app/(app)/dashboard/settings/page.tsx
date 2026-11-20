@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { useMe } from "@/features/dashboard/me-provider";
+import { OwnRoleBadge } from "@/features/dashboard/role-badge";
 import { PushSubscriptionCard } from "@/features/push-notifications/push-subscription-card";
 import { JourneyDetailsCard } from "@/features/settings/journey-details-card";
 import { PayoutDetailsCard } from "@/features/settings/payout-details-card";
@@ -56,6 +57,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
+      <OwnRoleBadge />
       {showEmailBanner && <EmailVerifyBanner onVerified={() => setEmailJustVerified(true)} />}
 
       {status === "loading" ? (
