@@ -224,7 +224,7 @@ export function CommissionsView() {
     line: (commission) => commission.business_line,
     date: (commission) => commission.created_at,
     statusOptions: STATUS_OPTIONS,
-    statusLabel: "commission states",
+    statusLabel: "Commission status",
     initialStatus: statusFilter,
     onStatusChange: setStatusFilter,
     searchLabel: "Search commissions",
@@ -263,7 +263,7 @@ export function CommissionsView() {
               onPay={payCommission}
             />
             <Dialog open={cancelTarget !== null} onOpenChange={(open) => !open && closeCancelDialog()}>
-              <DialogContent className="max-w-lg">
+              <DialogContent preventOutsideClose className="max-w-lg">
                 {cancelTarget ? (
                   <>
                     <DialogHeader>

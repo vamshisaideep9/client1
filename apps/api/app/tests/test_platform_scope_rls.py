@@ -49,6 +49,20 @@ _DOCUMENTED_SUB_ADMIN_EXCEPTIONS = {
     ("referral_bonus_config", "referral_bonus_config_insert"),
     ("referral_bonus_config", "referral_bonus_config_update"),
     ("referral_bonus_config", "referral_bonus_config_delete"),
+    # e4f6a8c0b2d5 (CS-019): a platform-Admin disjunct plus a separate branch
+    # that lets a Sub Admin read only the teams they manage (by their own
+    # staff profile), never through the platform bypass.
+    ("staff_teams", "staff_teams_select"),
+    ("staff_team_members", "staff_team_members_select"),
+    # a8d0f2b4c6e9 (CS-027): a platform-Admin disjunct beside a Sub Admin read
+    # of every contest (authoring surface) and of the result rows of the teams
+    # the Sub Admin manages, never through the platform bypass.
+    ("contests", "contests_select"),
+    ("contest_results", "contest_results_select"),
+    # a6c8e0f2b4d6 (CS-028): a platform-Admin disjunct beside a Sub Admin's
+    # approved/own-workflow reads; eligible loans-line staff and Agents read
+    # approved rates without the platform bypass.
+    ("product_commission_rates", "product_commission_rates_select"),
 }
 
 # Every current policy carrying a platform_scope branch. The original
@@ -65,6 +79,10 @@ _ALL_PLATFORM_SCOPE_POLICIES = {
     ("notifications", "notifications_rls"),
     ("support_tickets", "support_tickets_rls"),
     ("mobile_change_requests", "mobile_change_requests_select"),
+    # CS-025 (d4f6a8c0e2b4): owner-or-platform-Admin requests; history is
+    # platform-Admin only. Both require role 'admin' with the scope.
+    ("contact_change_requests", "contact_change_requests_select"),
+    ("contact_change_history", "contact_change_history_select"),
     ("enquiries", "enquiries_rls"),
     ("site_visits", "site_visits_rls"),
     ("lead_activities", "lead_activities_rls"),
@@ -137,6 +155,15 @@ _ALL_PLATFORM_SCOPE_POLICIES = {
     ("referral_bonus_config", "referral_bonus_config_insert"),
     ("referral_bonus_config", "referral_bonus_config_update"),
     ("referral_bonus_config", "referral_bonus_config_delete"),
+    ("staff_teams", "staff_teams_select"),
+    ("staff_team_members", "staff_team_members_select"),
+    # b2d4f6a8c0e1 (CS-020): platform Admin, reaching manager, assigned member.
+    ("team_work_notes", "team_work_notes_select"),
+    # a8d0f2b4c6e9 (CS-027): both require role 'admin' with the scope.
+    ("contests", "contests_select"),
+    ("contest_results", "contest_results_select"),
+    # e4a6c8d0f2b3 (CS-028): requires role 'admin' with the scope.
+    ("product_commission_rates", "product_commission_rates_select"),
 }
 
 

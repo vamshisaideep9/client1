@@ -168,6 +168,7 @@ export function FinancialProductWorkspace({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        preventOutsideClose
         ref={workspaceRef}
         className={WORKSPACE_DIALOG_CLASS}
         showCloseButton={false}

@@ -95,7 +95,7 @@ export function CommissionEntryDialog({
 
   return (
     <Dialog open={deal != null} onOpenChange={(o) => (o ? onOpenChange(true) : resetAndClose())}>
-      <DialogContent className="max-w-lg">
+      <DialogContent preventOutsideClose className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Enter commission</DialogTitle>
           <DialogDescription>

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   deleteAccount,
   getMe,
+  isRefreshRejected,
   login,
   registerInitiate,
   resendOtp,
@@ -29,6 +30,19 @@ function tokenWith(claims: Record<string, unknown>): string {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe("isRefreshRejected()", () => {
+  it("treats only an explicit refusal as the end of the session", () => {
+    expect(isRefreshRejected(401)).toBe(true);
+    expect(isRefreshRejected(403)).toBe(true);
+  });
+
+  it("keeps the session through a network failure, rate limit or server fault", () => {
+    for (const status of [0, 408, 429, 500, 502, 503, 504]) {
+      expect(isRefreshRejected(status)).toBe(false);
+    }
+  });
 });
 
 describe("login()", () => {
@@ -217,6 +231,8 @@ describe("profile mapping", () => {
         income_period: "annual",
         occupation: "Business owner",
         location: "Kondapur, Hyderabad",
+        pincode: "500032",
+        place: { pincode: "500032", area: "Gachibowli", district: "Hyderabad", state: "Telangana" },
         profiles: [],
       }),
     );
@@ -228,6 +244,8 @@ describe("profile mapping", () => {
       expect(res.data.gender).toBe("prefer_not_to_say");
       expect(res.data.incomeAmountMinor).toBe(12_500_000);
       expect(res.data.location).toBe("Kondapur, Hyderabad");
+      expect(res.data.pincode).toBe("500032");
+      expect(res.data.place?.area).toBe("Gachibowli");
     }
   });
 
@@ -252,7 +270,6 @@ describe("profile mapping", () => {
     await updateProfile({
       firstName: "Test",
       lastName: "User",
-      email: null,
       gender: null,
       genderSelfDescription: null,
       incomeSource: null,
@@ -260,18 +277,22 @@ describe("profile mapping", () => {
       incomePeriod: null,
       occupation: null,
       location: null,
+      pincode: null,
     });
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(JSON.parse(init.body as string)).toMatchObject({
-      email: null,
+    const body = JSON.parse(init.body as string);
+    expect(body).toMatchObject({
       gender: null,
       income_source: null,
       income_amount_minor: null,
       income_period: null,
       occupation: null,
       location: null,
+      pincode: null,
     });
+    // CS-025: email is never sent with a profile edit (it cannot be cleared).
+    expect(body).not.toHaveProperty("email");
   });
 });
 

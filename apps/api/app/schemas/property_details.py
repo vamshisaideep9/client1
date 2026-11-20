@@ -15,7 +15,7 @@ import unicodedata
 from datetime import date
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 _LINK_RE = re.compile(
     r"(?i)(?:[a-z][a-z0-9+.-]*://|www\.|"
@@ -23,6 +23,10 @@ _LINK_RE = re.compile(
 )
 _EMAIL_RE = re.compile(r"(?i)\b[^\s@]+@[^\s@]+\.[^\s@]+\b")
 _HTML_OR_MARKDOWN_LINK_RE = re.compile(r"<[^>]+>|\[[^\]]+\]\([^)]+\)")
+# Public text may mention short figures (unit counts, areas, years) but never a
+# phone or account number. A run of seven or more digits, even when broken up
+# by spaces, dashes, dots, brackets or a leading plus, is treated as one.
+_LONG_NUMBER_RE = re.compile(r"\d(?:[\s().+-]*\d){6,}")
 
 
 def _normalize_public_text(
@@ -33,8 +37,11 @@ def _normalize_public_text(
     min_words: int = 0,
 ) -> str:
     value = value.replace("\r\n", "\n").replace("\r", "\n").strip()
-    if any(character.isdigit() for character in value):
-        raise ValueError(f"{field_name} cannot contain numbers.")
+    if _LONG_NUMBER_RE.search(value):
+        raise ValueError(
+            f"{field_name} can include numbers of up to 6 digits, but not phone numbers "
+            "or longer numbers."
+        )
     if _LINK_RE.search(value) or _EMAIL_RE.search(value) or _HTML_OR_MARKDOWN_LINK_RE.search(value):
         raise ValueError(f"{field_name} cannot contain links or contact details.")
     if any(
@@ -63,12 +70,8 @@ def _amenities_description(value: str) -> str:
 
 
 def _project_amenities_description(value: str) -> str:
-    return _normalize_public_text(
-        value,
-        min_words=150,
-        max_words=500,
-        field_name="Amenities description",
-    )
+    # Optional for every listing type; when given, projects allow a longer text.
+    return _normalize_public_text(value, max_words=500, field_name="Amenities description")
 
 
 def _other_information(value: str) -> str:
@@ -133,7 +136,9 @@ class YesNoUnknown(enum.StrEnum):
 class ResidentialConfiguration(enum.StrEnum):
     ONE_BHK = "1_bhk"
     TWO_BHK = "2_bhk"
+    TWO_AND_HALF_BHK = "2_5_bhk"
     THREE_BHK = "3_bhk"
+    THREE_AND_HALF_BHK = "3_5_bhk"
     FOUR_BHK = "4_bhk"
     FIVE_PLUS_BHK = "5_plus_bhk"
     STUDIO = "studio"
@@ -194,17 +199,50 @@ class ProjectResidenceDetails(_DetailsBase):
     project_area_acres: float = Field(gt=0, le=100000)
     number_of_towers: int = Field(ge=1, le=1000)
     total_units: int = Field(ge=1, le=100000)
-    configurations: list[ResidentialConfiguration] = Field(min_length=1, max_length=6)
+    configurations: list[ResidentialConfiguration] = Field(min_length=1, max_length=8)
+    # Unit or flat area as a From-To range. The single stored value is "From";
+    # "To" is optional so existing listings stay valid.
     unit_or_plot_area_sqft: int = Field(gt=0, le=10_000_000)
+    unit_or_plot_area_max_sqft: int | None = Field(default=None, gt=0, le=10_000_000)
+    # Legacy single undivided share in sq ft, kept so stored listings still
+    # validate. New listings use the From-To range with a unit below.
     uds_sqft: int | None = Field(default=None, gt=0, le=10_000_000)
+    uds_area_from: int | None = Field(default=None, gt=0, le=10_000_000)
+    uds_area_to: int | None = Field(default=None, gt=0, le=10_000_000)
+    uds_area_unit: SiteAreaUnit | None = None
     price_per_sqft_paise: int = Field(gt=0)
     sale_type: SaleType | None = None
     expected_handover_date: date | None = None
     plot_facing: Facing = Facing.NOT_APPLICABLE
     entrance_facing: Facing = Facing.NOT_APPLICABLE
     local_approval: LocalApproval | None = None
-    amenities_description: ProjectAmenitiesDescription
+    amenities_description: ProjectAmenitiesDescription | None = None
     about_project: ProjectAbout
+
+    @model_validator(mode="after")
+    def _ranges_are_ordered(self) -> ProjectResidenceDetails:
+        if (
+            self.unit_or_plot_area_max_sqft is not None
+            and self.unit_or_plot_area_max_sqft < self.unit_or_plot_area_sqft
+        ):
+            raise ValueError("The unit or flat area To value must not be less than From.")
+        if self.uds_sqft is not None and (
+            self.uds_area_from is not None or self.uds_area_to is not None
+        ):
+            raise ValueError("Send the undivided share as a range or as a single value, not both.")
+        if self.uds_area_to is not None and self.uds_area_from is None:
+            raise ValueError("Enter the undivided share From value before To.")
+        if self.uds_area_from is not None and self.uds_area_unit is None:
+            raise ValueError("Choose square feet or square yards for the undivided share.")
+        if self.uds_area_from is None and self.uds_area_unit is not None:
+            raise ValueError("Enter the undivided share before choosing its unit.")
+        if (
+            self.uds_area_from is not None
+            and self.uds_area_to is not None
+            and self.uds_area_to < self.uds_area_from
+        ):
+            raise ValueError("The undivided share To value must not be less than From.")
+        return self
 
 
 class IndividualPropertyDetails(_DetailsBase):
