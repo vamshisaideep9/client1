@@ -58,6 +58,7 @@ from app.schemas.admin import (
     StaffCreateRequest,
     StaffCreateResponse,
     StaffFeatureUpdateRequest,
+    StaffSpecialtyUpdateRequest,
 )
 from app.schemas.agent_invites import (
     AgentInviteCandidateListResponse,
@@ -66,6 +67,7 @@ from app.schemas.agent_invites import (
 )
 from app.schemas.audit_log import AuditLogListResponse, AuditLogRead
 from app.schemas.auth import MessageResponse
+from app.schemas.contact_change import ContactHistoryResponse
 from app.schemas.employee import TaskFeedbackMediaRead
 from app.schemas.financial_catalog import (
     AdminProviderOfferListResponse,
@@ -76,7 +78,7 @@ from app.schemas.financial_catalog import (
     ProviderOfferCreate,
     ProviderOfferUpdate,
 )
-from app.schemas.lead_details import AdminLeadDetailsPatch, LeadDetailsRead
+from app.schemas.lead_details import AdminLeadDetailsPatch, AdminLeadDetailsRead, LeadDetailsRead
 from app.schemas.loan_config import (
     AdminBankListResponse,
     AdminBankRead,
@@ -91,6 +93,7 @@ from app.schemas.loan_config import (
     LoanTypeUpdate,
 )
 from app.schemas.loans import LoanApplicationProgressUpdate
+from app.schemas.profile_metadata import RoleProfileRead
 from app.schemas.property_deals import PropertyDealProgressUpdate
 from app.schemas.staff_invites import StaffInviteLinkRead
 from app.schemas.support_tickets import (
@@ -98,7 +101,7 @@ from app.schemas.support_tickets import (
     SupportTicketAdminRead,
     SupportTicketAdvanceRequest,
 )
-from app.services import agent_invites, staff_invites, storage
+from app.services import agent_invites, contact_change, staff_invites, storage
 from app.services.account_deletion import (
     AccountAlreadyDeleted,
     AccountNotFound,
@@ -112,6 +115,7 @@ from app.services.admin import (
     AdminUserUpdateForbidden,
     AgentApplicationAlreadyReviewed,
     AgentApplicationEmailConflict,
+    InvalidLoanSpecialty,
     InvalidStaffFeatureTarget,
     PrimaryAdminRequired,
     StaffAlreadyExists,
@@ -127,6 +131,7 @@ from app.services.admin import (
     reject_agent_application,
     set_operational_user_status,
     set_staff_feature,
+    set_staff_specialty,
 )
 from app.services.admin_home import get_admin_home
 from app.services.audit_log import AuditEntryView
@@ -164,6 +169,7 @@ from app.services.lead_details import (
 from app.services.leads import list_assigned_leads, list_unassigned_leads
 from app.services.loan_applications import (
     BankNotAvailableForLoanType,
+    SanctionTermsRequired,
     StatusReasonRequired,
     TerminalApplication,
     TermsNotAllowedAtStage,
@@ -196,6 +202,7 @@ from app.services.loan_config import (
     update_bank,
     update_loan_type,
 )
+from app.services.profile_metadata import role_profiles_for_users
 from app.services.property_deals import InvalidStatusTransition as InvalidDealStatusTransition
 from app.services.property_deals import (
     StatusReasonRequired as DealStatusReasonRequired,
@@ -227,6 +234,7 @@ from app.services.support_tickets import (
 )
 from app.services.task_feedback import list_feedback_media
 from app.services.tasks import list_active_employees, list_tasks_for_admin
+from app.services.telecaller import request_summaries_for_leads
 
 router = APIRouter()
 
@@ -298,6 +306,11 @@ async def create_staff_user(
             actor_role=current_user.role,
             actor_staff_profile_uuid=current_user.staff_profile_uuid,
         )
+    except InvalidLoanSpecialty as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Choose an active loan product for this Telecaller.",
+        ) from exc
     except StaffAlreadyExists as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -320,6 +333,7 @@ async def create_staff_user(
         role=payload.role,
         business_line=profile.business_line,
         staff_code=profile.staff_code,
+        loan_specialty_id=profile.loan_specialty_id,
         auth_user_uuid=profile.auth_user_uuid,
         temp_password=temp_password,
     )
@@ -384,6 +398,27 @@ async def update_staff_feature(
         additional_admin_limit=ADDITIONAL_ADMIN_LIMIT,
         additional_admin_count=additional_count,
     )
+
+
+@router.get("/users/{auth_user_uuid}/contact-history", response_model=ContactHistoryResponse)
+async def contact_history(
+    auth_user_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+) -> ContactHistoryResponse:
+    """CS-025 permanent phone/email history, old values included.
+
+    Platform Admin only (the dependency and the table's RLS policy both say
+    so; the account holder cannot read it). Every read is audited.
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    entries = await contact_change.history_for_admin(
+        db,
+        target_uuid=auth_user_uuid,
+        actor=contact_change.Actor(user_uuid=current_user.id, role=current_user.role),
+    )
+    return ContactHistoryResponse(entries=entries)
 
 
 @router.post("/users/{auth_user_uuid}/delete", response_model=MessageResponse)
@@ -476,9 +511,11 @@ async def list_users(
         created_to=created_to,
         never_logged_in=never_logged_in,
     )
+    role_profiles = await role_profiles_for_users(db, [user.id for user, _, _ in users])
     return AdminUserListResponse(
         users=[
             AdminUserRead(
+                role_profiles=role_profiles.get(user.id, []),
                 id=user.id,
                 first_name=user.first_name,
                 last_name=user.last_name,
@@ -637,6 +674,7 @@ async def update_user_status(
     roles = await operational_roles_for(db, user.id)
     client_profiles = await operational_client_profiles_for(db, user.id)
     return AdminUserRead(
+        role_profiles=(await role_profiles_for_users(db, [user.id])).get(user.id, []),
         id=user.id,
         first_name=user.first_name,
         last_name=user.last_name,
@@ -651,6 +689,32 @@ async def update_user_status(
         created_at=user.created_at,
         last_login_at=user.last_login_at,
     )
+
+
+@router.patch("/users/{auth_user_uuid}/loan-specialty", response_model=list[RoleProfileRead])
+async def update_staff_loan_specialty(
+    auth_user_uuid: UUID,
+    payload: StaffSpecialtyUpdateRequest,
+    response: Response,
+    current_user: CurrentUser = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+) -> list[RoleProfileRead]:
+    response.headers["Cache-Control"] = "private, no-store"
+    try:
+        await set_staff_specialty(
+            db,
+            user_id=auth_user_uuid,
+            product_id=payload.loan_specialty_id,
+            actor_id=current_user.id,
+        )
+    except AdminUserNotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Active Telecaller not found.") from exc
+    except InvalidLoanSpecialty as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Choose an active loan product for a Loans Telecaller.",
+        ) from exc
+    return (await role_profiles_for_users(db, [auth_user_uuid])).get(auth_user_uuid, [])
 
 
 @router.get("/agents", response_model=AgentApplicationListResponse)
@@ -835,25 +899,30 @@ async def list_assigned(
             assigned_telecaller_staff_code=staff.staff_code if staff else None,
             created_at=lead.created_at,
             updated_at=lead.updated_at,
+            resubmit_count=lead.resubmit_count,
+            last_resubmitted_at=lead.last_resubmitted_at,
         )
         for lead, staff, user in rows
     ]
 
 
-@router.get("/leads/{lead_id}/details", response_model=LeadDetailsRead)
+@router.get("/leads/{lead_id}/details", response_model=AdminLeadDetailsRead)
 async def get_lead_details(
     lead_id: UUID,
     response: Response,
     current_user: CurrentUser = Depends(require_platform_admin),
     db: AsyncSession = Depends(get_db),
-) -> LeadDetailsRead:
+) -> AdminLeadDetailsRead:
     response.headers["Cache-Control"] = "private, no-store"
     actor = DetailActor(role="admin", subject_uuid=current_user.id, auth_user_uuid=current_user.id)
     try:
         lead = await get_lead_details_for_actor(db, lead_id, actor)
     except LeadDetailsNotFound as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found.") from exc
-    return to_lead_details_read(lead, actor)
+    # What the client applied for and when (loan applications, enquiries,
+    # site visits, deals), newest first.
+    requests = (await request_summaries_for_leads(db, [lead.id]))[lead.id]
+    return AdminLeadDetailsRead(**to_lead_details_read(lead, actor).model_dump(), requests=requests)
 
 
 @router.patch("/leads/{lead_id}/details", response_model=LeadDetailsRead)
@@ -1006,6 +1075,11 @@ async def update_loan_application_progress(
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Deal terms can only be set once the application has been submitted to a bank.",
+        ) from exc
+    except SanctionTermsRequired as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Add the approved amount and bank before moving the loan to Approved or a later stage.",
         ) from exc
     except UnknownBank as exc:
         raise HTTPException(

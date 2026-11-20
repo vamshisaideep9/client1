@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from urllib.parse import urlsplit
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.urls import is_safe_https_url
 from app.models.audit_log import AuditAction
 from app.models.notification import NotificationType
 from app.models.offer import Offer, OfferStatus
@@ -52,18 +52,6 @@ class OfferInvalidConfiguration(Exception):
     """A campaign is missing required approval or redemption evidence."""
 
 
-def _is_safe_https_url(value: str | None) -> bool:
-    if not value:
-        return False
-    parsed = urlsplit(value)
-    return bool(
-        parsed.scheme == "https"
-        and parsed.hostname
-        and parsed.username is None
-        and parsed.password is None
-    )
-
-
 def validate_offer_for_review(offer: Offer) -> None:
     """Fail closed before submission, approval, scheduling, or activation."""
     try:
@@ -79,11 +67,11 @@ def validate_offer_for_review(offer: Offer) -> None:
             offer.code and offer.code.strip(),
             offer.terms_summary and offer.terms_summary.strip(),
             offer.image_key and asset_image_url(offer.image_key),
-            _is_safe_https_url(offer.redemption_url),
+            is_safe_https_url(offer.redemption_url),
         )
     ):
         raise OfferInvalidConfiguration
-    if offer.terms_url and not _is_safe_https_url(offer.terms_url):
+    if offer.terms_url and not is_safe_https_url(offer.terms_url):
         raise OfferInvalidConfiguration
     if offer.starts_at and offer.ends_at and offer.ends_at <= offer.starts_at:
         raise OfferInvalidConfiguration

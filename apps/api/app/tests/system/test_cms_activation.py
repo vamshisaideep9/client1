@@ -20,7 +20,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import delete, select, text
 
-from app.jobs.cms_activation import cms_activation
+from app.jobs.cms_activation import activate_banner_if_due, cms_activation
 from app.models.audit_log import AuditAction, AuditLog
 from app.models.banner import Banner, BannerPlacement, BannerStatus, BannerType
 from app.models.offer import Offer, OfferStatus
@@ -580,6 +580,62 @@ async def test_job_is_idempotent(client: AsyncClient) -> None:
     finally:
         await _delete_banners(banner_id)
         await _delete_offers(offer_id)
+
+
+@pytest.mark.asyncio
+async def test_activate_banner_if_due_applies_the_job_rules_to_one_banner(
+    client: AsyncClient,
+) -> None:
+    """Admin approval reuses the job's rules for one banner id (2026-11-16):
+    only that banner moves, and it moves only when due and its slot is free."""
+    import app.db.session as _session_mod
+
+    author = await _author_uuid(client)
+    # A slot no other test or seed uses, so the outcome never depends on history.
+    slot = f"single-banner-{uuid.uuid4().hex[:12]}"
+    due_id = await _seed_banner(
+        author=author, status=BannerStatus.APPROVED, starts_at=_PAST, category_key=slot
+    )
+    blocked_id = await _seed_banner(
+        author=author, status=BannerStatus.APPROVED, starts_at=_PAST, category_key=slot
+    )
+    bystander_id = await _seed_banner(author=author, status=BannerStatus.APPROVED, starts_at=_PAST)
+    future_id = await _seed_banner(author=author, status=BannerStatus.APPROVED, starts_at=_FUTURE)
+    pending_id = await _seed_banner(author=author, status=BannerStatus.PENDING_APPROVAL)
+    try:
+        async with _session_mod.AsyncSessionLocal() as session:
+            assert await activate_banner_if_due(session, uuid.UUID(due_id)) is True
+            await session.flush()
+            # Same slot, now occupied by due_id, and not its replacement.
+            assert await activate_banner_if_due(session, uuid.UUID(blocked_id)) is False
+            assert await activate_banner_if_due(session, uuid.UUID(future_id)) is False
+            assert await activate_banner_if_due(session, uuid.UUID(pending_id)) is False
+            assert await activate_banner_if_due(session, uuid.uuid4()) is False
+            await session.commit()
+        assert await _banner_status(due_id) == "live"
+        assert await _banner_status(blocked_id) == "approved"
+        assert await _banner_status(bystander_id) == "approved"
+        assert await _banner_status(future_id) == "approved"
+        assert await _banner_status(pending_id) == "pending_approval"
+
+        # An explicit clock replaces the database time for the start check.
+        async with _session_mod.AsyncSessionLocal() as session:
+            later = _FUTURE + timedelta(hours=1)
+            assert await activate_banner_if_due(session, uuid.UUID(future_id), later) is True
+            await session.commit()
+        assert await _banner_status(future_id) == "live"
+
+        async with _session_mod.AsyncSessionLocal() as db:
+            activated = await db.scalar(
+                select(AuditLog).where(
+                    AuditLog.entity_uuid == uuid.UUID(due_id),
+                    AuditLog.action == AuditAction.BANNER_ACTIVATED,
+                )
+            )
+        assert activated is not None
+        assert activated.actor_role == "system"
+    finally:
+        await _delete_banners(due_id, blocked_id, bystander_id, future_id, pending_id)
 
 
 @pytest.mark.asyncio

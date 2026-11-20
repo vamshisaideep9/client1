@@ -211,7 +211,7 @@ export function LeadDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent preventOutsideClose className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-heading">{title ?? line.title}</DialogTitle>
           <DialogDescription>

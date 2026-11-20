@@ -100,3 +100,17 @@ class Commission(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+
+
+class CommissionPayoutItem(Base):
+    """Original membership of a payout, retained when a live claim is released."""
+
+    __tablename__ = "commission_payout_items"
+
+    payout_uuid: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("payouts.id", ondelete="CASCADE"), primary_key=True
+    )
+    commission_uuid: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("commissions.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    amount_paise: Mapped[int] = mapped_column(BigInteger, nullable=False)

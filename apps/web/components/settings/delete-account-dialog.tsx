@@ -74,7 +74,7 @@ export function DeleteAccountDialog() {
       <DialogTrigger asChild>
         <Button variant="destructive">Delete account</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent preventOutsideClose className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Delete your account?</DialogTitle>
           <DialogDescription>

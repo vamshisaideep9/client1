@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  ChartNoAxesCombined,
   BadgeCheck,
   Building2,
   Calculator,
@@ -43,6 +44,7 @@ export const CALCULATOR_ICONS: Record<CalculatorSlug, LucideIcon> = {
   "credit-card-emi": WalletCards,
   "term-insurance": Umbrella,
   "health-insurance": HeartPulse,
+  "compound-interest": ChartNoAxesCombined,
 };
 
 export function calculatorIcon(slug: CalculatorSlug): LucideIcon {

@@ -219,7 +219,7 @@ export function SupportTicketsView() {
         searchPlaceholder="Subject, body, or requester"
         statusOptions={STATUS_OPTIONS}
         kindOptions={CATEGORY_OPTIONS}
-        kindLabel="Categories"
+        kindLabel="Category"
         showLine={false}
         dateFromLabel="Raised from"
         dateToLabel="Raised to"
@@ -264,7 +264,7 @@ export function SupportTicketsView() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && setActiveId(null)}>
-        <DialogContent className={REVIEW_WORKSPACE_CLASS}
+        <DialogContent preventOutsideClose className={REVIEW_WORKSPACE_CLASS}
           onCloseAutoFocus={(event) => {
             if (triggerRef.current?.isConnected) {
               event.preventDefault();

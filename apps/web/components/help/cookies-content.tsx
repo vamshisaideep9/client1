@@ -18,7 +18,7 @@ export function CookiesContent({ dashboard = false }: { dashboard?: boolean }) {
             Privacy at a glance
           </p>
           <h1 className="mt-3 font-heading text-3xl font-semibold leading-tight tracking-tight text-brand-heading sm:text-5xl">
-            Cookie Notice
+            Cookie Policy
           </h1>
           <p className="mt-6 text-lg leading-8 text-[var(--nav-text)]">
             {SITE_NAME} currently uses only the essential cookies and browser

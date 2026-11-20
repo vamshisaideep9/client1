@@ -14,9 +14,12 @@ import {
   MetricCard,
   MetricGrid,
 } from "@/features/dashboard/dashboard-ui";
+import { ContestHomeCard } from "@/features/contests/contest-home-card";
 import { FetchError } from "@/features/dashboard/fetch-error";
+import { useMe } from "@/features/dashboard/me-provider";
 import { formatPaise } from "@/lib/format";
 
+import { commissionPaidLabel } from "./agent-earnings-filters";
 import { useAgentEarnings } from "./use-agent-earnings";
 import { useAgentHome } from "./use-agent-home";
 
@@ -51,6 +54,7 @@ function formatDate(iso: string | null | undefined): string {
 export function AgentHome() {
   const { home, status, error, errorStatus, retry } = useAgentHome();
   const { earnings, status: earningsStatus, retry: retryEarnings } = useAgentEarnings();
+  const { me } = useMe();
 
   if (status === "loading") {
     return <DashboardPageSkeleton overview />;
@@ -65,12 +69,15 @@ export function AgentHome() {
   }
 
   const totalLeads = Object.values(home.counts_by_status).reduce((sum, count) => sum + count, 0);
-  const paidAmount = earnings ? formatPaise(earnings.totals.paid_amount_paise) : "-";
+  // The card covers the previous calendar month (IST) and names it, e.g.
+  // "Commission paid · Oct 2026" (CS-022).
+  const lastMonthPaid = earnings ? formatPaise(earnings.totals.last_month_paid_amount_paise) : "-";
+  const paidLabel = earnings ? commissionPaidLabel(earnings.totals) : "Commission paid";
 
   return (
     <DashboardPage>
       <DashboardHeader
-        title="Agent workspace"
+        title={me?.firstName ? `Hi ${me.firstName}` : "Hi there"}
         description="Monitor introduced leads, registration standing, and commission progress."
         actions={
           <Button asChild className="bg-brand-cta text-white hover:bg-brand-cta/90">
@@ -86,7 +93,7 @@ export function AgentHome() {
         <MetricCard label="Introduced leads" value={totalLeads} icon={DASHBOARD_ICONS.leads} href="/dashboard/leads" />
         <MetricCard label="Working" value={home.counts_by_status.working ?? 0} icon={DASHBOARD_ICONS.leads} href="/dashboard/leads" />
         <MetricCard label="Converted" value={home.counts_by_status.converted ?? 0} icon={DASHBOARD_ICONS.leads} href="/dashboard/leads" />
-        <MetricCard label="Commission paid" value={paidAmount} icon={DASHBOARD_ICONS.earnings} href="/dashboard/earnings" />
+        <MetricCard label={paidLabel} value={lastMonthPaid} icon={DASHBOARD_ICONS.earnings} href="/dashboard/earnings" />
       </MetricGrid>
 
       <div className="grid gap-4 xl:grid-cols-3">
@@ -159,6 +166,12 @@ export function AgentHome() {
           ) : earnings && earnings.rows.length > 0 ? (
             <dl className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
+                <dt className="text-text-secondary">Total</dt>
+                <dd className="font-medium text-text-primary">
+                  {formatPaise(earnings.totals.total_amount_paise)}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between">
                 <dt className="text-text-secondary">Pending</dt>
                 <dd className="font-medium text-text-primary">
                   {formatPaise(earnings.totals.pending_amount_paise)}
@@ -176,6 +189,7 @@ export function AgentHome() {
           )}
         </DashboardPanel>
       </div>
+      <ContestHomeCard />
     </DashboardPage>
   );
 }

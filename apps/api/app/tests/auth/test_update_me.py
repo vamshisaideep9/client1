@@ -1,19 +1,17 @@
 """PATCH /api/v1/auth/me — client edits their own profile.
 
-Covers success (name + GET reflects it), auth failure, validation, the email
-change resetting verification, and the email-collision path.
+Covers success (name + GET reflects it), auth failure, validation, and the
+CS-025 rule that email is never edited, changed or cleared here.
 
 Requires: running Postgres + Redis (docker compose up -d).
 """
 
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 from httpx import AsyncClient
 
-from conftest import full_registration, unique_email
+from conftest import add_verified_email, full_registration, unique_email
 
 
 @pytest.mark.asyncio
@@ -53,56 +51,67 @@ async def test_blank_name_is_422(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_email_change_updates_and_stays_unverified(client: AsyncClient) -> None:
+async def test_email_cannot_be_changed_through_profile_edit(client: AsyncClient) -> None:
+    """CS-025: an address is added with a code and changed through the
+    contact-change flow; PATCH /auth/me refuses any different address."""
     token, _ = await full_registration(client, lines=["loans"])
     headers = {"Authorization": f"Bearer {token}"}
-    new_email = unique_email()
 
     resp = await client.patch(
         "/api/v1/auth/me",
         headers=headers,
-        json={"first_name": "Aarav", "last_name": "Sharma", "email": new_email},
+        json={"first_name": "Aarav", "last_name": "Sharma", "email": unique_email()},
     )
-    assert resp.status_code == 200, resp.text
-    body = resp.json()
-    assert body["email"] == new_email
-    assert body["email_verified"] is False
+    assert resp.status_code == 422, resp.text
+    assert "Change email" in resp.json()["detail"]
+    me = await client.get("/api/v1/auth/me", headers=headers)
+    assert me.json()["email"] is None
+    assert me.json()["first_name"] != "Aarav"
 
 
 @pytest.mark.asyncio
-async def test_email_collision_is_400(client: AsyncClient) -> None:
-    taken_email = unique_email()
-    await full_registration(client, lines=["loans"], email=taken_email)
+async def test_verified_email_cannot_be_changed_or_cleared_through_profile_edit(
+    client: AsyncClient,
+) -> None:
+    token, _ = await full_registration(client, lines=["loans"])
+    headers = {"Authorization": f"Bearer {token}"}
+    email = await add_verified_email(client, token)
 
-    other_token, _ = await full_registration(client, lines=["loans"])
+    changed = await client.patch(
+        "/api/v1/auth/me",
+        headers=headers,
+        json={"first_name": "Aarav", "last_name": "Sharma", "email": unique_email()},
+    )
+    assert changed.status_code == 422
+    cleared = await client.patch(
+        "/api/v1/auth/me",
+        headers=headers,
+        json={"first_name": "Aarav", "last_name": "Sharma", "email": None},
+    )
+    assert cleared.status_code == 422
+    assert "removed" in cleared.json()["detail"]
+
+    me = await client.get("/api/v1/auth/me", headers=headers)
+    assert me.json()["email"] == email
+    assert me.json()["email_verified"] is True
+
+
+@pytest.mark.asyncio
+async def test_echoing_the_email_on_file_is_a_no_op(client: AsyncClient) -> None:
+    """Older clients send the address back unchanged with every profile save."""
+    token, _ = await full_registration(client, lines=["loans"])
+    headers = {"Authorization": f"Bearer {token}"}
+    email = await add_verified_email(client, token)
+
     resp = await client.patch(
         "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {other_token}"},
-        json={"first_name": "Bob", "last_name": "Kumar", "email": taken_email},
+        headers=headers,
+        json={"first_name": "Aarav", "last_name": "Sharma", "email": email.upper()},
     )
-    assert resp.status_code == 400
-
-
-@pytest.mark.asyncio
-async def test_concurrent_email_updates_allow_exactly_one_owner(client: AsyncClient) -> None:
-    first_token, _ = await full_registration(client, lines=["loans"])
-    second_token, _ = await full_registration(client, lines=["loans"])
-    shared_email = unique_email()
-
-    results = await asyncio.gather(
-        client.patch(
-            "/api/v1/auth/me",
-            headers={"Authorization": f"Bearer {first_token}"},
-            json={"first_name": "First", "last_name": "Owner", "email": shared_email},
-        ),
-        client.patch(
-            "/api/v1/auth/me",
-            headers={"Authorization": f"Bearer {second_token}"},
-            json={"first_name": "Second", "last_name": "Owner", "email": shared_email},
-        ),
-    )
-
-    assert sorted(response.status_code for response in results) == [200, 400]
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["email"] == email
+    assert resp.json()["email_verified"] is True
+    assert resp.json()["first_name"] == "Aarav"
 
 
 @pytest.mark.asyncio
@@ -155,30 +164,6 @@ async def test_optional_profile_fields_can_be_saved_and_cleared(client: AsyncCli
 
 
 @pytest.mark.asyncio
-async def test_email_can_be_added_then_cleared(client: AsyncClient) -> None:
-    token, _ = await full_registration(client)
-    headers = {"Authorization": f"Bearer {token}"}
-    email = unique_email()
-
-    added = await client.patch(
-        "/api/v1/auth/me",
-        headers=headers,
-        json={"first_name": "Aarav", "last_name": "Sharma", "email": email},
-    )
-    assert added.status_code == 200
-    assert added.json()["email"] == email
-
-    cleared = await client.patch(
-        "/api/v1/auth/me",
-        headers=headers,
-        json={"first_name": "Aarav", "last_name": "Sharma", "email": None},
-    )
-    assert cleared.status_code == 200
-    assert cleared.json()["email"] is None
-    assert cleared.json()["email_verified"] is False
-
-
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "profile",
     [
@@ -206,3 +191,56 @@ async def test_inconsistent_optional_profile_values_are_422(
         json={"first_name": "Aarav", "last_name": "Sharma", **profile},
     )
     assert resp.status_code == 422
+
+
+async def _role_token(mobile: str, role: str) -> dict[str, str]:
+    """A signed session for the same account under another role (claims only)."""
+    from sqlalchemy import text
+
+    import app.db.session as _session_mod
+    from app.core.security import create_access_token
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        uid = await db.scalar(text("SELECT id FROM auth_users WHERE mobile = :m"), {"m": mobile})
+    token = create_access_token(
+        {
+            "sub": str(uid),
+            "role": role,
+            "business_line": "loans",
+            "platform_scope": "true" if role == "admin" else "false",
+        }
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", ["telecaller", "employee", "sub_admin"])
+async def test_admin_managed_staff_cannot_edit_their_profile(
+    client: AsyncClient, role: str
+) -> None:
+    """CS-021: Telecaller, Employee and Sub Admin profiles are read-only."""
+    token, mobile = await full_registration(client, lines=["loans"])
+    headers = await _role_token(mobile, role)
+
+    resp = await client.patch(
+        "/api/v1/auth/me",
+        headers=headers,
+        json={"first_name": "Changed", "last_name": "Name", "email": unique_email()},
+    )
+    assert resp.status_code == 403, resp.text
+    assert "Admin" in resp.json()["detail"]
+
+    me = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.json()["first_name"] != "Changed"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", ["agent", "admin"])
+async def test_agents_and_admins_keep_editing_their_profile(client: AsyncClient, role: str) -> None:
+    _, mobile = await full_registration(client, lines=["loans"])
+    headers = await _role_token(mobile, role)
+    resp = await client.patch(
+        "/api/v1/auth/me", headers=headers, json={"first_name": "Kept", "last_name": "Editable"}
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["first_name"] == "Kept"
