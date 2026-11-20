@@ -16,8 +16,9 @@ full-suite pass is claimed. Deprecated 422 constants found earlier are corrected
 Ruff/format (645 files), one head `b7d9f1a3c5e7`, populated migration rollback/
 re-upgrade preserving legacy rotation and both contract scripts pass. Compatible
 web lint/typecheck, 1,113 units and the 118-page Node 22 build pass. Code/security
-review has no outstanding actionable finding. PR links pending; no percentage
-change. Next: separate Batch 3 web delivery; Batches 4–6 remain unstarted.
+review has no outstanding actionable finding. [Upstream #390](https://github.com/brollysolutions/client1/pull/390) and
+[mirror #91](https://github.com/vamshisaideep9/client1/pull/91) are open/mergeable
+against each repository?s main at the same head. No percentage change. Next: separate Batch 3 web delivery; Batches 4–6 remain unstarted.
 Migration rollout must quiesce assignment and update API/single scheduler together.
 Downgrade removes optional specialty/new-pool history; legacy all-pool rotation
 survives, and application rollback must support the retained audit enum action.

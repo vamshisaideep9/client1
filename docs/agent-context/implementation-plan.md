@@ -20,8 +20,9 @@ Earlier deprecated 422 constants are corrected. Ruff/format (645 files), one
 head `b7d9f1a3c5e7`, populated downgrade/upgrade preserving legacy cursor
 IDs/timestamps and both contract scripts pass. API-compatible web lint/typecheck,
 1,113 unit tests and the 118-page Node 22 production build pass. Code/security
-review found no outstanding actionable defect. PR links pending; no percentage
-change. Next priority: complete the separate Batch 3 web slice.
+review found no outstanding actionable defect. [Upstream #390](https://github.com/brollysolutions/client1/pull/390) and
+[mirror #91](https://github.com/vamshisaideep9/client1/pull/91) are open/mergeable
+against each repository?s main at the same head. No percentage change. Next priority: complete the separate Batch 3 web slice.
 
 Rollout: quiesce assignment and update API and the single scheduler together
 after migration; old workers cannot share the new cursor keys. Downgrade loses

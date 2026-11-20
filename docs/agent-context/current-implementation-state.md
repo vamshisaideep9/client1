@@ -998,7 +998,8 @@ operational design and display server-assigned codes rather than deriving IDs.
 API work on `feat/staff-specialty-routing-api` has complete segmented evidence
 for all 2,920 tests, a populated migration rollback, generated contracts and the
 compatible web gate; exact results and resolved test failures are in the living
-plan/status. Delivery links follow there. Assignment must be quiesced while the
+plan/status. Delivered for review as [upstream #390](https://github.com/brollysolutions/client1/pull/390)
+and [mirror #91](https://github.com/vamshisaideep9/client1/pull/91). Assignment must be quiesced while the
 API and single scheduler move together to the new cursor key. No payout, attendance,
 public-page or dependency scope is included in this decision.
 
