@@ -5,6 +5,7 @@ import { CheckCircle2, Loader2, Wallet, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth/session-provider";
+import { listCoveredCommissions } from "@/lib/admin-commissions-api";
 import { Button } from "@/components/ui/button";
 import { FieldError, RequiredIndicator } from "@/components/ui/field-error";
 import {
@@ -115,6 +116,8 @@ export function PayoutsView() {
   const [simulating, setSimulating] = React.useState<Payout | null>(null);
 
   const [active, setActive] = React.useState<Payout | null>(null);
+  const [covered, setCovered] = React.useState<Awaited<ReturnType<typeof listCoveredCommissions>> | null>(null);
+  const [coveredAttempt, setCoveredAttempt] = React.useState(0);
   const [rejecting, setRejecting] = React.useState(false);
   const [reason, setReason] = React.useState("");
   const [reasonError, setReasonError] = React.useState<string>();
@@ -132,6 +135,16 @@ export function PayoutsView() {
   React.useEffect(() => {
     setFilters((current) => ({ ...current, status: statusFilter || "all" }));
   }, [statusFilter]);
+
+  const commissionPayoutId = active?.type === "commission" ? active.id : null;
+  React.useEffect(() => {
+    if (!commissionPayoutId) return;
+    let current = true;
+    void listCoveredCommissions(commissionPayoutId).then((response) => {
+      if (current) setCovered(response);
+    });
+    return () => { current = false; };
+  }, [commissionPayoutId, coveredAttempt]);
 
   const filteredPayouts = React.useMemo(
     () =>
@@ -163,6 +176,7 @@ export function PayoutsView() {
 
   function openDecision(payout: Payout) {
     setActive(payout);
+    setCovered(null);
     setRejecting(false);
     setReason("");
     setReasonError(undefined);
@@ -344,6 +358,12 @@ export function PayoutsView() {
             (payout.status === "approved" ||
               payout.status === "processing" ||
               payout.status === "paid");
+          const viewCommission = canReview && payout.type === "commission" && !approvalAction;
+          const coveredAction = viewCommission ? (
+            <Button size="sm" variant="outline" onClick={() => openDecision(payout)}>
+              Covered commissions
+            </Button>
+          ) : null;
           if (approvalAction) {
             return (
               <Button size="sm" variant="outline" onClick={() => openDecision(payout)}>
@@ -353,19 +373,25 @@ export function PayoutsView() {
           }
           if (manualAction) {
             return (
-              <Button size="sm" variant="outline" onClick={() => openManualAction(payout)}>
-                Update cheque
-              </Button>
+              <div className="flex flex-wrap justify-end gap-2">
+                {coveredAction}
+                <Button size="sm" variant="outline" onClick={() => openManualAction(payout)}>
+                  Update cheque
+                </Button>
+              </div>
             );
           }
           if (canReview && (payout.simulate_events ?? []).length > 0) {
             return (
-              <Button size="sm" variant="outline" onClick={() => setSimulating(payout)}>
-                Test outcome
-              </Button>
+              <div className="flex flex-wrap justify-end gap-2">
+                {coveredAction}
+                <Button size="sm" variant="outline" onClick={() => setSimulating(payout)}>
+                  Test outcome
+                </Button>
+              </div>
             );
           }
-          return null;
+          return coveredAction;
         },
       },
     ],
@@ -482,11 +508,35 @@ export function PayoutsView() {
                   </div>
                 </dl>
 
-                <p className="rounded-lg bg-muted p-3 text-xs text-text-secondary">
+                {commissionPayoutId ? (
+                  <section aria-label="Covered commissions" className="rounded-lg border border-border p-3">
+                    <h3 className="text-sm font-semibold">Covered commissions</h3>
+                    {!covered ? (
+                      <p className="mt-2 text-sm text-text-secondary" role="status">Loading covered commissions…</p>
+                    ) : !covered.ok ? (
+                      <FetchError status={covered.status} message={covered.error} onRetry={() => { setCovered(null); setCoveredAttempt((value) => value + 1); }} />
+                    ) : covered.data.length === 0 ? (
+                      <p className="mt-2 text-sm text-text-secondary">This payout has no recorded commission items.</p>
+                    ) : (
+                      <ul className="mt-2 max-h-56 divide-y divide-border overflow-y-auto">
+                        {covered.data.map((item) => (
+                          <li key={item.id} className="flex flex-wrap justify-between gap-x-3 py-2 text-sm">
+                            <span className="min-w-0">
+                              {item.deal_type === "loan_application" ? "Loan commission" : "Property commission"}
+                              <span className="block break-all text-xs text-text-secondary">Deal {item.deal_uuid}</span>
+                            </span>
+                            <span className="font-semibold tabular-nums">{formatPaise(item.amount_paise)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                ) : null}
+                {active.status === "pending_approval" ? <p className="rounded-lg bg-muted p-3 text-xs text-text-secondary">
                   {active.viewer_is_maker
                     ? "You raised this payout. Another Admin must approve it before payment can proceed."
                     : "A payout must be approved by a different Admin than the one who raised it."}
-                </p>
+                </p> : null}
 
                 {rejecting ? (
                   <div className="space-y-1.5">
@@ -509,7 +559,9 @@ export function PayoutsView() {
               </div>
 
               <DialogFooter className="gap-2 sm:gap-2">
-                {rejecting ? (
+                {active.status !== "pending_approval" ? (
+                  <Button variant="outline" onClick={() => setActive(null)}>Close</Button>
+                ) : rejecting ? (
                   <>
                     <Button variant="ghost" onClick={() => setRejecting(false)} disabled={busy}>
                       Back
@@ -535,7 +587,7 @@ export function PayoutsView() {
                       </Button>
                     ) : null}
                     {active.viewer_can_approve ? (
-                      <Button onClick={() => void onApprove(active)} disabled={busy}>
+                      <Button onClick={() => void onApprove(active)} disabled={busy || Boolean(commissionPayoutId && !covered?.ok)}>
                         {busy ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (

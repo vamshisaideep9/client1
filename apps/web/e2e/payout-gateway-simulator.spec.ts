@@ -63,6 +63,12 @@ async function mockPayouts(page: Page) {
   await mockMobileApi(page, "admin");
   const simulated: Record<string, unknown>[] = [];
   let approved = false;
+  await page.route(`**/api/v1/admin/commissions/payouts/${PAYOUT_ID}/items`, (route) =>
+    route.fulfill({ json: [
+      { id: "commission-one", deal_type: "loan_application", deal_uuid: "deal-one", amount_paise: 1_500_000 },
+      { id: "commission-two", deal_type: "loan_application", deal_uuid: "deal-two", amount_paise: 1_000_000 },
+    ] }),
+  );
   await page.route("**/api/v1/payouts?**", (route) =>
     route.fulfill({
       json: {
@@ -110,6 +116,7 @@ for (const viewport of [
     await page.goto("/dashboard/payouts", { waitUntil: "domcontentloaded" });
 
     await page.getByRole("button", { name: "Review" }).first().click();
+    await expect(page.getByText("Deal deal-two")).toBeVisible();
     await page.getByRole("button", { name: "Approve" }).click();
 
     const dialog = page.getByRole("dialog", { name: "Razorpay test payout" });

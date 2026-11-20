@@ -22,6 +22,7 @@ import { formatDate, formatPaise } from "@/lib/format";
 import { getMoneyPayoutRequestState } from "@/lib/money-ledger";
 import { CommissionEntryDialog } from "./commission-entry-dialog";
 import { CommissionPayoutDialog } from "./commission-payout-dialog";
+import { CommissionPayoutGroups } from "./commission-payout-groups";
 import { MoneyLedgerView, type MoneyLedgerSection } from "./money-ledger-view";
 import { useAdminCommissions } from "./use-admin-commissions";
 
@@ -53,7 +54,10 @@ export function CommissionsView() {
     enterCommission,
     cancel,
     payCommission,
+    revision,
+    refreshLedger,
   } = useAdminCommissions();
+  const [showPendingPayouts, setShowPendingPayouts] = React.useState(false);
   const [activeDeal, setActiveDeal] = React.useState<EligibleDeal | null>(null);
   const [payTarget, setPayTarget] = React.useState<CommissionRead | null>(null);
   const [cancelTarget, setCancelTarget] = React.useState<CommissionRead | null>(null);
@@ -233,7 +237,7 @@ export function CommissionsView() {
     emptyTitle: "No commissions match these filters",
     emptyDescription: "Clear or adjust the filters to return to the ledger.",
     minWidth: "min-w-[980px]",
-    note: "A raised payout remains pending until a different Admin approves it.",
+    note: "Payouts can be tracked in the payout ledger after they are raised.",
   };
 
   return (
@@ -241,7 +245,13 @@ export function CommissionsView() {
       <DashboardHeader
         title="Agent commissions"
         description="Record negotiated commission, then raise its payout through the maker-checker flow."
+        actions={(
+          <Button aria-expanded={showPendingPayouts} onClick={() => setShowPendingPayouts((shown) => !shown)}>
+            {showPendingPayouts ? "Hide pending payouts" : "Pay pending commissions"}
+          </Button>
+        )}
       />
+      {showPendingPayouts ? <CommissionPayoutGroups revision={revision} onCreated={refreshLedger} /> : null}
       <MoneyLedgerView
         eligible={eligibleSection}
         ledger={ledgerSection}

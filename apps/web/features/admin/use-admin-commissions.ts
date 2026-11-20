@@ -24,6 +24,7 @@ export function useAdminCommissions() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [statusFilter, setStatusFilter] = React.useState<string>("pending");
+  const [revision, setRevision] = React.useState(0);
 
   const load = React.useCallback(async (filter: string) => {
     setLoading(true);
@@ -43,15 +44,20 @@ export function useAdminCommissions() {
     void load(statusFilter);
   }, [load, statusFilter]);
 
+  function refreshLedger() {
+    setRevision((value) => value + 1);
+    void load(statusFilter);
+  }
+
   async function enterCommission(body: CommissionCreate): Promise<ApiResponse<CommissionRead>> {
     const res = await createCommission(body);
-    if (res.ok) void load(statusFilter);
+    if (res.ok) refreshLedger();
     return res;
   }
 
   async function cancel(commissionId: string, reason: string): Promise<ApiResponse<undefined>> {
     const res = await cancelCommission(commissionId, reason);
-    if (res.ok) void load(statusFilter);
+    if (res.ok) refreshLedger();
     return res;
   }
 
@@ -60,7 +66,7 @@ export function useAdminCommissions() {
     body: CommissionPayoutRequest,
   ): Promise<ApiResponse<unknown>> {
     const res = await createCommissionPayout(commissionId, body);
-    if (res.ok) void load(statusFilter);
+    if (res.ok) refreshLedger();
     return res;
   }
 
@@ -75,5 +81,7 @@ export function useAdminCommissions() {
     enterCommission,
     cancel,
     payCommission,
+    revision,
+    refreshLedger,
   };
 }

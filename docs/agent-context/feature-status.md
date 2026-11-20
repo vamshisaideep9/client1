@@ -1,7 +1,10 @@
 # Feature implementation status
 
-**In progress — Batch 4 API: grouped commission payouts and transaction history**
-(2026-11-20), branch `feat/batch4-commission-payouts-api`.
+**In progress — Batch 4: grouped commission payouts and transaction history**
+(2026-11-20). API drafts
+([upstream #392](https://github.com/brollysolutions/client1/pull/392),
+[mirror #93](https://github.com/vamshisaideep9/client1/pull/93)).
+Web branch `feat/batch4-commission-payouts-web` is stacked on `c3d09cc3`.
 
 - One claim path handles single and grouped payouts for one Agent and line.
   Payout creation, commission claims and historical membership commit together
@@ -13,6 +16,14 @@
 - The migration backfills available live links and retains future membership
   through reversal and retry. Earlier payments whose links were already cleared
   keep the ledger details still available for those payments.
+- Admin web groups pending commissions and reviews the selection and amounts
+  before raising the payout. The payout review shows covered items. Users can
+  search and filter transaction history with server totals and open individual
+  payments. Existing Agent history continues to show the source deals.
+- Web lint, typecheck and all 1,119 unit tests passed. Six changed and neighboring
+  browser journeys passed together on synthetic routes. Additional neighboring
+  development checks timed out during low memory. The production build and
+  full local API check are still in progress.
 
 **Delivered for review - Batch 3 web: staff specialties and role identifiers**
 (2026-11-20), branch `feat/staff-specialty-badges-web`, stacked on final API
