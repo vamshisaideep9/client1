@@ -7537,6 +7537,8 @@ export interface components {
         };
         /** AgentLeadCreate */
         AgentLeadCreate: {
+            /** Email */
+            email?: string | null;
             /** Mobile */
             mobile: string;
             /** Name */

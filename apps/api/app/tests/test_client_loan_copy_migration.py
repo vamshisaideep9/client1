@@ -45,7 +45,10 @@ def test_client_copy_passes_the_admin_catalogue_validation(name: str) -> None:
 def test_single_alembic_head_includes_this_revision() -> None:
     config = Config()
     config.set_main_option("script_location", str(Path(__file__).parents[2] / "alembic"))
-    assert ScriptDirectory.from_config(config).get_heads() == [REVISION]
+    scripts = ScriptDirectory.from_config(config)
+    heads = scripts.get_heads()
+    assert len(heads) == 1
+    assert REVISION in {revision.revision for revision in scripts.walk_revisions(head=heads[0])}
 
 
 @pytest.mark.asyncio

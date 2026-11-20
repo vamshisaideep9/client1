@@ -5176,6 +5176,19 @@
       },
       "AgentLeadCreate": {
         "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "format": "email",
+                "maxLength": 254,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
           "mobile": {
             "pattern": "^\\+[1-9]\\d{6,14}$",
             "title": "Mobile",

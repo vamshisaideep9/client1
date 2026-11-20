@@ -187,6 +187,15 @@ separately and needs no further API change.
   check/format and a pure email
   normalization probe pass; API/ownership regressions and regenerated contract
   remain pending after that gate. Completion impact and next slice unchanged.
+- *Final-gate recovery (2026-11-20).* Frozen candidate `9a60ded9` completed:
+  2,865 passed / three failed in 7,637.50 seconds (exit 1). The observed
+  failures were stale strict assertions: the historical loan-copy revision
+  was asserted to remain the newest head, and public response allowlists
+  omitted already-approved video fields and developer name. The assertions
+  now require one head containing the historical revision and keep explicit
+  public-field allowlists. The reviewed email/notes follow-up is integrated;
+  both contracts are regenerated. Targeted regressions precede a new frozen
+  Linux-source full gate; none of these pending checks is claimed as passing.
 
 **In review — Batch 1: UI fixes (web)** (2026-11-19; PR
 [#387](https://github.com/brollysolutions/client1/pull/387), mirror

@@ -28,6 +28,13 @@ No requirement-percentage change.
   and a pure validation probe pass, while DB regressions and contract
   regeneration await the frozen full candidate's terminal result. No
   completion-percentage change; next remains Batch 2 web.
+- Full-gate recovery (2026-11-20): candidate `9a60ded9` terminated exit 1,
+  with 2,865 passes and three stale assertions (historical migration as latest
+  head, public banner video fields, public property developer name). The
+  corrected tests retain one-head ancestry and explicit public-field leak
+  guards. The reviewed compatibility follow-up is integrated and both
+  contracts regenerated. Targeted and final Linux-source full checks remain
+  pending; the original failed run is not a passing gate.
 - Lead form fields (`requirement.email`, `requirement.property_type`) and
   the per-role requirement allowlist as described in
   `implementation-plan.md` (Batch 2). Role matrix tests in
