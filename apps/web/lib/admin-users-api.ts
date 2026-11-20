@@ -5,6 +5,10 @@ import { apiRequest, type ApiResponse } from "@/lib/api/client";
 type Schemas = components["schemas"];
 export type AdminUser = Schemas["AdminUserRead"];
 
+export async function setStaffLoanSpecialty(id: string, body: Schemas["StaffSpecialtyUpdateRequest"]) {
+  return apiRequest<Schemas["RoleProfileRead"][]>(`/api/v1/admin/users/${id}/loan-specialty`, { method: "PATCH", body });
+}
+
 export type AdminUserQuery = {
   limit?: number;
   offset?: number;

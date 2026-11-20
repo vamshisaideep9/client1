@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from typing import Literal
-from urllib.parse import urlsplit
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.core.urls import is_safe_https_url
 from app.models.offer import OfferStatus
 from app.schemas.personalization import AudienceRules, audience_rules_valid_for_offer
 
@@ -24,13 +24,7 @@ _IMAGE_KEY_PATTERN = (
 def _validate_partner_url(value: str | None) -> str | None:
     if value is None:
         return None
-    parsed = urlsplit(value)
-    if (
-        parsed.scheme != "https"
-        or not parsed.hostname
-        or parsed.username is not None
-        or parsed.password is not None
-    ):
+    if not is_safe_https_url(value):
         raise ValueError("Use an HTTPS partner URL without embedded credentials.")
     return value
 

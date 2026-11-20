@@ -5,8 +5,11 @@ import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+
+import type { ActiveFilterChip, FilterOption } from "./filter-options";
+import { DateRangeFields, FilterSelect } from "./filter-select";
+import { ActiveFilterChips, MoreFilters, type MoreFilterGroup } from "./more-filters";
 
 /**
  * The filter bar for every staff list.
@@ -20,8 +23,14 @@ import { cn } from "@/lib/utils";
  * admin queues stop hand-rolling their own bars.
  *
  * Every filtered surface uses `"all"` as the not-filtering sentinel rather than
- * an empty string, because Radix `Select` treats `""` as "no value" and would
- * render the placeholder instead of the "All …" option.
+ * an empty string, because Radix `Select` treats `""` as "no value". Each
+ * select is a `FilterSelect`: unfiltered, its trigger reads the field name
+ * (`statusLabel`, `kindLabel`) and its first option is "All".
+ *
+ * The first row keeps search, status, business line, type and the From / To
+ * dates; anything else a surface needs goes into `more` ("More filters (n)",
+ * a popover or a phone bottom sheet) with its active values listed as
+ * removable `chips` next to "Clear all".
  */
 export type FilterBarValue = {
   search: string;
@@ -32,7 +41,7 @@ export type FilterBarValue = {
   to: string;
 };
 
-export type FilterOption = { value: string; label: string };
+export type { FilterOption } from "./filter-options";
 
 export const EMPTY_FILTERS: FilterBarValue = {
   search: "",
@@ -71,9 +80,10 @@ export function FilterBar({
   searchLabel,
   searchPlaceholder = "Search",
   statusOptions,
-  statusLabel = "statuses",
+  statusLabel = "Status",
   kindOptions,
-  kindLabel,
+  kindLabel = "Type",
+  lineLabel = "Business line",
   lineOptions = DEFAULT_LINE_OPTIONS,
   showSearch = true,
   showStatus = true,
@@ -85,6 +95,11 @@ export function FilterBar({
   note,
   actions,
   extra,
+  advanced,
+  more,
+  moreActiveCount = 0,
+  onClearMore,
+  chips,
   onClear,
   hasExternalFilters = false,
   className,
@@ -94,15 +109,19 @@ export function FilterBar({
   searchLabel: string;
   searchPlaceholder?: string;
   statusOptions?: readonly FilterOption[];
+  /** Field name of the status select, e.g. "Payout status". */
   statusLabel?: string;
   kindOptions?: readonly FilterOption[];
+  /** Field name of the type select, e.g. "Category". */
   kindLabel?: string;
+  lineLabel?: string;
   lineOptions?: readonly FilterOption[];
   showSearch?: boolean;
   showStatus?: boolean;
   showLine?: boolean;
   showDates?: boolean;
   showClear?: boolean;
+  /** Accessible names of the date pair; they must contain "from" / "to". */
   dateFromLabel?: string;
   dateToLabel?: string;
   note?: string;
@@ -110,6 +129,16 @@ export function FilterBar({
   actions?: ReactNode;
   /** Surface-specific controls, rendered in the same grid as the built-ins. */
   extra?: ReactNode;
+  /** Secondary content rendered below the grid. */
+  advanced?: ReactNode;
+  /** Grouped secondary filters behind the "More filters (n)" control. */
+  more?: readonly MoreFilterGroup[];
+  /** How many filters inside `more` are active. */
+  moreActiveCount?: number;
+  /** Resets only the filters inside `more`. */
+  onClearMore?: () => void;
+  /** Removable chips for the active filters inside `more`. */
+  chips?: readonly ActiveFilterChip[];
   /** Override the default all-empty reset when a surface has a meaningful baseline. */
   onClear?: () => void;
   /** Include filters rendered through `extra` in Clear-button visibility. */
@@ -117,7 +146,8 @@ export function FilterBar({
   className?: string;
 }) {
   const set = (patch: Partial<FilterBarValue>) => onChange({ ...value, ...patch });
-  const active = filtersAreActive(value) || hasExternalFilters;
+  const active = filtersAreActive(value) || hasExternalFilters || moreActiveCount > 0;
+  const hasChips = Boolean(chips && chips.length > 0);
 
   return (
     <section
@@ -137,78 +167,58 @@ export function FilterBar({
         ) : null}
 
         {showStatus && statusOptions ? (
-          <Select value={value.status} onValueChange={(status) => set({ status })}>
-            <SelectTrigger aria-label="Filter by status">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All {statusLabel}</SelectItem>
-              {statusOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FilterSelect
+            label={statusLabel}
+            value={value.status}
+            options={statusOptions}
+            onValueChange={(status) => set({ status })}
+          />
         ) : null}
 
         {showLine ? (
-          <Select value={value.line} onValueChange={(line) => set({ line })}>
-            <SelectTrigger aria-label="Filter by business line">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All lines</SelectItem>
-              {lineOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FilterSelect
+            label={lineLabel}
+            value={value.line}
+            options={lineOptions}
+            onValueChange={(line) => set({ line })}
+          />
         ) : null}
 
         {kindOptions ? (
-          <Select value={value.kind} onValueChange={(kind) => set({ kind })}>
-            <SelectTrigger aria-label={kindLabel ?? "Filter by type"}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All {kindLabel?.toLowerCase() ?? "types"}</SelectItem>
-              {kindOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FilterSelect
+            label={kindLabel}
+            value={value.kind}
+            options={kindOptions}
+            onValueChange={(kind) => set({ kind })}
+          />
         ) : null}
 
         {extra}
 
         {showDates ? (
-          <>
-            <Input
-              aria-label={dateFromLabel}
-              type="date"
-              value={value.from}
-              onChange={(event) => set({ from: event.target.value })}
-            />
-            <Input
-              aria-label={dateToLabel}
-              type="date"
-              min={value.from || undefined}
-              value={value.to}
-              onChange={(event) => set({ to: event.target.value })}
-            />
-          </>
+          <DateRangeFields
+            from={value.from}
+            to={value.to}
+            fromLabel={dateFromLabel}
+            toLabel={dateToLabel}
+            onFromChange={(from) => set({ from })}
+            onToChange={(to) => set({ to })}
+          />
         ) : null}
 
+        {more && more.length > 0 ? (
+          <MoreFilters groups={more} activeCount={moreActiveCount} onClear={onClearMore} />
+        ) : null}
       </div>
 
-      {note || (active && showClear) ? (
+      {advanced}
+
+      {note || (active && showClear) || hasChips ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
-          {note ? <p className="text-xs text-text-secondary">{note}</p> : <span />}
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            {hasChips && chips ? <ActiveFilterChips chips={chips} /> : null}
+            {note ? <p className="text-xs text-text-secondary">{note}</p> : null}
+          </div>
           {active && showClear ? (
             <Button
               type="button"
@@ -218,7 +228,7 @@ export function FilterBar({
               onClick={() => (onClear ? onClear() : onChange(EMPTY_FILTERS))}
             >
               <X className="h-4 w-4" aria-hidden="true" />
-              Clear filters
+              Clear all
             </Button>
           ) : null}
         </div>

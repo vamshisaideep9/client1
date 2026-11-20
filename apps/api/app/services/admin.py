@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import generate_profile_code, generate_temp_password, hash_password
 from app.models.audit_log import AuditAction
+from app.models.loan import LoanType
 from app.models.notification import NotificationType
 from app.models.profile import (
     AgentApplication,
@@ -46,6 +47,65 @@ from app.services.audit_log import record as record_audit
 
 class StaffAlreadyExists(Exception):
     """Raised when the target mobile already has an ACTIVE staff profile."""
+
+
+class InvalidLoanSpecialty(Exception):
+    """Specialties require an active lending product and a Loans Telecaller."""
+
+
+async def validate_loan_specialty(
+    db: AsyncSession, *, role: str, business_line: str | None, product_id: UUID | None
+) -> None:
+    if product_id is None:
+        return
+    if role != "telecaller" or business_line not in ("loans", "both"):
+        raise InvalidLoanSpecialty
+    product = await db.scalar(
+        select(LoanType).where(LoanType.id == product_id).with_for_update(read=True)
+    )
+    if product is None or not product.active or product.category != "loan":
+        raise InvalidLoanSpecialty
+
+
+async def set_staff_specialty(
+    db: AsyncSession, *, user_id: UUID, product_id: UUID | None, actor_id: UUID
+) -> None:
+    profile = await db.scalar(
+        select(StaffProfile)
+        .join(User, User.id == StaffProfile.auth_user_uuid)
+        .where(
+            StaffProfile.auth_user_uuid == user_id,
+            StaffProfile.status == ProfileStatus.ACTIVE,
+            StaffProfile.role == StaffRole.TELECALLER,
+            User.status != UserStatus.SOFT_DELETED,
+        )
+        .with_for_update(of=StaffProfile)
+    )
+    if profile is None:
+        raise AdminUserNotFound
+    if profile.business_line not in ("loans", "both"):
+        raise InvalidLoanSpecialty
+    await validate_loan_specialty(
+        db, role=profile.role.value, business_line=profile.business_line, product_id=product_id
+    )
+    previous = profile.loan_specialty_id
+    if previous == product_id:
+        return
+    profile.loan_specialty_id = product_id
+    await record_audit(
+        db,
+        action=AuditAction.STAFF_SPECIALTY_UPDATED,
+        entity_type="staff_profile",
+        entity_uuid=profile.id,
+        actor_uuid=actor_id,
+        actor_role="admin",
+        business_line="loans",
+        detail={
+            "previous_product_id": str(previous) if previous else None,
+            "product_id": str(product_id) if product_id else None,
+        },
+    )
+    await db.commit()
 
 
 class PrimaryAdminRequired(Exception):
@@ -331,6 +391,12 @@ async def create_staff(
     forced-reset flow (Auth Design §6.2) takes over on first sign-in.
     """
     role = StaffRole(payload.role)
+    await validate_loan_specialty(
+        db,
+        role=payload.role,
+        business_line=payload.business_line,
+        product_id=payload.loan_specialty_id,
+    )
     if role == StaffRole.ADMIN:
         if not await is_primary_admin(
             db,
@@ -407,6 +473,7 @@ async def create_staff(
         scope=scope,
         business_line=business_line,
         staff_code="",
+        loan_specialty_id=payload.loan_specialty_id,
         status=ProfileStatus.ACTIVE,
         created_by_auth_user_uuid=actor_id,
         is_primary_admin=False,

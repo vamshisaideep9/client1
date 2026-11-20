@@ -31,7 +31,7 @@ from app.core.config import settings
 from app.core.security import decode_access_token
 from app.models.lead import Lead
 from app.models.profile import AgentApplication
-from app.services import storage
+from app.services import media_processing, storage
 from conftest import full_registration, unique_email, unique_mobile
 
 # ASGITransport stamps every request with this client host.
@@ -135,14 +135,40 @@ def _submit_payload(
     return body
 
 
-def _mock_uploads_ok(monkeypatch: pytest.MonkeyPatch, size: int = 2048) -> None:
+class _StorageCalls:
+    """What submit did to storage while the helpers below were patched in."""
+
+    def __init__(self) -> None:
+        self.canonicalized: list[tuple[str, str, str]] = []
+        self.deleted: list[str] = []
+
+
+def _mock_processing(
+    monkeypatch: pytest.MonkeyPatch, content_type: str = "image/jpeg"
+) -> _StorageCalls:
+    """Stub the byte-level work submit does after the size check.
+
+    These tests never upload real objects, so the magic-byte sniff, the
+    scan/re-encode into a canonical key, and deletions are recorded instead of
+    reaching storage. Each test still exercises the real ticket, key-ownership
+    and size logic.
+    """
+    calls = _StorageCalls()
+    monkeypatch.setattr(storage, "sniffed_content_type", lambda _key: content_type)
+
+    def fake_canonicalize(source: str, destination: str, ctype: str, *, max_bytes: int) -> int:
+        assert max_bytes == settings.AGENT_APPLICATION_MAX_UPLOAD_BYTES
+        calls.canonicalized.append((source, destination, ctype))
+        return 2048
+
+    monkeypatch.setattr(media_processing, "canonicalize_object", fake_canonicalize)
+    monkeypatch.setattr(storage, "delete_object", calls.deleted.append)
+    return calls
+
+
+def _mock_uploads_ok(monkeypatch: pytest.MonkeyPatch, size: int = 2048) -> _StorageCalls:
     monkeypatch.setattr(storage, "head_object", lambda _key: size)
-    # Orthogonal to the size/existence check these helpers exist for — the
-    # magic-byte sniff (feature-status.md §2-12) does a real ranged GET, and
-    # these tests never upload real object bytes to minio, so it would 404
-    # (content_type_is_recognized -> False) and mask whatever this helper is
-    # actually testing.
-    monkeypatch.setattr(storage, "content_type_is_recognized", lambda _key: True)
+    return _mock_processing(monkeypatch)
 
 
 def _mock_uploads_missing(monkeypatch: pytest.MonkeyPatch, missing_key: str) -> None:
@@ -150,7 +176,7 @@ def _mock_uploads_missing(monkeypatch: pytest.MonkeyPatch, missing_key: str) -> 
         return None if key == missing_key else 2048
 
     monkeypatch.setattr(storage, "head_object", fake)
-    monkeypatch.setattr(storage, "content_type_is_recognized", lambda _key: True)
+    _mock_processing(monkeypatch)
 
 
 def _mock_uploads_transport_error(monkeypatch: pytest.MonkeyPatch, bad_key: str) -> None:
@@ -160,7 +186,7 @@ def _mock_uploads_transport_error(monkeypatch: pytest.MonkeyPatch, bad_key: str)
         return 2048
 
     monkeypatch.setattr(storage, "head_object", fake)
-    monkeypatch.setattr(storage, "content_type_is_recognized", lambda _key: True)
+    _mock_processing(monkeypatch)
 
 
 # ---------------------------------------------------------------------------
@@ -409,7 +435,7 @@ async def test_presign_quota_trips(client: AsyncClient) -> None:
 async def test_submit_happy_path_persists_row(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _mock_uploads_ok(monkeypatch)
+    calls = _mock_uploads_ok(monkeypatch)
     mobile = unique_mobile()
     ticket, keys = await _get_ticket_and_keys(client, mobile)
     resp = await client.post(_APPLY_URL, json=_submit_payload(ticket, keys))
@@ -420,10 +446,24 @@ async def test_submit_happy_path_persists_row(
     assert application is not None
     assert application.first_name == "Ravi"
     assert application.email is not None
-    assert application.aadhaar_ref == keys["aadhaar_front"]
-    assert application.aadhaar_back_ref == keys["aadhaar_back"]
-    assert application.pan_ref == keys["pan"]
-    assert application.photo_ref == keys["photo"]
+    # The row points at the scanned canonical copies, never the staged keys
+    # the applicant's presigned POST can still overwrite (audit finding #6).
+    jti = decode_access_token(ticket)["jti"]
+    stored = {
+        "aadhaar_front": application.aadhaar_ref,
+        "aadhaar_back": application.aadhaar_back_ref,
+        "pan": application.pan_ref,
+        "photo": application.photo_ref,
+    }
+    for doc_type, ref in stored.items():
+        assert ref is not None
+        assert ref.startswith(f"agent-applications/canonical/{jti}/")
+        assert ref.endswith(f"-{doc_type}")
+        assert ref != keys[doc_type]
+    assert sorted(calls.canonicalized) == sorted(
+        (keys[doc_type], stored[doc_type], "image/jpeg") for doc_type in _DOC_TYPES
+    )
+    assert sorted(calls.deleted) == sorted(keys.values())
     assert application.status == "pending"
     assert application.applicant_auth_user_uuid is None  # unregistered mobile
 
@@ -491,13 +531,15 @@ async def test_submit_polyglot_content_rejected_and_deletes_object(
     deleted, not silently accepted into a KYC application row."""
     ticket, keys = await _get_ticket_and_keys(client, unique_mobile())
     monkeypatch.setattr(storage, "head_object", lambda _key: 2048)
-    monkeypatch.setattr(storage, "content_type_is_recognized", lambda key: key != keys["pan"])
-    deleted_keys: list[str] = []
-    monkeypatch.setattr(storage, "delete_object", lambda key: deleted_keys.append(key))
+    calls = _mock_processing(monkeypatch)
+    monkeypatch.setattr(
+        storage, "sniffed_content_type", lambda key: None if key == keys["pan"] else "image/png"
+    )
 
     resp = await client.post(_APPLY_URL, json=_submit_payload(ticket, keys))
     assert resp.status_code == 422, resp.text
-    assert deleted_keys == [keys["pan"]]
+    assert calls.deleted == [keys["pan"]]
+    assert calls.canonicalized == []
 
 
 async def test_submit_storage_transport_error_returns_502(
@@ -547,7 +589,8 @@ async def test_submit_same_mobile_same_line_upserts_single_row(
             )
         ).all()
     assert len(rows) == 1
-    assert rows[0].photo_ref == keys2["photo"]
+    jti2 = decode_access_token(ticket2)["jti"]
+    assert rows[0].photo_ref.startswith(f"agent-applications/canonical/{jti2}/")
     assert rows[0].created_at == first_created_at
 
 
@@ -628,3 +671,103 @@ async def test_submit_honeypot_answers_202_without_writing(
     resp = await client.post(_APPLY_URL, json=payload)
     assert resp.status_code == 202
     assert await _get_application(mobile, "loans") is None
+
+
+# ---------------------------------------------------------------------------
+# Canonical copies (security audit finding #6)
+# ---------------------------------------------------------------------------
+
+
+async def test_submit_passes_each_sniffed_type_to_canonicalization(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = _mock_uploads_ok(monkeypatch)
+    ticket, keys = await _get_ticket_and_keys(client, unique_mobile())
+    monkeypatch.setattr(
+        storage,
+        "sniffed_content_type",
+        lambda key: "application/pdf" if key == keys["pan"] else "image/webp",
+    )
+
+    resp = await client.post(_APPLY_URL, json=_submit_payload(ticket, keys))
+    assert resp.status_code == 202, resp.text
+    types = {source: ctype for source, _dest, ctype in calls.canonicalized}
+    assert types[keys["pan"]] == "application/pdf"
+    assert types[keys["photo"]] == "image/webp"
+
+
+async def test_submit_rejects_video_bytes_under_a_document_key(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """sniff_content_type recognizes MP4, which no KYC document may be."""
+    calls = _mock_uploads_ok(monkeypatch)
+    ticket, keys = await _get_ticket_and_keys(client, unique_mobile())
+    monkeypatch.setattr(
+        storage,
+        "sniffed_content_type",
+        lambda key: "video/mp4" if key == keys["aadhaar_front"] else "image/jpeg",
+    )
+
+    resp = await client.post(_APPLY_URL, json=_submit_payload(ticket, keys))
+    assert resp.status_code == 422, resp.text
+    assert calls.deleted == [keys["aadhaar_front"]]
+    assert calls.canonicalized == []
+
+
+async def test_submit_with_malware_is_rejected_and_cleans_up(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = _mock_uploads_ok(monkeypatch)
+    mobile = unique_mobile()
+    ticket, keys = await _get_ticket_and_keys(client, mobile)
+
+    def infected(source: str, destination: str, ctype: str, *, max_bytes: int) -> int:
+        calls.canonicalized.append((source, destination, ctype))
+        if source == keys["pan"]:
+            raise media_processing.MalwareDetected
+        return 2048
+
+    monkeypatch.setattr(media_processing, "canonicalize_object", infected)
+
+    resp = await client.post(_APPLY_URL, json=_submit_payload(ticket, keys))
+    assert resp.status_code == 422, resp.text
+    assert "couldn't be accepted" in resp.json()["detail"]
+    assert await _get_application(mobile) is None
+    written = [destination for _source, destination, _ctype in calls.canonicalized]
+    # Every canonical copy attempted so far, and every staged upload, is removed.
+    assert set(calls.deleted) == {*written, *keys.values()}
+
+
+async def test_submit_when_scanner_is_down_fails_closed_and_keeps_ticket(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = _mock_uploads_ok(monkeypatch)
+    mobile = unique_mobile()
+    ticket, keys = await _get_ticket_and_keys(client, mobile)
+
+    def scanner_down(source: str, destination: str, ctype: str, *, max_bytes: int) -> int:
+        calls.canonicalized.append((source, destination, ctype))
+        raise media_processing.ScannerUnavailable
+
+    monkeypatch.setattr(media_processing, "canonicalize_object", scanner_down)
+    resp = await client.post(_APPLY_URL, json=_submit_payload(ticket, keys))
+    assert resp.status_code == 502, resp.text
+    assert await _get_application(mobile) is None
+    # Staged uploads are kept so the applicant can retry with the same ticket.
+    assert not set(calls.deleted) & set(keys.values())
+
+    retry_calls = _mock_processing(monkeypatch)
+    retry = await client.post(_APPLY_URL, json=_submit_payload(ticket, keys))
+    assert retry.status_code == 202, retry.text
+    assert len(retry_calls.canonicalized) == 4
+
+
+async def test_submit_cannot_claim_a_canonical_key(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _mock_uploads_ok(monkeypatch)
+    ticket, keys = await _get_ticket_and_keys(client, unique_mobile())
+    jti = decode_access_token(ticket)["jti"]
+    forged = f"agent-applications/canonical/{jti}/{'a' * 32}-photo"
+    resp = await client.post(_APPLY_URL, json=_submit_payload(ticket, keys, photo_key=forged))
+    assert resp.status_code == 400

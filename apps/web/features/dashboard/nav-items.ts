@@ -27,20 +27,28 @@ const CAPABILITIES = {
   agent: { roles: ["agent"] },
   agentRealEstate: { roles: ["agent"], lines: ["real_estate"] },
   telecaller: { roles: ["telecaller"] },
+  calculators: { roles: ["client", "telecaller"] },
   employee: { roles: ["employee"] },
   employeeRealEstate: { roles: ["employee"], lines: ["real_estate"] },
   subAdmin: { roles: ["sub_admin"] },
   admin: { roles: ["admin"] },
+  staffInsights: { roles: ["telecaller", "employee", "agent", "sub_admin"] },
+  // CS-027: the people contests can target (managers follow theirs in My team).
+  contestParticipant: { roles: ["agent", "telecaller", "employee"] },
   payouts: { roles: ["admin", "sub_admin"], staffFeature: "payout_requests" },
   subAdminPayouts: { roles: ["sub_admin"], staffFeature: "payout_requests" },
+  // Shown only once /api/v1/manager/teams says the Sub Admin runs a team.
+  teamManager: { roles: ["sub_admin"], teamManager: true },
   cms: { roles: ["sub_admin", "admin"] },
   referralRules: { roles: ["sub_admin", "admin"] },
+  commissionRates: { roles: ["sub_admin", "admin"] },
 } as const satisfies Record<
   string,
   {
     roles: readonly UserRole[];
     lines?: readonly BusinessLine[];
     staffFeature?: StaffFeature;
+    teamManager?: true;
   }
 >;
 
@@ -59,6 +67,8 @@ export type DashboardAccessContext = {
   activeLine?: BusinessLine;
   profileLines?: readonly BusinessLine[];
   staffFeatures?: readonly StaffFeature[];
+  /** Navigation hint only: the Sub Admin manages at least one live team. */
+  managesTeam?: boolean;
 };
 
 export type NavItem = {
@@ -190,6 +200,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     capability: "client",
     section: "workspace",
   },
+  {
+    key: "client-calculators",
+    label: "Calculators",
+    href: "/dashboard/calculators",
+    icon: DASHBOARD_ICONS.calculators,
+    capability: "client",
+    section: "workspace",
+  },
 
   // Agent, Telecaller, and Employee workspaces.
   {
@@ -197,6 +215,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Leads",
     href: "/dashboard/leads",
     icon: DASHBOARD_ICONS.leads,
+    capability: "telecaller",
+    section: "operations",
+  },
+  {
+    key: "telecaller-calculators",
+    label: "Calculators",
+    href: "/dashboard/calculators",
+    icon: DASHBOARD_ICONS.calculators,
     capability: "telecaller",
     section: "operations",
   },
@@ -267,6 +293,23 @@ export const NAV_ITEMS: readonly NavItem[] = [
     section: "operations",
   },
   {
+    key: "sub-admin-team",
+    label: "My team",
+    href: "/dashboard/team",
+    icon: DASHBOARD_ICONS.team,
+    capability: "teamManager",
+    section: "people",
+  },
+  // CS-027: Sub Admins author contests; a platform Admin approves them.
+  {
+    key: "sub-admin-contests",
+    label: "Contests",
+    href: "/dashboard/contests",
+    icon: DASHBOARD_ICONS.contests,
+    capability: "subAdmin",
+    section: "people",
+  },
+  {
     key: "sub-admin-finance",
     label: "Finance overview",
     href: "/dashboard/finance",
@@ -316,6 +359,23 @@ export const NAV_ITEMS: readonly NavItem[] = [
     capability: "subAdmin",
     section: "content",
   },
+  // CS-027: contests open to the Agent, Telecaller or Employee.
+  {
+    key: "my-contests",
+    label: "Contests",
+    href: "/dashboard/contests",
+    icon: DASHBOARD_ICONS.contests,
+    capability: "contestParticipant",
+    section: "insights",
+  },
+  {
+    key: "my-analytics",
+    label: "My analytics",
+    href: "/dashboard/insights",
+    icon: DASHBOARD_ICONS.analytics,
+    capability: "staffInsights",
+    section: "insights",
+  },
   {
     key: "campaign-approvals",
     label: "Campaign approvals",
@@ -325,6 +385,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     section: "content",
   },
   // Admin operations.
+  {
+    key: "commission-rates",
+    label: "Agent commission rates",
+    href: "/dashboard/commission-rates",
+    icon: DASHBOARD_ICONS.commissions,
+    capability: "commissionRates",
+    section: "finance",
+  },
   {
     key: "admin-leads",
     label: "Lead assignments",
@@ -404,6 +472,23 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Users & staff",
     href: "/dashboard/users",
     icon: DASHBOARD_ICONS.usersAndStaff,
+    capability: "admin",
+    section: "people",
+  },
+  {
+    key: "admin-teams",
+    label: "Teams",
+    href: "/dashboard/teams",
+    icon: DASHBOARD_ICONS.team,
+    capability: "admin",
+    section: "people",
+  },
+  // CS-027: approve Sub Admin contests, confirm winners, pay prizes.
+  {
+    key: "admin-contests",
+    label: "Contest approvals",
+    href: "/dashboard/contest-approvals",
+    icon: DASHBOARD_ICONS.contests,
     capability: "admin",
     section: "people",
   },
@@ -491,6 +576,8 @@ export type DashboardRouteRule = {
 export const DASHBOARD_ROUTE_RULES: readonly DashboardRouteRule[] = [
   { path: "/dashboard", exact: true, capabilities: ["shared"] },
   { path: "/dashboard/leads/new", exact: true, capabilities: ["agent"] },
+  { path: "/dashboard/leads/bulk", exact: true, capabilities: ["agent"] },
+  { path: "/dashboard/commission-rates", exact: true, capabilities: ["commissionRates"] },
   { path: "/dashboard/operations", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/admin-leads", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/admin-tasks", exact: true, capabilities: ["admin"] },
@@ -508,7 +595,16 @@ export const DASHBOARD_ROUTE_RULES: readonly DashboardRouteRule[] = [
   { path: "/dashboard/media-library", exact: true, capabilities: ["subAdmin"] },
   { path: "/dashboard/bookmarks", exact: true, capabilities: ["clientRealEstate"] },
   { path: "/dashboard/broadcast", exact: true, capabilities: ["admin"] },
+  { path: "/dashboard/calculators", capabilities: ["calculators"] },
   { path: "/dashboard/commissions", exact: true, capabilities: ["admin"] },
+  // CS-027: one page, a view per role (Sub Admin authoring; the Admin is sent
+  // on to Contest approvals).
+  {
+    path: "/dashboard/contests",
+    exact: true,
+    capabilities: ["subAdmin", "admin", "contestParticipant"],
+  },
+  { path: "/dashboard/contest-approvals", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/compare", exact: true, capabilities: ["clientRealEstate"] },
   { path: "/dashboard/documents", exact: true, capabilities: ["clientLoans"] },
   {
@@ -521,6 +617,7 @@ export const DASHBOARD_ROUTE_RULES: readonly DashboardRouteRule[] = [
   { path: "/dashboard/properties", capabilities: ["client"] },
   { path: "/dashboard/explore", capabilities: ["client"] },
   { path: "/dashboard/fee-cashbacks", exact: true, capabilities: ["admin"] },
+  { path: "/dashboard/insights", exact: true, capabilities: ["staffInsights"] },
   { path: "/dashboard/finance", exact: true, capabilities: ["subAdmin"] },
   { path: "/dashboard/leads", capabilities: ["agent", "telecaller"] },
   { path: "/dashboard/loan-applications", exact: true, capabilities: ["admin"] },
@@ -559,6 +656,9 @@ export const DASHBOARD_ROUTE_RULES: readonly DashboardRouteRule[] = [
   { path: "/dashboard/cookies", exact: true, capabilities: ["shared"] },
   { path: "/dashboard/support-tickets", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/tasks", capabilities: ["employee"] },
+  { path: "/dashboard/teams", exact: true, capabilities: ["admin"] },
+  // Every Sub Admin may open it; without a team the page explains why it is empty.
+  { path: "/dashboard/team", capabilities: ["subAdmin"] },
   { path: "/dashboard/transactions", exact: true, capabilities: ["transactions"] },
   { path: "/dashboard/users", exact: true, capabilities: ["admin"] },
   {
@@ -582,6 +682,7 @@ function hasCapability(
   ) {
     return false;
   }
+  if ("teamManager" in access && !context.managesTeam) return false;
   if (!("lines" in access)) return true;
 
   const allowedLines = access.lines as readonly BusinessLine[];

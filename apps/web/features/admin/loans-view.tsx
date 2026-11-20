@@ -24,7 +24,13 @@ import {
   matchesSearch,
   type FilterBarValue,
 } from "@/features/dashboard/filter-bar";
+import { AmountRangeFields } from "@/features/dashboard/amount-range-fields";
+import { compactChips, selectFilterChip } from "@/features/dashboard/filter-options";
+import { FilterSelect } from "@/features/dashboard/filter-select";
 import { ListEmptyState, ListLoadingState, ListPagination } from "@/features/dashboard/list-states";
+import { amountRangeLabel } from "@/features/dashboard/product-filter-options";
+import { useProductCatalogue } from "@/features/dashboard/use-product-catalogue";
+import { loanFinishedRank } from "@/features/dashboard/list-order";
 import { StatusBadge, type StatusTone } from "@/features/dashboard/status-badge";
 import { useFilteredPage } from "@/features/dashboard/use-filtered-page";
 import {
@@ -38,6 +44,13 @@ import type { AdminLoanApplication } from "@/lib/admin-api";
 import { isInDateRange } from "@/lib/date-range";
 import { formatDate, formatINR } from "@/lib/format";
 
+import {
+  EMPTY_ADMIN_LOAN_DETAIL,
+  adminLoanDetailCount,
+  adminLoanOptions,
+  matchesAdminLoanDetail,
+  type AdminLoanDetailFilters,
+} from "./admin-loan-filters";
 import { useAdminLoans } from "./use-admin-loans";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -46,7 +59,10 @@ const STATUS_LABEL: Record<string, string> = {
   contacted: "Contacted",
   docs_collected: "Docs collected",
   submitted_to_bank: "Submitted to bank",
-  sanctioned: "Sanctioned",
+  under_review: "Under review",
+  sanctioned: "Approved",
+  agreement_collected: "Agreement collected",
+  agreement_submitted_to_bank: "Agreement submitted to bank",
   disbursed: "Disbursed",
   closed: "Closed",
   rejected: "Rejected",
@@ -61,7 +77,10 @@ const STATUS_TONE: Record<string, StatusTone> = {
   contacted: "info",
   docs_collected: "info",
   submitted_to_bank: "info",
+  under_review: "info",
   sanctioned: "success",
+  agreement_collected: "success",
+  agreement_submitted_to_bank: "success",
   disbursed: "success",
   closed: "neutral",
   rejected: "danger",
@@ -83,8 +102,28 @@ export function AdminLoansView() {
   const { items, loading, error, setStatusFilter, reload, updateApp } = useAdminLoans();
 
   const [filters, setFilters] = React.useState<FilterBarValue>(EMPTY_FILTERS);
-  const [sort, setSort] = React.useState<SortState>({ key: "opened_at", dir: "desc" });
+  const [detail, setDetail] = React.useState<AdminLoanDetailFilters>(EMPTY_ADMIN_LOAN_DETAIL);
+  const [sort, setSort] = React.useState<SortState>({ key: "default", dir: "asc" });
   const [activeId, setActiveId] = React.useState<string | null>(null);
+  const catalogue = useProductCatalogue();
+  const options = React.useMemo(() => adminLoanOptions(items, catalogue), [items, catalogue]);
+  const detailCount = adminLoanDetailCount(detail);
+  const patchDetail = (patch: Partial<AdminLoanDetailFilters>) => setDetail((current) => ({ ...current, ...patch }));
+  const amountText = amountRangeLabel(detail.amountMin, detail.amountMax);
+  const chips = compactChips([
+    selectFilterChip("loanTypeId", "Product", detail.loanTypeId, options.loanTypes, () =>
+      patchDetail({ loanTypeId: "all" }),
+    ),
+    selectFilterChip("bankId", "Bank", detail.bankId, options.banks, () => patchDetail({ bankId: "all" })),
+    amountText
+      ? {
+          id: "amount",
+          label: `Requested amount: ${amountText}`,
+          onRemove: () => patchDetail({ amountMin: "", amountMax: "" }),
+        }
+      : null,
+  ]);
+  const anyFilter = filtersAreActive(filters) || detailCount > 0;
 
   // Status is the one filter the API applies server-side, so it is mirrored
   // into the shared filter object rather than duplicated as a second control.
@@ -97,6 +136,7 @@ export function AdminLoansView() {
       (application) =>
         isInDateRange(application.opened_at, filters.from, filters.to) &&
         (filters.line === "all" || application.business_line === filters.line) &&
+        matchesAdminLoanDetail(application, detail) &&
         matchesSearch(
           `${application.customer_code} ${application.loan_type_label} ${application.bank_name ?? ""}`,
           filters.search,
@@ -113,15 +153,23 @@ export function AdminLoansView() {
           return (Number(a.amount_requested ?? 0) - Number(b.amount_requested ?? 0)) * direction;
         case "status":
           return a.status.localeCompare(b.status) * direction;
+        case "default":
+          // Landing order: active applications first, closed and rejected
+          // below them, newest first within each. A column sort replaces it.
+          return (
+            loanFinishedRank(a.status) - loanFinishedRank(b.status) ||
+            new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime()
+          );
         default:
           return (
             (new Date(a.opened_at).getTime() - new Date(b.opened_at).getTime()) * direction
           );
       }
     });
-  }, [filters, items, sort]);
+  }, [filters, detail, items, sort]);
 
-  const { page, setPage, pageRows, total } = useFilteredPage(filtered, filters);
+  const pageResetKey = React.useMemo(() => ({ filters, detail }), [filters, detail]);
+  const { page, setPage, pageRows, total } = useFilteredPage(filtered, pageResetKey);
   const active = activeId ? items.find((item) => item.id === activeId) ?? null : null;
 
   const columns: DataColumn<AdminLoanApplication>[] = [
@@ -203,6 +251,46 @@ export function AdminLoansView() {
         ]}
         dateFromLabel="Opened from"
         dateToLabel="Opened to"
+        more={[
+          {
+            title: "Product",
+            content: (
+              <>
+                <FilterSelect
+                  label="Product"
+                  value={detail.loanTypeId}
+                  options={options.loanTypes}
+                  onValueChange={(loanTypeId) => patchDetail({ loanTypeId })}
+                />
+                <FilterSelect
+                  label="Bank"
+                  value={detail.bankId}
+                  options={options.banks}
+                  onValueChange={(bankId) => patchDetail({ bankId })}
+                />
+              </>
+            ),
+          },
+          {
+            title: "Money",
+            content: (
+              <AmountRangeFields
+                legend="Requested amount (₹)"
+                name="requested amount"
+                min={detail.amountMin}
+                max={detail.amountMax}
+                onChange={({ min, max }) => patchDetail({ amountMin: min, amountMax: max })}
+              />
+            ),
+          },
+        ]}
+        moreActiveCount={detailCount}
+        onClearMore={() => setDetail(EMPTY_ADMIN_LOAN_DETAIL)}
+        chips={chips}
+        onClear={() => {
+          setFilters(EMPTY_FILTERS);
+          setDetail(EMPTY_ADMIN_LOAN_DETAIL);
+        }}
       />
 
       {loading ? (
@@ -213,12 +301,12 @@ export function AdminLoansView() {
         <ListEmptyState
           icon={Inbox}
           title={
-            filtersAreActive(filters)
+            anyFilter
               ? "No applications match these filters"
               : "No loan applications yet"
           }
           description={
-            filtersAreActive(filters)
+            anyFilter
               ? "Try a different search, status, line, or date range."
               : "Applications will show up here as clients apply."
           }
@@ -227,7 +315,7 @@ export function AdminLoansView() {
         <DashboardPanel
           title="Applications"
           description={
-            filtersAreActive(filters)
+            anyFilter
               ? `${total} of ${items.length} applications`
               : `${items.length} applications`
           }
@@ -250,7 +338,7 @@ export function AdminLoansView() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && setActiveId(null)}>
-        <DialogContent showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
           {active ? (
             <>
               <WorkspaceDialogHeader

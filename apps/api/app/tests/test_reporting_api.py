@@ -349,3 +349,250 @@ async def test_export_forbidden_for_non_admin(client: AsyncClient) -> None:
     headers = {"Authorization": f"Bearer {_client_token(uid)}"}
     res = await client.get(f"/api/v1/admin/reports/leads/export{_QS}", headers=headers)
     assert res.status_code == 403
+
+
+def _unique_day() -> date:
+    """A far-future day no other run has used, so totals stay exact on a reused DB."""
+    import secrets
+
+    return date(2100 + secrets.randbelow(800), 1 + secrets.randbelow(12), 1 + secrets.randbelow(28))
+
+
+@pytest.mark.asyncio
+async def test_report_filters_are_validated_and_reach_exports(client: AsyncClient) -> None:
+    headers = await _admin_headers(client)
+    d = _unique_day()
+    await _seed_lead(
+        business_line="loans", created_at=datetime(d.year, d.month, d.day, 8, 0, tzinfo=UTC)
+    )
+    base = f"date_from={d}&date_to={d}&business_line=loans"
+    reports = "/api/v1/admin/reports"
+
+    bad = await client.get(f"{reports}/leads?{base}&call_status=maybe", headers=headers)
+    long_city = await client.get(
+        f"{reports}/deals?{base}&property_city={'x' * 121}", headers=headers
+    )
+    all_leads = await client.get(f"{reports}/leads?{base}", headers=headers)
+    agent_leads = await client.get(f"{reports}/leads?{base}&lead_source=agent", headers=headers)
+    export = await client.get(f"{reports}/leads/export?{base}&lead_source=agent", headers=headers)
+
+    assert bad.status_code == 422
+    assert long_city.status_code == 422
+    assert all_leads.json()["summary"]["total_count"] == 1
+    assert agent_leads.json()["summary"]["total_count"] == 0
+    assert export.status_code == 200, export.text
+    body_lines = [line for line in export.content.decode("utf-8-sig").splitlines() if line]
+    assert body_lines == ["bucket_start,business_line,total,converted"]
+
+
+@pytest.mark.asyncio
+async def test_telecaller_options_are_admin_only_and_line_scoped(client: AsyncClient) -> None:
+    from app.tests.test_telecaller_api import _seed_telecaller
+
+    headers = await _admin_headers(client)
+    _, loans_staff = await _seed_telecaller("loans")
+    _, estate_staff = await _seed_telecaller("real_estate")
+
+    loans = await client.get(
+        "/api/v1/admin/reports/telecallers?business_line=loans", headers=headers
+    )
+    assert loans.status_code == 200, loans.text
+    ids = {row["staff_profile_uuid"] for row in loans.json()}
+    assert loans_staff in ids
+    assert estate_staff not in ids
+    assert set(loans.json()[0]) == {"staff_profile_uuid", "staff_code", "name", "business_line"}
+
+    _, mobile = await full_registration(client)
+    client_uid = await _auth_user_uuid(mobile)
+    denied = await client.get(
+        "/api/v1/admin/reports/telecallers",
+        headers={"Authorization": f"Bearer {_client_token(client_uid)}"},
+    )
+    assert denied.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Client-roster export (bulk client PII)
+# ---------------------------------------------------------------------------
+
+_CLIENTS_EXPORT = "/api/v1/admin/reports/clients/export"
+
+
+def test_csv_cell_neutralizes_formula_lead() -> None:
+    """Unit-level CSV/formula-injection guard that runs without Postgres.
+
+    A client name is free text the client supplied themselves, not the admin
+    who later opens the export. A cell beginning with =, +, -, @, tab or CR
+    must be prefixed with a single quote so Excel/Sheets renders it as inert
+    text instead of executing it as a formula."""
+    from app.api.v1.reporting import _csv_cell
+
+    assert _csv_cell("=1+1") == "'=1+1"
+    assert _csv_cell("+SUM(A1)") == "'+SUM(A1)"
+    assert _csv_cell("-2") == "'-2"
+    assert _csv_cell("@cmd") == "'@cmd"
+    assert _csv_cell("Asha Rao") == "Asha Rao"  # ordinary text untouched
+
+
+async def _seed_client_user(first_name: str = "Asha", business_line: str = "loans") -> str:
+    import app.db.session as _session_mod
+    from app.models.profile import ClientProfile, ProfileStatus
+    from app.models.user import User
+
+    mobile = unique_mobile()
+    async with _session_mod.AsyncSessionLocal() as db:
+        user = User(
+            first_name=first_name,
+            last_name="Client",
+            mobile=mobile,
+            email=f"cl_{uuid.uuid4().hex[:12]}@example.com",
+            password_hash="super-secret-hash-must-never-appear",
+        )
+        db.add(user)
+        await db.flush()
+        db.add(
+            ClientProfile(
+                auth_user_uuid=user.id,
+                business_line=business_line,
+                customer_code=f"CL{uuid.uuid4().hex[:8]}",
+                status=ProfileStatus.ACTIVE,
+            )
+        )
+        await db.commit()
+        return mobile
+
+
+@pytest.mark.asyncio
+async def test_export_clients_csv_shape_for_admin(client: AsyncClient) -> None:
+    headers = await _admin_headers(client)
+    mobile = await _seed_client_user(first_name="Asha", business_line="loans")
+
+    res = await client.get(_CLIENTS_EXPORT, headers=headers)
+    assert res.status_code == 200, res.text
+    assert res.headers["content-type"].startswith("text/csv")
+    assert "attachment" in res.headers["content-disposition"]
+    assert (
+        f"dhanadhara-clients-{date.today().isoformat()}.csv" in res.headers["content-disposition"]
+    )
+
+    raw = res.content
+    assert raw[:3] == b"\xef\xbb\xbf"  # UTF-8 BOM
+    text_body = raw.decode("utf-8-sig")
+    lines = [line for line in text_body.splitlines() if line]
+    assert lines[0] == "id,name,phone,created_at,updated_at"
+    assert any(mobile in line for line in lines[1:])
+
+
+@pytest.mark.asyncio
+async def test_export_clients_never_exposes_password(client: AsyncClient) -> None:
+    """Hard exclusion: neither a password column header nor the password_hash
+    value may appear anywhere in the export."""
+    headers = await _admin_headers(client)
+    await _seed_client_user(first_name="Bo", business_line="real_estate")
+
+    res = await client.get(_CLIENTS_EXPORT, headers=headers)
+    assert res.status_code == 200, res.text
+    text_body = res.content.decode("utf-8-sig")
+    header_line = text_body.splitlines()[0].lower()
+    assert "password" not in header_line
+    assert "super-secret-hash-must-never-appear" not in text_body
+    assert "password_hash" not in text_body.lower()
+
+
+@pytest.mark.asyncio
+async def test_export_clients_spans_both_lines_for_admin(client: AsyncClient) -> None:
+    headers = await _admin_headers(client)
+    loans_mobile = await _seed_client_user(business_line="loans")
+    re_mobile = await _seed_client_user(business_line="real_estate")
+
+    res = await client.get(_CLIENTS_EXPORT, headers=headers)
+    assert res.status_code == 200, res.text
+    text_body = res.content.decode("utf-8-sig")
+    assert loans_mobile in text_body
+    assert re_mobile in text_body
+
+
+@pytest.mark.asyncio
+async def test_export_clients_escapes_formula_leading_name(client: AsyncClient) -> None:
+    headers = await _admin_headers(client)
+    await _seed_client_user(first_name='=1+1")+cmd|"/c calc"!A1', business_line="loans")
+
+    res = await client.get(_CLIENTS_EXPORT, headers=headers)
+    assert res.status_code == 200, res.text
+    text_body = res.content.decode("utf-8-sig")
+    assert '="1+1' not in text_body  # never an unescaped raw formula
+    assert "'=1+1" in text_body  # leading single-quote neutralizes it
+
+
+@pytest.mark.asyncio
+async def test_export_clients_403_for_client(client: AsyncClient) -> None:
+    _, mobile = await full_registration(client, lines=["loans"])
+    uid = await _auth_user_uuid(mobile)
+    headers = {"Authorization": f"Bearer {_client_token(uid)}"}
+    res = await client.get(_CLIENTS_EXPORT, headers=headers)
+    assert res.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_export_clients_403_for_sub_admin(client: AsyncClient) -> None:
+    _, mobile = await full_registration(client)
+    uid = await _auth_user_uuid(mobile)
+    headers = {"Authorization": f"Bearer {_sub_admin_token(uid)}"}
+    res = await client.get(_CLIENTS_EXPORT, headers=headers)
+    assert res.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_export_clients_403_for_line_scoped_admin(client: AsyncClient) -> None:
+    """Cross-line denial: a role=admin token with platform_scope=false must NOT
+    pull a both-lines client dump -- require_platform_admin returns 403, never a
+    silently line-filtered result."""
+    _, mobile = await full_registration(client)
+    uid = await _auth_user_uuid(mobile)
+    headers = {"Authorization": f"Bearer {_line_scoped_admin_token(uid)}"}
+    res = await client.get(_CLIENTS_EXPORT, headers=headers)
+    assert res.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_export_clients_unauthenticated_rejected(client: AsyncClient) -> None:
+    res = await client.get(_CLIENTS_EXPORT)
+    assert res.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_export_clients_writes_audit_row(client: AsyncClient) -> None:
+    from sqlalchemy import func, select
+
+    import app.db.session as _session_mod
+    from app.models.audit_log import AuditAction, AuditLog
+
+    _, admin_mobile = await full_registration(client)
+    admin_uid = await _auth_user_uuid(admin_mobile)
+    headers = {"Authorization": f"Bearer {_admin_token(admin_uid)}"}
+    await _seed_client_user()
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        before = await db.scalar(
+            select(func.count())
+            .select_from(AuditLog)
+            .where(
+                AuditLog.action == AuditAction.CLIENT_EXPORT_DOWNLOADED,
+                AuditLog.actor_uuid == uuid.UUID(admin_uid),
+            )
+        )
+
+    res = await client.get(_CLIENTS_EXPORT, headers=headers)
+    assert res.status_code == 200, res.text
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        after = await db.scalar(
+            select(func.count())
+            .select_from(AuditLog)
+            .where(
+                AuditLog.action == AuditAction.CLIENT_EXPORT_DOWNLOADED,
+                AuditLog.actor_uuid == uuid.UUID(admin_uid),
+            )
+        )
+
+    assert after == (before or 0) + 1
