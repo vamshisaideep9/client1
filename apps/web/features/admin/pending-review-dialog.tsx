@@ -15,13 +15,49 @@ import {
 } from "@/components/ui/dialog";
 import { CLOSE_BUTTON_CLASS } from "@/components/ui/close-button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { optionsFromLabels } from "@/features/dashboard/filter-options";
+import { DateRangeFields, FilterSelect } from "@/features/dashboard/filter-select";
 import type { AdminPendingItem } from "@/lib/admin-api";
 import { PANEL_DIALOG_FILTERED_CLASS } from "@/features/dashboard/workspace-dialog";
 import { cn } from "@/lib/utils";
 
 import { filterPendingReview, type PendingReviewFilters } from "./admin-home-pending-review";
 import { PendingReviewList, REVIEW_KIND_LABEL, REVIEW_LINE_LABEL } from "./pending-review-list";
+
+/** Shared maker-checker decision surface. The API remains the authorization wall. */
+export function PendingDecisionDialog({ title, description, children, onClose, onApprove, onReject }: {
+  title: string; description: string; children: React.ReactNode; onClose: () => void;
+  onApprove: () => Promise<string | null>; onReject: (note: string) => Promise<string | null>;
+}) {
+  const [note, setNote] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+  const [busy, setBusy] = React.useState(false);
+  const noteId = React.useId();
+  async function decide(approve: boolean) {
+    if (busy) return;
+    if (!approve && !note.trim()) { setError("Add feedback before rejecting."); return; }
+    setBusy(true); setError(null);
+    const message = approve ? await onApprove() : await onReject(note.trim());
+    if (message) { setError(message); setBusy(false); }
+  }
+  return <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
+    <DialogContent preventOutsideClose>
+      <DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>{description}</DialogDescription></DialogHeader>
+      {children}
+      <div className="grid gap-2"><Label htmlFor={noteId}>Feedback (required to reject)</Label>
+        <Textarea id={noteId} value={note} onChange={(event) => { setNote(event.target.value); setError(null); }} maxLength={500} />
+      </div>
+      {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button variant="outline" disabled={busy} onClick={onClose}>Cancel</Button>
+        <Button variant="outline" disabled={busy} onClick={() => void decide(false)}>Reject proposal</Button>
+        <Button disabled={busy} onClick={() => void decide(true)}>{busy ? "Saving…" : "Approve proposal"}</Button>
+      </div>
+    </DialogContent>
+  </Dialog>;
+}
 
 const EMPTY_FILTERS: PendingReviewFilters = {
   search: "",
@@ -69,25 +105,31 @@ export function PendingReviewDialog({
             maxLength={100}
             onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
           />
-          <Select value={filters.kind ?? "all"} onValueChange={(kind) => setFilters((current) => ({ ...current, kind: kind as PendingReviewFilters["kind"] }))}>
-            <SelectTrigger aria-label="Filter review items by type"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All review types</SelectItem>
-              {Object.entries(REVIEW_KIND_LABEL).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={filters.businessLine ?? "all"} onValueChange={(businessLine) => setFilters((current) => ({ ...current, businessLine: businessLine as PendingReviewFilters["businessLine"] }))}>
-            <SelectTrigger aria-label="Filter review items by business line"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All business lines</SelectItem>
-              {Object.entries(REVIEW_LINE_LABEL).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Input aria-label="Review items submitted from" type="date" value={filters.submittedFrom} onChange={(event) => setFilters((current) => ({ ...current, submittedFrom: event.target.value }))} />
-          <Input aria-label="Review items submitted to" type="date" min={filters.submittedFrom || undefined} value={filters.submittedTo} onChange={(event) => setFilters((current) => ({ ...current, submittedTo: event.target.value }))} />
+          <FilterSelect
+            label="Review type"
+            ariaLabel="Filter review items by type"
+            value={filters.kind ?? "all"}
+            options={optionsFromLabels(REVIEW_KIND_LABEL)}
+            onValueChange={(kind) => setFilters((current) => ({ ...current, kind: kind as PendingReviewFilters["kind"] }))}
+          />
+          <FilterSelect
+            label="Business line"
+            ariaLabel="Filter review items by business line"
+            value={filters.businessLine ?? "all"}
+            options={optionsFromLabels(REVIEW_LINE_LABEL)}
+            onValueChange={(businessLine) => setFilters((current) => ({ ...current, businessLine: businessLine as PendingReviewFilters["businessLine"] }))}
+          />
+          <DateRangeFields
+            from={filters.submittedFrom ?? ""}
+            to={filters.submittedTo ?? ""}
+            fromLabel="Review items submitted from"
+            toLabel="Review items submitted to"
+            onFromChange={(submittedFrom) => setFilters((current) => ({ ...current, submittedFrom }))}
+            onToChange={(submittedTo) => setFilters((current) => ({ ...current, submittedTo }))}
+          />
           <Button className="sm:col-span-2 lg:col-span-3 xl:col-span-5" variant="outline" onClick={() => setFilters(EMPTY_FILTERS)}>
             <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-            Clear filters
+            Clear all
           </Button>
         </div>
 

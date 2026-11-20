@@ -1,5 +1,6 @@
-"""Agent commissions — Admin entry against an eligible-deal queue, oversight,
-and the agent's own read-only earnings ledger (FR-8.1/8.2, IDR v1.4 §5.5).
+"""Agent commissions — Admin entry against an eligible-deal queue, oversight
+and payout links (FR-8.1/8.2, IDR v1.4 §5.5). The Agent's own commission
+history lives in services/agent_dashboard.py.
 
 All admin functions here run on the CALLER's request-scoped session, not a
 bypass session: `commissions_insert`/`commissions_update` RLS requires
@@ -19,27 +20,27 @@ from __future__ import annotations
 import logging
 import uuid
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 import app.db.session as db_session
 from app.models.commission import Commission, CommissionStatus
+from app.models.commission_rate import CommissionRateStatus, ProductCommissionRate
 from app.models.lead import Lead
-from app.models.loan import LoanApplication
+from app.models.loan import LoanApplication, LoanType
 from app.models.profile import AgentProfile
 from app.models.property_deal import PropertyDeal, PropertyDealStatus
 from app.models.user import User
 from app.schemas.commissions import (
-    AgentEarningsResponse,
-    AgentEarningsRow,
-    AgentEarningsTotals,
     CommissionRead,
     EligibleDeal,
+    EligibleDealCommissionRate,
 )
 from app.services import audit_log
 from app.services.audit_log import AuditAction
+from app.services.commission_rates import suggest_commission
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,69 @@ def _name_expr(user_model):
     return func.nullif(func.trim(full_name), "")
 
 
+def loan_commission_eligible():
+    """The commission-eligibility predicate for a loan case, over a query that
+    joins ``LoanApplication`` to its ``Lead``: disbursed at some point and
+    introduced by an Agent.
+
+    disbursed_at IS NOT NULL, not status == DISBURSED: DISBURSED isn't
+    terminal, so a loan that has since moved on to CLOSED (its normal next
+    step) must stay eligible — see disbursed_at's column docstring in
+    models/loan.py. Shared with contest scoring (CS-027), which credits the
+    same cases to the introducing Agent.
+    """
+    return and_(
+        LoanApplication.disbursed_at.is_not(None),
+        Lead.origin_agent_profile_uuid.is_not(None),
+    )
+
+
+def deal_commission_eligible():
+    """The commission-eligibility predicate for a property deal joined to its
+    ``Lead``: closed and introduced by an Agent. Shared with contest scoring."""
+    return and_(
+        PropertyDeal.status == PropertyDealStatus.CLOSED,
+        Lead.origin_agent_profile_uuid.is_not(None),
+    )
+
+
+def _loan_eligible_deal(r) -> EligibleDeal:  # noqa: ANN001 — a SQLAlchemy Row
+    """A disbursed-loan queue row with the CS-028 rate pre-fill."""
+    rate = None
+    suggested = basis = basis_paise = None
+    if r.rate_id is not None:
+        rate = EligibleDealCommissionRate(
+            id=r.rate_id,
+            kind=r.rate_kind,
+            percent_bps=r.rate_percent_bps,
+            amount_paise=r.rate_amount_paise,
+            note=r.rate_note,
+        )
+        suggested, basis, basis_paise = suggest_commission(
+            kind=r.rate_kind,
+            percent_bps=r.rate_percent_bps,
+            amount_paise=r.rate_amount_paise,
+            amount_sanctioned=r.amount_sanctioned,
+            amount_requested=r.amount_requested,
+        )
+    return EligibleDeal(
+        deal_type="loan_application",
+        deal_uuid=r.deal_uuid,
+        business_line=r.business_line,
+        agent_profile_uuid=r.agent_profile_uuid,
+        agent_code=r.agent_code,
+        agent_name=r.agent_name,
+        lead_uuid=r.lead_uuid,
+        eligible_since=r.eligible_since,
+        loan_type_id=r.loan_type_id,
+        product_label=r.product_label,
+        commission_rate=rate,
+        suggested_amount_paise=suggested,
+        suggestion_basis=basis,
+        basis_amount_paise=basis_paise,
+    )
+
+
 async def list_eligible_deals(
     db: AsyncSession, *, limit: int = 50, offset: int = 0
 ) -> tuple[list[EligibleDeal], int]:
@@ -95,17 +159,29 @@ async def list_eligible_deals(
             _name_expr(AgentUser).label("agent_name"),
             LoanApplication.lead_uuid,
             LoanApplication.disbursed_at.label("eligible_since"),
+            LoanApplication.loan_type_id,
+            LoanApplication.amount_sanctioned,
+            LoanApplication.amount_requested,
+            LoanType.label.label("product_label"),
+            ProductCommissionRate.id.label("rate_id"),
+            ProductCommissionRate.kind.label("rate_kind"),
+            ProductCommissionRate.percent_bps.label("rate_percent_bps"),
+            ProductCommissionRate.amount_paise.label("rate_amount_paise"),
+            ProductCommissionRate.note.label("rate_note"),
         )
         .join(Lead, Lead.id == LoanApplication.lead_uuid)
         .join(AgentProfile, AgentProfile.id == Lead.origin_agent_profile_uuid)
         .join(AgentUser, AgentUser.id == AgentProfile.auth_user_uuid)
+        .join(LoanType, LoanType.id == LoanApplication.loan_type_id)
+        .outerjoin(
+            ProductCommissionRate,
+            and_(
+                ProductCommissionRate.loan_type_id == LoanApplication.loan_type_id,
+                ProductCommissionRate.status == CommissionRateStatus.APPROVED.value,
+            ),
+        )
         .where(
-            # disbursed_at IS NOT NULL, not status == DISBURSED: DISBURSED
-            # isn't terminal, so a loan that has since moved on to CLOSED (its
-            # normal next step) must stay eligible — see disbursed_at's
-            # column docstring in models/loan.py.
-            LoanApplication.disbursed_at.is_not(None),
-            Lead.origin_agent_profile_uuid.is_not(None),
+            loan_commission_eligible(),
             ~select(Commission.id)
             .where(
                 Commission.loan_application_uuid == LoanApplication.id,
@@ -131,8 +207,7 @@ async def list_eligible_deals(
         .join(AgentProfile, AgentProfile.id == Lead.origin_agent_profile_uuid)
         .join(AgentUser, AgentUser.id == AgentProfile.auth_user_uuid)
         .where(
-            PropertyDeal.status == PropertyDealStatus.CLOSED,
-            Lead.origin_agent_profile_uuid.is_not(None),
+            deal_commission_eligible(),
             ~select(Commission.id)
             .where(
                 Commission.property_deal_uuid == PropertyDeal.id,
@@ -147,19 +222,7 @@ async def list_eligible_deals(
     loan_rows = (await db.execute(loan_stmt)).all()
     deal_rows = (await db.execute(deal_stmt)).all()
 
-    deals = [
-        EligibleDeal(
-            deal_type="loan_application",
-            deal_uuid=r.deal_uuid,
-            business_line=r.business_line,
-            agent_profile_uuid=r.agent_profile_uuid,
-            agent_code=r.agent_code,
-            agent_name=r.agent_name,
-            lead_uuid=r.lead_uuid,
-            eligible_since=r.eligible_since,
-        )
-        for r in loan_rows
-    ] + [
+    deals = [_loan_eligible_deal(r) for r in loan_rows] + [
         EligibleDeal(
             deal_type="property_deal",
             deal_uuid=r.deal_uuid,
@@ -344,7 +407,7 @@ async def list_for_admin(
 ) -> tuple[list[CommissionRead], int]:
     """Admin oversight read. Runs on the caller's request session — RLS's
     full-Admin branch already grants unfiltered reach, same trust-RLS
-    convention as list_eligible_deals / list_for_agent."""
+    convention as list_eligible_deals."""
     filters = []
     if status_filter is not None:
         filters.append(Commission.status == status_filter)
@@ -385,38 +448,9 @@ async def get_for_admin(db: AsyncSession, commission_id: uuid.UUID) -> Commissio
     return _row_to_read(commission, agent_code, agent_name)
 
 
-async def list_for_agent(db: AsyncSession) -> AgentEarningsResponse:
-    """The agent's own ledger. Runs on the caller's request session; RLS's
-    agent-own-row branch on `commissions_select` is the only filter that
-    matters — this function adds no additional WHERE, same stance
-    list_referrals takes."""
-    rows = (await db.scalars(select(Commission).order_by(Commission.created_at.desc()))).all()
-
-    ledger_rows = []
-    for c in rows:
-        deal_type, deal_uuid = _deal_fields(c)
-        ledger_rows.append(
-            AgentEarningsRow(
-                id=c.id,
-                business_line=c.business_line,
-                deal_type=deal_type,
-                deal_uuid=deal_uuid,
-                agreed_amount_paise=c.agreed_amount_paise,
-                status=c.status,
-                payout_txn_uuid=c.payout_txn_uuid,
-                created_at=c.created_at,
-            )
-        )
-    pending = sum(c.agreed_amount_paise for c in rows if c.status == CommissionStatus.PENDING)
-    paid = sum(c.agreed_amount_paise for c in rows if c.status == CommissionStatus.PAID)
-    return AgentEarningsResponse(
-        rows=ledger_rows,
-        totals=AgentEarningsTotals(
-            pending_amount_paise=pending,
-            paid_amount_paise=paid,
-            total_amount_paise=pending + paid,
-        ),
-    )
+# The Agent's own commission history moved to services/agent_dashboard.py
+# (CS-022): it reads the confined ``agent_commission_ledger()`` function so each
+# row can carry its client, deal, product and paid date.
 
 
 # ---------------------------------------------------------------------------

@@ -15,6 +15,7 @@ import { formatDate } from "@/lib/format";
 import { formatMobile } from "@/lib/phone";
 import type { AdminUser } from "@/lib/admin-users-api";
 
+import { ContactHistoryButton } from "./contact-history-dialog";
 import { TempCredentialPanel } from "./temp-credential-panel";
 
 /** Roles that get a StaffProfile, and therefore a setup link. */
@@ -74,7 +75,7 @@ export function StaffAccountDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className={PANEL_DIALOG_CLASS}>
+      <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_CLASS}>
         {user ? (
           <>
             <WorkspaceDialogHeader
@@ -124,6 +125,12 @@ export function StaffAccountDialog({
                         }
                       />
                     </dl>
+                    <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-text-secondary">
+                        Previous phone numbers and emails, kept for platform Admins only.
+                      </p>
+                      <ContactHistoryButton authUserUuid={user.id} name={name} />
+                    </div>
                   </section>
 
                   {isStaff ? (

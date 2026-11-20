@@ -6,9 +6,10 @@ import { Bell, CheckCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { optionsFromLabels } from "@/features/dashboard/filter-options";
+import { DateRangeFields, FilterSelect } from "@/features/dashboard/filter-select";
 import { ListPagination } from "@/features/dashboard/list-states";
 import { useFilteredPage } from "@/features/dashboard/use-filtered-page";
 import { isInDateRange } from "@/lib/date-range";
@@ -131,31 +132,20 @@ export default function NotificationsPage() {
                 maxLength={100}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger aria-label="Filter notifications by type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  {Object.entries(NOTIFICATION_TYPE_LABEL).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                aria-label="Notifications from date"
-                type="date"
-                value={dateFrom}
-                onChange={(event) => setDateFrom(event.target.value)}
+              <FilterSelect
+                label="Type"
+                ariaLabel="Filter notifications by type"
+                value={typeFilter}
+                options={optionsFromLabels(NOTIFICATION_TYPE_LABEL)}
+                onValueChange={setTypeFilter}
               />
-              <Input
-                aria-label="Notifications to date"
-                type="date"
-                min={dateFrom || undefined}
-                value={dateTo}
-                onChange={(event) => setDateTo(event.target.value)}
+              <DateRangeFields
+                from={dateFrom}
+                to={dateTo}
+                fromLabel="Notifications from date"
+                toLabel="Notifications to date"
+                onFromChange={setDateFrom}
+                onToChange={setDateTo}
               />
             </div>
           </div>

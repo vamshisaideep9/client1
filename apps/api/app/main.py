@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.admin import router as admin_router
 from app.api.v1.admin_operations import router as admin_operations_router
+from app.api.v1.admin_teams import router as admin_teams_router
 from app.api.v1.admin_vehicle_arrangements import router as admin_vehicle_arrangements_router
 from app.api.v1.agent import router as agent_router
 from app.api.v1.agent_applications import router as agent_applications_router
@@ -28,8 +29,12 @@ from app.api.v1.banners import router as banners_router
 from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.campaign_media import router as campaign_media_router
 from app.api.v1.client_lead_details import router as client_lead_details_router
+from app.api.v1.commission_rates import router as commission_rates_router
 from app.api.v1.commissions import router as commissions_router
+from app.api.v1.contact_change import admin_router as contact_change_admin_router
+from app.api.v1.contact_change import router as contact_change_router
 from app.api.v1.content import router as content_router
+from app.api.v1.contests import router as contests_router
 from app.api.v1.document_verification import router as document_verification_router
 from app.api.v1.employee import router as employee_router
 from app.api.v1.employee_vehicle_arrangements import router as employee_vehicle_arrangements_router
@@ -37,12 +42,15 @@ from app.api.v1.enquiries import router as enquiries_router
 from app.api.v1.fee_cashbacks import router as fee_cashbacks_router
 from app.api.v1.leads import router as leads_router
 from app.api.v1.loans import router as loans_router
+from app.api.v1.manager import router as manager_router
 from app.api.v1.mobile_change import admin_router as mobile_change_admin_router
 from app.api.v1.mobile_change import router as mobile_change_router
+from app.api.v1.my_contests import router as my_contests_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.offers import router as offers_router
 from app.api.v1.payments import router as payments_router
 from app.api.v1.personalization import router as personalization_router
+from app.api.v1.pincodes import router as pincodes_router
 from app.api.v1.properties import router as properties_router
 from app.api.v1.property_deals import router as property_deals_router
 from app.api.v1.property_submissions import router as property_submissions_router
@@ -52,6 +60,7 @@ from app.api.v1.referral_bonus import router as referral_bonus_router
 from app.api.v1.referrals import router as referrals_router
 from app.api.v1.reporting import router as reporting_router
 from app.api.v1.site_visits import router as site_visits_router
+from app.api.v1.staff_analytics import router as staff_analytics_router
 from app.api.v1.staff_invites import router as staff_invites_router
 from app.api.v1.sub_admin import router as sub_admin_router
 from app.api.v1.support_tickets import router as support_tickets_router
@@ -110,6 +119,14 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(
+    contact_change_router, prefix="/api/v1/auth/contact-change", tags=["contact-change"]
+)
+app.include_router(
+    contact_change_admin_router,
+    prefix="/api/v1/admin/contact-change-requests",
+    tags=["admin"],
+)
 app.include_router(mobile_change_router, prefix="/api/v1/mobile-change", tags=["mobile-change"])
 app.include_router(
     mobile_change_admin_router,
@@ -157,6 +174,7 @@ app.include_router(transactions_router, prefix="/api/v1/transactions", tags=["tr
 app.include_router(referrals_router, prefix="/api/v1/referrals", tags=["referrals"])
 app.include_router(payments_router, prefix="/api/v1/payouts", tags=["payouts"])
 app.include_router(telecaller_router, prefix="/api/v1/telecaller", tags=["telecaller"])
+app.include_router(staff_analytics_router, prefix="/api/v1/me", tags=["analytics"])
 app.include_router(agent_router, prefix="/api/v1/agent", tags=["agent"])
 app.include_router(
     client_lead_details_router,
@@ -175,12 +193,20 @@ app.include_router(offers_router, prefix="/api/v1/offers", tags=["offers"])
 app.include_router(
     personalization_router, prefix="/api/v1/personalization", tags=["personalization"]
 )
+app.include_router(pincodes_router, prefix="/api/v1/pincodes", tags=["pincodes"])
 app.include_router(content_router, prefix="/api/v1/content-blocks", tags=["content-blocks"])
 app.include_router(
     referral_bonus_router, prefix="/api/v1/referral-bonus-config", tags=["referral-bonus-config"]
 )
 app.include_router(reporting_router, prefix="/api/v1/admin/reports", tags=["reports"])
+app.include_router(admin_teams_router, prefix="/api/v1/admin/teams", tags=["teams"])
+app.include_router(manager_router, prefix="/api/v1/manager", tags=["manager"])
 app.include_router(commissions_router, prefix="/api/v1/admin/commissions", tags=["commissions"])
+app.include_router(contests_router, prefix="/api/v1/contests", tags=["contests"])
+app.include_router(
+    commission_rates_router, prefix="/api/v1/commission-rates", tags=["commission-rates"]
+)
+app.include_router(my_contests_router, prefix="/api/v1/my-contests", tags=["contests"])
 app.include_router(
     fee_cashbacks_router, prefix="/api/v1/admin/fee-cashbacks", tags=["fee-cashbacks"]
 )

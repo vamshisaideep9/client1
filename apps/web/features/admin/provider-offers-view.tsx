@@ -349,7 +349,7 @@ export function ProviderOffersView({ product }: { product: AdminLoanType }) {
         searchLabel="Search providers for this product"
         searchPlaceholder="Provider or offer name"
         statusOptions={STATUS_OPTIONS}
-        statusLabel="provider states"
+        statusLabel="Provider status"
         showLine={false}
         showDates={false}
       />

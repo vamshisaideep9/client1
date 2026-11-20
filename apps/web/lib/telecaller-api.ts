@@ -23,6 +23,14 @@ export type TaskCreate = Schemas["TaskCreate"];
 export type TelecallerPropertyDeal = Schemas["TelecallerPropertyDealRead"];
 export type PropertyDealCreate = Schemas["PropertyDealCreate"];
 export type PropertyDealProgressUpdate = Schemas["PropertyDealProgressUpdate"];
+export type LeadRequestSummary = Schemas["LeadRequestSummary"];
+export type RequestRef = Schemas["RequestRef"];
+export type RequestKind = RequestRef["kind"];
+export type TelecallerFinancialEnquiry = Schemas["TelecallerFinancialEnquiryRead"];
+export type TelecallerPropertyEnquiry = Schemas["TelecallerPropertyEnquiryRead"];
+export type TelecallerSiteVisit = Schemas["TelecallerSiteVisitRead"];
+export type TelecallerClientHistory = Schemas["TelecallerClientHistoryResponse"];
+export type ClientHistoryLead = Schemas["ClientHistoryLead"];
 
 export async function listTelecallerLeads(
   statusFilter?: string,
@@ -109,4 +117,12 @@ export async function updatePropertyDealProgress(
     method: "PATCH",
     body: payload,
   });
+}
+
+export async function getClientHistory(
+  leadId: string,
+): Promise<ApiResponse<TelecallerClientHistory>> {
+  return apiRequest<TelecallerClientHistory>(
+    `/api/v1/telecaller/leads/${leadId}/client-history`,
+  );
 }

@@ -54,11 +54,45 @@ def test_panorama_validation_accepts_two_to_one_and_rejects_ordinary_landscape()
         media_processing.validate_panorama_bytes(_jpeg(2048, 1365), "image/jpeg")
 
 
-def test_panorama_validation_rejects_small_or_png_media() -> None:
+def _encoded(width: int, height: int, fmt: str) -> bytes:
+    output = BytesIO()
+    Image.new("RGB", (width, height), color=(12, 34, 56)).save(output, format=fmt)
+    return output.getvalue()
+
+
+def test_panorama_validation_accepts_the_lowered_minimum_and_rejects_smaller() -> None:
+    # 2026-11-14 (CS-018): the minimum is 1024 x 512, still 2:1.
+    media_processing.validate_panorama_bytes(_jpeg(1024, 512), "image/jpeg")
+    media_processing.validate_panorama_bytes(_jpeg(1774, 887), "image/jpeg")
     with pytest.raises(media_processing.InvalidImage):
-        media_processing.validate_panorama_bytes(_jpeg(1024, 512), "image/jpeg")
+        media_processing.validate_panorama_bytes(_jpeg(1000, 500), "image/jpeg")
+    with pytest.raises(media_processing.InvalidImage):
+        media_processing.validate_panorama_bytes(_jpeg(4000, 6000), "image/jpeg")
+
+
+@pytest.mark.parametrize(
+    ("fmt", "content_type"),
+    [("PNG", "image/png"), ("WEBP", "image/webp"), ("AVIF", "image/avif")],
+)
+def test_panorama_validation_accepts_png_webp_and_avif(fmt: str, content_type: str) -> None:
+    media_processing.validate_panorama_bytes(_encoded(1024, 512, fmt), content_type)
+
+
+def test_panorama_validation_still_rejects_a_declared_format_mismatch() -> None:
     with pytest.raises(media_processing.InvalidImage):
         media_processing.validate_panorama_bytes(_jpeg(2048, 1024), "image/png")
+
+
+def test_sanitize_image_reencodes_avif_without_metadata(monkeypatch) -> None:
+    monkeypatch.setattr(media_processing.settings, "MEDIA_MALWARE_SCAN_MODE", "disabled")
+
+    result = media_processing.sanitize_image_bytes(
+        _encoded(40, 20, "AVIF"), "image/avif", max_bytes=1024 * 1024
+    )
+
+    with Image.open(BytesIO(result)) as image:
+        assert image.format == "AVIF"
+        assert image.size == (40, 20)
 
 
 def test_scan_fails_closed_when_clamav_is_unreachable(monkeypatch) -> None:
