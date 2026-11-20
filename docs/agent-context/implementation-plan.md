@@ -1,5 +1,14 @@
 # Living implementation plan
 
+**Implemented — Batch 5 web: contest schedules, prizes and Admin editing**
+
+- Staff author minute-level IST windows and cash or item prizes. Participant
+  views show exact schedules and how item awards are progressing.
+- Admin edits use the displayed contest version. Live rules remain locked,
+  with title, description, terms, item text and later end dates editable.
+- Full web unit suite passed with 1,120 tests. The next slice is the
+  attendance API.
+
 **Implemented — Batch 5 API: contest windows, item prizes and Admin edits**
 
 - Preserve historical all-day windows and pay cash through the existing controls.

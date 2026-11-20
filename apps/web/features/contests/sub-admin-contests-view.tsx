@@ -139,7 +139,7 @@ export function SubAdminContestsView() {
       key: "dates",
       header: "Dates",
       cellClassName: "whitespace-nowrap",
-      render: (row) => formatContestDates(row.starts_on, row.ends_on),
+      render: (row) => formatContestDates(row.starts_on, row.ends_on, row.start_time, row.end_time),
     },
     {
       key: "maker",

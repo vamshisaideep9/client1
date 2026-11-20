@@ -52,7 +52,7 @@ export function ContestHomeCard() {
                 <span className="block text-sm text-text-secondary">
                   {contest.me
                     ? `${formatMetricValue(contest.metric, contest.me.metric_value)}${contest.me.rank ? ` · rank ${contest.me.rank}` : ""}${contest.me.qualified ? " · targets met" : ""}`
-                    : formatContestDates(contest.starts_on, contest.ends_on)}
+                    : formatContestDates(contest.starts_on, contest.ends_on, contest.start_time, contest.end_time)}
                 </span>
               </span>
               <ChevronRight className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden />

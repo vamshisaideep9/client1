@@ -22,6 +22,28 @@ function form(overrides: Partial<ContestFormState> = {}): ContestFormState {
 }
 
 describe("contest form", () => {
+  it("sends minute windows and item prizes without a cash budget", () => {
+    const input = form({
+      prizeKind: "item",
+      itemPrize: { label: "Headphones", details: "Office collection", estimate: "4000" },
+      startsOn: "2030-01-01",
+      endsOn: "2030-01-01",
+      startTime: "09:00",
+      endTime: "09:00",
+      budgetCapRupees: "9000",
+    });
+    expect(validateContestForm(input)).toEqual({});
+    expect(buildContestDefinition(input)).toMatchObject({
+      start_time: "09:00",
+      end_time: "09:00",
+      prize_kind: "item",
+      item_prize: { label: "Headphones", details: "Office collection", estimated_value_paise: 400000 },
+      prize_paise: null,
+      budget_cap_paise: null,
+    });
+    expect(validateContestForm({ ...input, endTime: "08:59" }).endTime).toMatch(/before/);
+  });
+
   it("builds the reference example in paise", () => {
     const definition = buildContestDefinition(
       form({

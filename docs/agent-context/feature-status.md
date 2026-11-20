@@ -1,5 +1,10 @@
 # Feature implementation status
 
+**Implemented — Batch 5 web:** minute-level contest controls and across-role
+schedule display, versioned Admin editing, and Admin item award recording.
+The API parent is [upstream #394](https://github.com/brollysolutions/client1/pull/394)
+and [mirror #95](https://github.com/vamshisaideep9/client1/pull/95).
+
 **Implemented — Batch 5 API:** minute-level IST contest windows, item awards and
 versioned Admin edits. Covered by targeted contest and payout tests against
 PostgreSQL with Redis and a migration round-trip. Participant and Admin UI
