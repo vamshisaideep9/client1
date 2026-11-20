@@ -683,7 +683,11 @@ async def get_me(db: AsyncSession, current_user_id: UUID) -> MeResponse:
         if place_row is not None
         else None
     )
+    from app.services.profile_metadata import role_profiles_for_users
+
+    role_profiles = await role_profiles_for_users(db, [current_user_id], own=True)
     return MeResponse(
+        role_profiles=role_profiles.get(current_user_id, []),
         first_name=user.first_name,
         last_name=user.last_name,
         mobile=user.mobile,

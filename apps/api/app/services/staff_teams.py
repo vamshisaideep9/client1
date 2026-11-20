@@ -68,6 +68,7 @@ def _person(profile: StaffProfile, first_name: str, last_name: str) -> TeamPerso
         first_name=first_name,
         last_name=last_name,
         staff_code=profile.staff_code,
+        loan_specialty_id=profile.loan_specialty_id,
         status=profile.status.value,
         business_line=profile.business_line,
     )
@@ -100,7 +101,7 @@ async def people_by_profile(
     people = {profile.id: _person(profile, first, last) for profile, first, last in rows.all()}
     missing = [profile_id for profile_id in ids if profile_id not in people]
     if not missing:
-        return people
+        return await _with_specialty_labels(db, people)
     names = {
         row.staff_profile_uuid: (row.first_name, row.last_name)
         for row in await db.execute(_ROSTER_NAMES, {"ids": missing})
@@ -110,6 +111,23 @@ async def people_by_profile(
             select(StaffProfile).where(StaffProfile.id.in_(list(names)))
         ):
             people[profile.id] = _person(profile, *names[profile.id])
+    return await _with_specialty_labels(db, people)
+
+
+async def _with_specialty_labels(
+    db: AsyncSession, people: dict[UUID, TeamPersonRead]
+) -> dict[UUID, TeamPersonRead]:
+    from app.models.loan import LoanType
+
+    ids = {person.loan_specialty_id for person in people.values() if person.loan_specialty_id}
+    if ids:
+        labels = dict(
+            (
+                await db.execute(select(LoanType.id, LoanType.label).where(LoanType.id.in_(ids)))
+            ).all()
+        )
+        for person in people.values():
+            person.loan_specialty_label = labels.get(person.loan_specialty_id)
     return people
 
 

@@ -39,6 +39,8 @@ def _clean_name(value: str) -> str:
 
 
 class TeamPersonRead(BaseModel):
+    loan_specialty_id: UUID | None = None
+    loan_specialty_label: str | None = None
     staff_profile_uuid: UUID
     first_name: str
     last_name: str

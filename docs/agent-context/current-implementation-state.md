@@ -977,6 +977,38 @@ module; "Does not fit" items 6, 11, 12 and 13 of the batch plan):**
 
 Evidence is listed in `feature-status.md` under Batch G.
 
+### CS-029 — Telecaller loan specialties and scoped staff identifiers
+
+**Decision (2026-11-20; Round 2 Batch 3):** Admins may optionally assign an
+active loan product as the specialty of a Loans or dual-line Telecaller, on
+provisioning or later account editing. Existing staff start unspecialised.
+For a known active loan product, automatic assignment tries same-line/dual-line
+specialists, then unspecialised Loans Telecallers, then all eligible Telecallers.
+Each actual candidate pool rotates independently. Unknown/ambiguous products use
+the all-eligible pool. Real Estate keeps its line rotation. Current assignments
+are preserved; sticky Agent resubmission still precedes specialty routing.
+
+Task participants may read their actual counterpart's name and assigned code,
+without counterpart phone/email or a staff-directory grant. Own profile metadata
+includes staff/Agent codes, specialty and each active team's name/line, including
+both teams for dual-line staff. Admin directory metadata is batched; manager
+rosters remain limited to their reached staff. Web surfaces reuse the approved
+operational design and display server-assigned codes rather than deriving IDs.
+
+API work on `feat/staff-specialty-routing-api` has complete segmented evidence
+for all 2,920 tests, a populated migration rollback, generated contracts and the
+compatible web gate; exact results and resolved test failures are in the living
+plan/status. Delivered for review as [upstream #390](https://github.com/brollysolutions/client1/pull/390)
+and [mirror #91](https://github.com/vamshisaideep9/client1/pull/91). Assignment must be quiesced while the
+API and single scheduler move together to the new cursor key. No payout, attendance,
+public-page or dependency scope is included in this decision.
+
+Hosted verification exposed a shared-catalogue test fixture assumption, not a
+routing change: duplicate Personal Loan labels correctly use the all-staff
+fallback. The test now creates a unique product for its public-label assertion;
+a duplicate-label reproduction and the full 20-test routing file pass after
+the correction. Inherited Python dependency-audit findings remain a failed gate.
+
 ### CS-028 — Agent lead form fields, sticky resubmission, bulk submit and product commission rates
 
 Web slice (2026-11-20, `feat/agent-lead-intake-web`, parent API `e70b18c3`):
@@ -990,10 +1022,13 @@ with error/retry preserving inputs. No dependency or API change in this slice.
 The unchanged runtime passes 1,113 unit tests and the 118-page Node 22 build;
 the final combined production-browser run passes all 11 scenarios with synthetic
 API mocks. Post-restack lint/typecheck and runtime/API/contract identity checks
-pass. Web PRs [#389](https://github.com/brollysolutions/client1/pull/389) and
-[mirror #90](https://github.com/vamshisaideep9/client1/pull/90) are open against
-`main` with matching heads; hosted mirror jobs are blocked before startup by the
-account billing/spending restriction. Remaining Round 2 scope starts with Batch 3.
+pass. Web [upstream #389](https://github.com/brollysolutions/client1/pull/389)
+merged as `78567697`; [mirror #90](https://github.com/vamshisaideep9/client1/pull/90)
+remains open against `main`, refreshed to that merged history. API upstream #388
+merged as `66caddde` and mirror #89 remains open at that merged history. These
+states were rechecked while continuing Batch 3. Hosted mirror jobs were blocked
+by billing/spending restrictions at Batch 2 delivery. Batch 3 continues from this
+merged baseline.
 
 **Decision (2026-11-19, client-reported batch 2 "Agent leads"; both lines;
 amends CS-017's resubmission and the FR-8.1 commission entry; the detailed

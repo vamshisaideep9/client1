@@ -40,7 +40,7 @@ lead_status_enum = ENUM(LeadStatus, name="lead_status", create_type=False, value
 
 
 class LeadAssignmentCursor(Base):
-    """Internal per-line cursor for deterministic automatic assignment."""
+    """Internal per-line, per-candidate-pool automatic assignment cursor."""
 
     __tablename__ = "lead_assignment_cursors"
     __table_args__ = (
@@ -48,11 +48,20 @@ class LeadAssignmentCursor(Base):
             "business_line::text IN ('loans', 'real_estate')",
             name="business_line_operational",
         ),
+        CheckConstraint(
+            "pool = 'all' OR (business_line::text = 'loans' AND "
+            "(pool = 'unspecialised' OR pool ~ "
+            "'^product:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'))",
+            name="pool",
+        ),
     )
 
     business_line: Mapped[str] = mapped_column(
         business_line_enum,
         primary_key=True,
+    )
+    pool: Mapped[str] = mapped_column(
+        String(64), primary_key=True, default="all", server_default="all"
     )
     last_telecaller_profile_uuid: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

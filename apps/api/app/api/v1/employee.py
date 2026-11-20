@@ -35,6 +35,7 @@ from app.schemas.employee import (
     TaskTypeLiteral,
 )
 from app.schemas.field_visibility import ContactShareLinkRead
+from app.schemas.profile_metadata import TaskStaffRead
 from app.services import storage
 from app.services.employee import (
     IllegalTransition,
@@ -70,6 +71,7 @@ from app.services.field_visibility import (
     create_contact_share_link as create_contact_share_link_record,
 )
 from app.services.lead_signals import EMPTY_SIGNALS, LeadSignals, facets, lead_signals_for_ids
+from app.services.profile_metadata import task_staff_for_ids
 from app.services.task_feedback import (
     FeedbackLimitReached,
     FeedbackRateExceeded,
@@ -137,6 +139,7 @@ def _to_read(
     lead_mobile: str,
     modes: dict[tuple[str, str], FieldVisibilityMode],
     signals: LeadSignals | None = None,
+    staff: TaskStaffRead | None = None,
 ) -> EmployeeTaskRead:
     mode = contact_mode(modes)
     lead_values: dict[str, object] = {"name": lead_name, "mobile": lead_mobile}
@@ -150,6 +153,7 @@ def _to_read(
             "lead_facets": facets(signals),
         }
     return EmployeeTaskRead(
+        **(staff.model_dump() if staff else {}),
         **signal_fields,
         id=task.id,
         lead_uuid=task.lead_uuid,
@@ -184,8 +188,16 @@ async def list_tasks(
     rows = await list_tasks_for_employee(db, staff_profile_uuid, status_filter, task_type_filter)
     modes = await effective_modes(db, FieldTargetRole.EMPLOYEE)
     signals = await lead_signals_for_ids(db, (task.lead_uuid for task, _, _ in rows))
+    staff = await task_staff_for_ids(db, (task.id for task, _, _ in rows))
     return [
-        _to_read(task, name, mobile, modes, signals.get(task.lead_uuid, EMPTY_SIGNALS))
+        _to_read(
+            task,
+            name,
+            mobile,
+            modes,
+            signals.get(task.lead_uuid, EMPTY_SIGNALS),
+            staff.get(task.id),
+        )
         for task, name, mobile in rows
     ]
 
@@ -202,7 +214,8 @@ async def get_task(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Task not found.")
     modes = await effective_modes(db, FieldTargetRole.EMPLOYEE)
     signals = await lead_signals_for_ids(db, [row[0].lead_uuid])
-    read = _to_read(*row, modes, signals.get(row[0].lead_uuid, EMPTY_SIGNALS))
+    staff = await task_staff_for_ids(db, [task_id])
+    read = _to_read(*row, modes, signals.get(row[0].lead_uuid, EMPTY_SIGNALS), staff.get(task_id))
     read.manager_notes = await work_notes(db, task_id=task_id)
     return read
 
@@ -234,6 +247,7 @@ async def reopen_employee_task(
         lead.mobile if lead else "",
         modes,
         signals.get(task.lead_uuid, EMPTY_SIGNALS),
+        (await task_staff_for_ids(db, [task.id])).get(task.id),
     )
 
 
@@ -281,6 +295,7 @@ async def patch_task(
         lead.mobile if lead else "",
         modes,
         signals.get(task.lead_uuid, EMPTY_SIGNALS),
+        (await task_staff_for_ids(db, [task.id])).get(task.id),
     )
 
 
@@ -588,9 +603,13 @@ async def home(
     tasks_today, overdue_count, counts_by_type, counts_by_status = await get_home_summary(
         db, staff_profile_uuid
     )
+    staff = await task_staff_for_ids(db, (task.id for task, _, _ in tasks_today))
     modes = await effective_modes(db, FieldTargetRole.EMPLOYEE)
     return EmployeeHomeResponse(
-        tasks_today=[_to_read(task, name, mobile, modes) for task, name, mobile in tasks_today],
+        tasks_today=[
+            _to_read(task, name, mobile, modes, staff=staff.get(task.id))
+            for task, name, mobile in tasks_today
+        ],
         overdue_count=overdue_count,
         counts_by_type=counts_by_type,
         counts_by_status=counts_by_status,

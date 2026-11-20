@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.schemas.profile_metadata import TaskStaffRead
 from app.schemas.telecaller import (
     STAFF_NOTE_MAX_CHARS,
     CallDispositionLiteral,
@@ -40,7 +41,7 @@ DocContentTypeLiteral = Literal["image/jpeg", "image/png", "image/webp", "applic
 FeedbackContentTypeLiteral = Literal["image/jpeg", "image/png", "image/webp", "application/pdf"]
 
 
-class EmployeeTaskRead(BaseModel):
+class EmployeeTaskRead(TaskStaffRead):
     id: UUID
     lead_uuid: UUID
     lead_name: str | None = None

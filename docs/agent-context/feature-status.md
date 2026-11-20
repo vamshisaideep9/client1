@@ -1,14 +1,49 @@
 # Feature implementation status
 
-**In review — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
+**Delivered for review — Batch 3 API** (2026-11-20), branch
+`feat/staff-specialty-routing-api`, baseline `78567697` after upstream #388/#389
+merged. Scope: Admin-managed Telecaller loan specialty and independent routing
+pools, task-confined staff name/code projection, own/Admin profile metadata and
+dual-line team names. Existing assignments, sticky resubmit, staff profile locks
+and contact privacy remain invariants. API/contracts precede the web slice.
+Final evidence covers **all 2,920 collected API tests**, with no missing,
+duplicate, skipped, errored or failed cases in the retained results. Four isolated
+PostgreSQL/Redis groups cover 676/704/768/772 tests. A new bounded-retry test
+initially fell outside the oldest 200 leads; its setup now gives the lead
+priority and asserts visitation. Its entire file plus all unreached files pass
+together (37 tests), retaining unchanged passing files. No single uninterrupted
+full-suite pass is claimed. Deprecated 422 constants found earlier are corrected.
+Ruff/format (645 files), one head `b7d9f1a3c5e7`, populated migration rollback/
+re-upgrade preserving legacy rotation and both contract scripts pass. Compatible
+web lint/typecheck, 1,113 units and the 118-page Node 22 build pass. Code/security
+review has no outstanding actionable finding. [Upstream #390](https://github.com/brollysolutions/client1/pull/390) and
+[mirror #91](https://github.com/vamshisaideep9/client1/pull/91) are open/mergeable
+against their respective main branches at the same head. No percentage change.
+Next: separate Batch 3 web delivery; Batches 4–6 remain unstarted.
+Hosted shared-database verification passed 2,919 tests and found one fixture
+assumption about the seeded Personal Loan label being unique. An earlier history
+test deliberately duplicates that label, correctly invoking ambiguous fallback.
+The public-capture test now uses a unique product. The duplicate-label failure
+was reproduced locally; the corrected whole routing file passes all 20 tests
+in that same database, with Ruff/format passing and runtime/contracts unchanged.
+Final retained local coverage remains complete; hosted verification needs a
+fresh run. Secret scan passed, but Python dependency audit failed with 63
+advisories in four unchanged locked packages; Node audit was not reached.
+No allowlist, bypass or dependency change was made.
+Migration rollout must quiesce assignment and update API/single scheduler together.
+Downgrade removes optional specialty/new-pool history; legacy all-pool rotation
+survives, and application rollback must support the retained audit enum action.
+
+**Merged upstream — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
 branch `feat/agent-lead-intake-web`, stacked on API `e70b18c3`:
 [upstream #388](https://github.com/brollysolutions/client1/pull/388),
 [mirror #89](https://github.com/vamshisaideep9/client1/pull/89).
 The email/property intake, local spreadsheet workflow, resubmission filters/badges,
 approved commission display, proposal/review and editable suggestion are complete;
-PRs [upstream #389](https://github.com/brollysolutions/client1/pull/389) and
-[mirror #90](https://github.com/vamshisaideep9/client1/pull/90) are open against
-`main`, with repository/base/head identities independently verified.
+[Upstream #389](https://github.com/brollysolutions/client1/pull/389) merged as
+`78567697`. [Mirror #90](https://github.com/vamshisaideep9/client1/pull/90)
+remains open against `main`, refreshed to the merged history and independently
+rechecked while continuing Batch 3.
 No completion-percentage change.
 
 Web lint/typecheck and 1,113 unit tests (153 files) pass. The Node 22 Alpine
@@ -25,14 +60,14 @@ Security/design review covers hidden-note preservation, formula-safe bounded
 spreadsheets, generated contract consumers, mobile result cards and the embedded
 commission error/retry without an unrelated product save. Six synthetic screenshots
 and evidence are in `apps/web/e2e/review/agent-lead-intake/README.md`.
-Hosted CI remains unavailable: the upstream PR has no check runs; all three mirror
+Hosted CI was unavailable at Batch 2 delivery: the upstream PR had no check runs; all three mirror
 Actions jobs are blocked before startup by billing/spending restrictions (verify
-has zero steps). GitGuardian is neutral. Next priority: Batch 3 API; Batches 3–6
-have not started.
+had zero steps). GitGuardian was neutral. The next priority at that delivery was
+Batch 3 API, now in progress above; Batches 4–6 have not started.
 
 Status: **Derived living implementation ledger**
 
-**In review — Batch 2: Agent leads (API slice)** (2026-11-20; CS-028;
+**Merged upstream — Batch 2: Agent leads (API slice)** (2026-11-20; CS-028;
 client-reported), branch `feat/agent-lead-intake-api` built on merged Batch 1.
 PR [#388](https://github.com/brollysolutions/client1/pull/388), mirror [#89](https://github.com/vamshisaideep9/client1/pull/89), both against `main`.
 Both repository/base/head identities were independently checked; no

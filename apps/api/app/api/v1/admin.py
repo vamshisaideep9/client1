@@ -58,6 +58,7 @@ from app.schemas.admin import (
     StaffCreateRequest,
     StaffCreateResponse,
     StaffFeatureUpdateRequest,
+    StaffSpecialtyUpdateRequest,
 )
 from app.schemas.agent_invites import (
     AgentInviteCandidateListResponse,
@@ -92,6 +93,7 @@ from app.schemas.loan_config import (
     LoanTypeUpdate,
 )
 from app.schemas.loans import LoanApplicationProgressUpdate
+from app.schemas.profile_metadata import RoleProfileRead
 from app.schemas.property_deals import PropertyDealProgressUpdate
 from app.schemas.staff_invites import StaffInviteLinkRead
 from app.schemas.support_tickets import (
@@ -113,6 +115,7 @@ from app.services.admin import (
     AdminUserUpdateForbidden,
     AgentApplicationAlreadyReviewed,
     AgentApplicationEmailConflict,
+    InvalidLoanSpecialty,
     InvalidStaffFeatureTarget,
     PrimaryAdminRequired,
     StaffAlreadyExists,
@@ -128,6 +131,7 @@ from app.services.admin import (
     reject_agent_application,
     set_operational_user_status,
     set_staff_feature,
+    set_staff_specialty,
 )
 from app.services.admin_home import get_admin_home
 from app.services.audit_log import AuditEntryView
@@ -198,6 +202,7 @@ from app.services.loan_config import (
     update_bank,
     update_loan_type,
 )
+from app.services.profile_metadata import role_profiles_for_users
 from app.services.property_deals import InvalidStatusTransition as InvalidDealStatusTransition
 from app.services.property_deals import (
     StatusReasonRequired as DealStatusReasonRequired,
@@ -301,6 +306,11 @@ async def create_staff_user(
             actor_role=current_user.role,
             actor_staff_profile_uuid=current_user.staff_profile_uuid,
         )
+    except InvalidLoanSpecialty as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Choose an active loan product for this Telecaller.",
+        ) from exc
     except StaffAlreadyExists as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -323,6 +333,7 @@ async def create_staff_user(
         role=payload.role,
         business_line=profile.business_line,
         staff_code=profile.staff_code,
+        loan_specialty_id=profile.loan_specialty_id,
         auth_user_uuid=profile.auth_user_uuid,
         temp_password=temp_password,
     )
@@ -500,9 +511,11 @@ async def list_users(
         created_to=created_to,
         never_logged_in=never_logged_in,
     )
+    role_profiles = await role_profiles_for_users(db, [user.id for user, _, _ in users])
     return AdminUserListResponse(
         users=[
             AdminUserRead(
+                role_profiles=role_profiles.get(user.id, []),
                 id=user.id,
                 first_name=user.first_name,
                 last_name=user.last_name,
@@ -661,6 +674,7 @@ async def update_user_status(
     roles = await operational_roles_for(db, user.id)
     client_profiles = await operational_client_profiles_for(db, user.id)
     return AdminUserRead(
+        role_profiles=(await role_profiles_for_users(db, [user.id])).get(user.id, []),
         id=user.id,
         first_name=user.first_name,
         last_name=user.last_name,
@@ -675,6 +689,32 @@ async def update_user_status(
         created_at=user.created_at,
         last_login_at=user.last_login_at,
     )
+
+
+@router.patch("/users/{auth_user_uuid}/loan-specialty", response_model=list[RoleProfileRead])
+async def update_staff_loan_specialty(
+    auth_user_uuid: UUID,
+    payload: StaffSpecialtyUpdateRequest,
+    response: Response,
+    current_user: CurrentUser = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+) -> list[RoleProfileRead]:
+    response.headers["Cache-Control"] = "private, no-store"
+    try:
+        await set_staff_specialty(
+            db,
+            user_id=auth_user_uuid,
+            product_id=payload.loan_specialty_id,
+            actor_id=current_user.id,
+        )
+    except AdminUserNotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Active Telecaller not found.") from exc
+    except InvalidLoanSpecialty as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Choose an active loan product for a Loans Telecaller.",
+        ) from exc
+    return (await role_profiles_for_users(db, [auth_user_uuid])).get(auth_user_uuid, [])
 
 
 @router.get("/agents", response_model=AgentApplicationListResponse)
