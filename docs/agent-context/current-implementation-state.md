@@ -1003,6 +1003,12 @@ and [mirror #91](https://github.com/vamshisaideep9/client1/pull/91). Assignment 
 API and single scheduler move together to the new cursor key. No payout, attendance,
 public-page or dependency scope is included in this decision.
 
+Hosted verification exposed a shared-catalogue test fixture assumption, not a
+routing change: duplicate Personal Loan labels correctly use the all-staff
+fallback. The test now creates a unique product for its public-label assertion;
+a duplicate-label reproduction and the full 20-test routing file pass after
+the correction. Inherited Python dependency-audit findings remain a failed gate.
+
 ### CS-028 — Agent lead form fields, sticky resubmission, bulk submit and product commission rates
 
 Web slice (2026-11-20, `feat/agent-lead-intake-web`, parent API `e70b18c3`):

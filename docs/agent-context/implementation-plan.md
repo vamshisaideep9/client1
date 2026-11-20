@@ -1,6 +1,6 @@
 # Living implementation plan
 
-**Verified for delivery — Batch 3: staff specialty routing and profile metadata (API slice)**
+**Delivered for review — Batch 3: staff specialty routing and profile metadata (API slice)**
 (2026-11-20), branch `feat/staff-specialty-routing-api`, based on merged Batch 2
 `78567697` (upstream #388/#389). API/contracts first; web follows separately.
 Acceptance: optional Admin-managed Loans/dual-line Telecaller specialties;
@@ -22,7 +22,19 @@ IDs/timestamps and both contract scripts pass. API-compatible web lint/typecheck
 1,113 unit tests and the 118-page Node 22 production build pass. Code/security
 review found no outstanding actionable defect. [Upstream #390](https://github.com/brollysolutions/client1/pull/390) and
 [mirror #91](https://github.com/vamshisaideep9/client1/pull/91) are open/mergeable
-against each repository?s main at the same head. No percentage change. Next priority: complete the separate Batch 3 web slice.
+against their respective main branches at the same head. No percentage change.
+Next priority: complete the separate Batch 3 web slice.
+
+Hosted CI follow-up: the single shared-database run passed 2,919 tests and exposed
+one test-fixture assumption: another history test intentionally creates the same
+Personal Loan display label. Ambiguous-label fallback is correct. The public
+capture test now uses its own unique product; a locally seeded duplicate first
+reproduced the failure, and the entire routing file then passed (20 tests) in
+that same database. Runtime/API/contracts are unchanged; final retained local
+coverage still includes every test. Ruff/format pass. Hosted verification must
+rerun after this test-only correction. The secret scan passed; Python dependency
+audit failed on 63 advisories in four inherited locked packages (aiohttp,
+certifi, dnspython and Pillow), so Node audit was not reached. No gate was weakened.
 
 Rollout: quiesce assignment and update API and the single scheduler together
 after migration; old workers cannot share the new cursor keys. Downgrade loses

@@ -360,7 +360,10 @@ async def test_public_agent_and_application_capture_route_by_product(client: Asy
     async with sessions.AsyncSessionLocal() as db:
         row = await db.get(LoanApplication, UUID(application.json()["id"]))
         assert (await db.get(Lead, row.lead_uuid)).assigned_telecaller_profile_uuid == specialist.id
-        p = await db.get(LoanType, UUID(payload["loan_type_id"]))
+    # Other integration scenarios deliberately share the Personal Loan label.
+    # Public label routing needs its own unambiguous catalogue fixture.
+    p = await product()
+    await specialize(specialist, p.id)
     mobile = unique_mobile()
     assert await capture_lead(mobile, business_line="loans", requirement={"product": p.label})
     agent = await _seed_agent()

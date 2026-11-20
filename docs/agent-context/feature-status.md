@@ -1,6 +1,6 @@
 # Feature implementation status
 
-**Verified for delivery — Batch 3 API** (2026-11-20), branch
+**Delivered for review — Batch 3 API** (2026-11-20), branch
 `feat/staff-specialty-routing-api`, baseline `78567697` after upstream #388/#389
 merged. Scope: Admin-managed Telecaller loan specialty and independent routing
 pools, task-confined staff name/code projection, own/Admin profile metadata and
@@ -18,7 +18,18 @@ re-upgrade preserving legacy rotation and both contract scripts pass. Compatible
 web lint/typecheck, 1,113 units and the 118-page Node 22 build pass. Code/security
 review has no outstanding actionable finding. [Upstream #390](https://github.com/brollysolutions/client1/pull/390) and
 [mirror #91](https://github.com/vamshisaideep9/client1/pull/91) are open/mergeable
-against each repository?s main at the same head. No percentage change. Next: separate Batch 3 web delivery; Batches 4–6 remain unstarted.
+against their respective main branches at the same head. No percentage change.
+Next: separate Batch 3 web delivery; Batches 4–6 remain unstarted.
+Hosted shared-database verification passed 2,919 tests and found one fixture
+assumption about the seeded Personal Loan label being unique. An earlier history
+test deliberately duplicates that label, correctly invoking ambiguous fallback.
+The public-capture test now uses a unique product. The duplicate-label failure
+was reproduced locally; the corrected whole routing file passes all 20 tests
+in that same database, with Ruff/format passing and runtime/contracts unchanged.
+Final retained local coverage remains complete; hosted verification needs a
+fresh run. Secret scan passed, but Python dependency audit failed with 63
+advisories in four unchanged locked packages; Node audit was not reached.
+No allowlist, bypass or dependency change was made.
 Migration rollout must quiesce assignment and update API/single scheduler together.
 Downgrade removes optional specialty/new-pool history; legacy all-pool rotation
 survives, and application rollback must support the retained audit enum action.
