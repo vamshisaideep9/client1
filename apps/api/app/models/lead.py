@@ -154,6 +154,19 @@ class Lead(Base):
     expiry_reminder_sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # CS-028: the Telecaller whose assignment was most recently cleared
+    # (expiry, stale-assignee repair, Admin release). A resubmitted lead goes
+    # back to them while they are still eligible. The trigger
+    # trg_leads_last_telecaller_guard allows only the assignee being cleared.
+    last_telecaller_profile_uuid: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("staff_profiles.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # CS-028: when the originating Agent last resubmitted the lead.
+    last_resubmitted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
     )

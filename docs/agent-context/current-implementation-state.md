@@ -977,6 +977,86 @@ module; "Does not fit" items 6, 11, 12 and 13 of the batch plan):**
 
 Evidence is listed in `feature-status.md` under Batch G.
 
+### CS-028 — Agent lead form fields, sticky resubmission, bulk submit and product commission rates
+
+**Decision (2026-11-19, client-reported batch 2 "Agent leads"; both lines;
+amends CS-017's resubmission and the FR-8.1 commission entry; the detailed
+Round 2 brief and stacked-PR delivery were confirmed on 2026-11-20):**
+
+- *Lead form.* An Agent's lead is name, mobile, an optional email, the
+  requirement (loans: a loan product; real estate: a property type, with or
+  without a specific listing, which must then agree) and a description (the
+  existing notes). The email and property type are stored under the lead's
+  requirement, owned by the Agent in the detail-ownership ledger; the Agent
+  may change or remove the email and notes while the lead is editable; the
+  product, listing and property type are fixed at introduction.
+- *Input compatibility.* The optional top-level `email` and the existing
+  nested `requirement.email` normalize into that one stored key. Matching
+  nonblank values are accepted; conflicting ones are rejected. A legacy
+  update carrying a valid name and `requirement: null` clears owned notes
+  only, preserving email and the fixed interest fields; another creator's
+  notes remain protected and cause the whole update to fail.
+- *Email deletion.* Account deletion erases the person's lead email from
+  active and historical journeys selected by their verified mobile or
+  Client profile. Deleting a referring Agent does not erase another
+  person's contact. The existing financial-record retention window stays
+  separate; a deleted person's lead email is erased immediately, rather
+  than retained until a financial purge.
+- *Who reads a lead's requirement.* One allowlist for every read: the
+  originating Agent sees keys attributed to them in the ownership ledger.
+  Current/new claims preserve other creators' ownership and do not expose
+  their input. The old backfill attributes known fields by recorded Agent
+  origin; a public row already claimed before that ledger can contain earlier
+  merged input with that same descriptor. No accepted/claim per-key audit can
+  reconstruct those indistinguishable fields safely. The legacy regression
+  verifies the original backfill and subsequent claims, rather than proving
+  authorship of every pre-ledger claimed key. The assigned Telecaller sees every known key,
+  the email included, behind the existing Telecaller "Requirement details"
+  field rule (there is no separate email rule); a platform Admin's lead
+  details show notes, the resolved labels and the email; a Client's lead
+  details never show the email; Employees, Sub Admin team views and the
+  Agent's lead history carry no requirement.
+- *Resubmission goes back to the same Telecaller.* Every path that clears
+  a lead's Telecaller (the 30-day expiry, the repair of an ineligible
+  assignee, an Admin release) remembers that Telecaller. When the Agent
+  resubmits an expired lead that is still unassigned, it goes straight back
+  to them while they are an active Telecaller on the lead's line (or both
+  lines); otherwise round-robin assignment applies as before. A lead the
+  open pool already gave to another Telecaller before the resubmission
+  keeps that Telecaller (a lead being worked is not interrupted). Agent,
+  Telecaller and Admin lead lists show how often and when a lead was
+  resubmitted.
+- *Bulk submit.* An Agent uploads a spreadsheet the browser reads (at most
+  200 rows: S.No, name, mobile, email, requirement, description). A
+  check-only pass validates the rows (Indian mobile formats, repeated
+  numbers, product / property type on the Agent's own line) without looking
+  anything up; the real submit treats every row exactly like a single
+  introduction and reports each row (created, already yours, duplicate,
+  not eligible, repeated in the file, invalid, temporarily unavailable).
+  Limited to 5 submits and 30 checks per Agent per hour; one audit entry
+  per submit with counts only.
+- *Commission rate per loan product.* A Sub Admin or a platform Admin
+  enters an indicative commission for a loan product: a percent of the
+  loan amount or a fixed rupee amount, plus an optional short note. A Sub
+  Admin's entry waits for a platform Admin who did not make it (approve,
+  or reject with a note; the maker may withdraw it, and a new proposal
+  replaces their own earlier one); a platform Admin's own entry applies at
+  once as standalone entry with no checker or review timestamp. Any recorded
+  checker must differ from its maker. A platform Admin sees all workflow rows;
+  a Sub Admin sees approved rates and their own workflow rows only. Loans
+  Agents and eligible loans/both-line Telecallers and Employees have approved-
+  only RLS reads; the management API remains Admin/Sub Admin and the Agent
+  endpoint remains Agent-only. Rates are never public. The per-deal commission
+  is still entered by the Admin, now
+  pre-filled with the rate applied to the sanctioned amount (the requested
+  amount when none was sanctioned) or the fixed amount.
+
+Evidence is listed in `feature-status.md` under Batch 2. API review: [upstream #388](https://github.com/brollysolutions/client1/pull/388),
+[mirror #89](https://github.com/vamshisaideep9/client1/pull/89), both against `main`. Final API verification
+at `5c5c4467` passes all 2,884 tests with no failures/errors/skips and one
+Alembic head. The web slice follows; this session stops after Batch 2, with
+Batches 3–6 reserved for a new session.
+
 ## 3. Previously open items settled by current behavior
 
 The following entries may still be labelled “open,” “assumed,” or “pending” in

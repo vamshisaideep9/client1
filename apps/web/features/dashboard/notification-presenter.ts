@@ -54,6 +54,8 @@ export const NOTIFICATION_TYPE_ICON: Record<NotificationType, LucideIcon> = {
   contest_reviewed: Trophy,
   contest_live: Trophy,
   contest_won: Trophy,
+  commission_rate_submitted: Wallet,
+  commission_rate_reviewed: Wallet,
 };
 
 export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
@@ -88,6 +90,8 @@ export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
   contest_reviewed: "Contest reviewed",
   contest_live: "Contest is live",
   contest_won: "Contest won",
+  commission_rate_submitted: "Commission rate awaiting approval",
+  commission_rate_reviewed: "Commission rate reviewed",
 };
 
 export function formatNotificationTime(iso: string): string {

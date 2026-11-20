@@ -118,6 +118,11 @@ PERSONALIZATION_LOCATION_CAPTURE = "personalization_location_capture:{owner_uuid
 PINCODE_LOOKUP_RATE = "pincode_lookup_rate:{owner_uuid}"
 PINCODE_NEAREST_RATE = "pincode_nearest_rate:{owner_uuid}"
 
+# CS-028 Agent bulk lead submit, per Agent profile and mode ("submit" or
+# "dry_run"; separate budgets). Counters only: no row data is written to
+# Redis. Owner: api/v1/agent.py. Plain rolling hourly windows.
+AGENT_LEAD_BULK_RATE = "agent_lead_bulk_rate:{mode}:{agent_profile_uuid}"
+
 # TTLs in seconds
 TTL_OTP = 5 * 60  # 5 min
 TTL_OTP_RESEND = 60 * 60  # 1 hour window + lock duration
@@ -143,6 +148,7 @@ TTL_TASK_DOCUMENT_PRESIGN = 60 * 60
 TTL_TASK_DOCUMENT_UPLOAD = 10 * 60
 TTL_PERSONALIZATION_LOCATION_CAPTURE = 60 * 60
 TTL_PINCODE_RATE = 60 * 60
+TTL_AGENT_LEAD_BULK_RATE = 60 * 60
 
 
 # ---------------------------------------------------------------------------
@@ -378,6 +384,12 @@ def pincode_lookup_rate_key(owner_uuid: str) -> str:
 
 def pincode_nearest_rate_key(owner_uuid: str) -> str:
     return PINCODE_NEAREST_RATE.format(owner_uuid=owner_uuid)
+
+
+def agent_lead_bulk_rate_key(mode: str, agent_profile_uuid: str) -> str:
+    if mode not in ("submit", "dry_run"):
+        raise ValueError(f"Unknown bulk lead mode: {mode}")
+    return AGENT_LEAD_BULK_RATE.format(mode=mode, agent_profile_uuid=agent_profile_uuid)
 
 
 def agent_apply_otp_daily_key(mobile: str) -> str:

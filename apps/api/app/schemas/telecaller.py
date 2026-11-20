@@ -251,6 +251,10 @@ class TelecallerLeadRead(BaseModel):
     facets: LeadFacets = Field(default_factory=LeadFacets)
     # Loan transactions recorded on the lead; null on the real estate line.
     transactions: LeadTransactionSummary | None = None
+    # CS-028: how often and when the introducing Agent last resubmitted the
+    # lead after its window ended (0 / null when never).
+    resubmit_count: int = 0
+    last_resubmitted_at: datetime | None = None
 
 
 class LoanTxnCreate(BaseModel):

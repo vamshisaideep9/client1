@@ -18,12 +18,12 @@ from app.models.lead import Lead, LeadStatus
 from app.models.lead_intake_attempt import IntakeActorType
 from app.models.loan import LoanType
 from app.models.profile import AgentProfile
-from app.models.property import Property
-from app.schemas.agent import AgentLeadCreate, AgentLeadUpdate
+from app.models.property import Property, PropertySubtype
+from app.schemas.agent import PROPERTY_TYPE_LABELS, AgentLeadCreate, AgentLeadUpdate
 from app.schemas.eligibility import EligibilitySummary
-from app.schemas.lead_details import LeadDetailsPatch
+from app.schemas.lead_details import AgentLeadDetailsPatch
 from app.services import lead_intake_attempts
-from app.services.eligibility import agent_lead_eligibility
+from app.services.eligibility import EligibilityReason, agent_lead_eligibility
 from app.services.lead_details import (
     DetailActor,
     LeadDetailsForbidden,
@@ -31,9 +31,10 @@ from app.services.lead_details import (
     patch_details,
 )
 from app.services.leads import (
+    AgentCaptureOutcome,
     AgentLeadConflict,
     AgentLeadNotResubmittable,
-    capture_agent_lead,
+    capture_agent_lead_with_outcome,
     resubmit_agent_lead,
 )
 
@@ -48,7 +49,15 @@ class LeadCaptureFailed(Exception):
     mobile's existing active lead is on the OTHER business line, already
     assigned to a telecaller, or attributed to a different agent; see
     leads_rls's business_line-gated agent branch and services.leads.capture_lead's
-    conflict_guard)."""
+    conflict_guard).
+
+    ``reason`` is the CS-024 eligibility reason recorded for the attempt
+    (None when the post-capture re-read found nothing); every reason maps to
+    the same single-submit 409."""
+
+    def __init__(self, reason: EligibilityReason | None = None) -> None:
+        super().__init__(reason)
+        self.reason = reason
 
 
 class LeadCaptureUnavailable(Exception):
@@ -77,18 +86,32 @@ class LeadNotResubmittable(Exception):
 async def _resolve_interest(
     db: AsyncSession, business_line: str, requirement: dict | None
 ) -> dict | None:
-    """Validate the optional property / product choice and snapshot its title.
+    """Validate the optional property / property type / product choice and
+    snapshot its label.
 
     Reads through the Agent's request-scoped session, so only listings and
     products the Agent can already see are accepted. A real-estate Agent may
-    pick only an active property; a loans Agent only an active product. The
-    stored title lets the telecaller see the interest without another lookup.
+    pick only an active property and/or a property type; a loans Agent only
+    an active product. The stored labels let the telecaller see the interest
+    without another lookup. When both a listing and a property type are
+    given they must agree.
     """
     if not requirement:
         return requirement
     resolved = dict(requirement)
     property_id = requirement.get("property_id")
     product_slug = requirement.get("product_slug")
+    property_type = requirement.get("property_type")
+    subtype: PropertySubtype | None = None
+    if property_type is not None:
+        if business_line != "real_estate":
+            raise InvalidLeadInterest
+        try:
+            subtype = PropertySubtype(property_type)
+        except ValueError as exc:
+            raise InvalidLeadInterest from exc
+        resolved["property_type"] = subtype.value
+        resolved["property_type_label"] = PROPERTY_TYPE_LABELS[subtype]
     if property_id is not None:
         if business_line != "real_estate":
             raise InvalidLeadInterest
@@ -96,6 +119,12 @@ async def _resolve_interest(
             select(Property).where(Property.id == UUID(str(property_id)), Property.active.is_(True))
         )
         if prop is None:
+            raise InvalidLeadInterest
+        if (
+            subtype is not None
+            and prop.property_subtype is not None
+            and prop.property_subtype != subtype
+        ):
             raise InvalidLeadInterest
         resolved["property_id"] = str(prop.id)
         resolved["interest_title"] = f"{prop.title}, {prop.location}"[:240]
@@ -133,9 +162,27 @@ async def introduce_lead(
     payload: AgentLeadCreate,
 ) -> Lead:
     """Capture and automatically assign a lead sourced by this Agent."""
+    lead, _outcome = await introduce_lead_with_outcome(
+        db,
+        agent_profile_uuid=agent_profile_uuid,
+        business_line=business_line,
+        payload=payload,
+    )
+    return lead
+
+
+async def introduce_lead_with_outcome(
+    db: AsyncSession,
+    *,
+    agent_profile_uuid: UUID,
+    business_line: str,
+    payload: AgentLeadCreate,
+) -> tuple[Lead, AgentCaptureOutcome]:
+    """``introduce_lead`` that also says whether the lead was new to this
+    Agent (created or claimed) or was already one of theirs (bulk submit)."""
     requirement = await _resolve_interest(db, business_line, payload.requirement)
     try:
-        lead = await capture_agent_lead(
+        lead, outcome = await capture_agent_lead_with_outcome(
             mobile=payload.mobile,
             name=payload.name,
             business_line=business_line,
@@ -143,7 +190,7 @@ async def introduce_lead(
             requirement=requirement,
         )
     except AgentLeadConflict as exc:
-        raise LeadCaptureFailed from exc
+        raise LeadCaptureFailed(exc.reason) from exc
     except Exception as exc:
         raise LeadCaptureUnavailable from exc
 
@@ -158,7 +205,7 @@ async def introduce_lead(
     )
     if visible is None:
         raise LeadCaptureFailed
-    return visible
+    return visible, outcome
 
 
 async def list_my_leads(
@@ -218,11 +265,15 @@ async def update_lead_for_agent(
     auth_user_uuid: UUID,
     agent_profile_uuid: UUID,
 ) -> Lead:
-    notes = payload.requirement.get("notes") if payload.requirement is not None else None
-    details = LeadDetailsPatch.model_validate(
+    requirement = payload.requirement or {}
+    # Legacy clients send a valid name with requirement:null to clear notes.
+    # Keep that behavior without clearing the new email or fixed interest keys.
+    if "requirement" in payload.model_fields_set and payload.requirement is None:
+        requirement = {"notes": None}
+    details = AgentLeadDetailsPatch.model_validate(
         {
             **({"name": payload.name} if "name" in payload.model_fields_set else {}),
-            **({"notes": notes} if "requirement" in payload.model_fields_set else {}),
+            **{key: requirement[key] for key in ("notes", "email") if key in requirement},
         }
     )
     try:

@@ -40,6 +40,7 @@ from app.schemas.telecaller import (
     TelecallerSiteVisitRead,
 )
 from app.services.field_visibility import effective_modes, project_values
+from app.services.lead_details import visible_requirement
 from app.services.lead_signals import facets, lead_signals, transaction_summary
 from app.services.loan_applications import (
     BankNotAvailableForLoanType,
@@ -221,12 +222,14 @@ async def list_leads(
                 loan_statuses=signals.loan_statuses,
                 facets=facets(signals),
                 transactions=transaction_summary(signals.transactions, modes, lead.business_line),
+                resubmit_count=lead.resubmit_count,
+                last_resubmitted_at=lead.last_resubmitted_at,
                 **project_values(
                     modes,
                     "lead",
                     {
                         "name": lead.name,
-                        "requirement": lead.requirement,
+                        "requirement": visible_requirement(lead, "telecaller"),
                         "referrer": signals.referrer,
                     },
                 ),
@@ -319,6 +322,8 @@ async def get_lead(
         loan_statuses=signals.loan_statuses,
         facets=facets(signals),
         transactions=transaction_summary(signals.transactions, modes, lead.business_line),
+        resubmit_count=lead.resubmit_count,
+        last_resubmitted_at=lead.last_resubmitted_at,
         activities=[to_activity_read(a) for a in activities],
         loan_applications=loan_applications,
         financial_enquiries=financial_enquiries,
@@ -330,7 +335,11 @@ async def get_lead(
         **project_values(
             modes,
             "lead",
-            {"name": lead.name, "requirement": lead.requirement, "referrer": signals.referrer},
+            {
+                "name": lead.name,
+                "requirement": visible_requirement(lead, "telecaller"),
+                "referrer": signals.referrer,
+            },
         ),
     )
 
@@ -362,10 +371,12 @@ async def patch_lead(
         next_follow_up_at=activity.follow_up_at if activity else None,
         created_at=lead.created_at,
         updated_at=lead.updated_at,
+        resubmit_count=lead.resubmit_count,
+        last_resubmitted_at=lead.last_resubmitted_at,
         **project_values(
             modes,
             "lead",
-            {"name": lead.name, "requirement": lead.requirement},
+            {"name": lead.name, "requirement": visible_requirement(lead, "telecaller")},
         ),
     )
 

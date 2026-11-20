@@ -27,17 +27,20 @@ from sqlalchemy.orm import aliased
 
 import app.db.session as db_session
 from app.models.commission import Commission, CommissionStatus
+from app.models.commission_rate import CommissionRateStatus, ProductCommissionRate
 from app.models.lead import Lead
-from app.models.loan import LoanApplication
+from app.models.loan import LoanApplication, LoanType
 from app.models.profile import AgentProfile
 from app.models.property_deal import PropertyDeal, PropertyDealStatus
 from app.models.user import User
 from app.schemas.commissions import (
     CommissionRead,
     EligibleDeal,
+    EligibleDealCommissionRate,
 )
 from app.services import audit_log
 from app.services.audit_log import AuditAction
+from app.services.commission_rates import suggest_commission
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +98,43 @@ def deal_commission_eligible():
     )
 
 
+def _loan_eligible_deal(r) -> EligibleDeal:  # noqa: ANN001 — a SQLAlchemy Row
+    """A disbursed-loan queue row with the CS-028 rate pre-fill."""
+    rate = None
+    suggested = basis = basis_paise = None
+    if r.rate_id is not None:
+        rate = EligibleDealCommissionRate(
+            id=r.rate_id,
+            kind=r.rate_kind,
+            percent_bps=r.rate_percent_bps,
+            amount_paise=r.rate_amount_paise,
+            note=r.rate_note,
+        )
+        suggested, basis, basis_paise = suggest_commission(
+            kind=r.rate_kind,
+            percent_bps=r.rate_percent_bps,
+            amount_paise=r.rate_amount_paise,
+            amount_sanctioned=r.amount_sanctioned,
+            amount_requested=r.amount_requested,
+        )
+    return EligibleDeal(
+        deal_type="loan_application",
+        deal_uuid=r.deal_uuid,
+        business_line=r.business_line,
+        agent_profile_uuid=r.agent_profile_uuid,
+        agent_code=r.agent_code,
+        agent_name=r.agent_name,
+        lead_uuid=r.lead_uuid,
+        eligible_since=r.eligible_since,
+        loan_type_id=r.loan_type_id,
+        product_label=r.product_label,
+        commission_rate=rate,
+        suggested_amount_paise=suggested,
+        suggestion_basis=basis,
+        basis_amount_paise=basis_paise,
+    )
+
+
 async def list_eligible_deals(
     db: AsyncSession, *, limit: int = 50, offset: int = 0
 ) -> tuple[list[EligibleDeal], int]:
@@ -119,10 +159,27 @@ async def list_eligible_deals(
             _name_expr(AgentUser).label("agent_name"),
             LoanApplication.lead_uuid,
             LoanApplication.disbursed_at.label("eligible_since"),
+            LoanApplication.loan_type_id,
+            LoanApplication.amount_sanctioned,
+            LoanApplication.amount_requested,
+            LoanType.label.label("product_label"),
+            ProductCommissionRate.id.label("rate_id"),
+            ProductCommissionRate.kind.label("rate_kind"),
+            ProductCommissionRate.percent_bps.label("rate_percent_bps"),
+            ProductCommissionRate.amount_paise.label("rate_amount_paise"),
+            ProductCommissionRate.note.label("rate_note"),
         )
         .join(Lead, Lead.id == LoanApplication.lead_uuid)
         .join(AgentProfile, AgentProfile.id == Lead.origin_agent_profile_uuid)
         .join(AgentUser, AgentUser.id == AgentProfile.auth_user_uuid)
+        .join(LoanType, LoanType.id == LoanApplication.loan_type_id)
+        .outerjoin(
+            ProductCommissionRate,
+            and_(
+                ProductCommissionRate.loan_type_id == LoanApplication.loan_type_id,
+                ProductCommissionRate.status == CommissionRateStatus.APPROVED.value,
+            ),
+        )
         .where(
             loan_commission_eligible(),
             ~select(Commission.id)
@@ -165,19 +222,7 @@ async def list_eligible_deals(
     loan_rows = (await db.execute(loan_stmt)).all()
     deal_rows = (await db.execute(deal_stmt)).all()
 
-    deals = [
-        EligibleDeal(
-            deal_type="loan_application",
-            deal_uuid=r.deal_uuid,
-            business_line=r.business_line,
-            agent_profile_uuid=r.agent_profile_uuid,
-            agent_code=r.agent_code,
-            agent_name=r.agent_name,
-            lead_uuid=r.lead_uuid,
-            eligible_since=r.eligible_since,
-        )
-        for r in loan_rows
-    ] + [
+    deals = [_loan_eligible_deal(r) for r in loan_rows] + [
         EligibleDeal(
             deal_type="property_deal",
             deal_uuid=r.deal_uuid,

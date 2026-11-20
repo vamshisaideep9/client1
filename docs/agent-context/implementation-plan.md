@@ -68,6 +68,154 @@ default, not permission to skip the pre-implementation announcement.
 
 ## Prioritized active backlog
 
+**In review — Batch 2: Agent leads (API slice)** (2026-11-19; client-
+reported; CS-028; both lines; no requirement or completion-percentage
+change). Branch `feat/agent-lead-intake-api` is based on `upstream/main`
+`5c785a77`, after Batch 1 PR #387 merged. History alignment changed no
+tracked file; the verified code is identical. API, migrations and
+contract only; the web slice follows
+separately and needs no further API change.
+
+- *Lead form fields.* `AgentLeadCreate.requirement` accepts an optional
+  `email` (trimmed, lower-cased, at most 254 characters) and, for
+  real-estate Agents, a `property_type` (`PropertySubtype` value, stored
+  with a `property_type_label` snapshot like `interest_title`); a listing
+  may sit beside it (they must agree) but a loan product never. Both keys
+  are Agent-owned in the detail-ownership ledger; the Agent may change or
+  remove the email (and notes) while the lead is editable.
+- *Requirement visibility (security review of the above).* Every role's
+  lead read now shapes `requirement` through one allowlist,
+  `services/lead_details.visible_requirement`: the originating Agent sees
+  only Agent-form keys whose ownership names them (an Agent who claimed an
+  existing enquiry no longer reads what the person, a Telecaller, another
+  Agent or the public form recorded); the assigned Telecaller sees every
+  known key, the email included, behind the existing Telecaller
+  "Requirement details" field rule; a platform Admin's lead details add the
+  email to notes and labels; a Client's lead details never show it.
+  Unknown keys pass no read. Employees, Sub Admin team reads and the Agent
+  history carry no requirement at all (unchanged).
+- *Resubmitted leads back to the same Telecaller.* Migration
+  `c2e4a6b8d0f1` adds `leads.last_telecaller_profile_uuid` (FK, `ON DELETE
+  SET NULL`) and `leads.last_resubmitted_at`, guarded by trigger
+  `trg_leads_last_telecaller_guard` (a new lead carries neither; the
+  Telecaller memory may only become the assignee being cleared in the same
+  update; the resubmission time changes only with a `resubmit_count`
+  increment). The expiry job (same set-based UPDATE), the retry job's
+  stale-assignee repair and an Admin release record the cleared assignee.
+  `resubmit_agent_lead` gives an unassigned lead straight back to that
+  Telecaller while they are an active Telecaller on the lead's line or both
+  lines (`LEAD_ASSIGNED` audit mode `sticky_resubmit`, the usual
+  notification, round-robin cursor untouched), otherwise round robin as
+  before. `resubmit_count` and `last_resubmitted_at` are on the Agent,
+  Telecaller (list, detail, patch) and Admin (unassigned, assigned) lead
+  reads. A lead the 15-minute retry job already gave to another Telecaller
+  before the resubmission keeps that Telecaller (unchanged rule: a lead
+  being worked is not interrupted).
+- *Bulk lead submit.* `POST /api/v1/agent/leads/bulk` (Agents only, JSON
+  `{dry_run, rows[1..200]}`; the browser parses the sheet, no file reaches
+  the server). Rows: mobile normalised from `+91…`, `91…` or 10 digits
+  (spaces, dashes, dots, brackets ignored; must start 6-9), name, optional
+  email, description as notes, requirement text matched case-insensitively
+  to an active loan product (label or slug) or a property type (value or
+  label, plural accepted) on the Agent's own line; later repeats of a
+  mobile are `duplicate_in_file`. A dry run validates only and never looks
+  up, creates or records anything about a number. A real submit sends each
+  row through the single-introduction path in its own transaction
+  (outcomes `created`, `already_introduced`, `duplicate`,
+  `not_eligible`, `invalid`, `unavailable`, with the CS-024 reason labels
+  and attempt recording of a single submit). Hourly per-profile budgets
+  `AGENT_LEAD_BULK_SUBMITS_PER_HOUR` (5) and
+  `AGENT_LEAD_BULK_DRY_RUNS_PER_HOUR` (30); one `agent_leads_bulk_submitted`
+  audit entry per real upload with counts only (enum migration
+  `d3f5b7c9e1a2`).
+- *Per-loan-product commission rate (maker-checker).* Migration
+  `e4a6c8d0f2b3` creates `product_commission_rates` (percent in basis
+  points 1..10000 XOR fixed paise up to the ₹10 crore commission cap, note
+  ≤ 280, status pending / approved / rejected / superseded / withdrawn,
+  maker and checker; one approved and one pending row per product; CHECK
+  that a recorded checker never equals its maker; trigger keeping
+  terms and maker fixed and statuses moving forward only; cascades with an
+  unused product the Admin deletes). Additive `a6c8e0f2b4d6` corrects the
+  original derived policy. RLS forced: platform Admin reads all rows; a Sub
+  Admin reads approved rates and their own workflow rows; loans-line Agents
+  and eligible loans/both-line Telecallers and Employees read approved rows
+  only. Other roles read none; the maker Sub Admin alone inserts a proposal and
+  withdraws it (UPDATE granted on status / version / updated_at only); no
+  DELETE grant. `services/commission_rates.py`: a Sub Admin proposes
+  (`PUT /api/v1/commission-rates/{loan_type_id}`, replacing their own
+  pending proposal; another Sub Admin's pending one is a 409), a platform
+  Admin's `PUT` is approved at once (standalone, no checker) and supersedes
+  the current rate, `POST …/{rate_id}/approve | reject` (note required) by
+  a platform Admin who is not the maker, `POST …/{rate_id}/withdraw` by the
+  maker; `GET /api/v1/commission-rates` lists every loan-category product
+  with current, visible pending and up to 20 visible earlier entries with maker
+  / checker names. Direct Admin entry has no fabricated review identity and
+  uses creation time as its effective approval date. Audit
+  `commission_rate_proposed | set | approved | rejected |
+  withdrawn`; notifications `commission_rate_submitted` (platform Admins)
+  and `commission_rate_reviewed` (the maker). `GET
+  /api/v1/agent/commission-rates` returns approved rates of active loan
+  products keyed by slug (empty for a real-estate Agent). The Admin's
+  eligible-deal queue (`GET /api/v1/admin/commissions/eligible`) now
+  carries each disbursed loan's product, its approved rate and a suggested
+  amount (fixed amount, or percent of the sanctioned amount — requested
+  when none — in integer paise rounded half up, capped); the commission is
+  still entered by the Admin. Rates appear on no public or Client read.
+- *Contract.* `packages/contracts` regenerated; the web app received only
+  the type-only label / icon entries and test fixtures the new enum values
+  and required lead fields need. Decision recorded as CS-028.
+- *Final API verification (2026-11-20).* Frozen candidate `5c5c4467`
+  (API tree `250ed0078b10be2487c667a1345a4cbb3cbf6336`) passes the full
+  PostgreSQL/Redis-backed suite: **2,884 passed, zero failed/errors/skipped**
+  in 6,276.70 seconds, exit 0, with `CI=1`. The Docker execution, terminal
+  command result and JUnit agree. All 640 API files pass Ruff/format and
+  Alembic reports one head, `a6c8e0f2b4d6`.
+- *Final behavior and security review.* Optional top-level and nested email
+  share one owned storage key and reject conflicting addresses. Legacy valid-
+  name/null-requirement updates clear owned notes only. Account deletion
+  erases the deleted person's lead email, including closed history and old-
+  mobile profile-bound rows, while preserving third-party prospects. The
+  original-brief correction narrows Sub Admin reads to approved/own workflow
+  rows, gives eligible loans/both-line staff approved-only reads, and enforces
+  a global checker-not-maker CHECK. Direct Admin entry is standalone with no
+  fabricated checker/review timestamp and uses creation time as its effective
+  approval date. The approved-date fallback and audit mode are covered.
+- *Targeted and migration evidence.* The 189-test lead/ownership/intake/rate
+  gate passes before the final policy correction; the final correction gate
+  passes 29 tests and operational/classification/RLS/route coverage passes 28.
+  A populated real-trigger downgrade/upgrade preserves all 28 rate rows
+  exactly; the temporary-table upgrade/downgrade/upgrade also preserves terms,
+  status, version, timestamps and genuine distinct reviews. Email-erasure
+  upgrade/downgrade/upgrade passes; erased email is intentionally irreversible.
+  Both generation scripts pass with zero drift. The policy correction changes
+  only an OpenAPI operation description; schemas, paths, auth and wire shapes
+  remain identical. Web lint/typecheck, 1,106 unit tests and the Node 22 Linux
+  production build (116 pages) pass for the unchanged web runtime. The safe
+  script gate covers 102 distinct passing cases; Linux reruns resolve the
+  three Windows platform skips.
+- *Earlier runs are superseded.* Candidate `9a60ded9` had 2,865 passes and
+  three stale assertions, now corrected while retaining strict migration
+  ancestry and public-field leak guards. The follow-up run was intentionally
+  interrupted after 1,144 passes (KeyboardInterrupt/exit 2) to correct the
+  original-brief policy mismatch; it is not a passing gate.
+- *Historical provenance limit.* The legacy test verifies the original
+  ownership backfill and subsequent claims. A public row already claimed
+  before that ledger can retain earlier merged input attributed to its
+  recorded Agent; no accepted/claim per-key audit can safely reconstruct those
+  indistinguishable fields. Current/new claims preserve other creators'
+  ownership. Review found no remaining actionable issue in the final change;
+  this inherited limit is recorded rather than inventing provenance.
+- *Delivery.* API PR [#388](https://github.com/brollysolutions/client1/pull/388) and
+  mirror [#89](https://github.com/vamshisaideep9/client1/pull/89) are open against
+  `main`, with the same reviewed source and independently verified
+  repository/base/head identities. Batch 1 mirror #88 was fast-forwarded
+  to merged history `5c785a77`. The unpublished API rebase changed no
+  tracked files (full tree `7637e607` before/after); passing API and
+  contract fingerprints are unchanged. Hosted CI is tracked separately
+  on the PRs. Completion percentages are unchanged. Next: Batch 2 web; the
+  user requested this session stop after Batch 2, with Batches 3–6 deferred
+  to a new session.
+
 **In review — Batch 1: UI fixes (web)** (2026-11-19; PR
 [#387](https://github.com/brollysolutions/client1/pull/387), mirror
 vamshisaideep9/client1#88;
@@ -75,6 +223,9 @@ client-reported fixes; web only; no API, contract, migration or dependency
 change; no requirement or completion-percentage change). Branch
 `fix/dialog-autoclose-and-mobile-hover` from `upstream/main` `e4d7c40e`.
 
+- *Merge state (2026-11-20).* Upstream #387 is merged; mirror #88 is
+  open with merged main history `5c785a77`, independently verified after
+  its fast-forward push.
 - *Dialogs closing by themselves* (reported for the contest form, then
   every form). Reproduced with Playwright against `pnpm dev` and a mocked
   API; two proven causes. (1) Radix dismisses a modal dialog on any

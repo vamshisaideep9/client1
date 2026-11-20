@@ -205,6 +205,18 @@
             "title": "Id",
             "type": "string"
           },
+          "last_resubmitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Resubmitted At"
+          },
           "mobile": {
             "title": "Mobile",
             "type": "string"
@@ -227,6 +239,11 @@
             ],
             "title": "Origin",
             "type": "string"
+          },
+          "resubmit_count": {
+            "default": 0,
+            "title": "Resubmit Count",
+            "type": "integer"
           },
           "status": {
             "enum": [
@@ -1068,6 +1085,18 @@
             "title": "Id",
             "type": "string"
           },
+          "last_resubmitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Resubmitted At"
+          },
           "mobile": {
             "title": "Mobile",
             "type": "string"
@@ -1090,6 +1119,11 @@
             ],
             "title": "Origin",
             "type": "string"
+          },
+          "resubmit_count": {
+            "default": 0,
+            "title": "Resubmit Count",
+            "type": "integer"
           }
         },
         "required": [
@@ -3720,6 +3754,100 @@
         "title": "AgentChequePresignResponse",
         "type": "object"
       },
+      "AgentCommissionRateRead": {
+        "description": "The approved rate a loans Agent sees for a product they can offer.",
+        "properties": {
+          "amount_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Paise"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "kind": {
+            "enum": [
+              "percent",
+              "fixed"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "loan_type_id": {
+            "format": "uuid",
+            "title": "Loan Type Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "percent_bps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent Bps"
+          },
+          "product_label": {
+            "title": "Product Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loan_type_id",
+          "product_label",
+          "kind",
+          "percent_bps",
+          "amount_paise",
+          "note",
+          "approved_at"
+        ],
+        "title": "AgentCommissionRateRead",
+        "type": "object"
+      },
+      "AgentCommissionRatesResponse": {
+        "properties": {
+          "rates": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AgentCommissionRateRead"
+            },
+            "title": "Rates",
+            "type": "object"
+          }
+        },
+        "required": [
+          "rates"
+        ],
+        "title": "AgentCommissionRatesResponse",
+        "type": "object"
+      },
       "AgentContactRead": {
         "description": "Name + agent_code only -- never phone/email. Contact routes through\nthe support-ticket flow (POST /api/v1/support-tickets/tickets).",
         "properties": {
@@ -4705,8 +4833,362 @@
         "title": "AgentInvitePreview",
         "type": "object"
       },
+      "AgentLeadBulkFieldError": {
+        "properties": {
+          "field": {
+            "enum": [
+              "sno",
+              "name",
+              "mobile",
+              "email",
+              "requirement",
+              "description"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "message"
+        ],
+        "title": "AgentLeadBulkFieldError",
+        "type": "object"
+      },
+      "AgentLeadBulkRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/AgentLeadBulkRow"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dry_run",
+          "rows"
+        ],
+        "title": "AgentLeadBulkRequest",
+        "type": "object"
+      },
+      "AgentLeadBulkResponse": {
+        "properties": {
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/AgentLeadBulkRowResult"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/AgentLeadBulkTotals"
+          }
+        },
+        "required": [
+          "dry_run",
+          "rows",
+          "totals"
+        ],
+        "title": "AgentLeadBulkResponse",
+        "type": "object"
+      },
+      "AgentLeadBulkRow": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 320,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "mobile": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "maximum": 10000000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mobile"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "requirement": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requirement"
+          },
+          "sno": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "maximum": 1000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sno"
+          }
+        },
+        "title": "AgentLeadBulkRow",
+        "type": "object"
+      },
+      "AgentLeadBulkRowResult": {
+        "properties": {
+          "duplicate_of_row_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplicate Of Row Index"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/AgentLeadBulkFieldError"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "lead_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Id"
+          },
+          "mobile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mobile"
+          },
+          "outcome": {
+            "enum": [
+              "ready",
+              "created",
+              "already_introduced",
+              "duplicate",
+              "not_eligible",
+              "duplicate_in_file",
+              "invalid",
+              "unavailable"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "already_linked",
+                  "own_lead_window_ended",
+                  "already_referred",
+                  "self_referral",
+                  "attribution_expired",
+                  "referrer_not_client",
+                  "below_min_conversion",
+                  "cap_reached",
+                  "voided"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reason_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Label"
+          },
+          "requirement_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requirement Label"
+          },
+          "row_index": {
+            "title": "Row Index",
+            "type": "integer"
+          },
+          "sno": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sno"
+          }
+        },
+        "required": [
+          "row_index",
+          "outcome"
+        ],
+        "title": "AgentLeadBulkRowResult",
+        "type": "object"
+      },
+      "AgentLeadBulkTotals": {
+        "properties": {
+          "already_introduced": {
+            "title": "Already Introduced",
+            "type": "integer"
+          },
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "duplicate": {
+            "title": "Duplicate",
+            "type": "integer"
+          },
+          "duplicate_in_file": {
+            "title": "Duplicate In File",
+            "type": "integer"
+          },
+          "invalid": {
+            "title": "Invalid",
+            "type": "integer"
+          },
+          "not_eligible": {
+            "title": "Not Eligible",
+            "type": "integer"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "integer"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "unavailable": {
+            "title": "Unavailable",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rows",
+          "ready",
+          "created",
+          "already_introduced",
+          "duplicate",
+          "not_eligible",
+          "duplicate_in_file",
+          "invalid",
+          "unavailable"
+        ],
+        "title": "AgentLeadBulkTotals",
+        "type": "object"
+      },
       "AgentLeadCreate": {
         "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "format": "email",
+                "maxLength": 254,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
           "mobile": {
             "pattern": "^\\+[1-9]\\d{6,14}$",
             "title": "Mobile",
@@ -4942,6 +5424,18 @@
             "title": "Id",
             "type": "string"
           },
+          "last_resubmitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Resubmitted At"
+          },
           "mobile": {
             "title": "Mobile",
             "type": "string"
@@ -4972,6 +5466,10 @@
               }
             ],
             "title": "Requirement"
+          },
+          "resubmit_count": {
+            "title": "Resubmit Count",
+            "type": "integer"
           },
           "resubmittable": {
             "title": "Resubmittable",
@@ -5004,6 +5502,8 @@
           "registered",
           "editable",
           "resubmittable",
+          "resubmit_count",
+          "last_resubmitted_at",
           "expires_at",
           "expired_at",
           "created_at",
@@ -6247,7 +6747,13 @@
           "contest_recalculated",
           "contest_finalized",
           "contest_prize_payout_requested",
-          "contest_prize_marked_paid"
+          "contest_prize_marked_paid",
+          "agent_leads_bulk_submitted",
+          "commission_rate_proposed",
+          "commission_rate_set",
+          "commission_rate_approved",
+          "commission_rate_rejected",
+          "commission_rate_withdrawn"
         ],
         "title": "AuditAction",
         "type": "string"
@@ -8837,6 +9343,277 @@
         "title": "CommissionPayoutResponse",
         "type": "object"
       },
+      "CommissionRateApprove": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "CommissionRateApprove",
+        "type": "object"
+      },
+      "CommissionRateInput": {
+        "additionalProperties": false,
+        "description": "Propose (Sub Admin) or set (platform Admin) a product's rate.",
+        "properties": {
+          "amount_paise": {
+            "anyOf": [
+              {
+                "maximum": 10000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Paise"
+          },
+          "kind": {
+            "enum": [
+              "percent",
+              "fixed"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 280,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "percent_bps": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent Bps"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "CommissionRateInput",
+        "type": "object"
+      },
+      "CommissionRateListResponse": {
+        "properties": {
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/ProductCommissionRates"
+            },
+            "title": "Products",
+            "type": "array"
+          }
+        },
+        "required": [
+          "products"
+        ],
+        "title": "CommissionRateListResponse",
+        "type": "object"
+      },
+      "CommissionRateRead": {
+        "properties": {
+          "amount_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Paise"
+          },
+          "checker_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checker Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Name"
+          },
+          "created_by_role": {
+            "enum": [
+              "admin",
+              "sub_admin"
+            ],
+            "title": "Created By Role",
+            "type": "string"
+          },
+          "created_by_uuid": {
+            "format": "uuid",
+            "title": "Created By Uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_mine": {
+            "title": "Is Mine",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "percent",
+              "fixed"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "loan_type_id": {
+            "format": "uuid",
+            "title": "Loan Type Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "percent_bps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent Bps"
+          },
+          "review_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Note"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "status": {
+            "enum": [
+              "pending_approval",
+              "approved",
+              "rejected",
+              "superseded",
+              "withdrawn"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "loan_type_id",
+          "kind",
+          "percent_bps",
+          "amount_paise",
+          "note",
+          "status",
+          "created_by_uuid",
+          "created_by_name",
+          "created_by_role",
+          "is_mine",
+          "checker_name",
+          "reviewed_at",
+          "review_note",
+          "version",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CommissionRateRead",
+        "type": "object"
+      },
+      "CommissionRateReject": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "CommissionRateReject",
+        "type": "object"
+      },
       "CommissionRead": {
         "properties": {
           "agent_code": {
@@ -10887,9 +11664,30 @@
             "title": "Agent Profile Uuid",
             "type": "string"
           },
+          "basis_amount_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis Amount Paise"
+          },
           "business_line": {
             "title": "Business Line",
             "type": "string"
+          },
+          "commission_rate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EligibleDealCommissionRate"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "deal_type": {
             "enum": [
@@ -10920,6 +11718,56 @@
             "format": "uuid",
             "title": "Lead Uuid",
             "type": "string"
+          },
+          "loan_type_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Type Id"
+          },
+          "product_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Label"
+          },
+          "suggested_amount_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Amount Paise"
+          },
+          "suggestion_basis": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sanctioned",
+                  "requested",
+                  "fixed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion Basis"
           }
         },
         "required": [
@@ -10933,6 +11781,66 @@
           "eligible_since"
         ],
         "title": "EligibleDeal",
+        "type": "object"
+      },
+      "EligibleDealCommissionRate": {
+        "description": "The product's approved indicative rate (CS-028) at the time of reading.",
+        "properties": {
+          "amount_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Paise"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "percent",
+              "fixed"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "percent_bps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent Bps"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "percent_bps",
+          "amount_paise",
+          "note"
+        ],
+        "title": "EligibleDealCommissionRate",
         "type": "object"
       },
       "EligibleDealListResponse": {
@@ -16015,7 +16923,9 @@
           "contest_submitted",
           "contest_reviewed",
           "contest_live",
-          "contest_won"
+          "contest_won",
+          "commission_rate_submitted",
+          "commission_rate_reviewed"
         ],
         "title": "NotificationType",
         "type": "string"
@@ -17724,6 +18634,66 @@
         ],
         "title": "ProductCategory",
         "type": "string"
+      },
+      "ProductCommissionRates": {
+        "description": "One loan product: its approved rate, any proposal awaiting approval,\nand up to 20 earlier entries (newest first).",
+        "properties": {
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommissionRateRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/CommissionRateRead"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "loan_type_id": {
+            "format": "uuid",
+            "title": "Loan Type Id",
+            "type": "string"
+          },
+          "pending": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommissionRateRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "product_active": {
+            "title": "Product Active",
+            "type": "boolean"
+          },
+          "product_label": {
+            "title": "Product Label",
+            "type": "string"
+          },
+          "product_slug": {
+            "title": "Product Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loan_type_id",
+          "product_slug",
+          "product_label",
+          "product_active",
+          "current",
+          "pending",
+          "history"
+        ],
+        "title": "ProductCommissionRates",
+        "type": "object"
       },
       "ProductFormDefinition": {
         "properties": {
@@ -25352,6 +26322,18 @@
             ],
             "title": "Last Interest Level"
           },
+          "last_resubmitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Resubmitted At"
+          },
           "latest_request": {
             "anyOf": [
               {
@@ -25464,6 +26446,11 @@
               }
             ],
             "title": "Requirement"
+          },
+          "resubmit_count": {
+            "default": 0,
+            "title": "Resubmit Count",
+            "type": "integer"
           },
           "site_visits": {
             "default": [],
@@ -25580,6 +26567,18 @@
             ],
             "title": "Last Interest Level"
           },
+          "last_resubmitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Resubmitted At"
+          },
           "latest_request": {
             "anyOf": [
               {
@@ -25660,6 +26659,11 @@
               }
             ],
             "title": "Requirement"
+          },
+          "resubmit_count": {
+            "default": 0,
+            "title": "Resubmit Count",
+            "type": "integer"
           },
           "status": {
             "enum": [
@@ -35788,6 +36792,33 @@
         ]
       }
     },
+    "/api/v1/agent/commission-rates": {
+      "get": {
+        "description": "Approved indicative commission rates of the active loan products, keyed\nby product slug (CS-028). Empty for a real-estate Agent: RLS returns\napproved rows to loans-line Agents only.",
+        "operationId": "commission_rates_api_v1_agent_commission_rates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCommissionRatesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Commission Rates",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
     "/api/v1/agent/earnings": {
       "get": {
         "description": "The Agent's commission history on their line with client and deal\ndetails, filtered; totals always cover every commission. Read through the\nconfined ``agent_commission_ledger()`` function (caller's account, Agent\nprofile and line only). Dates are IST calendar days on the entry date;\namounts filter the commission amount.",
@@ -36218,6 +37249,53 @@
           }
         ],
         "summary": "Create Lead",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/v1/agent/leads/bulk": {
+      "post": {
+        "description": "Validate (``dry_run``) or submit up to 200 parsed spreadsheet rows.\n\nEach submitted row goes through the single-introduction path in its own\ntransaction; the response reports every row's outcome. A dry run checks\nthe rows only (format, repeated numbers, product / property type) and\nnever looks up, creates or records anything about a number.",
+        "operationId": "bulk_create_leads_api_v1_agent_leads_bulk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentLeadBulkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentLeadBulkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Bulk Create Leads",
         "tags": [
           "agent"
         ]
@@ -39310,6 +40388,265 @@
         "summary": "Get Contacts",
         "tags": [
           "client"
+        ]
+      }
+    },
+    "/api/v1/commission-rates": {
+      "get": {
+        "description": "Every loan product with its approved rate, any proposal awaiting\napproval, and up to 20 earlier entries with maker and checker names.\nSub Admins see only approved rates and their own workflow rows.",
+        "operationId": "list_rates_api_v1_commission_rates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionRateListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Rates",
+        "tags": [
+          "commission-rates"
+        ]
+      }
+    },
+    "/api/v1/commission-rates/{loan_type_id}": {
+      "put": {
+        "description": "Sub Admin: propose a rate (awaits a platform Admin; replaces your own\nearlier proposal). Platform Admin: set the rate now.",
+        "operationId": "set_rate_api_v1_commission_rates__loan_type_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_type_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Loan Type Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommissionRateInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductCommissionRates"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Set Rate",
+        "tags": [
+          "commission-rates"
+        ]
+      }
+    },
+    "/api/v1/commission-rates/{rate_id}/approve": {
+      "post": {
+        "description": "Approve a Sub Admin's proposal; the previous approved rate is superseded.",
+        "operationId": "approve_rate_api_v1_commission_rates__rate_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CommissionRateApprove"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductCommissionRates"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Approve Rate",
+        "tags": [
+          "commission-rates"
+        ]
+      }
+    },
+    "/api/v1/commission-rates/{rate_id}/reject": {
+      "post": {
+        "operationId": "reject_rate_api_v1_commission_rates__rate_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommissionRateReject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductCommissionRates"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Reject Rate",
+        "tags": [
+          "commission-rates"
+        ]
+      }
+    },
+    "/api/v1/commission-rates/{rate_id}/withdraw": {
+      "post": {
+        "description": "The proposing Sub Admin takes back a rate awaiting approval.",
+        "operationId": "withdraw_rate_api_v1_commission_rates__rate_id__withdraw_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductCommissionRates"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Withdraw Rate",
+        "tags": [
+          "commission-rates"
         ]
       }
     },

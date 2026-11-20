@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from sqlalchemy import and_, func, or_, select, text, update
@@ -283,6 +283,62 @@ async def auto_assign_locked_lead(db: AsyncSession, lead: Lead) -> LeadAssignmen
     )
 
 
+async def sticky_assign_locked_lead(db: AsyncSession, lead: Lead) -> LeadAssignmentNotice | None:
+    """Give a caller-owned locked lead back to its last Telecaller (CS-028).
+
+    Applies only to an unassigned, assignable lead whose
+    ``last_telecaller_profile_uuid`` is still an ACTIVE Telecaller on the
+    lead's line (or both lines). The round-robin cursor is neither read nor
+    advanced, so the per-line assignment lock is not needed; the Telecaller
+    row is share-locked so a concurrent deactivation waits for this
+    transaction (the assignment-scope trigger re-checks it anyway). Returns
+    None when the lead does not qualify, so the caller can fall back to
+    ``auto_assign_locked_lead``. Never commits or notifies.
+    """
+    if (
+        lead.assigned_telecaller_profile_uuid is not None
+        or lead.last_telecaller_profile_uuid is None
+        or lead.business_line not in _VALID_LINES
+        or lead.status not in _ASSIGNABLE_STATUSES
+    ):
+        return None
+    telecaller = await db.scalar(
+        select(StaffProfile)
+        .where(
+            StaffProfile.id == lead.last_telecaller_profile_uuid,
+            StaffProfile.role == StaffRole.TELECALLER,
+            StaffProfile.status == ProfileStatus.ACTIVE,
+            StaffProfile.business_line.in_((lead.business_line, "both")),
+        )
+        .with_for_update(read=True)
+    )
+    if telecaller is None:
+        return None
+
+    lead.assigned_telecaller_profile_uuid = telecaller.id
+    lead.status = LeadStatus.ASSIGNED
+    lead.updated_at = datetime.now(UTC)
+    await record_audit(
+        db,
+        action=AuditAction.LEAD_ASSIGNED,
+        entity_type="lead",
+        entity_uuid=lead.id,
+        actor_uuid=None,
+        actor_role=None,
+        business_line=lead.business_line,
+        detail={
+            "mode": "sticky_resubmit",
+            "telecaller_staff_profile_uuid": str(telecaller.id),
+        },
+    )
+    await db.flush()
+    return LeadAssignmentNotice(
+        lead_id=lead.id,
+        telecaller_user_uuid=telecaller.auth_user_uuid,
+        business_line=lead.business_line,
+    )
+
+
 async def notify_lead_assignments(notices: list[LeadAssignmentNotice]) -> None:
     for notice in notices:
         await emit_notification(
@@ -444,10 +500,36 @@ async def capture_agent_lead(
     requirement: dict[str, Any] | None,
 ) -> Lead:
     """Create/claim and automatically assign an Agent lead in one transaction."""
+    lead, _outcome = await capture_agent_lead_with_outcome(
+        mobile=mobile,
+        name=name,
+        business_line=business_line,
+        agent_profile_uuid=agent_profile_uuid,
+        requirement=requirement,
+    )
+    return lead
+
+
+# ``created``: a new lead row; ``claimed``: an open unclaimed enquiry for the
+# number became this Agent's; ``existing``: the number was already this
+# Agent's live lead (an idempotent retry).
+AgentCaptureOutcome = Literal["created", "claimed", "existing"]
+
+
+async def capture_agent_lead_with_outcome(
+    *,
+    mobile: str,
+    name: str,
+    business_line: str,
+    agent_profile_uuid: UUID,
+    requirement: dict[str, Any] | None,
+) -> tuple[Lead, AgentCaptureOutcome]:
+    """``capture_agent_lead`` plus which of the three branches it took."""
     if business_line not in _VALID_LINES:
         raise AgentLeadConflict
 
     notice: LeadAssignmentNotice | None = None
+    outcome: AgentCaptureOutcome = "created"
     try:
         async with AsyncSessionLocal() as session:
             await lock_lead_mobile(session, mobile)
@@ -520,6 +602,7 @@ async def capture_agent_lead(
                 session.add(lead)
                 await session.flush()
             elif lead.origin_agent_profile_uuid == agent_profile_uuid:
+                outcome = "existing"
                 # An Agent retry is idempotent. Once assignment locks the lead,
                 # do not allow the retry body to rewrite it.
                 if (
@@ -566,6 +649,7 @@ async def capture_agent_lead(
                     or lead.status not in _ASSIGNABLE_STATUSES
                 ):
                     raise AgentLeadConflict(EligibilityReason.ALREADY_LINKED)
+                outcome = "claimed"
                 lead.business_line = business_line
                 lead.origin = LeadOrigin.AGENT
                 lead.origin_agent_profile_uuid = agent_profile_uuid
@@ -617,7 +701,7 @@ async def capture_agent_lead(
 
     if notice is not None:
         await notify_lead_assignments([notice])
-    return lead
+    return lead, outcome
 
 
 class AgentLeadNotResubmittable(Exception):
@@ -661,7 +745,9 @@ async def resubmit_agent_lead(
 
     The operational status and any current Telecaller assignment are kept, so
     a Telecaller already working the lead is not interrupted. An unassigned
-    lead is offered to automatic assignment again.
+    lead goes back to the Telecaller who last held it when they are still
+    eligible (CS-028, ``sticky_assign_locked_lead``, cursor untouched) and is
+    otherwise offered to round-robin automatic assignment again.
     """
     notice: LeadAssignmentNotice | None = None
     try:
@@ -705,6 +791,7 @@ async def resubmit_agent_lead(
             lead.agent_expired_at = None
             lead.expiry_reminder_sent_at = None
             lead.resubmit_count = lead.resubmit_count + 1
+            lead.last_resubmitted_at = now
             lead.updated_at = now
             await session.flush()
             await record_audit(
@@ -722,7 +809,9 @@ async def resubmit_agent_lead(
                     ),
                 },
             )
-            notice = await auto_assign_locked_lead(session, lead)
+            notice = await sticky_assign_locked_lead(session, lead)
+            if notice is None:
+                notice = await auto_assign_locked_lead(session, lead)
             await session.commit()
     except AgentLeadNotResubmittable:
         raise
@@ -1060,6 +1149,9 @@ async def release_lead_from_telecaller(
             },
         )
     else:
+        # CS-028: remember the cleared assignee for a later resubmission.
+        if previous_telecaller_uuid is not None:
+            lead.last_telecaller_profile_uuid = previous_telecaller_uuid
         lead.assigned_telecaller_profile_uuid = None
         lead.status = LeadStatus.RELEASED
 

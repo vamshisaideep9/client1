@@ -73,3 +73,4 @@ from app.models.lead_intake_attempt import LeadIntakeAttempt  # noqa
 from app.models.contact_change import ContactChangeHistory, ContactChangeRequest  # noqa
 from app.models.pincode import Pincode  # noqa
 from app.models.contest import Contest, ContestResult  # noqa
+from app.models.commission_rate import ProductCommissionRate  # noqa

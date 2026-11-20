@@ -2,10 +2,126 @@
 
 Status: **Derived living implementation ledger**
 
+**In review — Batch 2: Agent leads (API slice)** (2026-11-20; CS-028;
+client-reported), branch `feat/agent-lead-intake-api` built on merged Batch 1.
+PR [#388](https://github.com/brollysolutions/client1/pull/388), mirror [#89](https://github.com/vamshisaideep9/client1/pull/89), both against `main`.
+Both repository/base/head identities were independently checked; no
+requirement-percentage change.
+
+- Final frozen candidate `5c5c4467` passes **2,884 API tests, zero failed,
+  errors or skipped**, in 6,276.70 seconds (exit 0), using fresh synthetic
+  PostgreSQL data, Redis and `CI=1`. Docker exit, command result and JUnit
+  independently agree. API tree: `250ed0078b10be2487c667a1345a4cbb3cbf6336`.
+  All 640 API files pass Ruff/format; one Alembic head `a6c8e0f2b4d6`.
+- Final policy correction: Sub Admins read approved rates and their own
+  workflow rows only; eligible loans/both-line TC/Employee reads are approved-
+  only. Any recorded checker differs from its maker. Direct Admin entry has
+  no fabricated reviewer/timestamp and records `admin_standalone`; the Agent
+  approval date falls back to creation time. Final focused correction: 29
+  passed; operational/classification/RLS/route coverage: 28 passed. The populated
+  real-trigger downgrade/upgrade leaves all 28 rate rows identical, preserving
+  terms, status, version, timestamps and genuine distinct reviews.
+- Lead email/deletion, original-backfill compatibility, sticky resubmission,
+  bulk intake and rates passed the 189-test targeted gate before the policy
+  correction, then the full final suite above. Top-level/nested email share
+  one owned key; conflicting input is rejected. The legacy name/null-
+  requirement notes-clear respects ownership and preserves email/interests.
+  Deletion erases the deleted person's active/historical lead email while
+  preserving third-party prospects; its migration up/down/up passes.
+- Both contract scripts pass with no drift. The final policy correction only
+  changes an operation description; all schemas, paths, auth and request/
+  response shapes remain unchanged. Web lint/typecheck, 1,106 unit tests and
+  the Node 22 Linux production build (116 pages) pass for the unchanged web
+  runtime. Safe script regressions: 102 distinct passes, including Linux
+  reruns resolving the three Windows platform skips.
+- Earlier full runs are not substituted for the final result: `9a60ded9`
+  had 2,865 passes / three stale assertions, now fixed without weakening the
+  guards; the superseded follow-up was intentionally interrupted after
+  1,144 passes (exit 2) for the original-brief policy correction.
+- Review/security: no remaining actionable finding. Historical limit: the
+  original backfill attributes known fields by recorded Agent origin, so
+  already-claimed pre-ledger rows can retain earlier merged input with that
+  descriptor. No per-key acceptance/claim audit proves their authorship; the
+  regression verifies the actual backfill and subsequent claims. Current/new
+  claims remain isolated. This inherited limit is explicitly disclosed.
+- History alignment: Batch 1 merged upstream as `5c785a77`; mirror #88
+  was fast-forwarded to that merged history. Rebasing the unpublished API
+  branch changed no tracked files (full tree `7637e607` before/after);
+  the API and contract fingerprints remain identical to the passing
+  candidate. Hosted CI is tracked separately on each PR and is not part
+  of the local passing-check claim.
+- Next: Batch 2 web. The session stops after Batch 2 as requested; Batches
+  3–6 resume in a new session.
+
+- Lead form fields (`requirement.email`, `requirement.property_type`) and
+  the per-role requirement allowlist as described in
+  `implementation-plan.md` (Batch 2). Role matrix tests in
+  `test_agent_lead_requirement_keys.py` (owner Agent, claiming Agent,
+  assigned / other Telecaller, Employee, Client, Admin) pass; the
+  neighbouring lead suites (Agent, Telecaller, Admin assign / release,
+  ownership, Employee, assignment, leads RLS, facets, history, team
+  manager) 231 passed.
+- Sticky resubmission and resubmit visibility (migration `c2e4a6b8d0f1`,
+  up / down / up on the scratch database): new
+  `test_agent_lead_sticky_resubmit.py` 9 passed (returns to the last
+  Telecaller with the cursor unmoved; falls back when they are inactive or
+  deleted; off-line Telecallers never qualify, dual-line ones do; a lead
+  the pool already reassigned keeps its Telecaller; expiry, stale repair
+  and Admin release record the cleared assignee; the trigger refuses the
+  three forged writes; Telecaller and Admin reads show the count). With
+  the expiry system test and the Agent, Telecaller, Admin assign / release,
+  assignment, requirement-key and leads RLS suites: 165 passed.
+- Bulk lead submit (enum migration `d3f5b7c9e1a2`): new
+  `test_agent_lead_bulk.py` 25 passed (mobile normalisation table,
+  per-line requirement matching and ambiguity, dry run creates and records
+  nothing, mixed created / duplicate / invalid / in-file / already
+  introduced / own-expired rows with recorded attempts and a counts-only
+  audit, a failing row leaves the others committed, wrong-line
+  requirements invalid, more than 200 rows / unknown columns 422 without
+  using the budget, per-Agent submit and dry-run limits, non-Agents 403);
+  with the Agent, refinements, eligibility, requirement-key, sticky and
+  audit-log suites 153 passed.
+- Per-product commission rates (migration `e4a6c8d0f2b3`, up / down / up on
+  the scratch database): new `test_commission_rates_api.py` 19 passed
+  (propose → pending with the Admin fan-out, approve with checker name and
+  maker notification, supersede, Admin direct entry approved at once with a
+  waiting proposal kept, reject needs a note, the maker cannot check even
+  with an Admin token, own proposal replaced / another's blocked, withdraw
+  by the maker only, staff routes refuse line Admins / Agents / Clients /
+  Telecallers / anonymous, input validation and loan products only, loans
+  Agent sees approved rates of active products only and a real-estate
+  Agent none, absent from public catalogue / loan-type / Client reads,
+  suggestion maths table, eligible-deal pre-fill for percent, no-rate and
+  property rows) and `test_commission_rates_rls.py` 4 passed (read matrix
+  for platform / line Admin, Sub Admin, loans / real-estate Agent,
+  Telecaller, Employee, Client and anonymous; maker-only pending inserts;
+  maker-only withdrawal, column grant, no delete; CHECK, trigger and
+  unique indexes on the bypass session). Ledgers updated (business-line
+  classification, Admin coverage, platform-scope policy); with the
+  commission, commission RLS / payout, loan configuration, financial
+  product, notification, platform-scope, classification, coverage, RLS
+  coverage and route-authorization suites: 142 + 42 + 51 passed.
+- Contract: `./scripts/generate-openapi.sh` and
+  `./scripts/generate-client.sh` (openapi-typescript 7.13.0) regenerated
+  `packages/contracts`; the only removed lines are the two extended enums.
+  `apps/web` type-only follow-ups for the regenerated schema: label / icon
+  entries for the six new audit actions and two notification types, and
+  the two test fixtures that build full lead rows. `pnpm typecheck` and
+  `pnpm lint` pass; the touched dashboard / Telecaller unit tests 95
+  passed.
+- Evidence (2026-11-19, `python:3.13.14-slim-trixie` container on
+  `client1_default`, scratch database migrated to head): new
+  `test_agent_lead_requirement_keys.py` plus `test_agent_api.py` and
+  `test_agent_dashboard_refinements.py` 74 passed;
+  `test_lead_detail_ownership_api.py`, `test_lead_eligibility.py` and
+  `test_lead_auto_assignment.py` 56 passed.
+
 **In review — Batch 1: UI fixes (web)** (2026-11-19; client-reported;
 PR [#387](https://github.com/brollysolutions/client1/pull/387), mirror
 vamshisaideep9/client1#88), branch `fix/dialog-autoclose-and-mobile-hover` from
 `upstream/main` `e4d7c40e`. No requirement-percentage change.
+- Upstream #387 merged on 2026-11-20. Mirror #88 remains open and now
+  carries the merged main history `5c785a77` after a verified fast-forward.
 - Dialog auto-close root causes, mobile hover gating, Telecaller greeting
   and PAN-card name copy as described in `implementation-plan.md`
   (Batch 1: UI fixes).

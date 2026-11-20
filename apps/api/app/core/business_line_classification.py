@@ -83,6 +83,9 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     "contest_results": ClassificationMode.OPERATIONAL,
     # CS-026 India pincode reference list: line-neutral lookup data.
     "pincodes": ClassificationMode.PLATFORM_CONFIG,
+    # CS-028 indicative commission rate per loan product: configuration of a
+    # loans-only product (loan_types is PLATFORM_CONFIG too); no line column.
+    "product_commission_rates": ClassificationMode.PLATFORM_CONFIG,
     "notifications": ClassificationMode.IDENTITY,
     "offers": ClassificationMode.GLOBAL_CONTENT,
     "payouts": ClassificationMode.OPERATIONAL,
