@@ -37,6 +37,8 @@ async def attach_payout(*, result_id: uuid.UUID, payout_id: uuid.UUID) -> bool:
                 ContestResult.id == result_id,
                 ContestResult.agent_profile_uuid.is_not(None),
                 ContestResult.won.is_(True),
+                ContestResult.prize_paise > 0,
+                ContestResult.item_prize.is_(None),
                 ContestResult.payment_status == ContestPaymentStatus.UNPAID.value,
                 ContestResult.payout_uuid.is_(None),
             )

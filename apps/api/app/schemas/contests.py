@@ -19,7 +19,7 @@ assigned to it or to both lines, or a team on it).
 from __future__ import annotations
 
 import re
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -35,6 +35,7 @@ from pydantic import (
 from app.models.contest import (
     ContestAudience,
     ContestMetric,
+    ContestPrizeKind,
     ContestStatus,
     ContestTeamMemberRole,
     ContestWinMode,
@@ -347,7 +348,31 @@ def validate_definition(
         raise ValueError("Everyone-who-hits-the-target contests need at least one target.")
 
 
-class ContestDefinition(BaseModel):
+class ContestItemPrize(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    details: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)] | None = None
+    estimated_value_paise: Annotated[int, Field(ge=1, le=MAX_PRIZE_PAISE)] | None = None
+
+
+class ContestScheduleAndPrize(BaseModel):
+    start_time: time = time.min
+    end_time: time = time(23, 59)
+    prize_kind: ContestPrizeKind = ContestPrizeKind.CASH
+    item_prize: ContestItemPrize | None = None
+    manager_item_prize: ContestItemPrize | None = None
+    member_item_prize: ContestItemPrize | None = None
+
+    @field_validator("start_time", "end_time")
+    @classmethod
+    def local_minute(cls, value: time) -> time:
+        if value.tzinfo is not None or value.second or value.microsecond:
+            raise ValueError("Use an IST time at minute precision, without an offset.")
+        return value
+
+
+class ContestDefinition(ContestScheduleAndPrize):
     """What a Sub Admin authors. Shared by create and full update."""
 
     model_config = ConfigDict(extra="forbid")
@@ -378,6 +403,45 @@ class ContestDefinition(BaseModel):
             raise ValueError("Choose the member role for a team contest, and only then.")
         if (self.win_mode == ContestWinMode.TOP_N) != (self.top_n is not None):
             raise ValueError("Set how many winners for a top-N contest, and only then.")
+        if self.prize_kind == ContestPrizeKind.ITEM:
+            if any(
+                value is not None
+                for value in (
+                    self.prize_paise,
+                    self.manager_prize_paise,
+                    self.member_prize_paise,
+                    self.budget_cap_paise,
+                )
+            ):
+                raise ValueError("Cash amounts and budget caps apply to cash prizes only.")
+            if self.audience == ContestAudience.TEAM:
+                if self.item_prize or not (self.manager_item_prize or self.member_item_prize):
+                    raise ValueError("Set an item for the manager, members or both.")
+            elif not self.item_prize or self.manager_item_prize or self.member_item_prize:
+                raise ValueError("Set an item for each individual winner.")
+            if bool(self.member_item_prize) != (self.member_min_contribution is not None):
+                raise ValueError("A minimum contribution applies only with a member prize.")
+        else:
+            self._validate_cash_prizes()
+        if self.ends_on < self.starts_on:
+            raise ValueError("The end date is before the start date.")
+        if self.ends_on == self.starts_on and self.end_time < self.start_time:
+            raise ValueError("The end time is before the start time.")
+        if (self.ends_on - self.starts_on).days > MAX_DURATION_DAYS:
+            raise ValueError("A contest can run for at most 366 days.")
+        validate_definition(
+            business_line=self.business_line,
+            audience=self.audience.value,
+            team_member_role=self.team_member_role.value if self.team_member_role else None,
+            metric=self.metric.value,
+            criteria=self.criteria,
+            win_mode=self.win_mode.value,
+        )
+        return self
+
+    def _validate_cash_prizes(self) -> None:
+        if self.item_prize or self.manager_item_prize or self.member_item_prize:
+            raise ValueError("Item details apply to item prizes only.")
         if self.audience == ContestAudience.TEAM:
             if self.prize_paise is not None:
                 raise ValueError("A team contest pays a manager prize and a member prize.")
@@ -404,19 +468,10 @@ class ContestDefinition(BaseModel):
             smallest_win = self.prize_paise
         if self.budget_cap_paise is not None and self.budget_cap_paise < smallest_win:
             raise ValueError("The budget cap is below a single prize.")
-        if self.ends_on < self.starts_on:
-            raise ValueError("The end date is before the start date.")
-        if (self.ends_on - self.starts_on).days > MAX_DURATION_DAYS:
-            raise ValueError("A contest can run for at most 366 days.")
-        validate_definition(
-            business_line=self.business_line,
-            audience=self.audience.value,
-            team_member_role=self.team_member_role.value if self.team_member_role else None,
-            metric=self.metric.value,
-            criteria=self.criteria,
-            win_mode=self.win_mode.value,
-        )
-        return self
+
+
+class ContestAdminUpdate(ContestDefinition):
+    expected_version: Annotated[int, Field(ge=1)]
 
 
 class ContestCancel(BaseModel):
@@ -454,7 +509,7 @@ class ContestResultPayment(BaseModel):
     paid_reference: str | None
 
 
-class ContestRead(BaseModel):
+class ContestRead(ContestScheduleAndPrize):
     id: UUID
     title: str
     description: str | None
@@ -521,6 +576,7 @@ class MyStanding(BaseModel):
     qualified: bool
     won: bool | None = None
     prize_paise: int | None = None
+    item_prize: ContestItemPrize | None = None
     payment_status: str | None = None
     excluded_reason: str | None = None
 
@@ -543,6 +599,7 @@ class TeamMemberStanding(BaseModel):
     meets_member_minimum: bool | None
     won: bool | None = None
     prize_paise: int | None = None
+    item_prize: ContestItemPrize | None = None
     payment_status: str | None = None
     is_me: bool = False
 
@@ -557,7 +614,7 @@ class TeamStanding(BaseModel):
     members: list[TeamMemberStanding]
 
 
-class MyContestSummary(BaseModel):
+class MyContestSummary(ContestScheduleAndPrize):
     id: UUID
     title: str
     business_line: Literal["loans", "real_estate"]
@@ -611,6 +668,7 @@ class StandingRow(BaseModel):
     qualified: bool
     won: bool
     prize_paise: int
+    item_prize: ContestItemPrize | None = None
     excluded_reason: str | None
     payment_status: str
     payout_uuid: UUID | None

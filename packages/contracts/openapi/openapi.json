@@ -10618,6 +10618,223 @@
         "title": "ContentStatus",
         "type": "string"
       },
+      "ContestAdminUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "audience": {
+            "$ref": "#/components/schemas/ContestAudience"
+          },
+          "budget_cap_paise": {
+            "anyOf": [
+              {
+                "maximum": 100000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Cap Paise"
+          },
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "criteria": {
+            "$ref": "#/components/schemas/ContestCriteria"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "end_time": {
+            "default": "23:59:00",
+            "format": "time",
+            "title": "End Time",
+            "type": "string"
+          },
+          "ends_on": {
+            "format": "date",
+            "title": "Ends On",
+            "type": "string"
+          },
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manager_item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manager_prize_paise": {
+            "anyOf": [
+              {
+                "maximum": 1000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Prize Paise"
+          },
+          "member_item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "member_min_contribution": {
+            "anyOf": [
+              {
+                "maximum": 10000000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Min Contribution"
+          },
+          "member_prize_paise": {
+            "anyOf": [
+              {
+                "maximum": 1000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Prize Paise"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/ContestMetric"
+          },
+          "prize_kind": {
+            "$ref": "#/components/schemas/ContestPrizeKind",
+            "default": "cash"
+          },
+          "prize_paise": {
+            "anyOf": [
+              {
+                "maximum": 1000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prize Paise"
+          },
+          "start_time": {
+            "default": "00:00:00",
+            "format": "time",
+            "title": "Start Time",
+            "type": "string"
+          },
+          "starts_on": {
+            "format": "date",
+            "title": "Starts On",
+            "type": "string"
+          },
+          "team_member_role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestTeamMemberRole"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terms": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terms"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Title",
+            "type": "string"
+          },
+          "top_n": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top N"
+          },
+          "win_mode": {
+            "$ref": "#/components/schemas/ContestWinMode"
+          }
+        },
+        "required": [
+          "title",
+          "business_line",
+          "audience",
+          "metric",
+          "criteria",
+          "win_mode",
+          "starts_on",
+          "ends_on",
+          "expected_version"
+        ],
+        "title": "ContestAdminUpdate",
+        "type": "object"
+      },
       "ContestAudience": {
         "enum": [
           "agent",
@@ -10733,10 +10950,36 @@
             ],
             "title": "Description"
           },
+          "end_time": {
+            "default": "23:59:00",
+            "format": "time",
+            "title": "End Time",
+            "type": "string"
+          },
           "ends_on": {
             "format": "date",
             "title": "Ends On",
             "type": "string"
+          },
+          "item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manager_item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "manager_prize_paise": {
             "anyOf": [
@@ -10750,6 +10993,16 @@
               }
             ],
             "title": "Manager Prize Paise"
+          },
+          "member_item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "member_min_contribution": {
             "anyOf": [
@@ -10780,6 +11033,10 @@
           "metric": {
             "$ref": "#/components/schemas/ContestMetric"
           },
+          "prize_kind": {
+            "$ref": "#/components/schemas/ContestPrizeKind",
+            "default": "cash"
+          },
           "prize_paise": {
             "anyOf": [
               {
@@ -10792,6 +11049,12 @@
               }
             ],
             "title": "Prize Paise"
+          },
+          "start_time": {
+            "default": "00:00:00",
+            "format": "time",
+            "title": "Start Time",
+            "type": "string"
           },
           "starts_on": {
             "format": "date",
@@ -10856,6 +11119,47 @@
         "title": "ContestDefinition",
         "type": "object"
       },
+      "ContestItemPrize": {
+        "additionalProperties": false,
+        "properties": {
+          "details": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "estimated_value_paise": {
+            "anyOf": [
+              {
+                "maximum": 1000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Value Paise"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "ContestItemPrize",
+        "type": "object"
+      },
       "ContestListResponse": {
         "properties": {
           "contests": {
@@ -10889,6 +11193,14 @@
           "site_visits_completed"
         ],
         "title": "ContestMetric",
+        "type": "string"
+      },
+      "ContestPrizeKind": {
+        "enum": [
+          "cash",
+          "item"
+        ],
+        "title": "ContestPrizeKind",
         "type": "string"
       },
       "ContestPrizeMarkPaid": {
@@ -11126,6 +11438,12 @@
             ],
             "title": "Description"
           },
+          "end_time": {
+            "default": "23:59:00",
+            "format": "time",
+            "title": "End Time",
+            "type": "string"
+          },
           "ended_at": {
             "anyOf": [
               {
@@ -11164,6 +11482,16 @@
             "title": "Is Mine",
             "type": "boolean"
           },
+          "item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "live_at": {
             "anyOf": [
               {
@@ -11176,6 +11504,16 @@
             ],
             "title": "Live At"
           },
+          "manager_item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "manager_prize_paise": {
             "anyOf": [
               {
@@ -11186,6 +11524,16 @@
               }
             ],
             "title": "Manager Prize Paise"
+          },
+          "member_item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "member_min_contribution": {
             "anyOf": [
@@ -11211,6 +11559,10 @@
           },
           "metric": {
             "$ref": "#/components/schemas/ContestMetric"
+          },
+          "prize_kind": {
+            "$ref": "#/components/schemas/ContestPrizeKind",
+            "default": "cash"
           },
           "prize_paise": {
             "anyOf": [
@@ -11245,6 +11597,12 @@
               }
             ],
             "title": "Reviewed At"
+          },
+          "start_time": {
+            "default": "00:00:00",
+            "format": "time",
+            "title": "Start Time",
+            "type": "string"
           },
           "starts_on": {
             "format": "date",
@@ -16501,6 +16859,12 @@
             "title": "Eligible",
             "type": "boolean"
           },
+          "end_time": {
+            "default": "23:59:00",
+            "format": "time",
+            "title": "End Time",
+            "type": "string"
+          },
           "ends_on": {
             "format": "date",
             "title": "Ends On",
@@ -16511,12 +16875,32 @@
             "title": "Id",
             "type": "string"
           },
+          "item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "leaderboard": {
             "items": {
               "$ref": "#/components/schemas/LeaderboardEntry"
             },
             "title": "Leaderboard",
             "type": "array"
+          },
+          "manager_item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "manager_prize_paise": {
             "anyOf": [
@@ -16533,6 +16917,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/MyStanding"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "member_item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
               },
               {
                 "type": "null"
@@ -16584,6 +16978,10 @@
             ],
             "title": "Participants"
           },
+          "prize_kind": {
+            "$ref": "#/components/schemas/ContestPrizeKind",
+            "default": "cash"
+          },
           "prize_paise": {
             "anyOf": [
               {
@@ -16594,6 +16992,12 @@
               }
             ],
             "title": "Prize Paise"
+          },
+          "start_time": {
+            "default": "00:00:00",
+            "format": "time",
+            "title": "Start Time",
+            "type": "string"
           },
           "starts_on": {
             "format": "date",
@@ -16717,6 +17121,12 @@
             "title": "Eligible",
             "type": "boolean"
           },
+          "end_time": {
+            "default": "23:59:00",
+            "format": "time",
+            "title": "End Time",
+            "type": "string"
+          },
           "ends_on": {
             "format": "date",
             "title": "Ends On",
@@ -16726,6 +17136,26 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manager_item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "manager_prize_paise": {
             "anyOf": [
@@ -16742,6 +17172,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/MyStanding"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "member_item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
               },
               {
                 "type": "null"
@@ -16793,6 +17233,10 @@
             ],
             "title": "Participants"
           },
+          "prize_kind": {
+            "$ref": "#/components/schemas/ContestPrizeKind",
+            "default": "cash"
+          },
           "prize_paise": {
             "anyOf": [
               {
@@ -16803,6 +17247,12 @@
               }
             ],
             "title": "Prize Paise"
+          },
+          "start_time": {
+            "default": "00:00:00",
+            "format": "time",
+            "title": "Start Time",
+            "type": "string"
           },
           "starts_on": {
             "format": "date",
@@ -16924,6 +17374,16 @@
               }
             ],
             "title": "Excluded Reason"
+          },
+          "item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "metric_value": {
             "title": "Metric Value",
@@ -17121,6 +17581,7 @@
           "contest_submitted",
           "contest_reviewed",
           "contest_live",
+          "contest_updated",
           "contest_won",
           "commission_rate_submitted",
           "commission_rate_reviewed"
@@ -23581,6 +24042,16 @@
             ],
             "title": "Excluded Reason"
           },
+          "item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "kind": {
             "title": "Kind",
             "type": "string"
@@ -25875,6 +26346,16 @@
             "default": false,
             "title": "Is Me",
             "type": "boolean"
+          },
+          "item_prize": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContestItemPrize"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "meets_member_minimum": {
             "anyOf": [
@@ -42093,7 +42574,15 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ContestDefinition"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ContestAdminUpdate"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ContestDefinition"
+                  }
+                ],
+                "title": "Payload"
               }
             }
           },

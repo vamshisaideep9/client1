@@ -86,20 +86,27 @@ IST = ZoneInfo("Asia/Kolkata")
 class ContestWindow:
     starts_on: date
     ends_on: date
+    start_time: time = time.min
+    end_time: time = time(23, 59)
 
     @property
     def start(self) -> datetime:
-        return datetime.combine(self.starts_on, time.min, tzinfo=IST).astimezone(UTC)
+        return datetime.combine(self.starts_on, self.start_time, tzinfo=IST).astimezone(UTC)
 
     @property
     def end(self) -> datetime:
-        return datetime.combine(self.ends_on + timedelta(days=1), time.min, tzinfo=IST).astimezone(
-            UTC
-        )
+        # The selected end minute is inclusive, including 23:59 on legacy contests.
+        end_minute = datetime.combine(self.ends_on, self.end_time, tzinfo=IST)
+        return end_minute.astimezone(UTC) + timedelta(minutes=1)
 
     @classmethod
     def of(cls, contest: Contest) -> ContestWindow:
-        return cls(contest.starts_on, contest.ends_on)
+        return cls(
+            contest.starts_on,
+            contest.ends_on,
+            contest.start_time or time.min,
+            contest.end_time or time(23, 59),
+        )
 
 
 @dataclass
@@ -148,6 +155,7 @@ class Participant:
     # Decided at finalization (``decide_winners``).
     won: bool = False
     prize_paise: int = 0
+    item_prize: dict | None = None
     excluded_reason: str | None = None
 
     @property
@@ -817,6 +825,14 @@ def _groups(people: Iterable[Participant]) -> list[list[Participant]]:
     return groups
 
 
+def item_prize_for(contest: Contest, kind: str) -> dict | None:
+    return {
+        ContestResultKind.INDIVIDUAL: contest.item_prize,
+        ContestResultKind.TEAM_MANAGER: contest.manager_item_prize,
+        ContestResultKind.TEAM_MEMBER: contest.member_item_prize,
+    }.get(kind)
+
+
 def decide_winners(contest: Contest, standings: Standings) -> None:
     """Mark winners and prizes in place.
 
@@ -879,15 +895,18 @@ def decide_winners(contest: Contest, standings: Standings) -> None:
         entry.won = True
         if contest.audience != ContestAudience.TEAM:
             entry.prize_paise = contest.prize_paise or 0
+            entry.item_prize = item_prize_for(contest, entry.kind)
             continue
         for person in people_by_team.get(entry.team_uuid, []):
+            item = item_prize_for(contest, person.kind)
             if person.kind == ContestResultKind.TEAM_MANAGER:
                 person.won = True
                 person.prize_paise = contest.manager_prize_paise or 0
-            elif contest.member_prize_paise and person.metric_value >= (
-                contest.member_min_contribution or 0
-            ):
-                person.won = True
-                person.prize_paise = contest.member_prize_paise
-            elif contest.member_prize_paise:
-                person.excluded_reason = ContestExclusion.BELOW_MEMBER_MINIMUM.value
+                person.item_prize = item
+            elif contest.member_prize_paise or item:
+                if person.metric_value >= (contest.member_min_contribution or 0):
+                    person.won = True
+                    person.prize_paise = contest.member_prize_paise or 0
+                    person.item_prize = item
+                else:
+                    person.excluded_reason = ContestExclusion.BELOW_MEMBER_MINIMUM.value

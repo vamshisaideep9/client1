@@ -27,9 +27,9 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Integer, String, Text, Time
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -64,6 +64,11 @@ class ContestMetric(enum.StrEnum):
 class ContestWinMode(enum.StrEnum):
     THRESHOLD = "threshold"  # everyone who meets every target wins
     TOP_N = "top_n"  # the N best qualifying participants win
+
+
+class ContestPrizeKind(enum.StrEnum):
+    CASH = "cash"
+    ITEM = "item"
 
 
 class ContestStatus(enum.StrEnum):
@@ -116,12 +121,18 @@ class Contest(Base):
     prize_paise: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     manager_prize_paise: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     member_prize_paise: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    prize_kind: Mapped[str] = mapped_column(String(4), default=ContestPrizeKind.CASH.value)
+    item_prize: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    manager_item_prize: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    member_item_prize: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     # In the contest metric's unit (count, or paise for the amount metric).
     member_min_contribution: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     budget_cap_paise: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     # Inclusive India Standard Time calendar dates.
     starts_on: Mapped[date] = mapped_column(Date, nullable=False)
     ends_on: Mapped[date] = mapped_column(Date, nullable=False)
+    start_time: Mapped[time] = mapped_column(Time, default=time.min)
+    end_time: Mapped[time] = mapped_column(Time, default=time(23, 59))
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default=ContestStatus.DRAFT.value
     )
@@ -192,6 +203,7 @@ class ContestResult(Base):
     won: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     excluded_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
     prize_paise: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    item_prize: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     payment_status: Mapped[str] = mapped_column(
         String(16), nullable=False, default=ContestPaymentStatus.NONE.value
     )

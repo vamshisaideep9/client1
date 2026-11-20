@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, or_, select
@@ -27,13 +27,13 @@ import app.db.session as db_session
 from app.models.audit_log import AuditAction
 from app.models.contest import Contest, ContestStatus
 from app.models.loan import Bank, LoanType
-from app.models.notification import NotificationType
+from app.models.notification import Notification, NotificationType
 from app.models.user import User
 from app.schemas.contests import (
+    ContestAdminUpdate,
     ContestCriteria,
     ContestDefinition,
     ContestRead,
-    validate_definition,
 )
 from app.services.admin_notify import notify_admins
 from app.services.audit_log import record as record_audit
@@ -49,6 +49,13 @@ _MAKER_CANCELLABLE = (
     ContestStatus.PENDING_APPROVAL.value,
     ContestStatus.REJECTED.value,
 )
+_ADMIN_EDITABLE = (
+    ContestStatus.PENDING_APPROVAL.value,
+    ContestStatus.APPROVED.value,
+    ContestStatus.LIVE.value,
+)
+_ITEM_PRIZES = ("item_prize", "manager_item_prize", "member_item_prize")
+_LIVE_TEXT = {"title", "description", "terms", "ends_on", "end_time"}
 
 
 class ContestError(Exception):
@@ -106,7 +113,18 @@ def _definition_values(definition: ContestDefinition) -> dict:
         "budget_cap_paise": definition.budget_cap_paise,
         "starts_on": definition.starts_on,
         "ends_on": definition.ends_on,
+        "start_time": definition.start_time,
+        "end_time": definition.end_time,
+        "prize_kind": definition.prize_kind.value,
+        **{
+            field: getattr(definition, field).model_dump() if getattr(definition, field) else None
+            for field in _ITEM_PRIZES
+        },
     }
+
+
+def _stored_definition(contest: Contest) -> ContestDefinition:
+    return ContestDefinition.model_validate(contest, from_attributes=True)
 
 
 async def _check_references(db: AsyncSession, criteria: ContestCriteria) -> None:
@@ -130,23 +148,22 @@ async def _check_references(db: AsyncSession, criteria: ContestCriteria) -> None
 def revalidate(contest: Contest) -> ContestCriteria:
     """Re-check a stored contest before it moves forward."""
     try:
-        criteria = parse_criteria(contest)
-        validate_definition(
-            business_line=contest.business_line,
-            audience=contest.audience,
-            team_member_role=contest.team_member_role,
-            metric=contest.metric,
-            criteria=criteria,
-            win_mode=contest.win_mode,
-        )
+        return _stored_definition(contest).criteria
     except ValueError as exc:
         raise ContestInvalid("The contest rules are no longer valid. Edit and resubmit.") from exc
-    return criteria
 
 
 def _require_future_start(contest: Contest) -> None:
-    if contest.starts_on < today_ist():
+    from app.services.contest_scoring import ContestWindow
+
+    now = datetime.now(UTC)
+    window = ContestWindow.of(contest)
+    # Older all-day contests historically allowed same-day submission and approval.
+    custom_window = contest.start_time != time.min or contest.end_time != time(23, 59)
+    if contest.starts_on < today_ist(now):
         raise ContestStateError("The start date has passed. Choose new dates and resubmit.")
+    if now >= window.end or (now > window.start and custom_window):
+        raise ContestStateError("The start time has passed. Choose a new start and resubmit.")
 
 
 async def _audit(
@@ -215,6 +232,7 @@ def to_read(contest: Contest, names: dict[uuid.UUID, str], viewer_uuid: uuid.UUI
         budget_cap_paise=contest.budget_cap_paise,
         starts_on=contest.starts_on,
         ends_on=contest.ends_on,
+        **schedule_and_prize(contest),
         status=contest.status,
         created_by_uuid=contest.created_by_uuid,
         created_by_name=names.get(contest.created_by_uuid) or None,
@@ -232,6 +250,15 @@ def to_read(contest: Contest, names: dict[uuid.UUID, str], viewer_uuid: uuid.UUI
         created_at=contest.created_at,
         updated_at=contest.updated_at,
     )
+
+
+def schedule_and_prize(contest: Contest) -> dict:
+    return {
+        "start_time": contest.start_time,
+        "end_time": contest.end_time,
+        "prize_kind": contest.prize_kind,
+        **{field: getattr(contest, field) for field in _ITEM_PRIZES},
+    }
 
 
 async def reads_for(contests: list[Contest], viewer_uuid: uuid.UUID) -> list[ContestRead]:
@@ -465,6 +492,86 @@ async def _locked(session: AsyncSession, contest_id: uuid.UUID) -> Contest:
     if contest is None:
         raise ContestNotFound("Contest not found.")
     return contest
+
+
+async def admin_update_contest(
+    contest_id: uuid.UUID, definition: ContestAdminUpdate, *, actor_uuid: uuid.UUID, actor_role: str
+) -> Contest:
+    from app.services.contest_lifecycle import contest_recipients
+    from app.services.contest_scoring import ContestWindow
+
+    async with db_session.AsyncSessionLocal() as session:
+        contest = await _locked(session, contest_id)
+        if contest.status not in _ADMIN_EDITABLE:
+            raise ContestStateError("This contest cannot be edited in its current status.")
+        if contest.created_by_uuid == actor_uuid:
+            raise ContestMakerChecker("You cannot use Admin editing on a contest you created.")
+        if contest.version != definition.expected_version:
+            raise ContestStateError("The contest changed. Reload it before editing again.")
+        now = datetime.now(UTC)
+        window = ContestWindow.of(contest)
+        proposed = ContestWindow(
+            definition.starts_on, definition.ends_on, definition.start_time, definition.end_time
+        )
+        if now >= window.end:
+            raise ContestStateError("The contest has ended.")
+        previous = _stored_definition(contest)
+        before = _definition_values(previous)
+        after = _definition_values(definition)
+        changed = {key for key in after if before[key] != after[key]}
+        has_started = contest.status == ContestStatus.LIVE.value or now >= window.start
+        if has_started:
+            for field in changed.intersection(_ITEM_PRIZES):
+                old, new = before[field], after[field]
+                if (
+                    not old
+                    or not new
+                    or old["estimated_value_paise"] != new["estimated_value_paise"]
+                ):
+                    raise ContestStateError("Only item prize text can change after the start.")
+            if changed.difference(_LIVE_TEXT, _ITEM_PRIZES) or proposed.end < window.end:
+                raise ContestStateError("After the start, edit only text or extend the end.")
+        else:
+            if proposed.start < now:
+                raise ContestStateError("Choose a start time that has not passed.")
+            await _check_references(session, definition.criteria)
+            if datetime.now(UTC) >= min(window.start, proposed.start):
+                raise ContestStateError("A start time has arrived. Reload before editing again.")
+        if not changed:
+            return contest
+
+        for field in changed:
+            setattr(contest, field, after[field])
+        contest.version += 1
+        await session.flush()
+        recipients = (
+            await contest_recipients(session, contest, now)
+            if has_started and contest.status != ContestStatus.PENDING_APPROVAL.value
+            else set()
+        )
+        session.add_all(
+            Notification(
+                user_uuid=user_uuid,
+                type=NotificationType.CONTEST_UPDATED,
+                title="Contest updated",
+                body=f"“{contest.title}” has updated details. Open the contest to review them.",
+                href=f"/dashboard/contests?contest={contest.id}",
+            )
+            for user_uuid in recipients
+        )
+        audit_before = previous.model_dump(mode="json")
+        audit_after = definition.model_dump(mode="json", exclude={"expected_version"})
+        await _audit(
+            session,
+            contest,
+            AuditAction.CONTEST_UPDATED,
+            actor_uuid=actor_uuid,
+            actor_role=actor_role,
+            detail={"before": audit_before, "after": audit_after, "notified": len(recipients)},
+        )
+        await session.commit()
+        await session.refresh(contest)
+        return contest
 
 
 async def approve_contest(

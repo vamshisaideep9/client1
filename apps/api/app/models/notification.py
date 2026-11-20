@@ -61,6 +61,7 @@ class NotificationType(enum.StrEnum):
     CONTEST_SUBMITTED = "contest_submitted"
     CONTEST_REVIEWED = "contest_reviewed"
     CONTEST_LIVE = "contest_live"
+    CONTEST_UPDATED = "contest_updated"
     CONTEST_WON = "contest_won"
     # CS-028 commission rates: a Sub Admin's proposal awaits review (platform
     # Admins), or was approved / rejected (the proposing Sub Admin).

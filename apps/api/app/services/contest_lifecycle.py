@@ -42,6 +42,7 @@ from app.services.contest_scoring import (
     Participant,
     Standings,
     compute_standings,
+    item_prize_for,
 )
 from app.services.contests import parse_criteria, today_ist
 
@@ -60,14 +61,14 @@ def _recipients(standings: Standings) -> set[uuid.UUID]:
 async def activate_if_due(session: AsyncSession, contest: Contest, now: datetime) -> bool:
     """approved -> live once the IST start has arrived. Caller holds the row
     lock and commits."""
-    if contest.status != ContestStatus.APPROVED.value or now < ContestWindow.of(contest).start:
+    window = ContestWindow.of(contest)
+    if contest.status != ContestStatus.APPROVED.value or now < window.start:
         return False
     contest.status = ContestStatus.LIVE.value
     contest.live_at = now
     contest.version += 1
     await session.flush()
-    standings = await compute_standings(session, contest, parse_criteria(contest), now)
-    recipients = _recipients(standings)
+    recipients = await contest_recipients(session, contest, now) if now < window.end else set()
     session.add_all(
         Notification(
             user_uuid=user_uuid,
@@ -75,7 +76,7 @@ async def activate_if_due(session: AsyncSession, contest: Contest, now: datetime
             title="A new contest is live",
             body=(
                 f"“{contest.title}” runs until "
-                f"{contest.ends_on.strftime('%d %b %Y')}. See the rules and your progress."
+                f"{contest.ends_on:%d %b %Y} at {contest.end_time:%H:%M} IST."
             ),
             href=_contest_href(contest),
         )
@@ -92,6 +93,13 @@ async def activate_if_due(session: AsyncSession, contest: Contest, now: datetime
         detail={"status": contest.status, "notified": len(recipients)},
     )
     return True
+
+
+async def contest_recipients(
+    session: AsyncSession, contest: Contest, now: datetime
+) -> set[uuid.UUID]:
+    standings = await compute_standings(session, contest, parse_criteria(contest), now)
+    return _recipients(standings)
 
 
 def _result_row(contest: Contest, person: Participant) -> ContestResult:
@@ -111,6 +119,7 @@ def _result_row(contest: Contest, person: Participant) -> ContestResult:
         rank=person.rank,
         won=False,
         prize_paise=0,
+        item_prize=item_prize_for(contest, person.kind),
         payment_status=ContestPaymentStatus.NONE.value,
     )
 

@@ -1,7 +1,19 @@
 # Living implementation plan
 
-**In progress — Batch 4: grouped commission payouts and transaction history**
-based on merged Batch 3. The API is in draft review
+**Implemented — Batch 5 API: contest windows, item prizes and Admin edits**
+
+- Preserve historical all-day windows and pay cash through the existing controls.
+- Store non-cash award details with results and enforce exact IST edit boundaries.
+- Verify boundaries, version conflicts, payout denial and migration compatibility.
+- Keep the current contest editor functional by submitting explicit all-day,
+  cash defaults until the new editor controls are available.
+- Focused PostgreSQL and Redis checks exercised 65 cases. Two existing
+  date-message regressions were corrected and passed the exact rerun. Ruff
+  lint and formatting, generated API contracts and scratch migration
+  upgrade/downgrade/upgrade passed. Next priority is the Batch 5 contest UI.
+
+**Merged upstream — Batch 4: grouped commission payouts and transaction history**
+based on merged Batch 3. The API is merged upstream
 ([upstream #392](https://github.com/brollysolutions/client1/pull/392),
 [mirror #93](https://github.com/vamshisaideep9/client1/pull/93)).
 `feat/batch4-commission-payouts-web` builds on API commit `c3d09cc3`.

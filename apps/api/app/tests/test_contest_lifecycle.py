@@ -134,6 +134,49 @@ async def test_overdue_contest_goes_live_and_ends_in_one_tick(client) -> None:
     assert await _count(ContestResult, ContestResult.contest_uuid == contest.id) == before
 
 
+async def test_single_minute_scores_only_inside_the_window(client) -> None:
+    maker = await seed_user("Maker", "Sub")
+    loan_type = await seed_loan_type("Minute window loan")
+    _, agent = await seed_agent()
+    day = today_ist() + timedelta(days=2)
+    contest = await seed_contest(
+        created_by=maker,
+        status="approved",
+        starts_on=day,
+        ends_on=day,
+        start_time=time(12, 34),
+        end_time=time(12, 34),
+        criteria={
+            "version": 1,
+            "loans": {
+                "loan_type_ids": [str(loan_type.id)],
+                "counted_stage": "disbursed",
+                "count_at_least": 1,
+            },
+        },
+    )
+    start = _ist_midnight(day) + timedelta(hours=12, minutes=34)
+    end = start + timedelta(minutes=1)
+    assert await _step(contest.id, start - timedelta(seconds=1)) == (False, False)
+    for at in (start - timedelta(seconds=1), start, end - timedelta(seconds=1), end):
+        await seed_loan(await seed_lead("loans", agent=agent), loan_type=loan_type, at=at)
+    assert await _step(contest.id, end) == (True, True)
+    async with db_session.AsyncSessionLocal() as db:
+        result = await db.scalar(
+            select(ContestResult).where(
+                ContestResult.contest_uuid == contest.id,
+                ContestResult.agent_profile_uuid == agent.id,
+            )
+        )
+        assert result.achieved_count == 2
+        assert not await db.scalar(
+            select(Notification.id).where(
+                Notification.type == NotificationType.CONTEST_LIVE,
+                Notification.href == f"/dashboard/contests?contest={contest.id}",
+            )
+        )
+
+
 async def test_approval_on_the_start_day_goes_live_at_once(client: AsyncClient) -> None:
     maker, _, _ = await sub_admin_token()
     admin, _ = await admin_token()
@@ -155,8 +198,8 @@ async def test_approval_on_the_start_day_goes_live_at_once(client: AsyncClient) 
     assert response.json()["live_at"] is not None
 
 
-def test_job_is_registered_every_five_minutes() -> None:
+def test_job_is_registered_every_minute() -> None:
     job = build_scheduler().get_job("contest_lifecycle")
     assert job is not None
-    assert job.trigger.interval.total_seconds() == 5 * 60
+    assert job.trigger.interval.total_seconds() == 60
     assert job.max_instances == 1 and job.coalesce is True
