@@ -293,6 +293,7 @@ async def transaction_detail(
                 method=raw_payout["method"],
                 provider=raw_payout["provider"],
                 destination_hint=raw_payout["destination_hint"],
+                reference=raw_payout.get("reference"),
                 requested_at=raw_payout["requested_at"],
                 approved_at=approved_at,
                 issued_at=raw_payout.get("issued_at"),

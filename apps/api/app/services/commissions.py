@@ -402,6 +402,7 @@ async def list_for_admin(
     status_filter: CommissionStatus | None = None,
     business_line: str | None = None,
     agent_profile_uuid: uuid.UUID | None = None,
+    awaiting_payout: bool = False,
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[CommissionRead], int]:
@@ -415,6 +416,10 @@ async def list_for_admin(
         filters.append(Commission.business_line == business_line)
     if agent_profile_uuid is not None:
         filters.append(Commission.agent_profile_uuid == agent_profile_uuid)
+    if awaiting_payout:
+        filters.extend(
+            (Commission.status == CommissionStatus.PENDING, Commission.payout_uuid.is_(None))
+        )
 
     total = await db.scalar(select(func.count()).select_from(Commission).where(*filters)) or 0
 
@@ -423,7 +428,7 @@ async def list_for_admin(
         .join(AgentProfile, AgentProfile.id == Commission.agent_profile_uuid)
         .join(User, User.id == Commission.agent_auth_user_uuid)
         .where(*filters)
-        .order_by(Commission.created_at.desc())
+        .order_by(Commission.created_at.desc(), Commission.id.desc())
         .limit(limit)
         .offset(offset)
     )
@@ -457,42 +462,7 @@ async def get_for_admin(db: AsyncSession, commission_id: uuid.UUID) -> Commissio
 # Payout execution (PR 2) — turning a pending commission into a real payout
 # ---------------------------------------------------------------------------
 #
-# The three functions below run on the BYPASS session (db_session.AsyncSessionLocal,
-# module-qualified access — not `from ... import AsyncSessionLocal`, so conftest's
-# NullPool patch of the module attribute is picked up automatically with no
-# separate _patch_db_null_pool entry needed, same trick services/referrals.py
-# already uses), mirroring services/referrals.py::attach_payout /
-# mark_paid_from_payout / release_payout_link exactly: services/payments.py
-# calls these from contexts with no admin JWT session at all (the auth-less
-# webhook receiver, a scheduler-driven reconcile job), so they cannot depend
-# on commissions_update RLS, which requires an admin request context.
-
-
-async def attach_payout(*, commission_id: uuid.UUID, payout_id: uuid.UUID) -> bool:
-    """Links a newly-created payout to a pending, unlinked commission.
-
-    The CAS (WHERE status='pending' AND payout_uuid IS NULL) is the
-    double-pay guard: two concurrent "Pay commission" clicks can only ever
-    have one winner. A False return means the row was already claimed (or is
-    no longer pending) — the router turns that into a 409. The payout itself
-    is NOT rolled back here; it is left pending_approval for a human to
-    reject, the same "never auto-cancel a maker-checker artifact" discipline
-    services/payments.py follows elsewhere and referrals.attach_payout mirrors.
-    """
-    async with db_session.AsyncSessionLocal() as session:
-        result = await session.execute(
-            update(Commission)
-            .where(
-                Commission.id == commission_id,
-                Commission.status == CommissionStatus.PENDING,
-                Commission.payout_uuid.is_(None),
-            )
-            .values(payout_uuid=payout_id, updated_at=func.now())
-            .returning(Commission.id)
-        )
-        claimed = result.scalar_one_or_none()
-        await session.commit()
-        return claimed is not None
+# Terminal hooks run without request identity on the trusted bypass session.
 
 
 async def mark_paid_from_payout(*, payout_id: uuid.UUID, transaction_id: uuid.UUID) -> None:

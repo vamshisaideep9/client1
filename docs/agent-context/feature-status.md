@@ -1,5 +1,19 @@
 # Feature implementation status
 
+**In progress — Batch 4 API: grouped commission payouts and transaction history**
+(2026-11-20), branch `feat/batch4-commission-payouts-api`.
+
+- One claim path handles single and grouped payouts for one Agent and line.
+  Payout creation, commission claims and historical membership commit together
+  before a standalone transfer can begin.
+- Platform Admin can read pending Agent groups and the original covered items.
+  Ledger search provides server-side filters, stable ordering, pagination and
+  totals. The established ledger visibility applies. Payment trails are scoped
+  to the owner and platform Admin. Agent deal data follows existing field rules.
+- The migration backfills available live links and retains future membership
+  through reversal and retry. Earlier payments whose links were already cleared
+  keep the ledger details still available for those payments.
+
 **Delivered for review - Batch 3 web: staff specialties and role identifiers**
 (2026-11-20), branch `feat/staff-specialty-badges-web`, stacked on final API
 `5e392e00` ([upstream #390](https://github.com/brollysolutions/client1/pull/390),
