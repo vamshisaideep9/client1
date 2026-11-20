@@ -1,19 +1,20 @@
 import { expect, test, type Page } from "@playwright/test";
 import ExcelJS from "exceljs";
+import type { CommissionRate, CommissionRateInput, ProductCommissionRates } from "@/lib/commission-rates-api";
 import { mockMobileApi, FIXTURE_ID } from "./helpers/mobile-fixtures";
 
 test.setTimeout(180_000);
 test.use({ contextOptions: { reducedMotion: "reduce" } });
 const LEAD_ID = "20000000-0000-4000-8000-000000000001";
 const RATE_ID = "30000000-0000-4000-8000-000000000001";
-const rate = {
+const rate: CommissionRate = {
   id: RATE_ID, loan_type_id: FIXTURE_ID, kind: "percent", percent_bps: 50, amount_paise: null,
-  note: "Paid on disbursal", status: "approved", created_by_uuid: FIXTURE_ID,
+  note: "Paid on disbursal", status: "approved", created_by_uuid: "40000000-0000-4000-8000-000000000001",
   created_by_name: "Rate Maker", created_by_role: "sub_admin", is_mine: false,
   checker_name: "Admin Reviewer", reviewed_at: "2026-11-19T10:00:00Z", review_note: null,
   version: 1, created_at: "2026-11-19T09:00:00Z", updated_at: "2026-11-19T10:00:00Z",
 };
-const product = { loan_type_id: FIXTURE_ID, product_slug: "personal-loan", product_label: "Personal Loan", product_active: true, current: rate, pending: null, history: [] };
+const product: ProductCommissionRates = { loan_type_id: FIXTURE_ID, product_slug: "personal-loan", product_label: "Personal Loan", product_active: true, current: rate, pending: null, history: [] };
 async function session(page: Page, role: "agent" | "admin" | "sub_admin" | "telecaller", line = "loans") {
   await mockMobileApi(page, role, line);
   await page.context().addCookies([{ name: "session_hint", value: "1", url: String(test.info().project.use.baseURL ?? "http://localhost:3001") }]);
@@ -35,7 +36,11 @@ function lead(count = 0, name = "Asha", id = LEAD_ID) {
 }
 test("loans Agent sees approved commission and sends email with the product", async ({ page }, info) => {
   await session(page, "agent");
-  await page.route("**/api/v1/agent/commission-rates", (route) => route.fulfill({ json: { rates: { "personal-loan": rate } } }));
+  await page.route("**/api/v1/agent/commission-rates", (route) => route.fulfill({ json: { rates: { "personal-loan": {
+    loan_type_id: FIXTURE_ID, product_label: "Personal Loan", kind: rate.kind,
+    percent_bps: rate.percent_bps, amount_paise: rate.amount_paise,
+    note: rate.note, approved_at: rate.reviewed_at,
+  } } } }));
   let body: Record<string, unknown> | null = null;
   await page.route("**/api/v1/agent/leads", async (route) => {
     if (route.request().method() === "POST") { body = route.request().postDataJSON(); await route.fulfill({ status: 201, json: lead() }); }
@@ -153,12 +158,28 @@ for (const role of ["agent", "telecaller"] as const) {
 }
 test("Admin reviews a proposal and edits the immediate rate", async ({ page }, info) => {
   await session(page, "admin");
-  let current = { ...product, pending: { ...rate, status: "pending_approval", checker_name: null } as Record<string, unknown> | null };
+  let current: ProductCommissionRates = { ...product, pending: { ...rate,
+    id: "30000000-0000-4000-8000-000000000002", status: "pending_approval",
+    checker_name: null, reviewed_at: null, review_note: null,
+  } };
   let saved: unknown;
   await page.route("**/api/v1/commission-rates**", async (route) => {
     const request = route.request();
-    if (request.method() === "PUT") saved = request.postDataJSON();
-    if (request.method() === "POST") current = { ...current, pending: null };
+    if (request.method() === "PUT") {
+      const body = request.postDataJSON() as CommissionRateInput;
+      saved = body;
+      current = { ...current, current: { ...rate,
+        id: "30000000-0000-4000-8000-000000000003", kind: body.kind,
+        percent_bps: body.percent_bps ?? null, amount_paise: body.amount_paise ?? null,
+        note: body.note ?? null, created_by_uuid: FIXTURE_ID,
+        created_by_name: "Mobile Reviewer", created_by_role: "admin", is_mine: true,
+        checker_name: null, reviewed_at: null, review_note: null,
+      } };
+    }
+    if (request.method() === "POST" && current.pending) current = { ...current,
+      current: { ...current.pending, status: "approved", checker_name: "Mobile Reviewer", reviewed_at: "2026-11-20T10:00:00Z", version: 2 },
+      pending: null,
+    };
     await route.fulfill({ json: request.method() === "GET" ? { products: [current] } : current });
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -174,13 +195,16 @@ test("Admin reviews a proposal and edits the immediate rate", async ({ page }, i
   await form.getByLabel("Percent of disbursed amount (%)").fill("0.75");
   await form.getByRole("button", { name: "Set commission" }).click();
   await expect.poll(() => saved).toMatchObject({ kind: "percent", percent_bps: 75, amount_paise: null });
+  await expect(form).toHaveCount(0);
+  await expect(page.getByText("0.75% of disbursed amount", { exact: true })).toBeVisible();
+  await expect(page.getByText("Entered by Mobile Reviewer", { exact: true })).toBeVisible();
   await page.screenshot({ path: info.outputPath("admin-rates-1440.png"), fullPage: true });
 });
 test("Sub Admin proposal waits for review and can be withdrawn", async ({ page }, info) => {
   await session(page, "sub_admin");
-  let current = { ...product, pending: null as Record<string, unknown> | null };
+  let current: ProductCommissionRates = { ...product, pending: null };
   await page.route("**/api/v1/commission-rates**", async (route) => {
-    if (route.request().method() === "PUT") current = { ...current, pending: { ...rate, is_mine: true, checker_name: null, status: "pending_approval" } };
+    if (route.request().method() === "PUT") current = { ...current, pending: { ...rate, created_by_uuid: FIXTURE_ID, is_mine: true, checker_name: null, reviewed_at: null, review_note: null, status: "pending_approval" } };
     if (route.request().method() === "POST") current = { ...current, pending: null };
     await route.fulfill({ json: route.request().method() === "GET" ? { products: [current] } : current });
   });

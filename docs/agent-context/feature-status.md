@@ -11,6 +11,9 @@ a new 390px rate-save error/retry regression passes against the standalone
 production server, preserving both values and making no product PATCH.
 Follow-up lint/typecheck, all 1,113 unit tests and all 118 production pages pass;
 all eight font hashes match the prior build.
+Rate fixtures now match the final standalone Admin and approved-only Agent DTO
+semantics; the three updated production-browser scenarios and fresh fixture
+lint/typecheck pass, with no additional UI implementation change.
 Web lint/typecheck pass; Vitest 153 files / 1,113 tests pass. Ten new browser
 scenarios pass, with 36 distinct journeys supported by passing segmented
 evidence. Review fixed an email-only edit trying to clear hidden notes, an extra

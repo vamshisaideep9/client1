@@ -11,7 +11,7 @@ review evidence, rather than pixel baselines or proof of a live API integration.
 | Loans Agent: contact and selected product | 390px | [Form](agent-loan-form-390.png) |
 | Real Estate Agent: subtype with optional listing | 768px | [Form](agent-property-form-768.png) |
 | Bulk results with invalid and repeated rows | 320px | [Results](bulk-results-320.png) |
-| Admin: rate approval and immediate entry | 1440px | [Rates](admin-rates-1440.png) |
+| Admin: immediate rate entry without a checker | 1440px | [Rates](admin-rates-1440.png) |
 | Sub Admin: proposal awaiting review | 390px | [Rates](subadmin-rates-390.png) |
 | Product workspace: saved commission after an error and retry | 390px | [Commission](product-agent-commission-390.png) |
 
@@ -23,6 +23,11 @@ Fresh terminal verification for the unchanged runtime candidate:
   All eight production font hashes match the prior verified artifact.
 - `pnpm test:e2e e2e/agent-lead-intake.spec.ts` against the production bundle:
   exit 0, all ten scenarios passed. API responses are explicitly mocked.
+- After the API's final permission/audit correction, the three affected fixtures
+  were aligned and rerun: all three passed on the unchanged production artifact,
+  with fresh fixture lint/typecheck. The Agent fixture uses only its DTO fields;
+  pending proposals have no review identity; direct Admin entry has no checker
+  and visibly updates the approved rate. These repeat existing scenarios.
 - The same standalone artifact passes the additional embedded product-commission
   scenario: a failed save keeps rate and note, retry succeeds, and no product
   update is sent. The unrelated Save product action is absent on this tab.

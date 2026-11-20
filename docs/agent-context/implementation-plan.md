@@ -27,6 +27,10 @@ delivery remain in progress independently; web delivery follows them.
   Its Node 22 Alpine production build passes all 118 pages. The ten intake
   scenarios and the additional embedded rate-save error/retry case pass against
   the standalone production server; all eight font hashes match the prior build.
+- Contract-fixture follow-up: the Agent mock carries only the Agent DTO fields;
+  pending proposals have no review identity; direct Admin entries have no checker.
+  The three updated scenarios pass against the unchanged production artifact,
+  with fresh fixture lint/typecheck. No additional UI implementation change.
 - Fresh evidence: web lint and typecheck pass; full Vitest 153 files / 1,113
   tests pass. New Playwright intake suite 10 passed; 36 distinct new/neighboring
   browser journeys have passing segmented evidence after the 320px row-action
