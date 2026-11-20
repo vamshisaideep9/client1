@@ -12,6 +12,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { FetchError } from "@/features/dashboard/fetch-error";
+import { TRANSACTION_SOURCE } from "@/features/dashboard/transaction-detail-sheet";
 import { StatusBadge, type StatusTone } from "@/features/dashboard/status-badge";
 import {
   getAgentTransaction,
@@ -67,9 +68,11 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 export function AgentTransactionSheet({
   transactionId,
   onOpenChange,
+  onCloseAutoFocus,
 }: {
   transactionId: string | null;
   onOpenChange: (open: boolean) => void;
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   const [state, setState] = React.useState<LoadState>({ status: "loading" });
   // Only the latest request may update the sheet, so a slow answer for a
@@ -93,13 +96,13 @@ export function AgentTransactionSheet({
     else requestRef.current += 1;
   }, [transactionId, load]);
 
-  const data = state.status === "ready" ? state.data : null;
+  const data = state.status === "ready" && state.data.id === transactionId ? state.data : null;
   const payout = data?.payout ?? null;
   const staffHidden = data?.hidden_fields.includes("staff_names") ?? false;
 
   return (
     <Sheet open={transactionId !== null} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md" onCloseAutoFocus={onCloseAutoFocus}>
         <SheetHeader>
           <SheetTitle>Transaction details</SheetTitle>
           <SheetDescription>How this payment reached you and what it paid for.</SheetDescription>
@@ -128,6 +131,15 @@ export function AgentTransactionSheet({
                 <p className="text-sm text-text-secondary">
                   {data.description} · {formatWhen(data.created_at)}
                 </p>
+                <dl className="mt-2 space-y-1 text-sm">
+                  <Row label="Transaction ID"><span className="break-all">TXN-{data.id}</span></Row>
+                  <Row label="Source">{TRANSACTION_SOURCE[data.type]}</Row>
+                </dl>
+                {payout?.status === "reversed" || data.amount_paise < 0 ? (
+                  <p className="mt-2 rounded-lg bg-muted p-3 text-sm text-text-secondary">
+                    The original payment was reversed. A separate debit offsets the credit.
+                  </p>
+                ) : null}
               </section>
 
               <section aria-labelledby="txn-trail" className="rounded-lg border border-border p-3">
@@ -145,6 +157,7 @@ export function AgentTransactionSheet({
                       {METHOD_LABEL[payout.method] ?? humanizeStatus(payout.method)} ·{" "}
                       <span className="font-mono">{payout.destination_hint}</span>
                     </Row>
+                    {payout.reference ? <Row label="Payment reference">{payout.reference}</Row> : null}
                     <Row label="Requested">{formatWhen(payout.requested_at)}</Row>
                     <Row label="Approved">{formatWhen(payout.approved_at)}</Row>
                     {payout.issued_at ? <Row label="Cheque issued">{formatWhen(payout.issued_at)}</Row> : null}

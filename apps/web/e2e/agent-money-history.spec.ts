@@ -170,9 +170,13 @@ for (const width of [1440, 390]) {
 
 test("transactions page opens an Agent's payment trail", async ({ page, baseURL }) => {
   await asAgent(page, baseURL);
-  await page.route("**/api/v1/transactions", (route) =>
+  await page.route("**/api/v1/transactions/search?**", (route) =>
     route.fulfill({
       json: {
+        total: 1,
+        paid_amount_paise: 4_000_000,
+        processing_count: 0,
+        referral_count: 0,
         transactions: [
           {
             id: TXN_ID,
@@ -192,6 +196,7 @@ test("transactions page opens an Agent's payment trail", async ({ page, baseURL 
   const trail = page.getByRole("dialog", { name: "Transaction details" });
   await expect(trail.getByText("What this paid")).toBeVisible();
   await expect(trail.getByText(/Asha Rao/)).toBeVisible();
+  await expect(trail.getByText(`TXN-${TXN_ID}`)).toBeVisible();
 });
 
 test("lead detail shows the lead's history and hidden fields", async ({ page, baseURL }, testInfo) => {

@@ -1,16 +1,24 @@
 # Living implementation plan
 
-**In progress — Batch 4 API: grouped commission payouts and transaction history**
-on `feat/batch4-commission-payouts-api`, based on merged Batch 3.
+**In progress — Batch 4: grouped commission payouts and transaction history**
+based on merged Batch 3. The API is in draft review
+([upstream #392](https://github.com/brollysolutions/client1/pull/392),
+[mirror #93](https://github.com/vamshisaideep9/client1/pull/93)).
+`feat/batch4-commission-payouts-web` builds on API commit `c3d09cc3`.
 
 - Atomically claim pending commissions for one Agent and business line, derive
   the payout amount from locked rows, and preserve the existing approval and
   terminal-state transitions. Start any transfer after the claim commits.
 - Preserve covered commission membership through payout reversal and retries.
   Keep transaction detail and list filters within their established RLS scope.
-- Verify overlap races, rollback, cap enforcement, terminal-state behavior,
-  historical membership, ownership and contract generation. Web delivery follows
-  the API. No payment provider, approval policy or production configuration change.
+- The web uses the existing dashboard controls for grouped selection, approval
+  review, ledger filters and history. It retains Agent field visibility and
+  shows a masked payment trail and reversal dates in owner views.
+- Focused API checks cover overlap races, rollback, cap enforcement, terminal
+  state, historical membership and ownership. Web lint, typecheck and 1,119
+  unit tests passed. A development browser run passed six current journeys,
+  including both new flows. Full API and production build evidence remains
+  pending.
 
 **Delivered for review - Batch 3 web: staff specialties and role identifiers**
 (2026-11-20), branch `feat/staff-specialty-badges-web`, stacked on final API
