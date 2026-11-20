@@ -1,5 +1,13 @@
 # Living implementation plan
 
+**Implemented — Batch 6 staff web: personal attendance**
+
+- Telecallers and Employees can clock in or out from Home and Attendance.
+- The IST month view shows worked hours, status, leave balances, and request
+  history. Staff can request leave or corrections and cancel eligible requests.
+- Mobile Playwright passed the setup-pending, check-in and half-day leave flow.
+  Next priority is the manager and Admin attendance workspace.
+
 **Implemented — Batch 6 API: attendance, regularisation and leave**
 
 - Require effective-dated Admin policy before opening the clock or leave.

@@ -20,6 +20,7 @@ import {
   QuickActionGrid,
 } from "@/features/dashboard/dashboard-ui";
 import { ContestHomeCard } from "@/features/contests/contest-home-card";
+import { AttendanceTodayCard } from "@/features/attendance/staff-attendance-view";
 import { useLine } from "@/features/dashboard/line-provider";
 import { getNotifications, type AppNotification } from "@/lib/notifications";
 import { getEmployeeHome, type EmployeeHome as EmployeeHomeData } from "@/lib/employee-api";
@@ -218,6 +219,7 @@ export function EmployeeHome() {
       ) : null}
 
       <ContestHomeCard />
+      <AttendanceTodayCard />
 
       <DashboardPanel
         title="Notifications"

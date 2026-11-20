@@ -1,5 +1,10 @@
 # Feature implementation status
 
+**Implemented — Batch 6 staff web:** Home clock, monthly calendar and totals,
+leave balance and requests, correction form, and request history. The API
+parent is [upstream #396](https://github.com/brollysolutions/client1/pull/396)
+and [mirror #97](https://github.com/vamshisaideep9/client1/pull/97).
+
 **Implemented — Batch 6 API:** attendance clock, effective-dated policy,
 reviewed leave and corrections, rollover, roster and audited CSV. Focused
 checks cover no-policy gating, concurrent check-in, overnight checkout,
