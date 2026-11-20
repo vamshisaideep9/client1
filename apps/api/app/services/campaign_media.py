@@ -15,6 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import campaign_artwork
+from app.core.config import settings
 from app.models.audit_log import AuditAction
 from app.models.banner import Banner, BannerTemplate
 from app.models.campaign_media import CampaignMediaAsset
@@ -28,10 +29,11 @@ from app.schemas.campaign_media import (
 from app.services import media_processing, storage
 from app.services.audit_log import record as record_audit
 
-MEDIA_MAX_BYTES = 4 * 1024 * 1024
+MEDIA_MAX_BYTES = 5 * 1024 * 1024
 _STAGING_PREFIX = "private/campaign-media/staging/"
 _CANONICAL_PREFIX = "public/campaign-media/"
 _ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
+_VIDEO_TYPE = "video/mp4"
 _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]")
 
 
@@ -81,12 +83,22 @@ def asset_image_url(image_ref: str) -> str | None:
     return storage.public_asset_url(image_ref)
 
 
+def upload_limit(content_type: str) -> int:
+    """Staging upload cap: images stay small; banner videos use the shared
+    managed-video cap enforced again by the isolated processor."""
+    if content_type == _VIDEO_TYPE:
+        return settings.MEDIA_VIDEO_MAX_UPLOAD_BYTES
+    return MEDIA_MAX_BYTES
+
+
 def presign_campaign_media(content_type: str, filename: str) -> tuple[str, dict[str, str], str]:
-    if content_type not in _ALLOWED_TYPES:
+    if content_type not in _ALLOWED_TYPES and content_type != _VIDEO_TYPE:
         raise CampaignMediaInvalid
     safe_name = _SAFE_NAME_RE.sub("_", filename).lstrip(".")[-100:] or "artwork"
     key = f"{_STAGING_PREFIX}{uuid.uuid4()}/{safe_name}"
-    url, fields = storage.presign_upload_post(key, content_type, max_bytes=MEDIA_MAX_BYTES)
+    url, fields = storage.presign_upload_post(
+        key, content_type, max_bytes=upload_limit(content_type)
+    )
     return url, fields, key
 
 
@@ -122,20 +134,45 @@ async def create_asset(
     actor_uuid: UUID,
     actor_role: str,
 ) -> CampaignMediaAsset:
-    suffix = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}[
-        payload.content_type
-    ]
-    destination = f"{_CANONICAL_PREFIX}{uuid.uuid4()}/artwork{suffix}"
+    is_video = payload.content_type == _VIDEO_TYPE
+    # A video is only ever a banner video, and a banner video is only ever a
+    # video: neither can be smuggled into the other's rendering surface.
+    if is_video != (payload.usage_type == campaign_artwork.BANNER_VIDEO):
+        await asyncio.to_thread(storage.delete_object, payload.object_key)
+        raise CampaignMediaInvalid
+    if is_video:
+        destination = f"{_CANONICAL_PREFIX}{uuid.uuid4()}/video.mp4"
+    else:
+        suffix = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}[
+            payload.content_type
+        ]
+        destination = f"{_CANONICAL_PREFIX}{uuid.uuid4()}/artwork{suffix}"
+    width: int | None = None
+    height: int | None = None
     try:
-        byte_size = await asyncio.to_thread(
-            media_processing.canonicalize_object,
-            payload.object_key,
-            destination,
-            payload.content_type,
-            max_bytes=MEDIA_MAX_BYTES,
-        )
-        width, height = await asyncio.to_thread(_dimensions, destination)
-        _validate_dimensions(payload.usage_type, width, height)
+        if is_video:
+            # Same trust boundary as loan videos: malware scan, then transcode
+            # in the secretless media runtime, then scan the canonical output.
+            result = await asyncio.to_thread(
+                media_processing.process_video_object,
+                payload.object_key,
+                destination,
+                policy=media_processing.VideoPolicy(
+                    max_bytes=settings.MEDIA_VIDEO_MAX_UPLOAD_BYTES,
+                    max_duration_seconds=settings.BANNER_VIDEO_MAX_DURATION_SECONDS,
+                ),
+            )
+            byte_size = result.size_bytes
+        else:
+            byte_size = await asyncio.to_thread(
+                media_processing.canonicalize_object,
+                payload.object_key,
+                destination,
+                payload.content_type,
+                max_bytes=MEDIA_MAX_BYTES,
+            )
+            width, height = await asyncio.to_thread(_dimensions, destination)
+            _validate_dimensions(payload.usage_type, width, height)
     except (media_processing.MediaProcessingError, CampaignMediaInvalid) as exc:
         await asyncio.to_thread(storage.delete_object, payload.object_key)
         await asyncio.to_thread(storage.delete_object, destination)
@@ -195,7 +232,13 @@ async def asset_usages(db: AsyncSession, asset_id: UUID) -> list[CampaignMediaUs
         )
         for item in templates
     )
-    banners = (await db.scalars(select(Banner).where(Banner.media_asset_id == asset_id))).all()
+    banners = (
+        await db.scalars(
+            select(Banner).where(
+                (Banner.media_asset_id == asset_id) | (Banner.video_media_asset_id == asset_id)
+            )
+        )
+    ).all()
     usages.extend(
         CampaignMediaUsage(
             kind="banner", entity_id=item.id, label=item.title, status=item.status.value
@@ -232,6 +275,13 @@ async def usage_counts(db: AsyncSession, asset_ids: Sequence[UUID]) -> dict[UUID
         )
         for asset_id, count in rows:
             counts[asset_id] = counts.get(asset_id, 0) + count
+    video_rows = await db.execute(
+        select(Banner.video_media_asset_id, func.count())
+        .where(Banner.video_media_asset_id.in_(ids))
+        .group_by(Banner.video_media_asset_id)
+    )
+    for asset_id, count in video_rows:
+        counts[asset_id] = counts.get(asset_id, 0) + count
     return counts
 
 

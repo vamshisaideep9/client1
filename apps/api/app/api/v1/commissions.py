@@ -11,32 +11,32 @@ the boundary.
 
 from __future__ import annotations
 
-import logging
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import CurrentUser, get_active_user, require_platform_admin
 from app.db.session import get_db
-from app.models.commission import Commission, CommissionStatus
-from app.models.payout import PayoutType
+from app.models.commission import CommissionStatus
+from app.models.payout import Payout, PayoutType
 from app.schemas.commissions import (
+    BulkCommissionPayoutRequest,
     CommissionCancelRequest,
     CommissionCreate,
     CommissionListResponse,
+    CommissionPayoutGroupList,
     CommissionPayoutRequest,
     CommissionPayoutResponse,
     CommissionRead,
+    CoveredCommission,
     EligibleDealListResponse,
 )
-from app.services import commissions
+from app.services import commission_payouts, commissions
 from app.services import payments as payments_service
 
 router = APIRouter()
-
-logger = logging.getLogger(__name__)
 
 # Same typed-error -> HTTP mapping convention as api/v1/referrals.py's
 # _ERROR_STATUS, duplicated rather than imported cross-router: the two
@@ -116,6 +116,7 @@ async def list_commissions(
     status_filter: CommissionStatus | None = None,
     business_line: Literal["loans", "real_estate"] | None = None,
     agent_profile_uuid: UUID | None = None,
+    awaiting_payout: bool = False,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     current_user: CurrentUser = Depends(get_active_user),
@@ -127,10 +128,25 @@ async def list_commissions(
         status_filter=status_filter,
         business_line=business_line,
         agent_profile_uuid=agent_profile_uuid,
+        awaiting_payout=awaiting_payout,
         limit=limit,
         offset=offset,
     )
     return CommissionListResponse(commissions=rows, total=total)
+
+
+@router.get("/pending-payout-groups", response_model=CommissionPayoutGroupList)
+async def list_pending_payout_groups(
+    response: Response,
+    limit: int = Query(default=25, ge=1, le=200),
+    offset: int = Query(default=0, ge=0, le=2_147_483_647),
+    current_user: CurrentUser = Depends(get_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> CommissionPayoutGroupList:
+    """Group every unlinked pending commission by Agent and business line."""
+    await require_platform_admin(current_user)
+    response.headers["Cache-Control"] = "private, no-store"
+    return await commission_payouts.list_pending_groups(db, limit=limit, offset=offset)
 
 
 @router.post("/{commission_id}/cancel", status_code=status.HTTP_204_NO_CONTENT)
@@ -155,6 +171,34 @@ async def cancel_commission(
 
 
 @router.post(
+    "/bulk-payout",
+    response_model=CommissionPayoutResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_bulk_commission_payout(
+    req: BulkCommissionPayoutRequest,
+    current_user: CurrentUser = Depends(get_active_user),
+) -> CommissionPayoutResponse:
+    """Create one payout from selected pending commissions for the same Agent."""
+    return await _create_commission_payout(req.commission_ids, req, current_user, bulk=True)
+
+
+@router.get("/payouts/{payout_id}/items", response_model=list[CoveredCommission])
+async def list_covered_commissions(
+    payout_id: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[CoveredCommission]:
+    await require_platform_admin(current_user)
+    payout = await db.get(Payout, payout_id)
+    if payout is None or payout.type != PayoutType.COMMISSION:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Commission payout not found.")
+    response.headers["Cache-Control"] = "private, no-store"
+    return await commission_payouts.list_items(db, payout_id)
+
+
+@router.post(
     "/{commission_id}/payout",
     response_model=CommissionPayoutResponse,
     status_code=status.HTTP_201_CREATED,
@@ -163,70 +207,21 @@ async def create_commission_payout(
     commission_id: UUID,
     req: CommissionPayoutRequest,
     current_user: CurrentUser = Depends(get_active_user),
-    db: AsyncSession = Depends(get_db),
 ) -> CommissionPayoutResponse:
-    """Turns one pending commission into a real payout. Amount and recipient
-    come from the commission row, never from the request body — only the
-    destination the agent actually receives money at is caller-supplied.
-    Approval is a separate step at POST /payouts/{id}/approve: this endpoint
-    is the maker, never the checker."""
+    """Create a payout for a single pending commission."""
+    return await _create_commission_payout([commission_id], req, current_user, bulk=False)
+
+
+async def _create_commission_payout(
+    ids: list[UUID], req: CommissionPayoutRequest, current_user: CurrentUser, *, bulk: bool
+) -> CommissionPayoutResponse:
     await require_platform_admin(current_user)
-
-    commission = await db.get(Commission, commission_id)
-    if commission is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Commission not found.")
-    if commission.status != CommissionStatus.PENDING or commission.payout_uuid is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Commission is not awaiting payout.",
-        )
-
     try:
-        payout_id = await payments_service.create_payout(
-            recipient_user_uuid=commission.agent_auth_user_uuid,
-            payout_type=PayoutType.COMMISSION,
-            business_line=commission.business_line,
-            amount_paise=commission.agreed_amount_paise,
-            destination_type=req.destination_type,
-            destination=req.destination.model_dump(),
-            # Deterministic, not client-supplied — see CommissionPayoutRequest's
-            # docstring. Two concurrent creates for the SAME commission now
-            # carry the SAME natural key, so create_payout's own dedupe guard
-            # (or the partial-unique idempotency index on a genuine race)
-            # rejects the second one before any orphan payout row can form.
-            idempotency_key=f"com-{commission.id.hex}",
-            maker_user_uuid=current_user.id,
+        payout_id = await commission_payouts.create_for_commissions(
+            ids, req, maker_uuid=current_user.id, maker_role=current_user.role, bulk=bulk
         )
+    except commissions.CommissionError as exc:
+        raise _map_error(exc) from exc
     except payments_service.PayoutError as exc:
         raise _map_payout_error(exc) from None
-
-    attached = await commissions.attach_payout(commission_id=commission.id, payout_id=payout_id)
-    if not attached:
-        # Belt-and-suspenders: the deterministic key above should make this
-        # branch unreachable for the concurrent-create race it guards
-        # against, but if the commission stopped being pending for some other
-        # reason between the read above and here, best-effort reject the
-        # payout we just created rather than leave a live pending_approval
-        # artifact with nothing pointing at it. Reject is not value-moving,
-        # so this is safe even if the payout was somehow already approved by
-        # the time we get here — that case raises PayoutStateError, swallowed
-        # and logged for investigation, mirroring create_referral_payout.
-        try:
-            await payments_service.reject_payout(
-                payout_id=payout_id,
-                rejector_user_uuid=current_user.id,
-                reason="Commission was claimed by another payout concurrently.",
-                rejector_role=current_user.role,
-            )
-        except payments_service.PayoutError:
-            logger.warning(
-                "commissions.orphan_payout_reject_failed payout_id=%s commission_id=%s",
-                payout_id,
-                commission.id,
-            )
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Commission was claimed by another payout concurrently.",
-        )
-
     return CommissionPayoutResponse(payout_id=payout_id)

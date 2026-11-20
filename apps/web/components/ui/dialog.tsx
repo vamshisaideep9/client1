@@ -52,15 +52,31 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  preventOutsideClose = false,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  /**
+   * Keep the dialog open when the pointer goes down, or focus moves, outside
+   * it: the overlay, a toast, the page behind. Set it on every dialog that
+   * holds a form or one-time information, so a stray tap never discards what
+   * someone typed. The dialog still closes from its X, an explicit Cancel or
+   * Close button, and Esc; focus trapping is unchanged.
+   */
+  preventOutsideClose?: boolean
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        onInteractOutside={(event) => {
+          onInteractOutside?.(event)
+          // Radix dismisses unless the outside pointer-down or focus event is
+          // prevented; it fires this for both.
+          if (preventOutsideClose) event.preventDefault()
+        }}
         className={cn(
           "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-surface p-6 shadow-lg duration-200 ease-out outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 motion-reduce:animate-none sm:max-w-lg",
           "max-h-[calc(100dvh-2rem)] min-w-0 overflow-y-auto overscroll-contain p-4 sm:p-6",

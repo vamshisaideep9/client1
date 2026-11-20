@@ -47,7 +47,7 @@ describe("uploadPropertyMedia", () => {
     const result = await uploadPropertyMedia(
       [new File(["image"], "front.jpg", { type: "image/jpeg" })],
       [new File(["pdf"], "rera.pdf", { type: "application/pdf" })],
-      null,
+      [],
     );
 
     expect(result.ok).toBe(true);
@@ -84,7 +84,7 @@ describe("uploadPropertyMedia", () => {
     const result = await uploadPropertyMedia(
       [new File(["image"], "front.jpg", { type: "image/jpeg" })],
       [],
-      null,
+      [],
     );
     expect(result).toEqual({ ok: false, error: "Could not upload front.jpg." });
   });
@@ -110,7 +110,7 @@ describe("uploadPropertyMedia", () => {
     const result = await uploadPropertyMedia(
       [new File(["image"], "front.jpg", { type: "image/jpeg" })],
       [],
-      new File(["panorama"], "tour.webp", { type: "image/webp" }),
+      [new File(["panorama"], "tour.webp", { type: "image/webp" })],
     );
 
     expect(result.ok).toBe(true);

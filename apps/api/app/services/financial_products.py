@@ -199,7 +199,7 @@ async def create_loan_application(
         db, product=product, provider_offer_id=provider_offer_id
     )
     amount_requested = Decimal(str(normalized["requested_amount"]))
-    lead_id = await resolve_loans_lead(mobile, client_profile_uuid)
+    lead_id = await resolve_loans_lead(mobile, client_profile_uuid, product_id=product.id)
     application = LoanApplication(
         lead_uuid=lead_id,
         client_profile_uuid=client_profile_uuid,
@@ -243,7 +243,7 @@ async def create_service_enquiry(
     selected_offer_id, selected_offer_snapshot = await _provider_offer_preference(
         db, product=product, provider_offer_id=provider_offer_id
     )
-    lead_id = await resolve_loans_lead(mobile, client_profile_uuid)
+    lead_id = await resolve_loans_lead(mobile, client_profile_uuid, product_id=product.id)
     enquiry = FinancialServiceEnquiry(
         lead_uuid=lead_id,
         client_profile_uuid=client_profile_uuid,

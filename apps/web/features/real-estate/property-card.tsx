@@ -6,8 +6,10 @@ import Link from "next/link";
 import { Bookmark, Check, MapPin, Scale } from "lucide-react";
 import { toast } from "sonner";
 
+import { ShareActions } from "@/components/share-actions";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBookmarks, useCompare } from "@/features/real-estate/store";
+import { listingSaleType } from "@/lib/properties";
 import type { REListing } from "@/lib/real-estate";
 import { isReraVerified, resolvePropertyArtwork } from "@/lib/property-artwork";
 import { cn } from "@/lib/utils";
@@ -43,7 +45,10 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
         fluid ? "w-full" : "w-[280px] shrink-0 sm:w-[300px]",
       )}
     >
-      <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-loans-soft/50">
+      {/* `isolate` keeps the overlay z-indexes below inside this card. Without
+          it the action buttons joined the page stacking order and painted over
+          the sticky app header and search bar while scrolling. */}
+      <div className="relative isolate aspect-video w-full shrink-0 overflow-hidden bg-loans-soft/50">
         <Link
           href={`/dashboard/properties/${listing.id}`}
           aria-label={`View ${listing.title}`}
@@ -67,7 +72,7 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
             aria-pressed={bookmarked}
             title={bookmarked ? "Remove bookmark" : "Bookmark this property"}
             className={cn(
-              "grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-card/95 text-text-secondary shadow-sm ring-1 ring-border transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-card/95 text-text-secondary shadow-sm ring-1 ring-border transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               bookmarked && "text-brand-link",
             )}
           >
@@ -80,7 +85,7 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
             aria-pressed={inCompare}
             title={inCompare ? "Remove from compare" : "Add to compare"}
             className={cn(
-              "grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-card/95 text-text-secondary shadow-sm ring-1 ring-border transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-card/95 text-text-secondary shadow-sm ring-1 ring-border transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               inCompare && "text-brand-link",
             )}
           >
@@ -94,7 +99,12 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
           </span>
           {listing.listingIntent === "rent" ? (
             <span className="rounded-full bg-amber-100/95 px-2.5 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
-              For rent
+              For rent / lease
+            </span>
+          ) : null}
+          {listing.listingIntent === "sale" && listingSaleType(listing.structuredDetails) === "resale" ? (
+            <span className="rounded-full bg-sky-100/95 px-2.5 py-1 text-xs font-semibold text-sky-900 ring-1 ring-sky-200">
+              Resale
             </span>
           ) : null}
         </span>
@@ -133,8 +143,13 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
         </p>
       </CardContent>
 
-      <CardFooter className="shrink-0 px-4 pb-4 pt-0">
+      <CardFooter className="flex shrink-0 flex-col gap-2 px-4 pb-4 pt-0">
         <PropertyPreviewDialog listing={listing} />
+        {/* Shares the public listing page so recipients need no account. */}
+        <ShareActions
+          path={`/real-estate/properties/${listing.id}`}
+          title={`${listing.title}, ${listing.locality}`}
+        />
       </CardFooter>
     </Card>
   );
