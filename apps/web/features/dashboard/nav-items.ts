@@ -41,6 +41,7 @@ const CAPABILITIES = {
   teamManager: { roles: ["sub_admin"], teamManager: true },
   cms: { roles: ["sub_admin", "admin"] },
   referralRules: { roles: ["sub_admin", "admin"] },
+  commissionRates: { roles: ["sub_admin", "admin"] },
 } as const satisfies Record<
   string,
   {
@@ -385,6 +386,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
   // Admin operations.
   {
+    key: "commission-rates",
+    label: "Agent commission rates",
+    href: "/dashboard/commission-rates",
+    icon: DASHBOARD_ICONS.commissions,
+    capability: "commissionRates",
+    section: "finance",
+  },
+  {
     key: "admin-leads",
     label: "Lead assignments",
     href: "/dashboard/admin-leads",
@@ -567,6 +576,8 @@ export type DashboardRouteRule = {
 export const DASHBOARD_ROUTE_RULES: readonly DashboardRouteRule[] = [
   { path: "/dashboard", exact: true, capabilities: ["shared"] },
   { path: "/dashboard/leads/new", exact: true, capabilities: ["agent"] },
+  { path: "/dashboard/leads/bulk", exact: true, capabilities: ["agent"] },
+  { path: "/dashboard/commission-rates", exact: true, capabilities: ["commissionRates"] },
   { path: "/dashboard/operations", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/admin-leads", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/admin-tasks", exact: true, capabilities: ["admin"] },

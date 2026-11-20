@@ -1,5 +1,48 @@
 # Living implementation plan
 
+**In review — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
+branch `feat/agent-lead-intake-web`, stacked on API `e70b18c3`:
+[upstream #388](https://github.com/brollysolutions/client1/pull/388),
+[mirror #89](https://github.com/vamshisaideep9/client1/pull/89).
+Web PRs: [upstream #389](https://github.com/brollysolutions/client1/pull/389),
+[mirror #90](https://github.com/vamshisaideep9/client1/pull/90), both against
+`main`, with repository/base/head identities independently verified.
+No requirement-percentage change.
+
+- Implemented: Agent email/property-type intake with an optional matching listing,
+  approved commission rate/note in the product dialog, Agent/Telecaller
+  resubmission filters and badges, browser-only CSV/XLSX templates and parsing,
+  a 200-row preview, valid-row submission and formula-safe results. Mobile results
+  use readable cards. Email-only edits preserve untouched or hidden notes.
+- Implemented: Sub Admin proposals/withdrawal, Admin review and immediate rate
+  entry, a commission section per loan product and editable per-deal suggestions.
+  The product workspace offers its product-save action only on product-editing
+  tabs; the commission action preserves values after an error and supports retry.
+- Verification: web lint/typecheck and all 1,113 Vitest tests (153 files) pass;
+  the Node 22 Alpine production build generates all 118 pages. The restack
+  preserves every runtime file from verified candidate `2010d74a`, and inherits
+  the API/contracts without changes. Fresh post-restack changed-test lint and
+  typecheck pass. All eight generated font hashes match the prior artifact.
+- Final production Playwright run: **11 passed together**, exit 0, 3.1 minutes,
+  using synthetic API mocks. This covers intake, CSV/XLSX, both resubmission
+  filters, Admin/Sub Admin rates, the editable suggestion and embedded error/retry.
+  The email-only regression waits for DOM readiness and still asserts the exact
+  PATCH body; a prior full-load wait timed out after its form had rendered.
+  There are 36 distinct new/neighboring journeys with segmented passing evidence;
+  no final combined 36-test pass is claimed.
+- Design/security review retains existing tokens, private-route boundaries and
+  responsive controls, with no new dependency or motion. Six synthetic screenshots
+  at 320/390/768/1440px and verification details are in
+  `apps/web/e2e/review/agent-lead-intake/README.md`. Server authorization, ledger
+  ownership, maker/checker and privacy behavior are covered by the parent API's
+  2,884 passing database-backed tests and its documented historical limit.
+
+Hosted CI: the upstream PR reports no check runs; mirror verify, secret-scan and
+dependency-audit jobs cannot start because of account billing/spending restrictions
+(all three annotations confirmed; verify has zero steps). GitGuardian is neutral.
+Local verification above passes. Next priority: Batch 3 API; Batches 3–6 have not
+started.
+
 Status: **Derived, actively maintained plan**
 
 As of: **2026-09-14**

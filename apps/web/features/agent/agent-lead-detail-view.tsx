@@ -6,12 +6,15 @@ import { Check, Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ResubmissionBadge } from "@/features/dashboard/resubmission-badge";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { DashboardBackLink, DashboardPage, DashboardHeader, DashboardPanel } from "@/features/dashboard/dashboard-ui";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { formatMobile } from "@/lib/phone";
+import { agentLeadUpdate } from "@/lib/agent-lead-update";
 import { cn } from "@/lib/utils";
 
 import { AgentLeadHistorySection } from "./agent-lead-history";
@@ -35,16 +38,16 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
   const backHref = Number.isSafeInteger(fromPage) && fromPage > 1 ? `/dashboard/leads?page=${fromPage}` : "/dashboard/leads";
   const { lead, status, error, errorStatus, retry, update, resubmit } = useAgentLeadDetail(leadId);
   const [notes, setNotes] = React.useState("");
+  const [email, setEmail] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const editable = lead?.editable ?? false;
 
   React.useEffect(() => {
-    if (lead?.requirement && typeof lead.requirement === "object") {
-      const value = (lead.requirement as Record<string, unknown>).notes;
-      if (typeof value === "string") setNotes(value);
-    }
+    const requirement = lead?.requirement as Record<string, unknown> | null;
+    setNotes(typeof requirement?.notes === "string" ? requirement.notes : "");
+    setEmail(typeof requirement?.email === "string" ? requirement.email : "");
   }, [lead]);
 
   React.useEffect(() => {
@@ -55,8 +58,10 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
+    const payload = agentLeadUpdate(lead?.requirement as Record<string, unknown> | null, notes, email);
+    if (!payload) { toast.info("No changes to save"); return; }
     setSaving(true);
-    const res = await update({ requirement: { notes: notes.trim() } });
+    const res = await update(payload);
     setSaving(false);
     if (res.ok) {
       toast.success("Updated");
@@ -112,6 +117,7 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
     <DashboardPage className="max-w-4xl">
       <DashboardBackLink href={backHref}>Back to leads</DashboardBackLink>
       <DashboardHeader title={lead.name ?? "Lead details"} description="Registration, attribution and operational progress" />
+      <ResubmissionBadge count={lead.resubmit_count} at={lead.last_resubmitted_at} />
       <DashboardPanel
         title={lead.name ?? "Unnamed lead"}
         description={formatMobile(lead.mobile)}
@@ -157,6 +163,9 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
       </DashboardPanel>
 
       <DashboardPanel title="Requirement">
+        {typeof (lead.requirement as Record<string, unknown> | null)?.property_type_label === "string" ? (
+          <p className="mb-3 text-sm">Property type: {String((lead.requirement as Record<string, unknown>).property_type_label)}</p>
+        ) : null}
         {typeof (lead.requirement as Record<string, unknown> | null)?.interest_title === "string" ? (
           <p className="mb-3 text-sm">
             <span className="text-text-secondary">Interested in: </span>
@@ -167,6 +176,10 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
         ) : null}
         {editable ? (
           <form className="space-y-3" onSubmit={(e) => void onSave(e)}>
+            <div>
+              <Label htmlFor="lead-email">Email (optional)</Label>
+              <Input id="lead-email" type="email" value={email} maxLength={254} onChange={(e) => setEmail(e.target.value)} />
+            </div>
             <div>
               <Label htmlFor="notes">What are they looking for?</Label>
               <Textarea
@@ -184,6 +197,7 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
           </form>
         ) : (
           <>
+            {email ? <p className="mb-2 break-all text-sm">Email: {email}</p> : null}
             <p className="text-sm text-text-secondary">{notes || "No requirement notes."}</p>
             <p className="mt-3 text-xs text-text-secondary">{readOnlyReason}</p>
           </>

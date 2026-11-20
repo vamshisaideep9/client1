@@ -1,5 +1,35 @@
 # Feature implementation status
 
+**In review — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
+branch `feat/agent-lead-intake-web`, stacked on API `e70b18c3`:
+[upstream #388](https://github.com/brollysolutions/client1/pull/388),
+[mirror #89](https://github.com/vamshisaideep9/client1/pull/89).
+The email/property intake, local spreadsheet workflow, resubmission filters/badges,
+approved commission display, proposal/review and editable suggestion are complete;
+PRs [upstream #389](https://github.com/brollysolutions/client1/pull/389) and
+[mirror #90](https://github.com/vamshisaideep9/client1/pull/90) are open against
+`main`, with repository/base/head identities independently verified.
+No completion-percentage change.
+
+Web lint/typecheck and 1,113 unit tests (153 files) pass. The Node 22 Alpine
+production build generates all 118 pages; all eight font hashes match the prior
+artifact. Restacking changes no runtime file relative to verified candidate
+`2010d74a` and inherits the final API/contracts unchanged. Fresh post-restack
+changed-test lint/typecheck pass. The final combined production-browser run is
+**11 passed**, exit 0, 3.1 minutes, using synthetic API mocks. The email-only test
+waits for DOM readiness and retains its exact request assertion after an earlier
+full-load timeout with the form already rendered. There are 36 distinct passing
+new/neighboring journeys across segmented runs, not a final combined 36-test pass.
+
+Security/design review covers hidden-note preservation, formula-safe bounded
+spreadsheets, generated contract consumers, mobile result cards and the embedded
+commission error/retry without an unrelated product save. Six synthetic screenshots
+and evidence are in `apps/web/e2e/review/agent-lead-intake/README.md`.
+Hosted CI remains unavailable: the upstream PR has no check runs; all three mirror
+Actions jobs are blocked before startup by billing/spending restrictions (verify
+has zero steps). GitGuardian is neutral. Next priority: Batch 3 API; Batches 3–6
+have not started.
+
 Status: **Derived living implementation ledger**
 
 **In review — Batch 2: Agent leads (API slice)** (2026-11-20; CS-028;

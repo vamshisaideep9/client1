@@ -7,6 +7,8 @@
 export type FormSurfaceKind = "mutation" | "filter" | "calculator" | "composite";
 
 export const FORM_SURFACE_REGISTRY = {
+  "features/admin/commission-rates-view.tsx": "mutation",
+  "features/agent/agent-lead-bulk-view.tsx": "mutation",
   "components/help/help-center.tsx": "filter",
   "features/employee/reopen-task-dialog.tsx": "mutation",
   "features/sub-admin/destination-input.tsx": "composite",
@@ -83,7 +85,7 @@ export const FORM_SURFACE_REGISTRY = {
   "features/admin/payout-create-dialog.tsx": "mutation",
   "features/admin/payout-destination-fields.tsx": "composite",
   "features/admin/payouts-view.tsx": "mutation",
-  "features/admin/pending-review-dialog.tsx": "filter",
+  "features/admin/pending-review-dialog.tsx": "composite",
   "features/admin/provider-offers-view.tsx": "mutation",
   "features/admin/recipient-picker.tsx": "composite",
   "features/admin/support-tickets-view.tsx": "mutation",

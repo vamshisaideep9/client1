@@ -18,6 +18,14 @@ export type AgentEarningsRow = Schemas["AgentEarningsRow"];
 export type AgentTransactionDetail = Schemas["AgentTransactionDetail"];
 export type AgentPayoutActor = Schemas["AgentPayoutActor"];
 export type AgentLeadHistory = Schemas["AgentLeadHistoryRead"];
+export type AgentLeadBulkRow = Schemas["AgentLeadBulkRow"];
+export type AgentLeadBulkResult = Schemas["AgentLeadBulkResponse"];
+
+export function submitAgentLeadRows(rows: AgentLeadBulkRow[], dryRun: boolean) {
+  return apiRequest<AgentLeadBulkResult>("/api/v1/agent/leads/bulk", {
+    method: "POST", body: { dry_run: dryRun, rows },
+  });
+}
 
 export async function getAgentHome(): Promise<ApiResponse<AgentHome>> {
   return apiRequest<AgentHome>("/api/v1/agent/home");

@@ -17,10 +17,12 @@ import { DashboardFormPage, DashboardFormSection } from "@/features/dashboard/da
 import { introduceAgentLead } from "@/lib/agent-api";
 import { isValidMobile, toE164 } from "@/lib/phone";
 
-function buildRequirement(notes: string, interest: LeadInterest) {
+function buildRequirement(notes: string, email: string, interest: LeadInterest) {
   const requirement: Record<string, string> = {};
   if (notes.trim()) requirement.notes = notes.trim();
-  if (interest?.kind === "property") requirement.property_id = interest.propertyId;
+  if (email.trim()) requirement.email = email.trim();
+  if (interest?.kind === "property" && interest.propertyId) requirement.property_id = interest.propertyId;
+  if (interest?.kind === "property" && interest.propertyType) requirement.property_type = interest.propertyType;
   if (interest?.kind === "product") requirement.product_slug = interest.productSlug;
   return Object.keys(requirement).length ? requirement : null;
 }
@@ -32,6 +34,8 @@ export function AgentIntroduceLeadForm() {
   const [mobile, setMobile] = React.useState("");
   const [name, setName] = React.useState("");
   const [notes, setNotes] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [emailError, setEmailError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [mobileError, setMobileError] = React.useState<string | null>(null);
   const [nameError, setNameError] = React.useState<string | null>(null);
@@ -48,8 +52,10 @@ export function AgentIntroduceLeadForm() {
     const nextNameError = name.trim() ? null : "Enter the person's name.";
     setMobileError(nextMobileError);
     setNameError(nextNameError);
-    if (nextMobileError || nextNameError) {
-      const firstInvalid = nextMobileError ? "mobile" : "name";
+    const nextEmailError = email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? "Enter a valid email address." : null;
+    setEmailError(nextEmailError);
+    if (nextMobileError || nextNameError || nextEmailError) {
+      const firstInvalid = nextMobileError ? "mobile" : nextNameError ? "name" : "lead-email";
       requestAnimationFrame(() => document.getElementById(firstInvalid)?.focus());
       return;
     }
@@ -57,7 +63,7 @@ export function AgentIntroduceLeadForm() {
     const res = await introduceAgentLead({
       mobile: toE164(mobile),
       name: name.trim(),
-      requirement: buildRequirement(notes, interest),
+      requirement: buildRequirement(notes, email, interest),
     });
     setSaving(false);
     if (res.ok) {
@@ -122,6 +128,13 @@ export function AgentIntroduceLeadForm() {
             <FieldError id="name-error" className="mt-1.5">
               {nameError ?? undefined}
             </FieldError>
+          </div>
+          <div>
+            <Label htmlFor="lead-email">Email (optional)</Label>
+            <Input id="lead-email" type="email" maxLength={254} autoComplete="off"
+              value={email} onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
+              aria-invalid={!!emailError} aria-describedby={emailError ? "lead-email-error" : undefined} />
+            <FieldError id="lead-email-error">{emailError ?? undefined}</FieldError>
           </div>
         </DashboardFormSection>
 

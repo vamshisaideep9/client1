@@ -979,6 +979,22 @@ Evidence is listed in `feature-status.md` under Batch G.
 
 ### CS-028 — Agent lead form fields, sticky resubmission, bulk submit and product commission rates
 
+Web slice (2026-11-20, `feat/agent-lead-intake-web`, parent API `e70b18c3`):
+Agent email/property type with optional matching listing, approved rate/note,
+resubmission filters/badges, local CSV/XLSX templates and bounded parsing,
+row preview and valid-row submission, formula-safe result download and mobile
+result cards. Admin/Sub Admin rate management includes maker/checker review and
+a per-product commission tab; per-deal suggestions remain editable. Email-only
+edits preserve untouched/hidden notes. The commission tab has its own save action,
+with error/retry preserving inputs. No dependency or API change in this slice.
+The unchanged runtime passes 1,113 unit tests and the 118-page Node 22 build;
+the final combined production-browser run passes all 11 scenarios with synthetic
+API mocks. Post-restack lint/typecheck and runtime/API/contract identity checks
+pass. Web PRs [#389](https://github.com/brollysolutions/client1/pull/389) and
+[mirror #90](https://github.com/vamshisaideep9/client1/pull/90) are open against
+`main` with matching heads; hosted mirror jobs are blocked before startup by the
+account billing/spending restriction. Remaining Round 2 scope starts with Batch 3.
+
 **Decision (2026-11-19, client-reported batch 2 "Agent leads"; both lines;
 amends CS-017's resubmission and the FR-8.1 commission entry; the detailed
 Round 2 brief and stacked-PR delivery were confirmed on 2026-11-20):**

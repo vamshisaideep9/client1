@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { PhoneCall, SearchX } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ResubmissionBadge } from "@/features/dashboard/resubmission-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardHeader, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
@@ -31,6 +32,8 @@ import {
   leadSignalActiveCount,
   leadSignalChips,
   leadSignalOptions,
+  RESUBMISSION_OPTIONS,
+  type ResubmissionFilter,
 } from "@/features/telecaller/lead-signal-filters";
 import { getAgentLeadEligibility, listAgentLeadAttempts, resubmitAgentLead } from "@/lib/agent-api";
 import { formatMobile } from "@/lib/phone";
@@ -108,12 +111,15 @@ export function AgentLeadsView() {
         title="Leads"
         description="Leads you have introduced, and whether each one counts for you."
         actions={
+          <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline"><Link href="/dashboard/leads/bulk">Bulk upload</Link></Button>
           <Button asChild className="bg-brand-cta text-white hover:bg-brand-cta/90">
             <Link href="/dashboard/leads/new">
               <PhoneCall className="h-4 w-4" aria-hidden="true" />
               Introduce a lead
             </Link>
           </Button>
+          </div>
         }
       />
 
@@ -153,14 +159,18 @@ export function AgentLeadsView() {
                 showLine={false}
                 showDates={false}
                 extra={
+                  <div className="flex flex-wrap gap-2">
                   <FilterSelect
                     label="Eligibility"
                     value={filters.eligibility}
                     options={ROW_ELIGIBILITY_OPTIONS}
                     onValueChange={(value) => patch({ eligibility: value })}
                   />
+                  <FilterSelect label="Resubmission" value={filters.resubmission} options={RESUBMISSION_OPTIONS}
+                    onValueChange={(value) => patch({ resubmission: value as ResubmissionFilter })} />
+                  </div>
                 }
-                hasExternalFilters={filters.eligibility !== "all"}
+                hasExternalFilters={filters.eligibility !== "all" || filters.resubmission !== "all"}
                 more={more}
                 moreActiveCount={moreActive}
                 onClearMore={() => patch(clearedLeadSignalFilters(filters))}
@@ -204,6 +214,7 @@ export function AgentLeadsView() {
                               <td className="px-5 py-4">
                                 <Link href={`/dashboard/leads/${lead.id}?page=${page + 1}`} onClick={(event) => event.stopPropagation()} className="inline-flex min-h-11 items-center rounded font-semibold text-brand-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{lead.name ?? "Unnamed lead"}</Link>
                                 <p className="text-xs text-text-secondary">{formatMobile(lead.mobile)}</p>
+                                <ResubmissionBadge count={lead.resubmit_count} at={lead.last_resubmitted_at} />
                               </td>
                               <td className="px-5 py-4">
                                 <span

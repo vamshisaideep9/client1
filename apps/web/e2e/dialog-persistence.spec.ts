@@ -180,5 +180,8 @@ test("a refused refresh still signs the user out", async ({ page, baseURL }) => 
   controls.expireToken(1);
   controls.failRefresh(401);
   await page.getByRole("dialog", { name: "New contest" }).getByRole("button", { name: "Save draft" }).click();
-  await expect(page).toHaveURL(`${baseURL}/`);
+  // Authenticated content must disappear immediately; the public destination
+  // can still need a cold dev compilation and its anonymous catalogue reads.
+  await expect(page.getByRole("dialog", { name: "New contest" })).toHaveCount(0);
+  await expect(page).toHaveURL(`${baseURL}/`, { timeout: 30_000 });
 });

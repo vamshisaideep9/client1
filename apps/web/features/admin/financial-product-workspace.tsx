@@ -28,6 +28,7 @@ import {
 } from "@/lib/financial-product-form-definition";
 import { FinancialProductFormBuilder } from "./financial-product-form-builder";
 import { ProviderOffersView } from "./provider-offers-view";
+import { CommissionRatesView } from "./commission-rates-view";
 
 const CATEGORY_LABEL = {
   loan: "Loan or funding",
@@ -178,7 +179,7 @@ export function FinancialProductWorkspace({
             <WorkspaceDialogHeader
               title={product.label}
               description={`${CATEGORY_LABEL[product.category]} · Form v${product.form_version} · ${formatLastUpdated(product.updated_at)}`}
-              actions={tab !== "providers" ? (
+              actions={tab === "details" || tab === "form" ? (
                 <Button size="sm" onClick={() => void save()} disabled={busy}>
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                   Save product
@@ -205,6 +206,7 @@ export function FinancialProductWorkspace({
                   <Landmark className="h-4 w-4" aria-hidden="true" />
                   Providers
                 </TabsTrigger>
+                {product.category === "loan" ? <TabsTrigger value="commission">Agent commission</TabsTrigger> : null}
               </TabsList>
 
               <TabsContent value="details" className="mt-4 min-h-0 overflow-y-auto pr-1">
@@ -366,6 +368,9 @@ export function FinancialProductWorkspace({
               <TabsContent value="providers" className="mt-4 min-h-0 overflow-y-auto pr-1">
                 <ProviderOffersView product={product} />
               </TabsContent>
+              {product.category === "loan" ? <TabsContent value="commission" className="mt-4 min-h-0 overflow-y-auto pr-1">
+                <CommissionRatesView embedded productId={product.id} />
+              </TabsContent> : null}
             </Tabs>
           </>
         ) : null}

@@ -28,9 +28,12 @@ import { formatPaise } from "@/lib/format";
 import { getLoanTypes, type LoanTypeOption } from "@/lib/loans";
 import { rows as detailRows } from "@/lib/property-details";
 import type { REListing } from "@/lib/real-estate";
+import { PROPERTY_SUBTYPE_OPTIONS, type PropertySubtype } from "@/lib/property-taxonomy";
+import { getAgentCommissionRates, type AgentCommissionRate } from "@/lib/commission-rates-api";
+import { commissionRateLabel } from "@/lib/commission-rate";
 
 export type LeadInterest =
-  | { kind: "property"; propertyId: string }
+  | { kind: "property"; propertyId?: string; propertyType?: PropertySubtype }
   | { kind: "product"; productSlug: string }
   | null;
 
@@ -81,6 +84,19 @@ function PropertyFeeDetails({ listing }: { listing: REListing }) {
 function ProductFeeDetails({ product }: { product: LoanTypeOption }) {
   const [offers, setOffers] = React.useState<PublicProviderOfferList | null>(null);
   const [failed, setFailed] = React.useState(false);
+  const [rate, setRate] = React.useState<AgentCommissionRate | null>(null);
+  const [rateState, setRateState] = React.useState<"loading" | "ready" | "error">("loading");
+  const [attempt, setAttempt] = React.useState(0);
+
+  React.useEffect(() => {
+    let active = true;
+    void getAgentCommissionRates().then((res) => {
+      if (!active) return;
+      setRateState(res.ok ? "ready" : "error");
+      if (res.ok) setRate(res.data.rates[product.name] ?? null);
+    });
+    return () => { active = false; };
+  }, [product.name, attempt]);
 
   React.useEffect(() => {
     let active = true;
@@ -97,6 +113,13 @@ function ProductFeeDetails({ product }: { product: LoanTypeOption }) {
   return (
     <div className="grid gap-3">
       <p className="font-semibold text-text-primary">{product.label}</p>
+      <div className="rounded-xl border border-border p-3 text-sm" aria-live="polite">
+        {rateState === "loading" ? "Loading your commission…" : rateState === "error" ? (
+          <><p>Could not load the commission rate.</p><Button variant="outline" size="sm" onClick={() => { setRateState("loading"); setAttempt((n) => n + 1); }}>Retry rate</Button></>
+        ) : rate ? (
+          <><p className="font-semibold">Your commission: {commissionRateLabel(rate)}</p>{rate.note ? <p className="mt-1 text-text-secondary">{rate.note}</p> : null}</>
+        ) : <p>No approved commission rate for this product yet.</p>}
+      </div>
       {offers === null && !failed ? (
         <p className="text-sm text-text-secondary">Loading provider terms…</p>
       ) : offers && offers.items.length > 0 ? (
@@ -129,15 +152,17 @@ function ProductFeeDetails({ product }: { product: LoanTypeOption }) {
 function PropertyInterestSelect({
   value,
   onPick,
+  propertyType,
 }: {
   value: string;
   onPick: (listing: REListing) => void;
+  propertyType?: PropertySubtype;
 }) {
   const { listings, loading } = useProperties();
   return (
     <PropertySelect
       id="lead-interest-property"
-      properties={listings}
+      properties={listings.filter((listing) => !propertyType || !listing.propertySubtype || listing.propertySubtype === propertyType)}
       value={value}
       disabled={loading}
       onChange={(id) => {
@@ -186,7 +211,7 @@ export function LeadInterestPicker({
     setPendingProduct(null);
   }
   function confirm() {
-    if (pendingProperty) onChange({ kind: "property", propertyId: pendingProperty.id });
+    if (pendingProperty) onChange({ kind: "property", propertyId: pendingProperty.id, propertyType: pendingProperty.propertySubtype ?? (value?.kind === "property" ? value.propertyType : undefined) });
     if (pendingProduct) onChange({ kind: "product", productSlug: pendingProduct.name });
     close();
   }
@@ -195,9 +220,18 @@ export function LeadInterestPicker({
     <div className="grid gap-2">
       {businessLine === "real_estate" ? (
         <>
+          <Label htmlFor="lead-interest-type">Property type (optional)</Label>
+          <Select value={value?.kind === "property" ? value.propertyType ?? "" : ""}
+            onValueChange={(propertyType) => onChange({ kind: "property", propertyType: propertyType as PropertySubtype })}>
+            <SelectTrigger id="lead-interest-type" className="w-full"><SelectValue placeholder="Choose a property type" /></SelectTrigger>
+            <SelectContent>{PROPERTY_SUBTYPE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}</SelectContent>
+          </Select>
           <Label htmlFor="lead-interest-property">Property (optional)</Label>
           <PropertyInterestSelect
-            value={value?.kind === "property" ? value.propertyId : ""}
+            value={value?.kind === "property" ? value.propertyId ?? "" : ""}
+            propertyType={value?.kind === "property" ? value.propertyType : undefined}
             onPick={setPendingProperty}
           />
         </>
