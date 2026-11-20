@@ -70,9 +70,10 @@ default, not permission to skip the pre-implementation announcement.
 
 **In review — Batch 2: Agent leads (API slice)** (2026-11-19; client-
 reported; CS-028; both lines; no requirement or completion-percentage
-change). Branch `feat/agent-lead-intake-api`, stacked on batch 1
-(`fix/dialog-autoclose-and-mobile-hover`, PR #387) from `upstream/main`
-`e4d7c40e`. API, migrations and contract only; the web slice follows
+change). Branch `feat/agent-lead-intake-api` is based on `upstream/main`
+`5c785a77`, after Batch 1 PR #387 merged. History alignment changed no
+tracked file; the verified code is identical. API, migrations and
+contract only; the web slice follows
 separately and needs no further API change.
 
 - *Lead form fields.* `AgentLeadCreate.requirement` accepts an optional
@@ -204,8 +205,14 @@ separately and needs no further API change.
   indistinguishable fields. Current/new claims preserve other creators'
   ownership. Review found no remaining actionable issue in the final change;
   this inherited limit is recorded rather than inventing provenance.
-- *Delivery.* API PR publication and independent upstream/mirror readback are
-  in progress. Completion percentages are unchanged. Next: Batch 2 web; the
+- *Delivery.* API PR [#388](https://github.com/brollysolutions/client1/pull/388) and
+  mirror [#89](https://github.com/vamshisaideep9/client1/pull/89) are open against
+  `main`, with the same reviewed source and independently verified
+  repository/base/head identities. Batch 1 mirror #88 was fast-forwarded
+  to merged history `5c785a77`. The unpublished API rebase changed no
+  tracked files (full tree `7637e607` before/after); passing API and
+  contract fingerprints are unchanged. Hosted CI is tracked separately
+  on the PRs. Completion percentages are unchanged. Next: Batch 2 web; the
   user requested this session stop after Batch 2, with Batches 3–6 deferred
   to a new session.
 
@@ -216,6 +223,9 @@ client-reported fixes; web only; no API, contract, migration or dependency
 change; no requirement or completion-percentage change). Branch
 `fix/dialog-autoclose-and-mobile-hover` from `upstream/main` `e4d7c40e`.
 
+- *Merge state (2026-11-20).* Upstream #387 is merged; mirror #88 is
+  open with merged main history `5c785a77`, independently verified after
+  its fast-forward push.
 - *Dialogs closing by themselves* (reported for the contest form, then
   every form). Reproduced with Playwright against `pnpm dev` and a mocked
   API; two proven causes. (1) Radix dismisses a modal dialog on any

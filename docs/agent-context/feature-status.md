@@ -3,8 +3,10 @@
 Status: **Derived living implementation ledger**
 
 **In review — Batch 2: Agent leads (API slice)** (2026-11-20; CS-028;
-client-reported), branch `feat/agent-lead-intake-api` stacked on Batch 1.
-API PR publication/readback is in progress; no requirement-percentage change.
+client-reported), branch `feat/agent-lead-intake-api` built on merged Batch 1.
+PR [#388](https://github.com/brollysolutions/client1/pull/388), mirror [#89](https://github.com/vamshisaideep9/client1/pull/89), both against `main`.
+Both repository/base/head identities were independently checked; no
+requirement-percentage change.
 
 - Final frozen candidate `5c5c4467` passes **2,884 API tests, zero failed,
   errors or skipped**, in 6,276.70 seconds (exit 0), using fresh synthetic
@@ -42,6 +44,12 @@ API PR publication/readback is in progress; no requirement-percentage change.
   descriptor. No per-key acceptance/claim audit proves their authorship; the
   regression verifies the actual backfill and subsequent claims. Current/new
   claims remain isolated. This inherited limit is explicitly disclosed.
+- History alignment: Batch 1 merged upstream as `5c785a77`; mirror #88
+  was fast-forwarded to that merged history. Rebasing the unpublished API
+  branch changed no tracked files (full tree `7637e607` before/after);
+  the API and contract fingerprints remain identical to the passing
+  candidate. Hosted CI is tracked separately on each PR and is not part
+  of the local passing-check claim.
 - Next: Batch 2 web. The session stops after Batch 2 as requested; Batches
   3–6 resume in a new session.
 
@@ -112,6 +120,8 @@ API PR publication/readback is in progress; no requirement-percentage change.
 PR [#387](https://github.com/brollysolutions/client1/pull/387), mirror
 vamshisaideep9/client1#88), branch `fix/dialog-autoclose-and-mobile-hover` from
 `upstream/main` `e4d7c40e`. No requirement-percentage change.
+- Upstream #387 merged on 2026-11-20. Mirror #88 remains open and now
+  carries the merged main history `5c785a77` after a verified fast-forward.
 - Dialog auto-close root causes, mobile hover gating, Telecaller greeting
   and PAN-card name copy as described in `implementation-plan.md`
   (Batch 1: UI fixes).

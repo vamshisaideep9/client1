@@ -1051,7 +1051,8 @@ Round 2 brief and stacked-PR delivery were confirmed on 2026-11-20):**
   pre-filled with the rate applied to the sanctioned amount (the requested
   amount when none was sanctioned) or the fixed amount.
 
-Evidence is listed in `feature-status.md` under Batch 2. Final API verification
+Evidence is listed in `feature-status.md` under Batch 2. API review: [upstream #388](https://github.com/brollysolutions/client1/pull/388),
+[mirror #89](https://github.com/vamshisaideep9/client1/pull/89), both against `main`. Final API verification
 at `5c5c4467` passes all 2,884 tests with no failures/errors/skips and one
 Alembic head. The web slice follows; this session stops after Batch 2, with
 Batches 3–6 reserved for a new session.
