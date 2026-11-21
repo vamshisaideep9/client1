@@ -180,7 +180,8 @@ async def list_teams(db: AsyncSession, *, include_archived: bool) -> list[StaffT
 
 
 async def _active_manager(db: AsyncSession, staff_profile_uuid: UUID) -> StaffProfile:
-    profile = await db.get(StaffProfile, staff_profile_uuid)
+    # Serialize team assignment with an access change that deactivates the manager.
+    profile = await db.get(StaffProfile, staff_profile_uuid, with_for_update={"read": True})
     if (
         profile is None
         or profile.role != StaffRole.SUB_ADMIN

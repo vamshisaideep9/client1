@@ -60,6 +60,7 @@ class AuditAction(enum.StrEnum):
     STAFF_SPECIALTY_UPDATED = "staff_specialty_updated"
     STAFF_FEATURE_GRANTED = "staff_feature_granted"
     STAFF_FEATURE_REVOKED = "staff_feature_revoked"
+    SUB_ADMIN_ACCESS_UPDATED = "sub_admin_access_updated"
     STAFF_INVITE_CREATED = "staff_invite_created"
     STAFF_INVITE_REVOKED = "staff_invite_revoked"
     ACCOUNT_REMOVED = "account_removed"

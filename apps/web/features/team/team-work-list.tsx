@@ -1,6 +1,9 @@
 "use client";
 
 import * as React from "react";
+
+import { useMe } from "@/features/dashboard/me-provider";
+import { assignedLines } from "@/lib/sub-admin-access";
 import { ArrowRightLeft, FileText, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
@@ -469,10 +472,12 @@ function NoteForm({
 
 function DetailDialog({
   team,
+  canEdit,
   target,
   onClose,
 }: {
   team: StaffTeam;
+  canEdit: boolean;
   target: Target | null;
   onClose: () => void;
 }) {
@@ -538,7 +543,7 @@ function DetailDialog({
               <section aria-label="Your notes" className="space-y-3">
                 <h3 className="text-sm font-medium text-text-primary">Your notes</h3>
                 <ManagerNotesList notes={notes} />
-                {target ? <NoteForm teamId={team.id} target={target} onAdded={retry} /> : null}
+                {target && canEdit ? <NoteForm teamId={team.id} target={target} onAdded={retry} /> : null}
               </section>
               {lead ? (
                 <section aria-label="Call log">
@@ -594,12 +599,14 @@ function RowActions({
 
 function LeadRows({
   rows,
+  canEdit,
   showAssignee,
   now,
   onAction,
 }: {
   rows: TeamLeadRow[];
   showAssignee: boolean;
+  canEdit: boolean;
   now: Date;
   onAction: (action: "details" | "edit" | "move", row: TeamLeadRow) => void;
 }) {
@@ -636,7 +643,7 @@ function LeadRows({
               </p>
             </div>
             <RowActions
-              open={OPEN_LEAD.has(lead.status)}
+              open={canEdit && OPEN_LEAD.has(lead.status)}
               name={name}
               onDetails={() => onAction("details", lead)}
               onEdit={() => onAction("edit", lead)}
@@ -651,12 +658,14 @@ function LeadRows({
 
 function TaskRows({
   rows,
+  canEdit,
   showAssignee,
   now,
   onAction,
 }: {
   rows: TeamTaskRow[];
   showAssignee: boolean;
+  canEdit: boolean;
   now: Date;
   onAction: (action: "details" | "edit" | "move", row: TeamTaskRow) => void;
 }) {
@@ -684,7 +693,7 @@ function TaskRows({
               ) : null}
             </div>
             <RowActions
-              open={OPEN_TASK.has(task.status)}
+              open={canEdit && OPEN_TASK.has(task.status)}
               name={`${type} for ${client}`}
               onDetails={() => onAction("details", task)}
               onEdit={() => onAction("edit", task)}
@@ -805,6 +814,9 @@ function TeamWorkFilterBar({
  * like the Telecaller and Employee lists); the API decides what is loaded.
  */
 export function TeamWorkList({ team, memberId }: { team: StaffTeam; memberId?: string }) {
+  const { me } = useMe();
+  const access = me?.subAdminAccess;
+  const canEdit = !access || assignedLines(access, "team_manager", "edit").includes(team.business_line);
   const [scope, setScope] = React.useState<"open" | "all">("open");
   const [filters, setFilters] = React.useState<TeamWorkFilters>(DEFAULT_TEAM_WORK_FILTERS);
   const { state, retry } = useLoad<WorkData>(
@@ -909,6 +921,7 @@ export function TeamWorkList({ team, memberId }: { team: StaffTeam; memberId?: s
             <LeadRows
               rows={leads}
               showAssignee={showAssignee}
+              canEdit={canEdit}
               now={now}
               onAction={(action, row) => {
                 const target = leadTarget(row);
@@ -921,6 +934,7 @@ export function TeamWorkList({ team, memberId }: { team: StaffTeam; memberId?: s
             <TaskRows
               rows={tasks}
               showAssignee={showAssignee}
+              canEdit={canEdit}
               now={now}
               onAction={(action, row) => {
                 const target = taskTarget(row);
@@ -934,7 +948,7 @@ export function TeamWorkList({ team, memberId }: { team: StaffTeam; memberId?: s
         </>
       )}
 
-      <DetailDialog team={team} target={details} onClose={() => setDetails(null)} />
+      <DetailDialog team={team} target={details} canEdit={canEdit} onClose={() => setDetails(null)} />
       <EditDialog
         team={team}
         target={editing?.target ?? null}

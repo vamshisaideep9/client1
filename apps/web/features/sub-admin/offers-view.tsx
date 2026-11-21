@@ -2,6 +2,9 @@
 /* eslint-disable @next/next/no-img-element */
 
 import * as React from "react";
+import { useMe } from "@/features/dashboard/me-provider";
+import { assignedLines, canActOnLine } from "@/lib/sub-admin-access";
+
 import Link from "next/link";
 import {
   Archive,
@@ -96,6 +99,10 @@ export function OffersView({
 }) {
   const { session } = useAuth();
   const isAdmin = session?.role === "admin";
+  const { me } = useMe();
+  const access = me?.subAdminAccess;
+  const editLines = access ? assignedLines(access, "media_sub_admin", "edit") : undefined;
+  const canCreate = !isAdmin && (!editLines || editLines.length > 0);
   const { items, loading, error, reload } = useOfferQueue();
   const [filters, setFilters] = React.useState<FilterBarValue>(() =>
     initialStatus ? { ...EMPTY_FILTERS, status: initialStatus } : EMPTY_FILTERS,
@@ -112,7 +119,7 @@ export function OffersView({
   React.useEffect(() => onPendingCount?.(pendingCount), [onPendingCount, pendingCount]);
   const [createOpen, setCreateOpen] = React.useState(false);
   const [createDirty, setCreateDirty] = React.useState(false);
-  const canEdit = Boolean(active && !isAdmin && EDITABLE.has(active.status));
+  const canEdit = Boolean(active && !isAdmin && (!editLines || canActOnLine(editLines, active.business_line)) && EDITABLE.has(active.status));
 
   const columns = React.useMemo<readonly DataColumn<Offer>[]>(() => [
     { key: "offer", header: "Campaign", render: (item) => <DataTablePrimaryCell title={item.title} subtitle={`${item.partner_name ?? "Partner not set"} · ${audienceSummary(item.audience_rules)}`} /> },
@@ -231,7 +238,7 @@ export function OffersView({
         title={isAdmin ? "Offer approvals" : "Dashboard offers"}
         description={isAdmin ? "Approve complete partner coupon campaigns before they can reach a dashboard." : "Create role-targeted partner coupons, submit them for approval, then schedule or activate them."}
         actions={
-          isAdmin ? undefined : (
+          !canCreate ? undefined : (
             <div className="flex flex-wrap items-center gap-2">
               <Button asChild variant="outline">
                 <Link href="/dashboard/media-library">
@@ -302,8 +309,9 @@ export function OffersView({
                   {isAdmin && reviewAction ? <><Button variant="ghost" disabled={busy} onClick={() => { setReviewAction(null); setReviewNote(""); }}>Back</Button><Button variant={reviewAction === "remove" ? "destructive" : "default"} disabled={busy} onClick={() => void (reviewAction === "remove" ? removeReviewed(active) : reject(active))}>{reviewAction === "remove" ? <Trash2 className="h-4 w-4" /> : <X className="h-4 w-4" />}{reviewAction === "remove" ? "Confirm removal" : "Send change request"}</Button></> : null}
                   {isAdmin && !reviewAction && active.status === "pending_approval" ? <><Button variant="outline" disabled={busy} onClick={() => setReviewAction("changes")}><X className="h-4 w-4" />Request changes</Button><Button disabled={busy} onClick={() => void transition(approveOffer, active, "Offer approved")}><Check className="h-4 w-4" />Approve</Button></> : null}
                   {isAdmin && !reviewAction ? <Button variant="destructive" disabled={busy} onClick={() => setReviewAction("remove")}><Trash2 className="h-4 w-4" />Remove</Button> : null}
-                  {!isAdmin && active.status === "approved" ? <><Button variant="outline" disabled={busy} onClick={() => void transition(scheduleOffer, active, "Offer scheduled")}><CalendarClock className="h-4 w-4" />Schedule</Button><Button disabled={busy} onClick={() => void transition(activateOffer, active, "Offer activated")}><Check className="h-4 w-4" />Activate now</Button></> : null}
-                  {!isAdmin && (active.status === "scheduled" || active.status === "active" || active.status === "expired") ? <Button variant="outline" disabled={busy} onClick={() => void transition(archiveOffer, active, "Offer archived")}><Archive className="h-4 w-4" />Archive</Button> : null}
+                  {!access && active.status === "approved" ? <><Button variant="outline" disabled={busy} onClick={() => void transition(scheduleOffer, active, "Offer scheduled")}><CalendarClock className="h-4 w-4" />Schedule</Button><Button disabled={busy} onClick={() => void transition(activateOffer, active, "Offer activated")}><Check className="h-4 w-4" />Activate now</Button></> : null}
+                  {isAdmin && active.status === "scheduled" ? <Button disabled={busy} onClick={() => void transition(activateOffer, active, "Offer activated")}><Check className="h-4 w-4" />Activate now</Button> : null}
+                  {!access && !isAdmin && (active.status === "scheduled" || active.status === "active" || active.status === "expired") ? <Button variant="outline" disabled={busy} onClick={() => void transition(archiveOffer, active, "Offer archived")}><Archive className="h-4 w-4" />Archive</Button> : null}
                 </DialogFooter>
               </div>}
               preview={<CmsPreviewFrame title="Dashboard appearance" description="Coupon codes are never rendered on public pages." contexts={[{ value: "dashboard", label: "Dashboard" }]} context="dashboard" onContextChange={() => undefined}><OfferPreview offer={active} /></CmsPreviewFrame>}
@@ -312,7 +320,7 @@ export function OffersView({
         </DialogContent>
       </Dialog>
 
-      {isAdmin ? null : <Dialog open={createOpen} onOpenChange={closeCreate}><DialogContent preventOutsideClose showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}><CmsWorkspaceHeader title="New dashboard offer" description="Create a complete private draft before sending it to Admin." /><div className="min-h-0 overflow-y-auto py-2"><OfferForm embedded onDirtyChange={setCreateDirty} onCreated={() => { setCreateDirty(false); setCreateOpen(false); void reload(); }} /></div></DialogContent></Dialog>}
+      {!canCreate ? null : <Dialog open={createOpen} onOpenChange={closeCreate}><DialogContent preventOutsideClose showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}><CmsWorkspaceHeader title="New dashboard offer" description="Create a complete private draft before sending it to Admin." /><div className="min-h-0 overflow-y-auto py-2"><OfferForm embedded allowedLines={editLines} onDirtyChange={setCreateDirty} onCreated={() => { setCreateDirty(false); setCreateOpen(false); void reload(); }} /></div></DialogContent></Dialog>}
     </DashboardPage>
   );
 }

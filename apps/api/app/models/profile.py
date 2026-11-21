@@ -3,8 +3,8 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, String
-from sqlalchemy.dialects.postgresql import ENUM, UUID
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -138,6 +138,28 @@ class StaffProfile(Base):
     created_by_user: Mapped[Optional["User"]] = relationship(
         "User", foreign_keys=[created_by_auth_user_uuid]
     )
+
+
+class SubAdminAccessProfile(Base):
+    """A missing row identifies a Sub Admin still using legacy access."""
+
+    __tablename__ = "sub_admin_access"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending', 'active', 'inactive')", name="valid_status"),
+        CheckConstraint("version > 0", name="positive_version"),
+        CheckConstraint(
+            "jsonb_typeof(grants) = 'array' AND jsonb_array_length(grants) <= 8 "
+            "AND (status = 'active' OR grants = '[]'::jsonb)",
+            name="valid_grants",
+        ),
+    )
+
+    staff_profile_uuid: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("staff_profiles.id", ondelete="CASCADE"), primary_key=True
+    )
+    status: Mapped[str] = mapped_column(String(12), nullable=False)
+    grants: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class StaffFeatureGrant(Base):

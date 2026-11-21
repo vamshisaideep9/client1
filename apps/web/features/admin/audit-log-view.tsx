@@ -78,6 +78,7 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   agent_rejected: { label: "Partner rejected", icon: Ban, tone: "bg-error/10 text-error" },
   staff_created: { label: "Staff account created", icon: UserPlus, tone: "bg-loans-soft text-brand-link" },
   staff_specialty_updated: { label: "Loan specialty updated", icon: ShieldCheck, tone: "bg-loans-soft text-brand-link" },
+  sub_admin_access_updated: { label: "Sub Admin access updated", icon: ShieldCheck, tone: "bg-loans-soft text-brand-link" },
   staff_feature_granted: {
     label: "Staff access granted",
     icon: ShieldCheck,

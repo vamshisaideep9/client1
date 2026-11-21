@@ -59,6 +59,7 @@ from app.api.v1.public_catalog import router as public_catalog_router
 from app.api.v1.push import router as push_router
 from app.api.v1.referral_bonus import router as referral_bonus_router
 from app.api.v1.referrals import router as referrals_router
+from app.api.v1.relationships import router as relationships_router
 from app.api.v1.reporting import router as reporting_router
 from app.api.v1.site_visits import router as site_visits_router
 from app.api.v1.staff_analytics import router as staff_analytics_router
@@ -160,6 +161,7 @@ app.include_router(
 )
 app.include_router(site_visits_router, prefix="/api/v1/site-visits", tags=["site-visits"])
 app.include_router(sub_admin_router, prefix="/api/v1/sub-admin", tags=["sub-admin"])
+app.include_router(relationships_router, prefix="/api/v1/relationships", tags=["relationships"])
 app.include_router(enquiries_router, prefix="/api/v1/enquiries", tags=["enquiries"])
 app.include_router(properties_router, prefix="/api/v1/properties", tags=["properties"])
 app.include_router(

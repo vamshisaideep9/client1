@@ -1,6 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { useMe } from "@/features/dashboard/me-provider";
+import { assignedLines, canActOnLine } from "@/lib/sub-admin-access";
+
 import { Archive, Images, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,6 +49,10 @@ type SectionKey = ArtworkUsageType | "legacy";
  * and each tile renders at that surface's real shape.
  */
 export function MediaLibraryView() {
+  const { me } = useMe();
+  const access = me?.subAdminAccess;
+  const editLines = access ? assignedLines(access, "media_sub_admin", "edit") : undefined;
+  const canUpload = !editLines || editLines.length > 0;
   const [assets, setAssets] = React.useState<CampaignMediaAsset[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -142,10 +149,10 @@ export function MediaLibraryView() {
         title="Campaign Media Library"
         description="Artwork grouped by the surface it is made for. Upload once, reuse across campaigns, and see what depends on each image."
         actions={
-          <Button onClick={() => setUploadOpen(true)}>
+          canUpload ? <Button onClick={() => setUploadOpen(true)}>
             <Plus className="h-4 w-4" aria-hidden />
             Upload artwork
-          </Button>
+          </Button> : undefined
         }
       />
 
@@ -221,15 +228,18 @@ export function MediaLibraryView() {
           : null}
       </section>
 
-      <BannerTemplateManager />
+      {!editLines || editLines.length === 2 ? <BannerTemplateManager /> : null}
 
       <ArtworkUploadDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         onUploaded={() => void load()}
+        allowedLines={editLines}
+        defaultBusinessLine={editLines?.length === 1 ? editLines[0] : "both"}
       />
       <AssetDetailDialog
         asset={selected}
+        canEdit={!editLines || (selected !== null && canActOnLine(editLines, selected.business_line))}
         onClose={() => setSelected(null)}
         onSaved={async (next) => {
           setSelected(next);
@@ -323,12 +333,14 @@ function SurfaceSection({
 
 function AssetDetailDialog({
   asset,
+  canEdit,
   onClose,
   onSaved,
   onArchiveToggle,
   onDelete,
 }: {
   asset: CampaignMediaAsset | null;
+  canEdit: boolean;
   onClose: () => void;
   onSaved: (asset: CampaignMediaAsset) => Promise<void>;
   onArchiveToggle: (asset: CampaignMediaAsset, active: boolean) => Promise<void>;
@@ -513,6 +525,7 @@ function AssetDetailDialog({
                     id="media-edit-title"
                     name="title"
                     value={title}
+                    readOnly={!canEdit}
                     maxLength={160}
                     onChange={(event) => setTitle(event.target.value)}
                   />
@@ -523,6 +536,7 @@ function AssetDetailDialog({
                     id="media-edit-alt"
                     name="alt_text"
                     value={altText}
+                    readOnly={!canEdit}
                     maxLength={300}
                     onChange={(event) => setAltText(event.target.value)}
                   />
@@ -533,6 +547,7 @@ function AssetDetailDialog({
                     id="media-edit-tags"
                     name="tags"
                     value={tags}
+                    readOnly={!canEdit}
                     maxLength={500}
                     onChange={(event) => setTags(event.target.value)}
                   />
@@ -546,12 +561,13 @@ function AssetDetailDialog({
                     id="media-edit-source"
                     name="source_reference"
                     value={source}
+                    readOnly={!canEdit}
                     maxLength={500}
                     onChange={(event) => setSource(event.target.value)}
                     placeholder={asset.source_type}
                   />
                 </div>
-                <Button className="w-full" disabled={busy || !dirty} onClick={() => void save()}>
+                <Button className="w-full" disabled={!canEdit || busy || !dirty} onClick={() => void save()}>
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
                   Save details
                 </Button>
@@ -560,7 +576,7 @@ function AssetDetailDialog({
             <DialogFooter className="shrink-0 border-t border-border bg-muted/30 px-5 py-4 sm:px-6">
               <Button
                 variant="outline"
-                disabled={busy || dirty}
+                disabled={!canEdit || busy || dirty}
                 onClick={() => void onArchiveToggle(asset, !asset.active)}
               >
                 <Archive className="h-4 w-4" aria-hidden />
@@ -568,7 +584,7 @@ function AssetDetailDialog({
               </Button>
               <Button
                 variant="destructive"
-                disabled={busy || dirty || asset.usage_count > 0}
+                disabled={!canEdit || busy || dirty || asset.usage_count > 0}
                 onClick={() => void onDelete(asset)}
               >
                 <Trash2 className="h-4 w-4" aria-hidden />

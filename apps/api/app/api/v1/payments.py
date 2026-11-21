@@ -18,6 +18,7 @@ import hmac
 import json
 import logging
 from collections.abc import Sequence
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -25,7 +26,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import CurrentUser, get_active_user, is_platform_admin
+from app.core.deps import (
+    CurrentUser,
+    check_assignment_line,
+    get_active_user,
+    is_platform_admin,
+    require_assignment,
+)
 from app.db.session import get_db
 from app.models.payout import Payout, PayoutProvider, PayoutStatus, PayoutType
 from app.schemas.agent_payout_details import CancelledChequeRead, SavedPayoutDestinationRead
@@ -48,6 +55,10 @@ from app.services.payout_links import list_link_divergences
 from app.services.payout_recipients import resolve_payout_identities, search_payout_recipients
 
 logger = logging.getLogger(__name__)
+
+finance_view = require_assignment("account_manager", "view", include_admin=True)
+finance_prepare = require_assignment("account_manager", "prepare", include_admin=True)
+
 
 router = APIRouter()
 
@@ -137,7 +148,11 @@ async def _to_read(
     identities_by_line: dict[str | None, dict[UUID, object]] = {}
     for line in lines_present:
         prefer_line = {p.recipient_user_uuid: line for p in payouts if p.business_line == line}
-        identities_by_line[line] = await resolve_payout_identities(uuids, prefer_line=prefer_line)
+        identities_by_line[line] = await resolve_payout_identities(
+            uuids,
+            prefer_line=prefer_line,
+            profile_line=line if current_user.sub_admin_access is not None else None,
+        )
 
     reads: list[PayoutRead] = []
     for p in payouts:
@@ -168,10 +183,13 @@ async def _to_read(
 @router.post("", response_model=PayoutRead, status_code=status.HTTP_201_CREATED)
 async def create_payout(
     req: PayoutCreate,
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(finance_prepare),
     db: AsyncSession = Depends(get_db),
 ) -> PayoutRead:
-    _require_payout_requester(current_user)
+    if current_user.sub_admin_access is None:
+        _require_payout_requester(current_user)
+    else:
+        check_assignment_line(current_user, "account_manager", "prepare", req.business_line)
     try:
         payout_id = await payments_service.create_payout(
             recipient_user_uuid=req.recipient_user_uuid,
@@ -183,6 +201,11 @@ async def create_payout(
             idempotency_key=req.idempotency_key,
             maker_user_uuid=current_user.id,
             actor_role=current_user.role,
+            scoped_staff_id=(
+                current_user.staff_profile_uuid
+                if current_user.sub_admin_access is not None
+                else None
+            ),
         )
     except payments_service.PayoutError as exc:
         raise _map_error(exc) from None
@@ -378,11 +401,23 @@ async def reverse_manual_cheque(
 async def list_payout_recipients(
     q: str = Query(min_length=2, max_length=64),
     limit: int = Query(default=20, ge=1, le=50),
-    current_user: CurrentUser = Depends(get_active_user),
+    business_line: Literal["loans", "real_estate"] | None = None,
+    current_user: CurrentUser = Depends(finance_prepare),
 ) -> PayoutRecipientListResponse:
     """Minimal recipient picker for an authorized payout requester."""
-    _require_payout_requester(current_user)
-    hits = await search_payout_recipients(q=q, limit=limit, exclude_user_uuid=current_user.id)
+    line = None
+    if current_user.sub_admin_access is None:
+        _require_payout_requester(current_user)
+    else:
+        if business_line is None:
+            raise HTTPException(
+                422, detail="Choose a business line before searching for a recipient."
+            )
+        check_assignment_line(current_user, "account_manager", "prepare", business_line)
+        line = business_line
+    hits = await search_payout_recipients(
+        q=q, limit=limit, exclude_user_uuid=current_user.id, line=line
+    )
     return PayoutRecipientListResponse(
         recipients=[
             PayoutRecipientRead(
@@ -555,7 +590,7 @@ async def get_agent_saved_destination(
 
 @router.get("/link-divergences", response_model=PayoutLinkDivergencesRead)
 async def get_payout_link_divergences(
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(finance_view),
     db: AsyncSession = Depends(get_db),
 ) -> PayoutLinkDivergencesRead:
     """Read-only: payouts whose linked referral/commission/fee_cashback row
@@ -564,7 +599,8 @@ async def get_payout_link_divergences(
     mutating counterpart exists on purpose: see payout_links.py's docstring
     for why a force-unlink endpoint would convert a display bug into a money
     bug."""
-    _require_admin(current_user, action="Viewing payout reconciliation")
+    if current_user.sub_admin_access is None:
+        _require_admin(current_user, action="Viewing payout reconciliation")
     result = await list_link_divergences(db)
     return PayoutLinkDivergencesRead(
         paid_direction=[PayoutLinkDivergenceRead(**row) for row in result["paid_direction"]],
@@ -577,12 +613,13 @@ async def list_payouts(
     status_filter: PayoutStatus | None = None,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(finance_view),
     db: AsyncSession = Depends(get_db),
 ) -> PayoutListResponse:
-    _require_payout_requester(current_user)
+    if current_user.sub_admin_access is None:
+        _require_payout_requester(current_user)
     stmt = select(Payout).order_by(Payout.created_at.desc()).limit(limit).offset(offset)
-    if current_user.role == "sub_admin":
+    if current_user.role == "sub_admin" and current_user.sub_admin_access is None:
         # Defence in depth over payouts_rls: delegated Sub Admins are makers and
         # may only see the requests they raised, never another maker's queue.
         stmt = stmt.where(Payout.maker_user_uuid == current_user.id)

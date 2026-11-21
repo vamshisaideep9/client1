@@ -22,7 +22,7 @@ export function DashboardRouteGuard({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const { session } = useAuth();
-  const { me } = useMe();
+  const { me, status: meStatus } = useMe();
   const { activeLine, lines } = useLine();
 
   const emailRequired = me ? me.emailRequired : (session?.emailRequired ?? false);
@@ -38,6 +38,8 @@ export function DashboardRouteGuard({ children }: { children: React.ReactNode })
       // Once known, held Client lines make cross-line direct URLs deterministic.
       profileLines: lines.length > 0 ? lines : undefined,
       staffFeatures: session.staffFeatures,
+      subAdminAccess: me?.subAdminAccess,
+      subAdminAccessLoading: meStatus !== "ready",
     });
 
   React.useEffect(() => {
@@ -45,8 +47,8 @@ export function DashboardRouteGuard({ children }: { children: React.ReactNode })
     // Keep the edge hint in step with the server's answer.
     if (me) setEmailRequiredHint(me.emailRequired);
     if (emailRequired) router.replace("/add-email");
-    else if (!allowed) router.replace("/dashboard");
-  }, [allowed, emailRequired, me, router, session]);
+    else if (!allowed && !(session.role === "sub_admin" && meStatus === "loading")) router.replace("/dashboard");
+  }, [allowed, emailRequired, me, meStatus, router, session]);
 
   if (!allowed) {
     return <DashboardPageSkeleton label="Checking dashboard access" />;

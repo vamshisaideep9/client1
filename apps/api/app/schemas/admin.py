@@ -7,10 +7,24 @@ from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.schemas.financial_products import FormAnswers, ProductFormDefinition
 from app.schemas.profile_metadata import RoleProfileRead
+from app.schemas.sub_admin_access import (
+    GrantList,
+    SubAdminAccess,
+    SubAdminTeamLink,
+    validate_grants,
+)
 
 # ---------------------------------------------------------------------------
 # Staff provisioning
@@ -30,6 +44,7 @@ class StaffCreateRequest(BaseModel):
     # and employee are line-scoped (loans, real_estate, or both is required).
     business_line: Literal["loans", "real_estate", "both"] | None = None
     loan_specialty_id: UUID | None = None
+    sub_admin_grants: Annotated[GrantList, AfterValidator(validate_grants)] | None = None
 
     @field_validator("email")
     @classmethod
@@ -38,6 +53,8 @@ class StaffCreateRequest(BaseModel):
 
     @model_validator(mode="after")
     def check_business_line_matches_role(self) -> StaffCreateRequest:
+        if self.sub_admin_grants is not None and self.role != "sub_admin":
+            raise ValueError("Only Sub Admins may receive dashboard grants.")
         if self.loan_specialty_id is not None and (
             self.role != "telecaller" or self.business_line not in ("loans", "both")
         ):
@@ -76,6 +93,9 @@ class StaffAccessEntry(BaseModel):
     role: Literal["admin", "sub_admin"]
     is_primary_admin: bool
     features: list[StaffFeatureLiteral]
+    sub_admin_access: SubAdminAccess | None = None
+    suspended: bool = False
+    live_teams: list[SubAdminTeamLink] = Field(default_factory=list)
 
 
 class StaffAccessListResponse(BaseModel):

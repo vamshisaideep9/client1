@@ -96,6 +96,7 @@ from app.schemas.loans import LoanApplicationProgressUpdate
 from app.schemas.profile_metadata import RoleProfileRead
 from app.schemas.property_deals import PropertyDealProgressUpdate
 from app.schemas.staff_invites import StaffInviteLinkRead
+from app.schemas.sub_admin_access import SubAdminAccessHistory, SubAdminAccessUpdate
 from app.schemas.support_tickets import (
     SupportTicketAdminListResponse,
     SupportTicketAdminRead,
@@ -219,6 +220,14 @@ from app.services.property_deals import (
 from app.services.property_deals import (
     apply_progress_update as apply_deal_progress_update,
 )
+from app.services.sub_admin_access import (
+    InvalidSubAdminAgents,
+    SubAdminAccessConflict,
+    SubAdminAccessTargetMissing,
+    SubAdminTeamsNeedReassignment,
+    access_history,
+    update_access,
+)
 from app.services.support_tickets import (
     AdminTicketView,
     TicketIllegalTransition,
@@ -311,6 +320,8 @@ async def create_staff_user(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Choose an active loan product for this Telecaller.",
         ) from exc
+    except InvalidSubAdminAgents as exc:
+        raise HTTPException(422, detail="Choose existing Agents in the assigned line.") from exc
     except StaffAlreadyExists as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -319,7 +330,7 @@ async def create_staff_user(
     except PrimaryAdminRequired as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the Main Admin may create another Admin account.",
+            detail="Only the Main Admin may create an Admin or set Sub Admin access.",
         ) from exc
     except AdditionalAdminLimitReached as exc:
         raise HTTPException(
@@ -343,8 +354,9 @@ async def create_staff_user(
 async def get_staff_access(
     current_user: CurrentUser = Depends(require_platform_admin),
     db: AsyncSession = Depends(get_db),
+    pending_only: bool = False,
 ) -> StaffAccessListResponse:
-    if not await is_primary_admin(
+    if not pending_only and not await is_primary_admin(
         db,
         auth_user_uuid=current_user.id,
         staff_profile_uuid=current_user.staff_profile_uuid,
@@ -353,12 +365,57 @@ async def get_staff_access(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the Main Admin may manage staff feature access.",
         )
-    entries, additional_count = await list_staff_access(db)
+    entries, additional_count = await list_staff_access(db, pending_only=pending_only)
     return StaffAccessListResponse(
         entries=[StaffAccessEntry(**entry) for entry in entries],
         additional_admin_limit=ADDITIONAL_ADMIN_LIMIT,
         additional_admin_count=additional_count,
     )
+
+
+@router.get(
+    "/staff-access/{staff_profile_uuid}/history", response_model=list[SubAdminAccessHistory]
+)
+async def get_sub_admin_dashboard_history(
+    staff_profile_uuid: UUID,
+    current_user: CurrentUser = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+) -> list[SubAdminAccessHistory]:
+    if not await is_primary_admin(
+        db, auth_user_uuid=current_user.id, staff_profile_uuid=current_user.staff_profile_uuid
+    ):
+        raise HTTPException(403, detail="Only the Main Admin may view Sub Admin access history.")
+    return await access_history(db, staff_profile_uuid)
+
+
+@router.put("/staff-access/{staff_profile_uuid}/dashboard", response_model=StaffAccessListResponse)
+async def update_sub_admin_dashboard(
+    staff_profile_uuid: UUID,
+    payload: SubAdminAccessUpdate,
+    current_user: CurrentUser = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+) -> StaffAccessListResponse:
+    if not await is_primary_admin(
+        db, auth_user_uuid=current_user.id, staff_profile_uuid=current_user.staff_profile_uuid
+    ):
+        raise HTTPException(403, detail="Only the Main Admin may manage Sub Admin access.")
+    try:
+        await update_access(
+            db, staff_id=staff_profile_uuid, actor_id=current_user.id, update=payload
+        )
+    except SubAdminAccessTargetMissing as exc:
+        raise HTTPException(404, detail="Sub Admin account not found.") from exc
+    except InvalidSubAdminAgents as exc:
+        raise HTTPException(422, detail="Choose existing Agents in the assigned line.") from exc
+    except SubAdminTeamsNeedReassignment as exc:
+        raise HTTPException(
+            409, detail="Reassign this Sub Admin’s live teams before deactivation."
+        ) from exc
+    except SubAdminAccessConflict as exc:
+        raise HTTPException(
+            409, detail="Access changed or cannot be activated. Reload the account and try again."
+        ) from exc
+    return await get_staff_access(current_user, db)
 
 
 @router.put(

@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 
 import { AccountMenu } from "./account-menu";
 import { EXPLORE_CATEGORIES } from "./explore-categories";
+import { useMe } from "./me-provider";
 import { useLine } from "./line-provider";
 import {
   getDashboardPathLine,
@@ -52,6 +53,7 @@ export function AppSidebar({
   const { activeLine } = useLine();
   const { count: bookmarkCount } = useBookmarks();
   const { session } = useAuth();
+  const { me, status: meStatus } = useMe();
   const managesTeam = useManagesTeam(session?.role, session?.accessToken);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const toggleRef = React.useRef<HTMLButtonElement>(null);
@@ -86,6 +88,8 @@ export function AppSidebar({
         activeLine: screenLine,
         staffFeatures: session.staffFeatures,
         managesTeam,
+        subAdminAccess: me?.subAdminAccess,
+        subAdminAccessLoading: meStatus !== "ready",
       })
     : [];
 

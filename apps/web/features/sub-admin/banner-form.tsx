@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import * as React from "react";
+import { canActOnLine, type AccessLine } from "@/lib/sub-admin-access";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -153,17 +154,19 @@ function forcedLine(placement: Placement): BusinessLine | null {
 
 export function BannerForm({
   embedded = false,
+  allowedLines,
   onCreated,
   onDirtyChange,
 }: {
   embedded?: boolean;
+  allowedLines?: readonly AccessLine[];
   onCreated?: () => void;
   onDirtyChange?: (dirty: boolean) => void;
 } = {}) {
   const router = useRouter();
   const [step, setStep] = React.useState<StepKey>("where");
-  const [placement, setPlacement] = React.useState<Placement>("homepage");
-  const [businessLine, setBusinessLine] = React.useState<BusinessLine>("both");
+  const [placement, setPlacement] = React.useState<Placement>(allowedLines && allowedLines.length === 1 ? "dashboard" : "homepage");
+  const [businessLine, setBusinessLine] = React.useState<BusinessLine>(allowedLines?.length === 1 ? allowedLines[0] : "both");
   const [bannerType, setBannerType] = React.useState<BannerType>("default");
   const [templateId, setTemplateId] = React.useState("");
   const [propertyId, setPropertyId] = React.useState("");
@@ -209,6 +212,12 @@ export function BannerForm({
   const isPublic = placement !== "dashboard";
 
   function choosePlacement(next: Placement) {
+    const requiredLine = forcedLine(next);
+    if (allowedLines && requiredLine && !canActOnLine(allowedLines, requiredLine)) {
+      toast.error("This placement requires access to its business line.");
+      return;
+    }
+
     setPlacement(next);
     // Artwork is surface-specific: a 5:2 section image cannot follow the author
     // to the 9:5 hero, so every artwork choice resets with the placement.
@@ -540,7 +549,7 @@ export function BannerForm({
                   aria-label="Business line"
                   className="mt-2 flex flex-wrap gap-2"
                 >
-                  {LINE_OPTIONS.map((option) => (
+                  {LINE_OPTIONS.filter((option) => !allowedLines || canActOnLine(allowedLines, option.value)).map((option) => (
                     <button
                       key={option.value}
                       type="button"

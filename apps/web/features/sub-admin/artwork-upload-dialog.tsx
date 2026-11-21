@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { canActOnLine, type AccessLine } from "@/lib/sub-admin-access";
 import { ImageIcon, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -54,6 +55,7 @@ export function ArtworkUploadDialog({
   fixedUsageType,
   defaultUsageType = "campaign",
   defaultBusinessLine = "both",
+  allowedLines,
   allowedUsageTypes,
 }: {
   open: boolean;
@@ -63,6 +65,7 @@ export function ArtworkUploadDialog({
   fixedUsageType?: ArtworkUsageType;
   defaultUsageType?: ArtworkUsageType;
   defaultBusinessLine?: BusinessLine;
+  allowedLines?: readonly AccessLine[];
   allowedUsageTypes?: readonly ArtworkUsageType[];
 }) {
   const [file, setFile] = React.useState<File | null>(null);
@@ -117,6 +120,7 @@ export function ArtworkUploadDialog({
   }
 
   async function submit() {
+    if (allowedLines && !canActOnLine(allowedLines, line)) return;
     if (!file || !title.trim() || !altText.trim()) {
       toast.error("Add artwork, an internal title, and alt text");
       return;
@@ -243,9 +247,9 @@ export function ArtworkUploadDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="both">Both lines</SelectItem>
-                    <SelectItem value="loans">Loans</SelectItem>
-                    <SelectItem value="real_estate">Real Estate</SelectItem>
+                    {(!allowedLines || canActOnLine(allowedLines, "both")) ? <SelectItem value="both">Both lines</SelectItem> : null}
+                    {(!allowedLines || canActOnLine(allowedLines, "loans")) ? <SelectItem value="loans">Loans</SelectItem> : null}
+                    {(!allowedLines || canActOnLine(allowedLines, "real_estate")) ? <SelectItem value="real_estate">Real Estate</SelectItem> : null}
                   </SelectContent>
                 </Select>
               </div>

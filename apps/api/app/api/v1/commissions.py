@@ -15,11 +15,12 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import CurrentUser, get_active_user, require_platform_admin
+from app.core.deps import CurrentUser, get_active_user, require_assignment, require_platform_admin
 from app.db.session import get_db
-from app.models.commission import CommissionStatus
+from app.models.commission import Commission, CommissionStatus
 from app.models.payout import Payout, PayoutType
 from app.schemas.commissions import (
     BulkCommissionPayoutRequest,
@@ -33,10 +34,12 @@ from app.schemas.commissions import (
     CoveredCommission,
     EligibleDealListResponse,
 )
+from app.schemas.sub_admin_access import ScopedCommission
 from app.services import commission_payouts, commissions
 from app.services import payments as payments_service
 
 router = APIRouter()
+_finance_view = require_assignment("account_manager", "view", include_admin=True)
 
 # Same typed-error -> HTTP mapping convention as api/v1/referrals.py's
 # _ERROR_STATUS, duplicated rather than imported cross-router: the two
@@ -133,6 +136,27 @@ async def list_commissions(
         offset=offset,
     )
     return CommissionListResponse(commissions=rows, total=total)
+
+
+@router.get("/scoped-summary", response_model=list[ScopedCommission])
+async def scoped_commission_summary(
+    user: CurrentUser = Depends(_finance_view),
+    db: AsyncSession = Depends(get_db),
+) -> list[ScopedCommission]:
+    if user.sub_admin_access is None:
+        await require_platform_admin(user)
+    rows = await db.execute(
+        select(
+            Commission.id,
+            Commission.business_line,
+            Commission.status,
+            Commission.agreed_amount_paise,
+            Commission.created_at,
+        )
+        .order_by(Commission.created_at.desc(), Commission.id.desc())
+        .limit(100)
+    )
+    return [ScopedCommission.model_validate(row) for row in rows.mappings()]
 
 
 @router.get("/pending-payout-groups", response_model=CommissionPayoutGroupList)

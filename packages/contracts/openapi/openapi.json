@@ -7584,6 +7584,7 @@
           "staff_specialty_updated",
           "staff_feature_granted",
           "staff_feature_revoked",
+          "sub_admin_access_updated",
           "staff_invite_created",
           "staff_invite_revoked",
           "account_removed",
@@ -17197,6 +17198,16 @@
             },
             "title": "Role Profiles",
             "type": "array"
+          },
+          "sub_admin_access": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubAdminAccess"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -23751,6 +23762,136 @@
         "title": "RejectRequest",
         "type": "object"
       },
+      "RelationshipActivity": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "follow_up",
+              "recommendation"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "note",
+          "id",
+          "created_at"
+        ],
+        "title": "RelationshipActivity",
+        "type": "object"
+      },
+      "RelationshipActivityInput": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "follow_up",
+              "recommendation"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "note"
+        ],
+        "title": "RelationshipActivityInput",
+        "type": "object"
+      },
+      "RelationshipAgent": {
+        "properties": {
+          "agent_code": {
+            "title": "Agent Code",
+            "type": "string"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kyc_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kyc Status"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_leads": {
+            "default": 0,
+            "title": "Submitted Leads",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "agent_code",
+          "business_line",
+          "status",
+          "kyc_status",
+          "approved_at"
+        ],
+        "title": "RelationshipAgent",
+        "type": "object"
+      },
       "RentalIncomeStart": {
         "enum": [
           "immediate",
@@ -24136,6 +24277,45 @@
         "title": "SavedPayoutDestinationRead",
         "type": "object"
       },
+      "ScopedCommission": {
+        "properties": {
+          "agreed_amount_paise": {
+            "title": "Agreed Amount Paise",
+            "type": "integer"
+          },
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "business_line",
+          "status",
+          "agreed_amount_paise",
+          "created_at"
+        ],
+        "title": "ScopedCommission",
+        "type": "object"
+      },
       "SetPasswordRequest": {
         "properties": {
           "confirm_password": {
@@ -24409,6 +24589,13 @@
             "title": "Last Name",
             "type": "string"
           },
+          "live_teams": {
+            "items": {
+              "$ref": "#/components/schemas/SubAdminTeamLink"
+            },
+            "title": "Live Teams",
+            "type": "array"
+          },
           "role": {
             "enum": [
               "admin",
@@ -24425,6 +24612,21 @@
             "format": "uuid",
             "title": "Staff Profile Uuid",
             "type": "string"
+          },
+          "sub_admin_access": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubAdminAccess"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "suspended": {
+            "default": false,
+            "title": "Suspended",
+            "type": "boolean"
           }
         },
         "required": [
@@ -24640,6 +24842,21 @@
             ],
             "title": "Role",
             "type": "string"
+          },
+          "sub_admin_grants": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SubAdminGrant"
+                },
+                "maxItems": 8,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Admin Grants"
           }
         },
         "required": [
@@ -25195,6 +25412,168 @@
         "title": "StandingRow",
         "type": "object"
       },
+      "SubAdminAccess": {
+        "properties": {
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/SubAdminGrant"
+            },
+            "maxItems": 8,
+            "title": "Grants",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "active",
+              "inactive"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "grants",
+          "version"
+        ],
+        "title": "SubAdminAccess",
+        "type": "object"
+      },
+      "SubAdminAccessHistory": {
+        "properties": {
+          "actor_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Uuid"
+          },
+          "after": {
+            "$ref": "#/components/schemas/SubAdminAccess"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubAdminAccess"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_uuid",
+          "created_at",
+          "before",
+          "after"
+        ],
+        "title": "SubAdminAccessHistory",
+        "type": "object"
+      },
+      "SubAdminAccessUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/SubAdminGrant"
+            },
+            "maxItems": 8,
+            "title": "Grants",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "inactive"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "grants",
+          "expected_version"
+        ],
+        "title": "SubAdminAccessUpdate",
+        "type": "object"
+      },
+      "SubAdminGrant": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "enum": [
+                "view",
+                "edit",
+                "review",
+                "prepare",
+                "follow_up"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Actions",
+            "type": "array"
+          },
+          "agent_profile_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Agent Profile Ids",
+            "type": "array"
+          },
+          "assignment": {
+            "enum": [
+              "team_manager",
+              "media_sub_admin",
+              "account_manager",
+              "relationship_manager"
+            ],
+            "title": "Assignment",
+            "type": "string"
+          },
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment",
+          "business_line",
+          "actions"
+        ],
+        "title": "SubAdminGrant",
+        "type": "object"
+      },
       "SubAdminHomeResponse": {
         "properties": {
           "content_drafts_count": {
@@ -25232,6 +25611,34 @@
           "recent_referral_payouts"
         ],
         "title": "SubAdminHomeResponse",
+        "type": "object"
+      },
+      "SubAdminTeamLink": {
+        "properties": {
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "business_line"
+        ],
+        "title": "SubAdminTeamLink",
         "type": "object"
       },
       "SubmissionCreate": {
@@ -31260,6 +31667,36 @@
           }
         ],
         "summary": "List Pending Payout Groups",
+        "tags": [
+          "commissions"
+        ]
+      }
+    },
+    "/api/v1/admin/commissions/scoped-summary": {
+      "get": {
+        "operationId": "scoped_commission_summary_api_v1_admin_commissions_scoped_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScopedCommission"
+                  },
+                  "title": "Response Scoped Commission Summary Api V1 Admin Commissions Scoped Summary Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Scoped Commission Summary",
         "tags": [
           "commissions"
         ]
@@ -37549,6 +37986,18 @@
     "/api/v1/admin/staff-access": {
       "get": {
         "operationId": "get_staff_access_api_v1_admin_staff_access_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "pending_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Pending Only",
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -37559,6 +38008,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -37567,6 +38026,64 @@
           }
         ],
         "summary": "Get Staff Access",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/staff-access/{staff_profile_uuid}/dashboard": {
+      "put": {
+        "operationId": "update_sub_admin_dashboard_api_v1_admin_staff_access__staff_profile_uuid__dashboard_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "staff_profile_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Staff Profile Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubAdminAccessUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffAccessListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Sub Admin Dashboard",
         "tags": [
           "admin"
         ]
@@ -37625,6 +38142,58 @@
           }
         ],
         "summary": "Update Staff Feature",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/staff-access/{staff_profile_uuid}/history": {
+      "get": {
+        "operationId": "get_sub_admin_dashboard_history_api_v1_admin_staff_access__staff_profile_uuid__history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "staff_profile_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Staff Profile Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SubAdminAccessHistory"
+                  },
+                  "title": "Response Get Sub Admin Dashboard History Api V1 Admin Staff Access  Staff Profile Uuid  History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Sub Admin Dashboard History",
         "tags": [
           "admin"
         ]
@@ -50313,6 +50882,26 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "business_line",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "loans",
+                    "real_estate"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Business Line"
+            }
           }
         ],
         "responses": {
@@ -53156,6 +53745,210 @@
         "summary": "Create Referral Payout",
         "tags": [
           "referrals"
+        ]
+      }
+    },
+    "/api/v1/relationships": {
+      "get": {
+        "operationId": "list_relationship_agents_api_v1_relationships_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RelationshipAgent"
+                  },
+                  "title": "Response List Relationship Agents Api V1 Relationships Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Relationship Agents",
+        "tags": [
+          "relationships"
+        ]
+      }
+    },
+    "/api/v1/relationships/options": {
+      "get": {
+        "operationId": "relationship_options_api_v1_relationships_options_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "line",
+            "required": true,
+            "schema": {
+              "enum": [
+                "loans",
+                "real_estate"
+              ],
+              "title": "Line",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "query",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 2,
+              "title": "Query",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RelationshipAgent"
+                  },
+                  "title": "Response Relationship Options Api V1 Relationships Options Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Relationship Options",
+        "tags": [
+          "relationships"
+        ]
+      }
+    },
+    "/api/v1/relationships/{agent_id}/activity": {
+      "get": {
+        "operationId": "list_relationship_activity_api_v1_relationships__agent_id__activity_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RelationshipActivity"
+                  },
+                  "title": "Response List Relationship Activity Api V1 Relationships  Agent Id  Activity Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Relationship Activity",
+        "tags": [
+          "relationships"
+        ]
+      },
+      "post": {
+        "operationId": "add_relationship_activity_api_v1_relationships__agent_id__activity_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RelationshipActivityInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationshipActivity"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Add Relationship Activity",
+        "tags": [
+          "relationships"
         ]
       }
     },
