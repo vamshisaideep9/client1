@@ -151,5 +151,15 @@ class AttendanceCertificate(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class AttendanceMonthRevision(Base):
+    __tablename__ = "attendance_month_revisions"
+
+    month: Mapped[date] = mapped_column(Date, primary_key=True)
+    version: Mapped[int] = mapped_column(Integer, primary_key=True)
+    closed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    reopened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    totals: Mapped[list[dict]] = mapped_column(JSONB)
+
+
 ATTENDANCE_ROLLOVER_LOCK = 1_885_206_137
 ATTENDANCE_POLICY_LOCK = 1_885_206_138

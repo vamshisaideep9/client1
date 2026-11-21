@@ -36,6 +36,8 @@ from app.schemas.attendance import (
     AttendanceInboxRead,
     AttendanceLeaveInput,
     AttendanceLine,
+    AttendanceMonthAction,
+    AttendanceMonthRead,
     AttendancePolicyInput,
     AttendancePolicyState,
     AttendanceRequestRead,
@@ -49,6 +51,7 @@ from app.services import (
     attendance,
     attendance_certificates,
     attendance_employment,
+    attendance_month_close,
     attendance_requests,
     attendance_views,
 )
@@ -291,6 +294,70 @@ async def get_employment(staff_id: UUID, _: Admin, db: DB):
 @router.put("/employment/{staff_id}", response_model=AttendanceEmploymentRead)
 async def put_employment(staff_id: UUID, payload: AttendanceEmploymentInput, user: Admin):
     return await attendance_employment.save(user, staff_id, payload)
+
+
+@router.get("/months/{month}", response_model=AttendanceMonthRead)
+async def get_month_report(month: date, _: Admin, db: DB, response: Response):
+    response.headers["Cache-Control"] = "private, no-store"
+    return await attendance_month_close.report(db, month)
+
+
+@router.post("/months/{month}/close", response_model=AttendanceMonthRead)
+async def close_month(month: date, payload: AttendanceMonthAction, user: Admin):
+    return await attendance_month_close.change(user, month, payload, reopening=False)
+
+
+@router.post("/months/{month}/reopen", response_model=AttendanceMonthRead)
+async def reopen_month(month: date, payload: AttendanceMonthAction, user: Admin):
+    return await attendance_month_close.change(user, month, payload, reopening=True)
+
+
+@router.get("/months/{month}/export", response_class=StreamingResponse)
+async def export_month(
+    month: date, user: Admin, db: DB, version: Annotated[int | None, Query(ge=1)] = None
+):
+    summary = await attendance_month_close.report(db, month)
+    latest = summary.revisions[0] if summary.revisions else None
+    if version is not None:
+        latest = next(
+            (revision for revision in summary.revisions if revision.version == version), None
+        )
+        if latest is None:
+            raise attendance.AttendanceNotFound("Attendance report revision not found.")
+    closed_snapshot = latest is not None and (version is not None or latest.reopened_at is None)
+    totals = latest.totals if closed_snapshot else summary.totals
+    label = f"revision-{latest.version}" if closed_snapshot else "preview"
+    keys = {
+        "business_line": "business_line",
+        "recorded_days": "recorded_days",
+        "worked_minutes": "worked_minutes",
+        "leave_units": "leave_half_days",
+        "sandwich_units": "sandwich_half_days",
+        "lop_units": "lop_quarter_days",
+        "late_days": "late_days",
+        "absences": "absences",
+    }
+    fields = list(keys.values())
+    rows = [{keys[key]: value for key, value in total.model_dump().items()} for total in totals]
+    await record(
+        db,
+        action=AuditAction.ATTENDANCE_EXPORTED,
+        entity_type="staff_attendance",
+        entity_uuid=None,
+        actor_uuid=user.id,
+        actor_role=user.role,
+        detail={"month": month.isoformat(), "report": label},
+    )
+    await db.commit()
+    filename = branded_filename(f"attendance-{month:%Y-%m}-{label}.csv")
+    return StreamingResponse(
+        csv_chunks(rows, fields),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 @router.get("/export", response_class=StreamingResponse)

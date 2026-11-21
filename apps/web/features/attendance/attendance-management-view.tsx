@@ -22,8 +22,9 @@ import { ATTENDANCE_STATUS, attendanceCode, attendanceDate, attendanceTime, dura
 import { AttendancePolicyPanel } from "./attendance-policy-panel";
 import { AttendanceEmploymentDialog } from "./attendance-employment-dialog";
 import { AttendanceCertificateControl } from "./attendance-certificate-control";
+import { AttendanceMonthPanel } from "./attendance-month-panel";
 
-type Mode = "daily" | "month" | "requests" | "policy";
+type Mode = "daily" | "month" | "requests" | "policy" | "close";
 type FilterOption = { id: string; name: string };
 const PAGE_SIZE = 50;
 const selectClass = "min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -74,7 +75,7 @@ export function AttendanceManagementView() {
   }, [admin, revision, role]);
 
   useEffect(() => {
-    if (!role || mode === "policy") return;
+    if (!role || mode === "policy" || mode === "close") return;
     let current = true;
     const query = new URLSearchParams(range);
     if (mode !== "requests") query.set("offset", String(offset));
@@ -122,9 +123,10 @@ export function AttendanceManagementView() {
           <TabsTrigger value="month">Monthly grid</TabsTrigger>
           <TabsTrigger value="requests">Requests</TabsTrigger>
           {admin ? <TabsTrigger value="policy">Policy & holidays</TabsTrigger> : null}
+          {admin ? <TabsTrigger value="close">Monthly close</TabsTrigger> : null}
         </TabsList>
         <TabsContent value={mode} className="space-y-4">
-      {mode === "policy" && admin ? <AttendancePolicyPanel /> : (
+      {mode === "close" && admin ? <AttendanceMonthPanel manageable /> : mode === "policy" && admin ? <AttendancePolicyPanel /> : (
         <>
           <DashboardPanel title="Filters" action={admin && mode !== "requests" && roster?.configured ? (
             <Button variant="outline" disabled={exporting} onClick={() => void download()}>Export CSV</Button>

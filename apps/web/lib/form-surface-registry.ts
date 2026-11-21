@@ -12,6 +12,7 @@ export const FORM_SURFACE_REGISTRY = {
   "features/attendance/attendance-policy-panel.tsx": "mutation",
   "features/attendance/attendance-employment-dialog.tsx": "mutation",
   "features/attendance/attendance-certificate-control.tsx": "mutation",
+  "features/attendance/attendance-month-panel.tsx": "mutation",
   "features/admin/commission-rates-view.tsx": "mutation",
   "features/agent/agent-lead-bulk-view.tsx": "mutation",
   "components/help/help-center.tsx": "filter",

@@ -16,6 +16,7 @@ from app.models.attendance import (
     AttendanceEmployment,
     AttendanceHoliday,
     AttendanceLineHoliday,
+    AttendanceMonthRevision,
     AttendancePolicy,
     AttendanceRequest,
 )
@@ -93,6 +94,24 @@ async def require_policy(db: AsyncSession, day: date) -> AttendancePolicy:
     if policy is None:
         raise AttendanceError("An Admin must configure attendance before it opens.")
     return policy
+
+
+async def closed_months(db: AsyncSession, start: date, end: date) -> set[date]:
+    return set(
+        await db.scalars(
+            select(AttendanceMonthRevision.month).where(
+                AttendanceMonthRevision.month.between(start.replace(day=1), end.replace(day=1)),
+                AttendanceMonthRevision.reopened_at.is_(None),
+            )
+        )
+    )
+
+
+async def ensure_period_open(db: AsyncSession, start: date, end: date) -> None:
+    if await closed_months(db, start, end):
+        raise AttendanceError(
+            "An Admin must reopen the closed attendance month before editing these dates."
+        )
 
 
 def allows_personal_attendance(role: str, policy: AttendancePolicy | None) -> bool:
