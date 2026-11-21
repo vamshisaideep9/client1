@@ -18,10 +18,10 @@ from app.cache.redis_keys import RedisCache
 from app.core.client_ip import get_client_ip
 from app.core.deps import (
     CurrentUser,
-    get_active_user,
     get_active_user_allow_email_pending,
     get_cache,
     get_current_user,
+    get_personal_user,
 )
 from app.db.session import get_db
 from app.schemas.auth import (
@@ -438,7 +438,8 @@ async def me(
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_active_user_allow_email_pending),
 ) -> MeResponse:
-    return await auth_service.get_me(db, current_user.id)
+    profile = await auth_service.get_me(db, current_user.id)
+    return profile.model_copy(update={"sub_admin_access": current_user.sub_admin_access})
 
 
 @router.patch("/me", response_model=MeResponse, status_code=status.HTTP_200_OK)
@@ -446,9 +447,9 @@ async def update_me(
     req: MeUpdateRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(get_personal_user),
 ) -> MeResponse:
-    return await auth_service.update_me(
+    profile = await auth_service.update_me(
         db,
         current_user.id,
         req,
@@ -456,6 +457,7 @@ async def update_me(
         user_agent=request.headers.get("user-agent"),
         actor_role=current_user.role,
     )
+    return profile.model_copy(update={"sub_admin_access": current_user.sub_admin_access})
 
 
 @router.post(
@@ -587,4 +589,5 @@ async def email_add_verify(
         )
     except contact_change.ContactChangeError as exc:
         raise contact_change.http_error(exc) from exc
-    return await auth_service.get_me(db, current_user.id)
+    profile = await auth_service.get_me(db, current_user.id)
+    return profile.model_copy(update={"sub_admin_access": current_user.sub_admin_access})

@@ -16,10 +16,12 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import CurrentUser, require_sub_admin
+from app.core.deps import CurrentUser, check_assignment_line, require_assignment
 from app.db.session import get_db
+from app.models.staff_team import StaffTeam
 from app.schemas.staff_analytics import StaffAnalyticsResponse
 from app.schemas.staff_teams import (
     ManagerTeamsResponse,
@@ -66,6 +68,28 @@ from app.services.team_manager import (
     team_work,
     update_task,
 )
+
+team_view = require_assignment("team_manager", "view")
+_team_edit_user = require_assignment("team_manager", "edit")
+
+
+async def team_edit(
+    team_id: UUID,
+    user: CurrentUser = Depends(_team_edit_user),
+    db: AsyncSession = Depends(get_db),
+) -> CurrentUser:
+    if user.sub_admin_access is not None:
+        line = await db.scalar(
+            select(StaffTeam.business_line).where(
+                StaffTeam.id == team_id,
+                StaffTeam.manager_staff_profile_uuid == user.staff_profile_uuid,
+            )
+        )
+        if line is None:
+            raise HTTPException(404, detail="Team not found.")
+        check_assignment_line(user, "team_manager", "edit", line)
+    return user
+
 
 router = APIRouter()
 
@@ -221,7 +245,7 @@ def _manager_uuid(current_user: CurrentUser) -> UUID:
 @router.get("/teams", response_model=ManagerTeamsResponse)
 async def get_my_teams(
     response: Response,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(team_view),
     db: AsyncSession = Depends(get_db),
 ) -> ManagerTeamsResponse:
     response.headers["Cache-Control"] = "private, no-store"
@@ -234,7 +258,7 @@ async def get_overview(
     response: Response,
     period: _Period = Depends(_period),
     query: TeamAnalyticsQuery = Depends(_analytics_query),
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(team_view),
     db: AsyncSession = Depends(get_db),
 ) -> TeamOverviewResponse:
     response.headers["Cache-Control"] = "private, no-store"
@@ -253,7 +277,7 @@ async def get_member_analytics(
     response: Response,
     period: _Period = Depends(_period),
     query: TeamAnalyticsQuery = Depends(_analytics_query),
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(team_view),
     db: AsyncSession = Depends(get_db),
 ) -> StaffAnalyticsResponse:
     response.headers["Cache-Control"] = "private, no-store"
@@ -276,7 +300,7 @@ async def get_team_work(
     team_id: UUID,
     response: Response,
     scope: str = Query("open", pattern="^(open|all)$"),
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(team_view),
     db: AsyncSession = Depends(get_db),
 ) -> TeamWorkResponse:
     response.headers["Cache-Control"] = "private, no-store"
@@ -292,7 +316,7 @@ async def get_member_work(
     member_id: UUID,
     response: Response,
     scope: str = Query("open", pattern="^(open|all)$"),
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(team_view),
     db: AsyncSession = Depends(get_db),
 ) -> TeamMemberWorkResponse:
     response.headers["Cache-Control"] = "private, no-store"
@@ -309,7 +333,7 @@ async def get_lead_detail(
     team_id: UUID,
     lead_id: UUID,
     response: Response,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(team_view),
     db: AsyncSession = Depends(get_db),
 ) -> TeamLeadDetailResponse:
     response.headers["Cache-Control"] = "private, no-store"
@@ -331,7 +355,7 @@ async def get_task_detail(
     team_id: UUID,
     task_id: UUID,
     response: Response,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(team_view),
     db: AsyncSession = Depends(get_db),
 ) -> TeamTaskDetailResponse:
     response.headers["Cache-Control"] = "private, no-store"
@@ -353,7 +377,7 @@ async def patch_lead(
     team_id: UUID,
     lead_id: UUID,
     payload: TeamLeadStatusUpdate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(team_edit),
     db: AsyncSession = Depends(get_db),
 ) -> TeamWorkUpdateResponse:
     try:
@@ -375,7 +399,7 @@ async def patch_task(
     team_id: UUID,
     task_id: UUID,
     payload: TeamTaskUpdate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(team_edit),
     db: AsyncSession = Depends(get_db),
 ) -> TeamWorkUpdateResponse:
     try:
@@ -402,7 +426,7 @@ async def post_lead_note(
     team_id: UUID,
     lead_id: UUID,
     payload: TeamNoteCreate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(team_edit),
     db: AsyncSession = Depends(get_db),
 ) -> TeamWorkNoteRead:
     try:
@@ -429,7 +453,7 @@ async def post_task_note(
     team_id: UUID,
     task_id: UUID,
     payload: TeamNoteCreate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(team_edit),
     db: AsyncSession = Depends(get_db),
 ) -> TeamWorkNoteRead:
     try:
@@ -452,7 +476,7 @@ async def post_reassign_lead(
     team_id: UUID,
     lead_id: UUID,
     payload: TeamReassignRequest,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(team_edit),
     db: AsyncSession = Depends(get_db),
 ) -> TeamReassignResponse:
     try:
@@ -474,7 +498,7 @@ async def post_reassign_task(
     team_id: UUID,
     task_id: UUID,
     payload: TeamReassignRequest,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(team_edit),
     db: AsyncSession = Depends(get_db),
 ) -> TeamReassignResponse:
     try:

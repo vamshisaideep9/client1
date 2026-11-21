@@ -361,6 +361,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/commissions/scoped-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scoped Commission Summary */
+        get: operations["scoped_commission_summary_api_v1_admin_commissions_scoped_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/commissions/{commission_id}/cancel": {
         parameters: {
             query?: never;
@@ -1321,6 +1338,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/staff-access/{staff_profile_uuid}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Sub Admin Dashboard */
+        put: operations["update_sub_admin_dashboard_api_v1_admin_staff_access__staff_profile_uuid__dashboard_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/staff-access/{staff_profile_uuid}/features": {
         parameters: {
             query?: never;
@@ -1331,6 +1365,23 @@ export interface paths {
         get?: never;
         /** Update Staff Feature */
         put: operations["update_staff_feature_api_v1_admin_staff_access__staff_profile_uuid__features_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/staff-access/{staff_profile_uuid}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Sub Admin Dashboard History */
+        get: operations["get_sub_admin_dashboard_history_api_v1_admin_staff_access__staff_profile_uuid__history_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -5700,6 +5751,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/relationships": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Relationship Agents */
+        get: operations["list_relationship_agents_api_v1_relationships_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/relationships/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Relationship Options */
+        get: operations["relationship_options_api_v1_relationships_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/relationships/{agent_id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Relationship Activity */
+        get: operations["list_relationship_activity_api_v1_relationships__agent_id__activity_get"];
+        put?: never;
+        /** Add Relationship Activity */
+        post: operations["add_relationship_activity_api_v1_relationships__agent_id__activity_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/site-visits": {
         parameters: {
             query?: never;
@@ -8714,7 +8817,7 @@ export interface components {
          *     `services/fee_cashbacks.py` (FR-6.6 processing-fee cashback).
          * @enum {string}
          */
-        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_specialty_updated" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "contact_history_viewed" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded" | "contest_created" | "contest_updated" | "attendance_updated" | "attendance_exported" | "contest_submitted" | "contest_deleted" | "contest_approved" | "contest_rejected" | "contest_cancelled" | "contest_went_live" | "contest_ended" | "contest_recalculated" | "contest_finalized" | "contest_prize_payout_requested" | "contest_prize_marked_paid" | "agent_leads_bulk_submitted" | "commission_rate_proposed" | "commission_rate_set" | "commission_rate_approved" | "commission_rate_rejected" | "commission_rate_withdrawn";
+        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_specialty_updated" | "staff_feature_granted" | "staff_feature_revoked" | "sub_admin_access_updated" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "contact_history_viewed" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded" | "contest_created" | "contest_updated" | "attendance_updated" | "attendance_exported" | "contest_submitted" | "contest_deleted" | "contest_approved" | "contest_rejected" | "contest_cancelled" | "contest_went_live" | "contest_ended" | "contest_recalculated" | "contest_finalized" | "contest_prize_payout_requested" | "contest_prize_marked_paid" | "agent_leads_bulk_submitted" | "commission_rate_proposed" | "commission_rate_set" | "commission_rate_approved" | "commission_rate_rejected" | "commission_rate_withdrawn";
         /** AuditLogListResponse */
         AuditLogListResponse: {
             /** Entries */
@@ -11919,6 +12022,7 @@ export interface components {
             profiles: components["schemas"]["ClientProfileSummary"][];
             /** Role Profiles */
             role_profiles?: components["schemas"]["RoleProfileRead"][];
+            sub_admin_access?: components["schemas"]["SubAdminAccess"] | null;
         };
         /**
          * MeUpdateRequest
@@ -13970,6 +14074,64 @@ export interface components {
             /** Note */
             note: string;
         };
+        /** RelationshipActivity */
+        RelationshipActivity: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "follow_up" | "recommendation";
+            /** Note */
+            note: string;
+        };
+        /** RelationshipActivityInput */
+        RelationshipActivityInput: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "follow_up" | "recommendation";
+            /** Note */
+            note: string;
+        };
+        /** RelationshipAgent */
+        RelationshipAgent: {
+            /** Agent Code */
+            agent_code: string;
+            /** Approved At */
+            approved_at: string | null;
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kyc Status */
+            kyc_status: string | null;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /**
+             * Submitted Leads
+             * @default 0
+             */
+            submitted_leads: number;
+        };
         /**
          * RentalIncomeStart
          * @enum {string}
@@ -14137,6 +14299,28 @@ export interface components {
             /** Upi Id */
             upi_id?: string | null;
         };
+        /** ScopedCommission */
+        ScopedCommission: {
+            /** Agreed Amount Paise */
+            agreed_amount_paise: number;
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
+        };
         /** SetPasswordRequest */
         SetPasswordRequest: {
             /** Confirm Password */
@@ -14247,6 +14431,8 @@ export interface components {
             is_primary_admin: boolean;
             /** Last Name */
             last_name: string;
+            /** Live Teams */
+            live_teams?: components["schemas"]["SubAdminTeamLink"][];
             /**
              * Role
              * @enum {string}
@@ -14259,6 +14445,12 @@ export interface components {
              * Format: uuid
              */
             staff_profile_uuid: string;
+            sub_admin_access?: components["schemas"]["SubAdminAccess"] | null;
+            /**
+             * Suspended
+             * @default false
+             */
+            suspended: boolean;
         };
         /** StaffAccessListResponse */
         StaffAccessListResponse: {
@@ -14343,6 +14535,8 @@ export interface components {
              * @enum {string}
              */
             role: "admin" | "sub_admin" | "telecaller" | "employee";
+            /** Sub Admin Grants */
+            sub_admin_grants?: components["schemas"]["SubAdminGrant"][] | null;
         };
         /** StaffCreateResponse */
         StaffCreateResponse: {
@@ -14545,6 +14739,59 @@ export interface components {
             /** Won */
             won: boolean;
         };
+        /** SubAdminAccess */
+        SubAdminAccess: {
+            /** Grants */
+            grants: components["schemas"]["SubAdminGrant"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "active" | "inactive";
+            /** Version */
+            version: number;
+        };
+        /** SubAdminAccessHistory */
+        SubAdminAccessHistory: {
+            /** Actor Uuid */
+            actor_uuid: string | null;
+            after: components["schemas"]["SubAdminAccess"];
+            before: components["schemas"]["SubAdminAccess"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** SubAdminAccessUpdate */
+        SubAdminAccessUpdate: {
+            /** Expected Version */
+            expected_version: number;
+            /** Grants */
+            grants: components["schemas"]["SubAdminGrant"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "inactive";
+        };
+        /** SubAdminGrant */
+        SubAdminGrant: {
+            /** Actions */
+            actions: ("view" | "edit" | "review" | "prepare" | "follow_up")[];
+            /** Agent Profile Ids */
+            agent_profile_ids?: string[];
+            /**
+             * Assignment
+             * @enum {string}
+             */
+            assignment: "team_manager" | "media_sub_admin" | "account_manager" | "relationship_manager";
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+        };
         /** SubAdminHomeResponse */
         SubAdminHomeResponse: {
             /** Content Drafts Count */
@@ -14557,6 +14804,21 @@ export interface components {
             pending_approval: components["schemas"]["PendingApprovalItem"][];
             /** Recent Referral Payouts */
             recent_referral_payouts: components["schemas"]["ReferralPayoutActivityRead"][];
+        };
+        /** SubAdminTeamLink */
+        SubAdminTeamLink: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /** SubmissionCreate */
         SubmissionCreate: {
@@ -16843,6 +17105,26 @@ export interface operations {
             };
         };
     };
+    scoped_commission_summary_api_v1_admin_commissions_scoped_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScopedCommission"][];
+                };
+            };
+        };
+    };
     cancel_commission_api_v1_admin_commissions__commission_id__cancel_post: {
         parameters: {
             query?: never;
@@ -18869,7 +19151,9 @@ export interface operations {
     };
     get_staff_access_api_v1_admin_staff_access_get: {
         parameters: {
-            query?: never;
+            query?: {
+                pending_only?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -18883,6 +19167,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaffAccessListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_sub_admin_dashboard_api_v1_admin_staff_access__staff_profile_uuid__dashboard_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                staff_profile_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubAdminAccessUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffAccessListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -18909,6 +19237,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaffAccessListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sub_admin_dashboard_history_api_v1_admin_staff_access__staff_profile_uuid__history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                staff_profile_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubAdminAccessHistory"][];
                 };
             };
             /** @description Validation Error */
@@ -26009,6 +26368,7 @@ export interface operations {
             query: {
                 q: string;
                 limit?: number;
+                business_line?: ("loans" | "real_estate") | null;
             };
             header?: never;
             path?: never;
@@ -27751,6 +28111,124 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReferralPayoutResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_relationship_agents_api_v1_relationships_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelationshipAgent"][];
+                };
+            };
+        };
+    };
+    relationship_options_api_v1_relationships_options_get: {
+        parameters: {
+            query: {
+                line: "loans" | "real_estate";
+                query: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelationshipAgent"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_relationship_activity_api_v1_relationships__agent_id__activity_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelationshipActivity"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_relationship_activity_api_v1_relationships__agent_id__activity_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RelationshipActivityInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelationshipActivity"];
                 };
             };
             /** @description Validation Error */

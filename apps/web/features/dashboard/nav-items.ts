@@ -7,6 +7,8 @@ import type {
   UserRole,
 } from "@/lib/auth";
 
+import { assignedLines, type SubAdminAccess } from "@/lib/sub-admin-access";
+
 import { DASHBOARD_ICONS } from "./dashboard-icons";
 
 const ALL_ROLES: readonly UserRole[] = [
@@ -31,6 +33,7 @@ const CAPABILITIES = {
   employee: { roles: ["employee"] },
   employeeRealEstate: { roles: ["employee"], lines: ["real_estate"] },
   subAdmin: { roles: ["sub_admin"] },
+  relationships: { roles: ["sub_admin"] },
   admin: { roles: ["admin"] },
   staffInsights: { roles: ["telecaller", "employee", "agent", "sub_admin"] },
   staffAttendance: { roles: ["telecaller", "employee", "sub_admin"] },
@@ -71,6 +74,8 @@ export type DashboardAccessContext = {
   staffFeatures?: readonly StaffFeature[];
   /** Navigation hint only: the Sub Admin manages at least one live team. */
   managesTeam?: boolean;
+  subAdminAccess?: SubAdminAccess | null;
+  subAdminAccessLoading?: boolean;
 };
 
 export type NavItem = {
@@ -300,6 +305,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     href: "/dashboard/team",
     icon: DASHBOARD_ICONS.team,
     capability: "teamManager",
+    section: "people",
+  },
+  {
+    key: "relationship-agents",
+    label: "Agent relationships",
+    href: "/dashboard/relationships",
+    icon: DASHBOARD_ICONS.team,
+    capability: "relationships",
     section: "people",
   },
   // CS-027: Sub Admins author contests; a platform Admin approves them.
@@ -639,6 +652,7 @@ export const DASHBOARD_ROUTE_RULES: readonly DashboardRouteRule[] = [
   { path: "/dashboard/attendance", exact: true, capabilities: ["staffAttendance"] },
   { path: "/dashboard/attendance-management", exact: true, capabilities: ["attendanceManagement"] },
   { path: "/dashboard/finance", exact: true, capabilities: ["subAdmin"] },
+  { path: "/dashboard/relationships", exact: true, capabilities: ["relationships"] },
   { path: "/dashboard/leads", capabilities: ["agent", "telecaller"] },
   { path: "/dashboard/loan-applications", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/loan-config", exact: true, capabilities: ["admin"] },
@@ -721,9 +735,36 @@ function hasCapability(
   return context.profileLines.some((line) => allowedLines.includes(line));
 }
 
+function scopedPathAllowed(pathname: string, context: DashboardAccessContext): boolean | undefined {
+  if (context.role !== "sub_admin") return;
+  const access = context.subAdminAccess;
+  if (!access && !context.subAdminAccessLoading) return pathname === "/dashboard/relationships" ? false : undefined;
+  if (["/dashboard", "/dashboard/settings", "/dashboard/notifications", "/dashboard/support", "/dashboard/get-started", "/dashboard/help-center", "/dashboard/terms", "/dashboard/privacy", "/dashboard/cookies"].includes(pathname)) return true;
+  if (access?.status !== "active") return false;
+
+  if (pathname === "/dashboard/attendance") return true;
+  if (pathname === "/dashboard/team" || pathname.startsWith("/dashboard/team/")) {
+    return assignedLines(access, "team_manager", "view").length > 0;
+  }
+  if (pathname === "/dashboard/attendance-management") {
+    return assignedLines(access, "team_manager", "review").length > 0;
+  }
+  if (["/dashboard/campaigns", "/dashboard/banners", "/dashboard/offers", "/dashboard/media-library"].includes(pathname)) {
+    return assignedLines(access, "media_sub_admin", "view").length > 0;
+  }
+  if (["/dashboard/finance", "/dashboard/payouts"].includes(pathname)) {
+    return assignedLines(access, "account_manager", "view").length > 0;
+  }
+  if (pathname === "/dashboard/relationships") {
+    return assignedLines(access, "relationship_manager", "view").length > 0;
+  }
+  return false;
+}
+
 export function getNavigationSections(context: DashboardAccessContext): NavSection[] {
   const visible = NAV_ITEMS.filter((item) =>
-    hasCapability(item.capability, context, false),
+    (CAPABILITIES[item.capability].roles as readonly UserRole[]).includes(context.role) &&
+    (scopedPathAllowed(item.href, context) ?? hasCapability(item.capability, context, false)),
   );
 
   return SECTION_META.map((section) => ({
@@ -761,6 +802,8 @@ export function isDashboardPathAllowed(
   if (!pathname.startsWith("/dashboard")) return true;
   const rule = findDashboardRouteRule(pathname);
   if (!rule) return false;
+  const scoped = scopedPathAllowed(pathname, context);
+  if (scoped !== undefined) return scoped;
   return rule.capabilities.some((capability) =>
     hasCapability(capability, context, true),
   );

@@ -2,6 +2,9 @@
 /* eslint-disable @next/next/no-img-element */
 
 import * as React from "react";
+import { useMe } from "@/features/dashboard/me-provider";
+import { assignedLines, canActOnLine } from "@/lib/sub-admin-access";
+
 import Link from "next/link";
 import {
   Archive,
@@ -166,6 +169,10 @@ export function BannersView({
 }) {
   const { session } = useAuth();
   const isAdmin = session?.role === "admin";
+  const { me } = useMe();
+  const access = me?.subAdminAccess;
+  const editLines = access ? assignedLines(access, "media_sub_admin", "edit") : undefined;
+  const canCreate = !isAdmin && (!editLines || editLines.length > 0);
   const { items, loading, error, reload } = useBannerQueue();
   const [filters, setFilters] = React.useState<FilterBarValue>(() =>
     initialStatus ? { ...EMPTY_FILTERS, status: initialStatus } : EMPTY_FILTERS,
@@ -199,7 +206,8 @@ export function BannersView({
 
   const filtered = React.useMemo(() => filterBanners(items, filters), [filters, items]);
   const bannersPage = useFilteredPage(filtered, filters);
-  const canEdit = Boolean(active && !isAdmin && EDITABLE.has(active.status));
+  const canEditActive = active && !isAdmin && (!editLines || canActOnLine(editLines, active.business_line));
+  const canEdit = Boolean(canEditActive && active && EDITABLE.has(active.status));
   const dirty = Boolean(canEdit && active && draft && JSON.stringify(draft) !== JSON.stringify(toDraft(active)));
 
   // A background refresh can bring a newer copy of the open banner (approved,
@@ -556,7 +564,7 @@ export function BannersView({
             : "Build campaigns from Admin-approved artwork, then submit them for review before they can go live."
         }
         actions={
-          !isAdmin ? (
+          canCreate ? (
             <div className="flex flex-wrap items-center gap-2">
               <Button asChild variant="outline">
                 <Link href="/dashboard/media-library">
@@ -767,13 +775,13 @@ export function BannersView({
                       </> : isAdmin && active.status === "pending_approval" ? <>
                         <Button variant="outline" disabled={busy} onClick={() => setReviewAction("changes")}>Request changes</Button>
                         <Button disabled={busy} onClick={() => void approve(active)}><CheckCircle2 className="h-4 w-4" />Approve</Button>
-                      </> : !isAdmin && EDITABLE.has(active.status) ? (
+                      </> : canEditActive && EDITABLE.has(active.status) ? (
                         <>
                           <Button variant="destructive" disabled={busy} onClick={() => void deleteBeforeLive(active)}><Trash2 className="h-4 w-4" />{active.status === "draft" ? "Delete draft" : "Delete"}</Button>
                           <Button variant="outline" disabled={busy || !dirty} onClick={() => void save(active)}>Save changes</Button>
                           <Button disabled={busy || dirty} onClick={() => void advance(submitBanner, active, "Submitted for approval")}><Send className="h-4 w-4" />Submit for approval</Button>
                         </>
-                      ) : !isAdmin ? (
+                      ) : canEditActive ? (
                         <>
                           {active.status === "live" ? <p className="mr-auto self-center text-sm text-text-secondary">Live — ask an Admin to remove it.</p> : null}
                           {DELETABLE.has(active.status) ? <Button variant="destructive" disabled={busy} onClick={() => void deleteBeforeLive(active)}><Trash2 className="h-4 w-4" />Delete</Button> : null}
@@ -781,7 +789,7 @@ export function BannersView({
                         </>
                       ) : null}
                       {isAdmin && !reviewAction ? <Button variant="destructive" disabled={busy} onClick={() => setReviewAction("remove")}><Trash2 className="h-4 w-4" />Remove</Button> : null}
-                      {!isAdmin && ARCHIVABLE.has(active.status) ? (
+                      {!access && !isAdmin && ARCHIVABLE.has(active.status) ? (
                         <Button variant="outline" disabled={busy} onClick={() => void archive(active)}><Archive className="h-4 w-4" />Archive</Button>
                       ) : null}
                     </DialogFooter>
@@ -816,12 +824,12 @@ export function BannersView({
         </DialogContent>
       </Dialog>
 
-      {!isAdmin ? (
+      {canCreate ? (
         <Dialog open={createOpen} onOpenChange={closeCreate}>
           <DialogContent preventOutsideClose showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}>
             <CmsWorkspaceHeader title="New banner" description="Select governed artwork and preview the campaign before Admin review." />
             <div className="min-h-0 overflow-y-auto py-2">
-              <BannerForm embedded onDirtyChange={setCreateDirty} onCreated={() => { setCreateDirty(false); setCreateOpen(false); void reload(); }} />
+              <BannerForm embedded allowedLines={editLines} onDirtyChange={setCreateDirty} onCreated={() => { setCreateDirty(false); setCreateOpen(false); void reload(); }} />
             </div>
           </DialogContent>
         </Dialog>

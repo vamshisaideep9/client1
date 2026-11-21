@@ -97,8 +97,10 @@ export async function reverseManualCheque(
 
 export async function searchPayoutRecipients(
   q: string,
+  businessLine?: "loans" | "real_estate",
 ): Promise<ApiResponse<PayoutRecipient[]>> {
   const params = new URLSearchParams({ q, limit: "20" });
+  if (businessLine) params.set("business_line", businessLine);
   const res = await apiRequest<Schemas["PayoutRecipientListResponse"]>(
     `/api/v1/payouts/recipients?${params}`,
   );

@@ -60,11 +60,12 @@ from app.models.payout import (
     PayoutStatus,
     PayoutType,
 )
-from app.models.profile import AgentProfile, ClientProfile, StaffProfile
+from app.models.profile import AgentProfile, ClientProfile, StaffProfile, SubAdminAccessProfile
 from app.models.transaction import Transaction, TransactionStatus, TransactionType
 from app.services import payout_links
 from app.services.admin_notify import notify_admins
 from app.services.audit_log import record as record_audit
+from app.services.sub_admin_access import read_access
 
 logger = logging.getLogger(__name__)
 
@@ -287,6 +288,7 @@ async def create_payout(
     maker_user_uuid: uuid.UUID,
     actor_role: str | None = None,
     allow_standalone: bool = True,
+    scoped_staff_id: uuid.UUID | None = None,
 ) -> uuid.UUID:
     """Validate the safety guards, provision the gateway fund account (real
     mode), and persist a payout. Main Admin payouts start approved; all others
@@ -300,6 +302,21 @@ async def create_payout(
     dedupe) and the insert must not depend on the caller's RLS scope.
     """
     async with AsyncSessionLocal() as db, db.begin():
+        if scoped_staff_id is not None:
+            staff = await db.get(StaffProfile, scoped_staff_id, with_for_update={"read": True})
+            access = read_access(await db.get(SubAdminAccessProfile, scoped_staff_id))
+            if (
+                staff is None
+                or staff.auth_user_uuid != maker_user_uuid
+                or staff.role != "sub_admin"
+                or staff.status != "active"
+                or access is None
+                or business_line not in access.lines_for("account_manager", "prepare")
+            ):
+                raise SelfPayoutForbidden(
+                    "Payout requests require current access to this business line."
+                )
+            allow_standalone = False
         payout = await prepare_payout(
             db,
             recipient_user_uuid=recipient_user_uuid,

@@ -46,8 +46,10 @@ export function PayoutCreateDialog({
   open,
   onOpenChange,
   onCreate,
+  allowedLines,
 }: {
   open: boolean;
+  allowedLines?: readonly ("loans" | "real_estate")[];
   onOpenChange: (open: boolean) => void;
   onCreate: (body: PayoutCreate) => Promise<ApiResponse<Payout>>;
 }) {
@@ -155,6 +157,7 @@ export function PayoutCreateDialog({
             <Label htmlFor="payout-recipient">Recipient<RequiredIndicator /></Label>
             <RecipientPicker
               id="payout-recipient"
+              businessLine={allowedLines ? form.businessLine : undefined}
               value={form.recipient}
               onChange={(v) => set("recipient", v)}
               aria-invalid={Boolean(errors.recipient)}
@@ -186,14 +189,14 @@ export function PayoutCreateDialog({
               <Select
                 value={form.businessLine || undefined}
                 onValueChange={(v) =>
-                  set("businessLine", v as PayoutFormState["businessLine"])
+                  setForm((current) => ({ ...current, businessLine: v as PayoutFormState["businessLine"], recipient: allowedLines ? null : current.recipient }))
                 }
               >
                 <SelectTrigger id="payout-business-line" aria-required="true" aria-invalid={Boolean(errors.businessLine)} aria-describedby={errors.businessLine ? "payout-business-line-error" : undefined}>
                   <SelectValue placeholder="Choose a business line" />
                 </SelectTrigger>
                 <SelectContent>
-                  {BUSINESS_LINE_OPTIONS.map((o) => (
+                  {BUSINESS_LINE_OPTIONS.filter((option) => !allowedLines || allowedLines.includes(option.value)).map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
                     </SelectItem>

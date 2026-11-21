@@ -9,6 +9,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, model_validato
 from app.core.security import REFERRAL_CODE_RE, normalize_referral_code
 from app.schemas.pincodes import PincodePlaceRead, PincodeValue
 from app.schemas.profile_metadata import RoleProfileRead
+from app.schemas.sub_admin_access import SubAdminAccess
 
 # Channel an OTP was actually delivered through. "none" = all channels mocked/failed
 # (dev only — the response then carries otp_hint in non-production).
@@ -219,6 +220,7 @@ class ClientProfileSummary(BaseModel):
 
 
 class MeResponse(BaseModel):
+    sub_admin_access: SubAdminAccess | None = None
     role_profiles: list[RoleProfileRead] = Field(default_factory=list)
     first_name: str
     last_name: str

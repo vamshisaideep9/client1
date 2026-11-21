@@ -17,7 +17,13 @@ from app.models.attendance import (
     AttendancePolicy,
 )
 from app.models.audit_log import AuditAction
-from app.models.profile import ProfileScope, ProfileStatus, StaffProfile, StaffRole
+from app.models.profile import (
+    ProfileScope,
+    ProfileStatus,
+    StaffProfile,
+    StaffRole,
+    SubAdminAccessProfile,
+)
 from app.models.staff_team import StaffTeam, StaffTeamMember
 from app.models.user import User, UserStatus
 from app.schemas.attendance import AttendancePolicyInput, AttendancePolicyState
@@ -29,6 +35,7 @@ from app.services.attendance_sessions import (
     session_coverage,
 )
 from app.services.audit_log import record
+from app.services.sub_admin_access import read_access
 
 STAFF_ROLES = (StaffRole.TELECALLER, StaffRole.EMPLOYEE, StaffRole.SUB_ADMIN)
 DAY = timedelta(days=1)
@@ -162,10 +169,13 @@ async def managers_for(
         criteria.append(StaffTeam.business_line == business_line)
     manager_rows = (
         await db.execute(
-            select(StaffTeam.manager_staff_profile_uuid, StaffProfile.auth_user_uuid)
+            select(StaffProfile.auth_user_uuid, StaffTeam.business_line, SubAdminAccessProfile)
             .join(StaffTeamMember, StaffTeamMember.team_uuid == StaffTeam.id)
             .join(StaffProfile, StaffProfile.id == StaffTeam.manager_staff_profile_uuid)
             .join(User, User.id == StaffProfile.auth_user_uuid)
+            .outerjoin(
+                SubAdminAccessProfile, SubAdminAccessProfile.staff_profile_uuid == StaffProfile.id
+            )
             .where(
                 *criteria,
                 StaffProfile.role == StaffRole.SUB_ADMIN,
@@ -175,7 +185,11 @@ async def managers_for(
             .with_for_update(read=True, of=(StaffTeam, StaffTeamMember))
         )
     ).all()
-    return {row.auth_user_uuid for row in manager_rows}
+    return {
+        auth_user_uuid
+        for auth_user_uuid, line, access_row in manager_rows
+        if access_row is None or line in read_access(access_row).lines_for("team_manager", "review")
+    }
 
 
 async def audit(

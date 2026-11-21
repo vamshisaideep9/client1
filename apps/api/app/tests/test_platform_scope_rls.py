@@ -67,6 +67,11 @@ _DOCUMENTED_SUB_ADMIN_EXCEPTIONS = {
     # through a separate role disjunct. Staff records use scoped policies.
     ("attendance_policies", "attendance_policies_read"),
     ("attendance_holidays", "attendance_holidays_read"),
+    # Scoped access combines a self-read or Sub Admin target check with an
+    # independent Main Admin check. No Sub Admin receives a platform bypass.
+    ("sub_admin_access", "sub_admin_access_select"),
+    ("sub_admin_access", "sub_admin_access_insert"),
+    ("sub_admin_access", "sub_admin_access_update"),
 }
 
 # Every current policy carrying a platform_scope branch. The original
@@ -172,6 +177,14 @@ _ALL_PLATFORM_SCOPE_POLICIES = {
     ("product_commission_rates", "product_commission_rates_select"),
     ("attendance_policies", "attendance_policies_read"),
     ("attendance_holidays", "attendance_holidays_read"),
+    ("sub_admin_access", "sub_admin_access_select"),
+    ("sub_admin_access", "sub_admin_access_insert"),
+    ("sub_admin_access", "sub_admin_access_update"),
+    ("relationship_activity", "relationship_activity_select"),
+    # The session clock policies have an explicit platform Admin branch next
+    # to self and team access. The scoped grants narrow team reach separately.
+    ("attendance_days", "attendance_days_read"),
+    ("attendance_requests", "attendance_requests_read"),
 }
 
 

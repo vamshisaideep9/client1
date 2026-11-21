@@ -8,13 +8,27 @@
   quarter-day LOP, and two-stage review for new requests. Regularization covers
   late waivers, early exits, on-duty credit, holiday work, and Sunday comp-off.
   New half-day requests identify their morning or afternoon session.
-- Remaining scope includes dashboard access administration and specialist
-  permissions, staff employment dates and line calendars, monthly leave
-  entitlement and sandwich calculations, private medical certificates, and
-  complete attendance reporting with closed revisions and Analytics.
+- Remaining attendance scope includes staff employment dates and line
+  calendars, monthly entitlement and sandwich calculations, private medical
+  certificates, and reporting with closed revisions and Analytics.
 - The seven focused PostgreSQL checks and 1,122 web unit tests cover the
-  delivered slice. The next implementation priority is scoped Sub Admin
-  permissions and provisioning.
+  first slice, merged in [upstream #399](https://github.com/brollysolutions/client1/pull/399).
+- Slice 2 implements Main Admin provisioning and revocable Sub Admin
+  grants by business line. Existing accounts retain legacy access until
+  explicitly transitioned. Scoped access requires both a permitted action and
+  access to the target record.
+- Main Admin can activate additional Admins' pending accounts, review grant
+  history, revoke access, and reactivate with fresh grants. Reassign live teams
+  before deactivating their manager. Relationship Managers see only assigned
+  Agents and recorded follow-ups. Account Managers can prepare scoped payout
+  requests for Admin approval. Media Sub Admins submit scoped campaigns for
+  Admin review. Team Managers use their assigned teams and supported actions.
+- Next attendance priority is employment dates and line calendars, including
+  direct reporting assignments outside the existing teams.
+- Slice 2 verification includes the migration round trip, PostgreSQL API
+  coverage for session revocation and independent grants, all 1,122 web unit
+  tests, and desktop provisioning and mobile scoped-access browser checks.
+  [Slice 2 changes](https://github.com/brollysolutions/client1/compare/main...feat/scoped-sub-admin-access)
 
 **Implemented — Batch 6 attendance management web**
 

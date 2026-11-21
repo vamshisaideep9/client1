@@ -11,7 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import (
     CurrentUser,
-    require_sub_admin,
+    check_assignment_line,
+    require_assignment,
 )
 from app.db.session import get_db
 from app.models.campaign_media import CampaignMediaAsset
@@ -36,13 +37,16 @@ from app.services.campaign_media import (
     usage_counts,
 )
 
+media_view = require_assignment("media_sub_admin", "view")
+media_edit = require_assignment("media_sub_admin", "edit")
+
 router = APIRouter()
 
 
 @router.post("/image-upload-url", response_model=CampaignMediaUploadResponse)
 async def image_upload_url(
     payload: CampaignMediaUploadRequest,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
 ) -> CampaignMediaUploadResponse:
     try:
         url, fields, object_key = presign_campaign_media(payload.content_type, payload.filename)
@@ -62,9 +66,10 @@ async def image_upload_url(
 @router.post("", response_model=CampaignMediaRead, status_code=status.HTTP_201_CREATED)
 async def confirm_media(
     payload: CampaignMediaCreate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> CampaignMediaRead:
+    check_assignment_line(current_user, "media_sub_admin", "edit", payload.business_line)
     try:
         asset = await create_asset(
             db, payload=payload, actor_uuid=current_user.id, actor_role=current_user.role
@@ -86,7 +91,7 @@ async def list_media(
     active_only: bool = False,
     usage_type: CampaignMediaUsageType | None = None,
     business_line: Literal["loans", "real_estate", "both"] | None = None,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_view),
     db: AsyncSession = Depends(get_db),
 ) -> CampaignMediaListResponse:
     stmt = select(CampaignMediaAsset).order_by(CampaignMediaAsset.created_at.desc())
@@ -110,7 +115,7 @@ async def list_media(
 @router.get("/{asset_id}", response_model=CampaignMediaRead)
 async def get_media(
     asset_id: UUID,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_view),
     db: AsyncSession = Depends(get_db),
 ) -> CampaignMediaRead:
     asset = await db.get(CampaignMediaAsset, asset_id)
@@ -123,7 +128,7 @@ async def get_media(
 async def patch_media(
     asset_id: UUID,
     payload: CampaignMediaUpdate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> CampaignMediaRead:
     asset = await db.scalar(
@@ -131,6 +136,7 @@ async def patch_media(
     )
     if asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found.")
+    check_assignment_line(current_user, "media_sub_admin", "edit", asset.business_line)
     updated = await update_asset(
         db,
         asset=asset,
@@ -144,7 +150,7 @@ async def patch_media(
 @router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_media(
     asset_id: UUID,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     asset = await db.scalar(
@@ -152,6 +158,7 @@ async def remove_media(
     )
     if asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found.")
+    check_assignment_line(current_user, "media_sub_admin", "edit", asset.business_line)
     try:
         await delete_asset(
             db, asset=asset, actor_uuid=current_user.id, actor_role=current_user.role

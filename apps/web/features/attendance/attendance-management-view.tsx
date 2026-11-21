@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardHeader, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { ListLoadingState } from "@/features/dashboard/list-states";
+import { useMe } from "@/features/dashboard/me-provider";
 import {
   decideAttendanceRequest, exportAttendance, getAttendanceInbox, getAttendanceRoster,
   type AttendanceDecision, type AttendanceInbox, type AttendanceRequest, type AttendanceRoster,
@@ -27,6 +28,8 @@ const selectClass = "min-h-10 w-full rounded-md border border-input bg-backgroun
 
 export function AttendanceManagementView() {
   const { session } = useAuth();
+  const { me } = useMe();
+  const recommendationsOnly = Boolean(me?.subAdminAccess);
   const role = session?.role;
   const admin = role === "admin";
   const [mode, setMode] = useState<Mode>("daily");
@@ -196,7 +199,8 @@ export function AttendanceManagementView() {
         </TabsContent>
       </Tabs>
       {review ? <ReviewDialog entry={review} name={members.get(review.staff_profile_id)?.name}
-        admin={admin} close={() => setReview(null)} saved={() => { setNotice("Attendance decision saved."); refresh((value) => value + 1); }} /> : null}
+        admin={admin} recommendationsOnly={recommendationsOnly} close={() => setReview(null)}
+        saved={() => { setNotice(recommendationsOnly ? "Attendance recommendation saved." : "Attendance decision saved."); refresh((value) => value + 1); }} /> : null}
     </DashboardPage>
   );
 }
@@ -240,8 +244,9 @@ function RosterTable({ roster, dates, daily }: { roster: AttendanceRoster; dates
   );
 }
 
-function ReviewDialog({ entry, name, admin, close, saved }: {
-  entry: AttendanceRequest; name?: string; admin: boolean; close: () => void; saved: () => void;
+function ReviewDialog({ entry, name, admin, recommendationsOnly, close, saved }: {
+  entry: AttendanceRequest; name?: string; admin: boolean; recommendationsOnly: boolean;
+  close: () => void; saved: () => void;
 }) {
   const last = entry.decisions.at(-1);
   const stage = entry.two_stage && (!admin || last?.stage !== "recommendation")
@@ -250,7 +255,7 @@ function ReviewDialog({ entry, name, admin, close, saved }: {
   const reversing = entry.two_stage && entry.status === "approved";
   const canDecide = entry.two_stage
     ? entry.status === "pending" || reversing
-    : admin || entry.status === "pending";
+    : admin || (!recommendationsOnly && entry.status === "pending");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit(event: FormEvent<HTMLFormElement>) {

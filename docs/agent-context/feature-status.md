@@ -4,14 +4,22 @@
 labels, two distinct team types per manager and line, and the session-clock
 workflow with midnight checkout, fractional LOP, scoped two-stage approvals,
 regularizations, and explicit half-day sessions. Legacy policy and request
-versions retain their original behavior. Access delegation and specialist
-roles, full monthly leave rules, certificate handling, and monthly reporting
+versions retain their original behavior. Slice 2 adds Main Admin provisioning
+and management of scoped Sub Admin access. Team Manager, Media Sub Admin,
+Account Manager, and Relationship Manager grants are evaluated per action and
+business line. Legacy Sub Admins keep their current access until explicitly
+transitioned. Existing team assignments drive attendance recommendations.
+Separate direct attendance reporting assignments, employment dates, line
+holiday calendars, monthly leave rules, certificates, and closed reporting
 remain open.
 
-Verification on this slice includes the seven focused session-clock and
-regularization cases on migrated PostgreSQL, cross-line team visibility,
-one Alembic head, API and web lint, web typechecking, and all 1,122 web unit
-tests. The complete feature remains in progress.
+Slice 1 was merged in [upstream #399](https://github.com/brollysolutions/client1/pull/399).
+Slice 2 adds PostgreSQL coverage for pending activation, stale sessions,
+cross-line payout and campaign restrictions, and assigned Agent activity.
+The migration round trip and single-head check passed. All 1,122 web unit tests
+and the desktop activation and mobile delegated-access browser journeys
+passed. The complete attendance feature remains in progress.
+[Slice 2 changes](https://github.com/brollysolutions/client1/compare/main...feat/scoped-sub-admin-access)
 
 **Implemented — Batch 6 attendance management web**
 

@@ -7,17 +7,19 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRoute
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.brand import branded_filename
 from app.core.deps import (
     CurrentUser,
-    get_active_user,
+    get_personal_user,
+    require_assignment,
     require_platform_admin,
-    require_sub_admin_or_platform_admin,
 )
 from app.db.session import get_db
 from app.models.audit_log import AuditAction
+from app.models.staff_team import StaffTeam
 from app.schemas.attendance import (
     AttendanceAdjustmentInput,
     AttendanceCorrectionInput,
@@ -56,7 +58,9 @@ class AttendanceRoute(APIRoute):
 router = APIRouter(route_class=AttendanceRoute)
 
 
-async def require_attendance_staff(user: CurrentUser = Depends(get_active_user)) -> CurrentUser:
+async def require_attendance_staff(user: CurrentUser = Depends(get_personal_user)) -> CurrentUser:
+    if user.sub_admin_access is not None and user.sub_admin_access.status != "active":
+        raise HTTPException(403, detail="Attendance is available once access is activated.")
     if user.role not in attendance.STAFF_ROLES or user.staff_profile_uuid is None:
         raise HTTPException(
             403, detail="Only Telecallers, Officers, and Sub Admins can use the attendance clock."
@@ -65,7 +69,9 @@ async def require_attendance_staff(user: CurrentUser = Depends(get_active_user))
 
 
 Staff = Annotated[CurrentUser, Depends(require_attendance_staff)]
-Reviewer = Annotated[CurrentUser, Depends(require_sub_admin_or_platform_admin)]
+Reviewer = Annotated[
+    CurrentUser, Depends(require_assignment("team_manager", "review", include_admin=True))
+]
 Admin = Annotated[CurrentUser, Depends(require_platform_admin)]
 DB = Annotated[AsyncSession, Depends(get_db)]
 PageSize = Annotated[int, Query(ge=1, le=100)]
@@ -112,9 +118,25 @@ async def cancel_request(request_id: UUID, user: Staff):
     return await attendance_requests.cancel(user, request_id)
 
 
+async def _check_team_review(db: DB, user: CurrentUser, team_id: UUID | None) -> None:
+    if user.sub_admin_access is None:
+        return
+    await db.execute(text("SELECT set_config('app.team_review', 'true', true)"))
+    if team_id is None:
+        return
+    line = await db.scalar(
+        select(StaffTeam.business_line).where(
+            StaffTeam.id == team_id,
+            StaffTeam.manager_staff_profile_uuid == user.staff_profile_uuid,
+        )
+    )
+    if line not in user.sub_admin_access.lines_for("team_manager", "review"):
+        raise HTTPException(404, detail="Team not found.")
+
+
 @router.get("/roster", response_model=AttendanceRosterRead)
 async def get_roster(
-    _: Reviewer,
+    user: Reviewer,
     db: DB,
     start: date,
     end: date,
@@ -124,6 +146,7 @@ async def get_roster(
     limit: PageSize = 50,
     offset: Offset = 0,
 ):
+    await _check_team_review(db, user, team_id)
     return await attendance_views.roster(
         db,
         start=start,
@@ -138,7 +161,7 @@ async def get_roster(
 
 @router.get("/requests", response_model=AttendanceInboxRead)
 async def get_requests(
-    _: Reviewer,
+    user: Reviewer,
     db: DB,
     status: RequestStatus | None = "pending",
     team_id: UUID | None = None,
@@ -148,6 +171,7 @@ async def get_requests(
     limit: PageSize = 50,
     offset: Offset = 0,
 ):
+    await _check_team_review(db, user, team_id)
     if start is not None and end is not None:
         attendance_views.validate_period(start, end)
     return await attendance_views.inbox(
@@ -164,6 +188,8 @@ async def get_requests(
 
 @router.post("/requests/{request_id}/decision", response_model=AttendanceRequestRead)
 async def decide_request(request_id: UUID, payload: AttendanceDecisionInput, user: Reviewer):
+    if user.sub_admin_access is not None and payload.stage != "recommendation":
+        raise HTTPException(403, detail="Only a platform Admin can make a final decision.")
     return await attendance_requests.decide(user, request_id, payload)
 
 

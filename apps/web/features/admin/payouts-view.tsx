@@ -42,6 +42,9 @@ import { isInDateRange } from "@/lib/date-range";
 import { formatDate, formatPaise } from "@/lib/format";
 import type { Payout, PayoutStatus } from "@/lib/payouts-api";
 
+import { useMe } from "@/features/dashboard/me-provider";
+import { assignedLines } from "@/lib/sub-admin-access";
+
 import { PayoutCreateDialog } from "./payout-create-dialog";
 import { PayoutGatewaySimulatorDialog } from "./payout-gateway-simulator-dialog";
 import { useAdminPayouts } from "./use-admin-payouts";
@@ -95,6 +98,10 @@ function shortId(id: string): string {
 export function PayoutsView() {
   const { session } = useAuth();
   const canReview = session?.role === "admin";
+  const { me } = useMe();
+  const scoped = me?.subAdminAccess;
+  const prepareLines = scoped ? assignedLines(scoped, "account_manager", "prepare") : undefined;
+  const canPrepare = !prepareLines || prepareLines.length > 0;
   const {
     payouts,
     status,
@@ -408,9 +415,9 @@ export function PayoutsView() {
         description={
           canReview
             ? "Approve, reject, and settle cashback, referral, and commission disbursements."
-            : "Prepare payout requests and follow only the requests you raised. Admin review and settlement are separate."
+            : scoped ? "Review payouts in your assigned business lines." : "Prepare payout requests and follow only the requests you raised. Admin review and settlement are separate."
         }
-        actions={<Button onClick={() => setCreateOpen(true)}>Raise a payout</Button>}
+        actions={canPrepare ? <Button onClick={() => setCreateOpen(true)}>Raise a payout</Button> : undefined}
       />
 
       <FilterBar
@@ -425,7 +432,7 @@ export function PayoutsView() {
         note={
           canReview
             ? "The Admin who raises a payout cannot approve it. Manual cheques settle only after clearance."
-            : "You can create and track requests. Approval, rejection, reconciliation, and cheque settlement remain Admin-only."
+            : scoped ? "Platform Admin handles final decisions and settlement." : "You can create and track requests. Approval, rejection, reconciliation, and cheque settlement remain Admin-only."
         }
       />
 
@@ -433,8 +440,8 @@ export function PayoutsView() {
         <FetchError status={errorStatus} message={error} onRetry={retry} />
       ) : (
         <DashboardPanel
-          title={canReview ? "Payout ledger" : "My requests"}
-          description={canReview ? "Maker-checker approvals and settlement state across every money programme." : "Maker-side status for requests raised by your account."}
+          title={canReview || scoped ? "Payout ledger" : "My requests"}
+          description={canReview ? "Maker-checker approvals and settlement state across every money programme." : scoped ? "Payments within your assigned business lines." : "Maker-side status for requests raised by your account."}
           bodyClassName="p-0"
         >
           {status === "loading" ? (
@@ -730,6 +737,7 @@ export function PayoutsView() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreate={create}
+        allowedLines={prepareLines}
       />
     </DashboardPage>
   );

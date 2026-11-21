@@ -33,6 +33,8 @@ _SUB_ADMIN_TRANSITIONS: dict[OfferStatus, set[OfferStatus]] = {
 }
 _ADMIN_TRANSITIONS: dict[OfferStatus, set[OfferStatus]] = {
     OfferStatus.PENDING_APPROVAL: {OfferStatus.APPROVED, OfferStatus.REJECTED},
+    OfferStatus.APPROVED: {OfferStatus.SCHEDULED, OfferStatus.ACTIVE},
+    OfferStatus.SCHEDULED: {OfferStatus.ACTIVE},
 }
 _AUDIT_ACTION = {
     OfferStatus.PENDING_APPROVAL: AuditAction.OFFER_SUBMITTED,

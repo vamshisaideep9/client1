@@ -71,6 +71,7 @@ export type ClientLineProfile = {
 };
 
 export type Me = {
+  subAdminAccess?: Schemas["SubAdminAccess"] | null;
   roleProfiles?: Schemas["RoleProfileRead"][];
   firstName: string;
   lastName: string;
@@ -344,6 +345,7 @@ export async function login(
 
 function mapMe(d: Schemas["MeResponse"]): Me {
   return {
+    subAdminAccess: d.sub_admin_access ?? null,
     roleProfiles: d.role_profiles ?? [],
     firstName: d.first_name,
     lastName: d.last_name,

@@ -18,6 +18,7 @@ from app.cache.redis_keys import RedisCache, jwt_blacklist_key
 from app.core.config import settings
 from app.core.security import decode_access_token
 from app.db.session import get_db
+from app.schemas.sub_admin_access import AccessAction, Assignment, SubAdminAccess
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,7 @@ class CurrentUser:
     # email. Read from the live account row on every request (not a token
     # claim), so the gate lifts on the very next request after verification.
     email_required: bool = field(default=False)
+    sub_admin_access: SubAdminAccess | None = field(default=None)
 
 
 async def get_redis(request: Request) -> aioredis.Redis:
@@ -224,6 +226,31 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    staff_uuid = _parse_uuid(claims.get("staff_profile_uuid"))
+    sub_admin_access = None
+    platform_scope = claims.get("platform_scope")
+    if role == "sub_admin" and staff_uuid is not None:
+        from app.models.profile import SubAdminAccessProfile
+
+        access = await db.get(SubAdminAccessProfile, staff_uuid)
+        if access is not None:
+            sub_admin_access = SubAdminAccess.model_validate(access, from_attributes=True)
+            if sub_admin_access.status == "inactive":
+                raise credentials_error
+            platform_scope = "false"
+            business_line = None
+            staff_features = frozenset()
+            await _set_rls_context(
+                db=db,
+                user_uuid=str(user_id),
+                role=role,
+                business_line="",
+                client_profile_uuid="",
+                agent_profile_uuid="",
+                staff_profile_uuid=str(staff_uuid),
+                platform_scope=platform_scope,
+            )
+
     return CurrentUser(
         id=user_id,
         role=role,
@@ -233,11 +260,12 @@ async def get_current_user(
         business_line=business_line,
         client_profile_uuid=_parse_uuid(claims.get("client_profile_uuid")),
         agent_profile_uuid=_parse_uuid(claims.get("agent_profile_uuid")),
-        staff_profile_uuid=_parse_uuid(claims.get("staff_profile_uuid")),
-        platform_scope=claims.get("platform_scope"),
+        staff_profile_uuid=staff_uuid,
+        platform_scope=platform_scope,
         staff_features=staff_features,
         force_reset=claims.get("force_reset", False),
         email_required=email_required_for(user),
+        sub_admin_access=sub_admin_access,
     )
 
 
@@ -273,7 +301,7 @@ async def get_active_user_allow_email_pending(
     return current_user
 
 
-async def get_active_user(
+async def get_personal_user(
     current_user: CurrentUser = Depends(get_active_user_allow_email_pending),
 ) -> CurrentUser:
     """Like get_current_user, but rejects a force-reset session.
@@ -294,6 +322,43 @@ async def get_active_user(
             headers={"X-Email-Required": "1"},
         )
     return current_user
+
+
+async def get_active_user(
+    current_user: CurrentUser = Depends(get_personal_user),
+) -> CurrentUser:
+    """Legacy business routes are closed to scoped and pending Sub Admins."""
+    if current_user.sub_admin_access is not None:
+        raise HTTPException(403, detail="This operation requires a dashboard grant.")
+    return current_user
+
+
+def require_assignment(
+    assignment: Assignment, action: AccessAction, *, include_admin: bool = False
+):
+    """Opt a reviewed route into scoped access. RLS or the service checks the target line."""
+
+    async def require_user(user: CurrentUser = Depends(get_personal_user)) -> CurrentUser:
+        if include_admin and is_platform_admin(user):
+            return user
+        if user.role == "sub_admin" and (
+            user.sub_admin_access is None or user.sub_admin_access.lines_for(assignment, action)
+        ):
+            return user
+        raise HTTPException(403, detail="This operation requires a dashboard grant.")
+
+    return require_user
+
+
+def check_assignment_line(
+    user: CurrentUser, assignment: Assignment, action: AccessAction, business_line: str
+) -> None:
+    access = user.sub_admin_access
+    if access is None:
+        return
+    lines = access.lines_for(assignment, action)
+    if business_line not in lines and (business_line != "both" or len(lines) != 2):
+        raise HTTPException(403, detail="This operation is outside your assigned business lines.")
 
 
 async def require_re_submitter(

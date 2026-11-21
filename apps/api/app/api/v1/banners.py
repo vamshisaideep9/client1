@@ -17,11 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import campaign_artwork
 from app.core.deps import (
     CurrentUser,
-    get_active_user,
+    check_assignment_line,
+    get_personal_user,
     require_admin,
+    require_assignment,
     require_platform_admin,
     require_sub_admin,
-    require_sub_admin_or_platform_admin,
 )
 from app.db.session import get_db
 from app.models.audit_log import AuditAction
@@ -72,6 +73,24 @@ from app.services.campaign_media import (
     asset_image_url,
     resolve_campaign_asset,
 )
+
+media_view = require_assignment("media_sub_admin", "view", include_admin=True)
+media_edit = require_assignment("media_sub_admin", "edit")
+media_shared_edit = require_assignment("media_sub_admin", "edit")
+
+
+async def shared_media_edit(user: CurrentUser = Depends(media_shared_edit)) -> CurrentUser:
+    check_assignment_line(user, "media_sub_admin", "edit", "both")
+    return user
+
+
+async def media_record_reader(user: CurrentUser = Depends(get_personal_user)) -> CurrentUser:
+    if user.sub_admin_access is not None and not user.sub_admin_access.lines_for(
+        "media_sub_admin", "view"
+    ):
+        raise HTTPException(403, detail="This operation requires a dashboard grant.")
+    return user
+
 
 router = APIRouter()
 
@@ -129,9 +148,10 @@ async def _resolve_video_asset(
 @router.post("", response_model=BannerRead, status_code=status.HTTP_201_CREATED)
 async def create_banner(
     payload: BannerCreate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> BannerRead:
+    check_assignment_line(current_user, "media_sub_admin", "edit", payload.business_line)
     try:
         template, _, _ = await validate_banner_configuration(
             db,
@@ -227,7 +247,7 @@ def _template_read(template: BannerTemplate) -> BannerTemplateRead:
 @router.get("/templates", response_model=BannerTemplateListResponse)
 async def list_banner_templates(
     active_only: bool = True,
-    current_user: CurrentUser = Depends(require_sub_admin_or_platform_admin),
+    current_user: CurrentUser = Depends(media_view),
     db: AsyncSession = Depends(get_db),
 ) -> BannerTemplateListResponse:
     stmt = select(BannerTemplate).order_by(
@@ -242,7 +262,7 @@ async def list_banner_templates(
 @router.post("/templates", response_model=BannerTemplateRead, status_code=status.HTTP_201_CREATED)
 async def add_banner_template_version(
     payload: BannerTemplateCreate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(shared_media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> BannerTemplateRead:
     try:
@@ -260,7 +280,7 @@ async def add_banner_template_version(
 @router.post("/templates/image-upload-url", response_model=BannerImageUploadResponse)
 async def get_template_image_upload_url(
     payload: BannerImageUploadRequest,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(shared_media_edit),
 ) -> BannerImageUploadResponse:
     try:
         url, fields, object_key = presign_banner_image_upload(
@@ -279,7 +299,7 @@ async def get_template_image_upload_url(
 @router.post("/image-upload-url", response_model=BannerImageUploadResponse)
 async def get_banner_image_upload_url(
     payload: BannerImageUploadRequest,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
 ) -> BannerImageUploadResponse:
     # No DB row yet -- a banner may not exist until after the image is
     # picked (create_banner takes image_key as a plain field). The key
@@ -304,7 +324,7 @@ async def get_banner_image_upload_url(
 @router.get("", response_model=BannerListResponse)
 async def list_banners(
     status_filter: BannerStatus | None = None,
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(media_record_reader),
     db: AsyncSession = Depends(get_db),
 ) -> BannerListResponse:
     # RLS scopes the rows: sub_admin and admin see the shared queue, anyone else
@@ -319,7 +339,7 @@ async def list_banners(
 @router.get("/{banner_id}", response_model=BannerRead)
 async def get_banner(
     banner_id: UUID,
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(media_record_reader),
     db: AsyncSession = Depends(get_db),
 ) -> BannerRead:
     banner = await db.scalar(
@@ -335,7 +355,7 @@ async def get_banner(
 async def update_banner(
     banner_id: UUID,
     payload: BannerUpdate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> BannerRead:
     visible_banner = await db.scalar(
@@ -346,6 +366,7 @@ async def update_banner(
     # RLS and this application guard both restrict mutation to draft/rejected
     # rows. The queue is intentionally shared across the Sub Admin team, so
     # authorship is audit provenance rather than an edit-authorization boundary.
+    check_assignment_line(current_user, "media_sub_admin", "edit", visible_banner.business_line)
     if visible_banner.status not in (BannerStatus.DRAFT, BannerStatus.REJECTED):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -504,7 +525,7 @@ async def update_banner(
 @router.post("/{banner_id}/submit", response_model=BannerRead)
 async def submit(
     banner_id: UUID,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> BannerRead:
     try:
@@ -540,7 +561,7 @@ _LIVE_NEEDS_ADMIN = "Live banners can only be taken down by an Admin."
 @router.delete("/{banner_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_banner_draft(  # name kept: it is the published operationId
     banner_id: UUID,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Sub Admin hard-deletes a banner until it goes live (draft, pending
@@ -605,12 +626,13 @@ async def remove(
 )
 async def create_replacement(
     banner_id: UUID,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> BannerRead:
     source = await db.scalar(select(Banner).where(Banner.id == banner_id))
     if source is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Banner not found.")
+    check_assignment_line(current_user, "media_sub_admin", "edit", source.business_line)
     if source.status not in (BannerStatus.APPROVED, BannerStatus.LIVE, BannerStatus.ARCHIVED):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

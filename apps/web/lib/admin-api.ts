@@ -48,8 +48,16 @@ export async function createStaff(
   });
 }
 
-export async function getStaffAccess(): Promise<ApiResponse<StaffAccessList>> {
-  return apiRequest<StaffAccessList>("/api/v1/admin/staff-access");
+export async function getStaffAccess(pendingOnly = false): Promise<ApiResponse<StaffAccessList>> {
+  return apiRequest<StaffAccessList>("/api/v1/admin/staff-access" + (pendingOnly ? "?pending_only=true" : ""));
+}
+
+export function setSubAdminAccess(id: string, body: Schemas["SubAdminAccessUpdate"]) {
+  return apiRequest<StaffAccessList>("/api/v1/admin/staff-access/" + id + "/dashboard", { method: "PUT", body });
+}
+
+export function getSubAdminAccessHistory(id: string) {
+  return apiRequest<Schemas["SubAdminAccessHistory"][]>("/api/v1/admin/staff-access/" + id + "/history");
 }
 
 export async function setStaffFeature(
