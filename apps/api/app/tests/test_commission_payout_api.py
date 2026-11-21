@@ -28,6 +28,7 @@ from app.models.payout import Payout, PayoutDestination, PayoutStatus, PayoutTyp
 from app.models.profile import AgentProfile, ClientProfile, ProfileStatus
 from app.models.user import User
 from app.services import payments as payments_service
+from app.tests.test_admin_hierarchy_api import _primary_admin
 from conftest import full_registration, unique_mobile
 
 pytestmark = pytest.mark.asyncio
@@ -518,6 +519,182 @@ async def test_rejected_payout_releases_commission_for_retry(client: AsyncClient
     assert retry_res.status_code == 201, retry_res.text
 
 
+async def _seed_batch(maker_uuid, *, count=2):
+    agent_uid, profile_id = await _seed_agent()
+    ids = [
+        await _seed_commission(
+            agent_auth_user_uuid=agent_uid,
+            agent_profile_uuid=profile_id,
+            business_line="loans",
+            entered_by_uuid=str(maker_uuid),
+            amount_paise=50_000 + i,
+        )
+        for i in range(count)
+    ]
+    return agent_uid, profile_id, ids
+
+
+async def _post_batch(client, token, ids):
+    return await client.post(
+        "/api/v1/admin/commissions/bulk-payout",
+        headers=_headers(token),
+        json=_payout_body(commission_ids=ids),
+    )
+
+
+@pytest.mark.parametrize("single", [False, True])
+async def test_bulk_and_overlapping_claims_create_one_payout(client, single):
+    token, maker = await _make_admin(client)
+    agent, _, ids = await _seed_batch(maker, count=3)
+    competing = (
+        client.post(
+            f"/api/v1/admin/commissions/{ids[1]}/payout",
+            headers=_headers(token),
+            json=_payout_body(),
+        )
+        if single
+        else _post_batch(client, token, [ids[2], ids[1]])
+    )
+    first, second = await asyncio.gather(_post_batch(client, token, ids[:2]), competing)
+    assert sorted((first.status_code, second.status_code)) == [201, 409]
+    selected = ids[:2] if first.status_code == 201 else ids[1:2] if single else ids[1:]
+    winner = first if first.status_code == 201 else second
+    payout_id = uuid.UUID(winner.json()["payout_id"])
+    for commission_id in ids:
+        row = await _get_commission_row(commission_id)
+        assert row["payout_uuid"] == (payout_id if commission_id in selected else None)
+    replay = await _post_batch(client, token, list(reversed(selected)))
+    assert replay.status_code == 409
+
+    import app.db.session as session_mod
+
+    async with session_mod.AsyncSessionLocal() as db:
+        payouts = (
+            (
+                await db.execute(
+                    text("SELECT id FROM payouts WHERE recipient_user_uuid = :agent"),
+                    {"agent": agent},
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert payouts == [payout_id]
+
+
+async def test_bulk_validates_all_rows_and_rolls_back_prepared_payout(client, monkeypatch):
+    token, maker = await _make_admin(client)
+    agent, profile, ids = await _seed_batch(maker)
+    _, _, other = await _seed_batch(maker, count=1)
+    groups = await client.get(
+        "/api/v1/admin/commissions/pending-payout-groups?limit=200", headers=_headers(token)
+    )
+    assert groups.status_code == 200, groups.text
+    group = next(row for row in groups.json()["groups"] if row["agent_profile_uuid"] == profile)
+    assert (group["pending_count"], group["pending_amount_paise"]) == (2, 100_001)
+    for selection, expected in (
+        ([ids[0], ids[0]], 422),
+        ([], 422),
+        ([ids[0], str(uuid.uuid4())], 404),
+        ([ids[0], other[0]], 409),
+    ):
+        result = await _post_batch(client, token, selection)
+        assert result.status_code == expected, result.text
+
+    with monkeypatch.context() as caps:
+        caps.setattr(settings, "PAYOUT_MAX_AMOUNT_PAISE", 100_000)
+        over_cap = await _post_batch(client, token, ids)
+        assert over_cap.status_code == 422, over_cap.text
+
+    original_prepare = payments_service.prepare_payout
+
+    async def fail_after_flush(*args, **kwargs):
+        await original_prepare(*args, **kwargs)
+        raise payments_service.GatewayError("Synthetic payout preparation failure.")
+
+    monkeypatch.setattr(payments_service, "prepare_payout", fail_after_flush)
+    failure = await _post_batch(client, token, ids)
+    assert failure.status_code == 502, failure.text
+    for commission_id in ids:
+        row = await _get_commission_row(commission_id)
+        assert row["status"] == "pending"
+        assert row["payout_uuid"] is None
+
+    import app.db.session as session_mod
+
+    async with session_mod.AsyncSessionLocal() as db:
+        count = await db.scalar(
+            text("SELECT count(*) FROM payouts WHERE recipient_user_uuid = :agent"),
+            {"agent": agent},
+        )
+    assert count == 0
+
+
+async def test_main_admin_initiates_after_commit_and_reversal_preserves_bulk_items(
+    client, monkeypatch
+):
+    token, maker, _ = await _primary_admin(client)
+    agent, profile, ids = await _seed_batch(maker)
+    original_initiate = payments_service.initiate_payout
+
+    async def observe_committed_links(payout_id):
+        for commission_id in ids:
+            row = await _get_commission_row(commission_id)
+            assert row["payout_uuid"] == payout_id
+        await original_initiate(payout_id)
+
+    monkeypatch.setattr(payments_service, "initiate_payout", observe_committed_links)
+    create = await _post_batch(client, token, ids)
+    assert create.status_code == 201, create.text
+    payout_id = create.json()["payout_id"]
+
+    import app.db.session as session_mod
+
+    async with session_mod.AsyncSessionLocal() as db:
+        payout = await db.get(Payout, uuid.UUID(payout_id))
+        assert payout.status == PayoutStatus.PAID
+        assert payout.amount_paise == 100_001
+        assert payout.checker_user_uuid is None
+        initial_txn = payout.ledger_transaction_id
+        gateway_id = payout.gateway_payout_id
+    for commission_id in ids:
+        assert (await _get_commission_row(commission_id))["payout_txn_uuid"] == initial_txn
+    await payments_service.settle_from_webhook(
+        event="payout.reversed", gateway_payout_id=gateway_id
+    )
+    for commission_id in ids:
+        row = await _get_commission_row(commission_id)
+        assert row["status"] == "pending"
+        assert row["payout_uuid"] is None
+
+    retry = await _post_batch(client, token, ids[::-1])
+    assert retry.status_code == 201, retry.text
+    assert retry.json()["payout_id"] != payout_id
+    agent_token = create_access_token(
+        {"sub": agent, "role": "agent", "business_line": "loans", "agent_profile_uuid": profile}
+    )
+    covered = await client.get(
+        f"/api/v1/admin/commissions/payouts/{payout_id}/items", headers=_headers(token)
+    )
+    assert covered.status_code == 200, covered.text
+    assert {item["id"] for item in covered.json()} == set(ids)
+    forbidden = await client.get(
+        f"/api/v1/admin/commissions/payouts/{payout_id}/items", headers=_headers(agent_token)
+    )
+    assert forbidden.status_code == 403
+    history = await client.get(
+        f"/api/v1/agent/transactions/{initial_txn}", headers=_headers(agent_token)
+    )
+    assert history.status_code == 200, history.text
+    assert history.json()["payout"]["status"] == "reversed"
+    assert {item["commission_id"] for item in history.json()["items"]} == set(ids)
+    generic = await client.get(f"/api/v1/transactions/{initial_txn}", headers=_headers(agent_token))
+    assert generic.status_code == 200, generic.text
+    assert generic.json()["payment"]["status"] == "reversed"
+    assert generic.json()["payment"]["reversed_at"]
+    assert "9876543210" not in generic.text
+
+
 async def test_concurrent_pay_commission_creates_no_orphan_payout(client: AsyncClient) -> None:
     """Two simultaneous 'Pay commission' calls for the SAME commission must
     never both succeed. The deterministic per-commission idempotency key
@@ -661,58 +838,3 @@ async def test_reversal_after_paid_frees_commission_for_retry(client: AsyncClien
         json=_payout_body(),
     )
     assert retry_res.status_code == 201, retry_res.text
-
-
-async def test_attach_failure_rejects_the_orphan_payout(client: AsyncClient, monkeypatch) -> None:
-    """If the commission stops being pending between create_payout succeeding
-    and attach_payout's CAS (e.g. it was cancelled by another admin in that
-    narrow window — the deterministic idempotency key means the concurrent
-    -second-request race itself can't reach this branch, since
-    create_payout's own dedupe guard catches that first, see
-    test_concurrent_pay_commission_creates_no_orphan_payout), the router must
-    best-effort reject the payout it just created rather than leave a live
-    pending_approval artifact with nothing pointing at it. Forces the branch
-    directly via monkeypatch since the real race window is a few
-    microseconds wide and not reliably reproducible from the HTTP layer."""
-    from app.services import commissions as commissions_service
-
-    admin_token, admin_uid = await _make_admin(client)
-    agent_uid, agent_profile_uuid = await _seed_agent("loans")
-    commission_id = await _seed_commission(
-        agent_auth_user_uuid=agent_uid,
-        agent_profile_uuid=agent_profile_uuid,
-        business_line="loans",
-        entered_by_uuid=admin_uid,
-    )
-
-    async def _always_fails_to_attach(*, commission_id, payout_id):
-        return False
-
-    monkeypatch.setattr(commissions_service, "attach_payout", _always_fails_to_attach)
-
-    res = await client.post(
-        f"/api/v1/admin/commissions/{commission_id}/payout",
-        headers=_headers(admin_token),
-        json=_payout_body(),
-    )
-    assert res.status_code == 409, res.text
-    assert "concurrently" in res.json()["detail"].lower()
-
-    # The commission itself is untouched (attach never succeeded)...
-    row = await _get_commission_row(commission_id)
-    assert row["status"] == "pending"
-    assert row["payout_uuid"] is None
-
-    # ...but the orphaned payout was rejected, not left dangling pending_approval.
-    import app.db.session as _session_mod
-
-    async with _session_mod.AsyncSessionLocal() as db:
-        result = await db.execute(
-            text(
-                "SELECT status FROM payouts WHERE recipient_user_uuid = :uid "
-                "AND type = 'commission'"
-            ),
-            {"uid": agent_uid},
-        )
-        statuses = [r[0] for r in result.fetchall()]
-    assert statuses == ["rejected"], statuses

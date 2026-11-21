@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -40,7 +40,7 @@ lead_status_enum = ENUM(LeadStatus, name="lead_status", create_type=False, value
 
 
 class LeadAssignmentCursor(Base):
-    """Internal per-line cursor for deterministic automatic assignment."""
+    """Internal per-line, per-candidate-pool automatic assignment cursor."""
 
     __tablename__ = "lead_assignment_cursors"
     __table_args__ = (
@@ -48,11 +48,20 @@ class LeadAssignmentCursor(Base):
             "business_line::text IN ('loans', 'real_estate')",
             name="business_line_operational",
         ),
+        CheckConstraint(
+            "pool = 'all' OR (business_line::text = 'loans' AND "
+            "(pool = 'unspecialised' OR pool ~ "
+            "'^product:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'))",
+            name="pool",
+        ),
     )
 
     business_line: Mapped[str] = mapped_column(
         business_line_enum,
         primary_key=True,
+    )
+    pool: Mapped[str] = mapped_column(
+        String(64), primary_key=True, default="all", server_default="all"
     )
     last_telecaller_profile_uuid: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -143,6 +152,28 @@ class Lead(Base):
     # Telecaller pool and continue through assigned/working/converted later.
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     agent_expired_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # Same-Agent resubmissions after expiry (2026-11-14 amendment to FR-4.6).
+    resubmit_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    # Set once the 7-day "client hasn't registered" reminder is sent for the
+    # current window; cleared when the Agent resubmits.
+    expiry_reminder_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # CS-028: the Telecaller whose assignment was most recently cleared
+    # (expiry, stale-assignee repair, Admin release). A resubmitted lead goes
+    # back to them while they are still eligible. The trigger
+    # trg_leads_last_telecaller_guard allows only the assignee being cleared.
+    last_telecaller_profile_uuid: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("staff_profiles.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # CS-028: when the originating Agent last resubmitted the lead.
+    last_resubmitted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(

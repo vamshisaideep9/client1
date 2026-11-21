@@ -20,7 +20,9 @@ import {
   matchesSearch,
   type FilterBarValue,
 } from "@/features/dashboard/filter-bar";
+import { AmountRangeFields } from "@/features/dashboard/amount-range-fields";
 import { ListEmptyState, ListLoadingState, ListPagination } from "@/features/dashboard/list-states";
+import { amountRangeLabel, parseRupees } from "@/features/dashboard/product-filter-options";
 import { StatusBadge, type StatusTone } from "@/features/dashboard/status-badge";
 import { useFilteredPage } from "@/features/dashboard/use-filtered-page";
 import { PANEL_DIALOG_CLASS, WorkspaceDialogHeader, WorkspaceLayout } from "@/features/dashboard/workspace-dialog";
@@ -56,10 +58,25 @@ function money(value: string | null | undefined): string {
   return value ? formatINR(Number(value)) : "-";
 }
 
+/** Quoted price within the typed range; an inverted range matches nothing. */
+export function priceInRange(value: string | null | undefined, range: { min: string; max: string }): boolean {
+  const min = parseRupees(range.min);
+  const max = parseRupees(range.max);
+  if (min === null && max === null) return true;
+  const quoted = value === null || value === undefined || value === "" ? null : Number(value);
+  if (quoted === null || Number.isNaN(quoted)) return false;
+  if (min !== null && quoted < min) return false;
+  return !(max !== null && quoted > max);
+}
+
 export function PropertyDealsView() {
   const [filters, setFilters] = React.useState<FilterBarValue>(EMPTY_FILTERS);
+  // Quoted price range, rupees as typed (CS-023).
+  const [price, setPrice] = React.useState({ min: "", max: "" });
   const [sort, setSort] = React.useState<SortState>({ key: "opened_at", dir: "desc" });
   const [activeId, setActiveId] = React.useState<string | null>(null);
+  const priceText = amountRangeLabel(price.min, price.max);
+  const anyFilter = filtersAreActive(filters) || priceText !== null;
 
   // Status is applied server-side by the hook; the rest filter in memory.
   const { deals, loading, error, reload, updateDeal } = useAdminPropertyDeals(
@@ -71,6 +88,7 @@ export function PropertyDealsView() {
       (deal) =>
         isInDateRange(deal.opened_at, filters.from, filters.to) &&
         (filters.line === "all" || deal.business_line === filters.line) &&
+        priceInRange(deal.price_quoted, price) &&
         matchesSearch(`${deal.property_title} ${deal.customer_code}`, filters.search),
     );
     const direction = sort.dir === "asc" ? 1 : -1;
@@ -86,9 +104,10 @@ export function PropertyDealsView() {
           return (new Date(a.opened_at).getTime() - new Date(b.opened_at).getTime()) * direction;
       }
     });
-  }, [deals, filters, sort]);
+  }, [deals, filters, price, sort]);
 
-  const { page, setPage, pageRows, total } = useFilteredPage(filtered, filters);
+  const pageResetKey = React.useMemo(() => ({ filters, price }), [filters, price]);
+  const { page, setPage, pageRows, total } = useFilteredPage(filtered, pageResetKey);
   const active = activeId ? deals.find((deal) => deal.id === activeId) ?? null : null;
 
   const columns: DataColumn<Deal>[] = [
@@ -158,6 +177,31 @@ export function PropertyDealsView() {
         ]}
         dateFromLabel="Opened from"
         dateToLabel="Opened to"
+        more={[
+          {
+            title: "Money",
+            content: (
+              <AmountRangeFields
+                legend="Quoted price (₹)"
+                name="quoted price"
+                min={price.min}
+                max={price.max}
+                onChange={setPrice}
+              />
+            ),
+          },
+        ]}
+        moreActiveCount={priceText ? 1 : 0}
+        onClearMore={() => setPrice({ min: "", max: "" })}
+        chips={
+          priceText
+            ? [{ id: "price", label: `Quoted price: ${priceText}`, onRemove: () => setPrice({ min: "", max: "" }) }]
+            : []
+        }
+        onClear={() => {
+          setFilters(EMPTY_FILTERS);
+          setPrice({ min: "", max: "" });
+        }}
       />
 
       {loading ? (
@@ -167,9 +211,9 @@ export function PropertyDealsView() {
       ) : total === 0 ? (
         <ListEmptyState
           icon={Home}
-          title={filtersAreActive(filters) ? "No deals match these filters" : "No property deals yet"}
+          title={anyFilter ? "No deals match these filters" : "No property deals yet"}
           description={
-            filtersAreActive(filters)
+            anyFilter
               ? "Try a different search, status, line, or date range."
               : "Deals telecallers open against real-estate leads will show up here."
           }
@@ -178,7 +222,7 @@ export function PropertyDealsView() {
         <DashboardPanel
           title="Deals"
           description={
-            filtersAreActive(filters) ? `${total} of ${deals.length} deals` : `${deals.length} deals`
+            anyFilter ? `${total} of ${deals.length} deals` : `${deals.length} deals`
           }
           bodyClassName="p-0"
         >
@@ -199,7 +243,7 @@ export function PropertyDealsView() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && setActiveId(null)}>
-        <DialogContent showCloseButton={false} className={PANEL_DIALOG_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_CLASS}>
           {active ? (
             <>
               <WorkspaceDialogHeader

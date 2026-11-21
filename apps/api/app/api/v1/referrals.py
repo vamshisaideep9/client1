@@ -8,6 +8,11 @@ calling GET /me should see why they have no code, not a 403. RLS scopes
 GET / to the caller's own rows regardless (same trust-RLS stance as
 api/v1/transactions.py).
 
+GET /eligibility and GET /attempts (CS-024) add referral eligibility: counts
+of eligible, not eligible and duplicate referrals, and the sign-ups with the
+caller's code that were not accepted. Both name the caller explicitly as well
+as relying on RLS.
+
 GET /admin and POST /{id}/payout (PR 2) are Admin-only oversight + execution
 (FR-9.5 — Sub Admin manages bonus RULES only, never referral activity itself,
 so there is deliberately no sub_admin branch here, unlike payments.py's
@@ -31,8 +36,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import CurrentUser, get_active_user, require_platform_admin
 from app.core.masking import mask_mobile
 from app.db.session import get_db
+from app.models.lead_intake_attempt import IntakeActorType
 from app.models.payout import PayoutType
 from app.models.referral import Referral, ReferralStatus
+from app.schemas.eligibility import EligibilitySummary, IntakeAttemptListResponse
 from app.schemas.referrals import (
     AdminReferralListResponse,
     AdminReferralRead,
@@ -42,8 +49,9 @@ from app.schemas.referrals import (
     ReferralPayoutResponse,
     ReferralRead,
 )
+from app.services import lead_intake_attempts, referrals
 from app.services import payments as payments_service
-from app.services import referrals
+from app.services.eligibility import reason_label, referral_eligibility
 from app.services.payout_recipients import resolve_identities
 
 router = APIRouter()
@@ -86,8 +94,11 @@ async def list_referrals(
     db: AsyncSession = Depends(get_db),
 ) -> ReferralListResponse:
     rows = await referrals.list_referrals(db)
-    return ReferralListResponse(
-        referrals=[
+    items = await referrals.converted_items(rows)
+    out: list[ReferralRead] = []
+    for r in rows:
+        eligibility, reason = referral_eligibility(r.conversion_status, r.accrual_reason)
+        out.append(
             ReferralRead(
                 id=r.id,
                 referred_mobile_masked=mask_mobile(r.referred_mobile),
@@ -96,10 +107,40 @@ async def list_referrals(
                 bonus_amount_paise=r.bonus_amount_paise,
                 converted_at=r.converted_at,
                 created_at=r.created_at,
+                converted_item=items.get(r.id),
+                eligibility=eligibility,
+                eligibility_reason=reason,
+                eligibility_reason_label=reason_label(reason),
             )
-            for r in rows
-        ]
+        )
+    return ReferralListResponse(referrals=out)
+
+
+@router.get("/eligibility", response_model=EligibilitySummary)
+async def referral_eligibility_summary(
+    current_user: CurrentUser = Depends(get_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> EligibilitySummary:
+    """Eligible / Not eligible / Duplicate counts for the caller's referrals (CS-024)."""
+    return await referrals.referral_eligibility_summary(db, current_user.id)
+
+
+@router.get("/attempts", response_model=IntakeAttemptListResponse)
+async def list_referral_attempts(
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    current_user: CurrentUser = Depends(get_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> IntakeAttemptListResponse:
+    """Sign-ups with the caller's code that were not accepted, newest first.
+
+    Recorded from the CS-024 release onward. RLS returns only the caller's
+    own rows; the query also names the caller as the referrer.
+    """
+    attempts, total = await lead_intake_attempts.list_attempts(
+        db, IntakeActorType.REFERRER, current_user.id, limit=limit, offset=offset
     )
+    return IntakeAttemptListResponse(attempts=attempts, total=total)
 
 
 @router.get("/admin", response_model=AdminReferralListResponse)
