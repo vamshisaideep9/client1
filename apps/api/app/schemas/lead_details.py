@@ -8,6 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.schemas.telecaller import LeadRequestSummary
+
 LeadDetailOwner = Literal[
     "agent", "client", "telecaller", "admin", "system", "unclaimed", "legacy_locked"
 ]
@@ -19,11 +21,22 @@ class LeadDetailsPatch(BaseModel):
 
     @model_validator(mode="after")
     def _at_least_one_explicit_field(self) -> LeadDetailsPatch:
-        if not ({"name", "notes"} & self.model_fields_set):
+        if not ({"name", "notes", "email"} & self.model_fields_set):
             raise ValueError("Provide at least one of name or notes.")
         if "name" in self.model_fields_set and self.name is not None and not self.name.strip():
             raise ValueError("name cannot be blank; use null to clear it.")
         return self
+
+
+class AgentLeadDetailsPatch(LeadDetailsPatch):
+    """The originating Agent's edit: name, notes and the optional email.
+
+    Built only by ``services/agent.update_lead_for_agent`` from an already
+    validated ``AgentLeadUpdate`` (the email is normalised there); never a
+    request body, so Client and Admin detail edits cannot reach the email.
+    """
+
+    email: Annotated[str | None, Field(default=None, max_length=254)] = None
 
 
 class AdminLeadDetailsPatch(LeadDetailsPatch):
@@ -47,6 +60,12 @@ class LeadDetailsRead(BaseModel):
     field_owners: dict[str, LeadDetailOwner]
     editable_fields: list[Literal["name", "requirement.notes"]]
     updated_at: datetime
+
+
+class AdminLeadDetailsRead(LeadDetailsRead):
+    """Admin view: also what the client applied for and when."""
+
+    requests: list[LeadRequestSummary]
 
 
 class JourneyContactRead(BaseModel):

@@ -5,14 +5,27 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useAuth } from "@/components/auth/session-provider";
 import { MobileInput } from "@/components/auth/mobile-input";
 import { Button } from "@/components/ui/button";
+import { FieldError, RequiredIndicator } from "@/components/ui/field-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { LeadInterestPicker, type LeadInterest } from "@/features/agent/lead-interest-picker";
 import { DashboardFormPage, DashboardFormSection } from "@/features/dashboard/dashboard-ui";
 import { introduceAgentLead } from "@/lib/agent-api";
 import { isValidMobile, toE164 } from "@/lib/phone";
+
+function buildRequirement(notes: string, email: string, interest: LeadInterest) {
+  const requirement: Record<string, string> = {};
+  if (notes.trim()) requirement.notes = notes.trim();
+  if (email.trim()) requirement.email = email.trim();
+  if (interest?.kind === "property" && interest.propertyId) requirement.property_id = interest.propertyId;
+  if (interest?.kind === "property" && interest.propertyType) requirement.property_type = interest.propertyType;
+  if (interest?.kind === "product") requirement.product_slug = interest.productSlug;
+  return Object.keys(requirement).length ? requirement : null;
+}
 
 export function AgentIntroduceLeadForm() {
   const router = useRouter();
@@ -21,22 +34,36 @@ export function AgentIntroduceLeadForm() {
   const [mobile, setMobile] = React.useState("");
   const [name, setName] = React.useState("");
   const [notes, setNotes] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [emailError, setEmailError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [mobileError, setMobileError] = React.useState<string | null>(null);
+  const [nameError, setNameError] = React.useState<string | null>(null);
+  const [interest, setInterest] = React.useState<LeadInterest>(null);
+  const { session } = useAuth();
+  const businessLine =
+    session?.businessLine === "loans" || session?.businessLine === "real_estate"
+      ? session.businessLine
+      : null;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!isValidMobile(mobile)) {
-      setMobileError("Enter a 10-digit Indian mobile number.");
-      requestAnimationFrame(() => document.getElementById("mobile")?.focus());
+    const nextMobileError = isValidMobile(mobile) ? null : "Enter a 10-digit Indian mobile number.";
+    const nextNameError = name.trim() ? null : "Enter the person's name.";
+    setMobileError(nextMobileError);
+    setNameError(nextNameError);
+    const nextEmailError = email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? "Enter a valid email address." : null;
+    setEmailError(nextEmailError);
+    if (nextMobileError || nextNameError || nextEmailError) {
+      const firstInvalid = nextMobileError ? "mobile" : nextNameError ? "name" : "lead-email";
+      requestAnimationFrame(() => document.getElementById(firstInvalid)?.focus());
       return;
     }
-    setMobileError(null);
     setSaving(true);
     const res = await introduceAgentLead({
       mobile: toE164(mobile),
-      name: name.trim() || null,
-      requirement: notes.trim() ? { notes: notes.trim() } : null,
+      name: name.trim(),
+      requirement: buildRequirement(notes, email, interest),
     });
     setSaving(false);
     if (res.ok) {
@@ -81,18 +108,38 @@ export function AgentIntroduceLeadForm() {
             ) : null}
           </div>
           <div>
-            <Label htmlFor="name">Name (optional)</Label>
+            <Label htmlFor="name">
+              Name
+              <RequiredIndicator />
+            </Label>
             <Input
               id="name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (nameError) setNameError(null);
+              }}
               placeholder="Full name"
               maxLength={100}
+              autoComplete="off"
+              aria-invalid={!!nameError}
+              aria-describedby={nameError ? "name-error" : undefined}
             />
+            <FieldError id="name-error" className="mt-1.5">
+              {nameError ?? undefined}
+            </FieldError>
+          </div>
+          <div>
+            <Label htmlFor="lead-email">Email (optional)</Label>
+            <Input id="lead-email" type="email" maxLength={254} autoComplete="off"
+              value={email} onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
+              aria-invalid={!!emailError} aria-describedby={emailError ? "lead-email-error" : undefined} />
+            <FieldError id="lead-email-error">{emailError ?? undefined}</FieldError>
           </div>
         </DashboardFormSection>
 
         <DashboardFormSection title="Requirement" description="Optional — help the telecaller follow up faster.">
+          <LeadInterestPicker businessLine={businessLine} value={interest} onChange={setInterest} />
           <div>
             <Label htmlFor="notes">What are they looking for?</Label>
             <Textarea

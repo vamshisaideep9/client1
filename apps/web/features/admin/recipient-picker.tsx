@@ -28,11 +28,13 @@ type SearchStatus = "idle" | "loading" | "ready" | "error";
 export function RecipientPicker({
   value,
   onChange,
+  businessLine,
   id,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
 }: {
   value: PayoutRecipientChoice | null;
+  businessLine?: "loans" | "real_estate" | "";
   onChange: (value: PayoutRecipientChoice | null) => void;
   id?: string;
   "aria-invalid"?: boolean;
@@ -49,7 +51,7 @@ export function RecipientPicker({
 
   React.useEffect(() => {
     const trimmed = query.trim();
-    if (trimmed.length < MIN_QUERY_LENGTH) {
+    if (businessLine === "" || trimmed.length < MIN_QUERY_LENGTH) {
       setHits([]);
       setStatus("idle");
       return;
@@ -57,7 +59,7 @@ export function RecipientPicker({
     let active = true;
     setStatus("loading");
     const timer = setTimeout(() => {
-      void searchPayoutRecipients(trimmed).then((res) => {
+      void searchPayoutRecipients(trimmed, businessLine || undefined).then((res) => {
         if (!active) return;
         if (!res.ok) {
           if (res.status === 403) setForbidden(true);
@@ -72,7 +74,7 @@ export function RecipientPicker({
       active = false;
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, businessLine]);
 
   function pick(hit: PayoutRecipient) {
     onChange({ authUserUuid: hit.auth_user_uuid, name: hit.name, code: hit.codes[0] ?? null });
@@ -89,7 +91,7 @@ export function RecipientPicker({
           aria-controls={optionsId}
           aria-expanded={open}
           aria-required="true"
-          disabled={forbidden}
+          disabled={forbidden || businessLine === ""}
           aria-invalid={ariaInvalid}
           aria-describedby={ariaDescribedBy}
           className={cn(
@@ -98,7 +100,7 @@ export function RecipientPicker({
           )}
         >
           <span className="truncate">
-            {value ? `${value.name}${value.code ? ` · ${value.code}` : ""}` : "Choose a recipient"}
+            {value ? `${value.name}${value.code ? ` · ${value.code}` : ""}` : businessLine === "" ? "Choose a business line first" : "Choose a recipient"}
           </span>
           <ChevronDownIcon className="h-4 w-4 shrink-0 opacity-50" />
         </button>

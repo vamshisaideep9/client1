@@ -17,7 +17,7 @@ export function ClosingCtaFrame({
     <section
       id={id}
       aria-labelledby={`${id}-heading`}
-      className="w-full scroll-mt-16 border-t border-border bg-surface-sky dark:bg-surface"
+      className="w-full scroll-mt-[var(--site-header-h)] border-t border-border bg-surface-sky dark:bg-surface"
     >
       <div className="mx-auto grid max-w-7xl items-center gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16 lg:px-8 lg:py-20">
         <div className="max-w-2xl border-l-2 border-brand-sky pl-5 sm:pl-7">

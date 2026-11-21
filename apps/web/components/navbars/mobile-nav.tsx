@@ -30,7 +30,7 @@ export function MobileNav({ items }: { items: readonly NavItem[] }) {
         <Button
           variant="ghost"
           size="icon"
-          className="text-[var(--nav-text)] hover:bg-[var(--nav-tint)] hover:text-brand-link xl:hidden"
+          className="text-[var(--nav-text)] hover:bg-[var(--nav-tint)] hover:text-brand-link md:hidden"
           aria-label="Open menu"
         >
           <Menu className="h-5 w-5" />

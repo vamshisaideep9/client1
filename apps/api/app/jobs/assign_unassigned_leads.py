@@ -61,6 +61,10 @@ async def _assign_batch(
         ).all()
     )
     for lead in stale:
+        # CS-028: remember the cleared assignee; a resubmission only returns
+        # to them if they are eligible again by then.
+        if lead.assigned_telecaller_profile_uuid is not None:
+            lead.last_telecaller_profile_uuid = lead.assigned_telecaller_profile_uuid
         lead.assigned_telecaller_profile_uuid = None
         lead.status = LeadStatus.RELEASED
         lead.released_at = datetime.now(UTC)

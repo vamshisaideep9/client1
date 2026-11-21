@@ -113,6 +113,27 @@ async def test_create_then_list_own_enquiry(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_enquiry_is_linked_to_the_clients_real_estate_lead(client: AsyncClient) -> None:
+    """The assigned Telecaller finds the enquiry through its lead."""
+    import app.db.session as _session_mod
+    from app.models.enquiry import Enquiry
+    from app.models.lead import Lead
+
+    token, _ = await full_registration(client, lines=["real_estate"])
+    created = await client.post(
+        "/api/v1/enquiries", headers={"Authorization": f"Bearer {token}"}, json=_payload()
+    )
+    assert created.status_code == 201, created.text
+
+    async with _session_mod.AsyncSessionLocal() as db:
+        enquiry = await db.get(Enquiry, uuid.UUID(created.json()["id"]))
+        assert enquiry is not None and enquiry.lead_uuid is not None
+        lead = await db.get(Lead, enquiry.lead_uuid)
+        assert lead is not None
+        assert lead.business_line == "real_estate"
+
+
+@pytest.mark.asyncio
 async def test_other_client_cannot_see_enquiry(client: AsyncClient) -> None:
     owner_token, _ = await full_registration(client, lines=["real_estate"])
     await client.post(
@@ -191,3 +212,39 @@ async def test_staff_cannot_create_enquiry(client: AsyncClient) -> None:
         json=_payload(),
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", ["telecaller", "employee", "agent"])
+async def test_line_staff_list_never_shows_other_clients_enquiries(
+    client: AsyncClient, role: str
+) -> None:
+    """Audit finding #3: GET /enquiries is "My Enquiries" for every caller.
+
+    RLS admits real-estate Telecallers/Employees for their own workflows, but
+    this list must not turn into a line-wide directory of client contacts.
+    """
+    owner_token, _ = await full_registration(client, lines=["real_estate"])
+    created = await client.post(
+        "/api/v1/enquiries", headers={"Authorization": f"Bearer {owner_token}"}, json=_payload()
+    )
+    assert created.status_code == 201, created.text
+
+    from sqlalchemy import text as _text
+
+    import app.db.session as _session_mod
+
+    _, staff_mobile = await full_registration(client, lines=["real_estate"])
+    async with _session_mod.AsyncSessionLocal() as db:
+        staff_id = (
+            await db.execute(
+                _text("SELECT id FROM auth_users WHERE mobile = :m"), {"m": staff_mobile}
+            )
+        ).scalar_one()
+
+    resp = await client.get(
+        "/api/v1/enquiries",
+        headers={"Authorization": f"Bearer {_staff_token(str(staff_id), role)}"},
+    )
+    assert resp.status_code == 200
+    assert created.json()["id"] not in [e["id"] for e in resp.json()["enquiries"]]

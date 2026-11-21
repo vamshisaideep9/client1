@@ -5,6 +5,7 @@ import * as React from "react";
 import { ClipboardList, Download, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ViewDocumentButton } from "@/components/documents/document-viewer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DashboardHeader, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
@@ -171,7 +172,7 @@ export function TasksQueueView() {
     },
     {
       key: "employee",
-      header: "Employee",
+      header: "Officer",
       sortable: true,
       render: (task) =>
         task.assigned_employee_name ? (
@@ -205,17 +206,17 @@ export function TasksQueueView() {
     <DashboardPage>
       <DashboardHeader
         title="Task assignments"
-        description="Every field task with its raising Telecaller and assigned Employee. Open a row for the full record."
+        description="Every field task with its raising Telecaller and assigned Officer. Open a row for the full record."
       />
 
       <FilterBar
         value={filters}
         onChange={setFilters}
         searchLabel="Search task assignments"
-        searchPlaceholder="Lead, Telecaller, or Employee"
+        searchPlaceholder="Lead, Telecaller, or Officer"
         statusOptions={STATUS_OPTIONS}
         kindOptions={TYPE_OPTIONS}
-        kindLabel="Task types"
+        kindLabel="Task type"
         lineOptions={LINE_OPTIONS}
         dateFromLabel="Due from"
         dateToLabel="Due to"
@@ -342,7 +343,7 @@ export function TasksQueueView() {
                       <section className="rounded-xl border border-border bg-card p-5">
                         <h2 className="font-semibold text-text-primary">Visit feedback</h2>
                         <p className="mt-1 text-sm leading-6 text-text-secondary">
-                          Private attachments from the assigned Employee, retained for 90 days
+                          Private attachments from the assigned Officer, retained for 90 days
                           after closure.
                         </p>
                         {feedbackLoading ? (
@@ -380,8 +381,12 @@ export function TasksQueueView() {
                                     <FileText className="h-7 w-7" aria-hidden="true" />
                                   </div>
                                 )}
-                                <div className="p-3">
-                                  <Button asChild size="sm" variant="outline" className="w-full">
+                                <div className="grid grid-cols-2 gap-2 p-3">
+                                  <ViewDocumentButton
+                                    url={item.download_url}
+                                    title={`Visit feedback ${index + 1}`}
+                                  />
+                                  <Button asChild size="sm" variant="outline">
                                     <a href={item.download_url} target="_blank" rel="noreferrer">
                                       <Download className="h-4 w-4" aria-hidden="true" /> Download
                                     </a>

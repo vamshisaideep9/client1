@@ -105,6 +105,26 @@ def _effective_index(status: PropertyDealStatus) -> int:
     return _ORDER_INDEX.get(status, _ORDER_INDEX[PropertyDealStatus.NEW])
 
 
+_STAGE_MARKERS = (
+    (_ORDER_INDEX[PropertyDealStatus.SITE_VISIT_DONE], "site_visit_done_at"),
+    (_ORDER_INDEX[PropertyDealStatus.BOOKED], "booked_at"),
+    (_ORDER_INDEX[PropertyDealStatus.AGREEMENT_SIGNED], "agreement_signed_at"),
+)
+
+
+def _stamp_stages(deal: PropertyDeal) -> None:
+    """CS-027: record when the deal first reached each counted stage. A
+    forward jump (CLOSED included) stamps every stage it passed; the side
+    branches stamp nothing. Set once, never moved."""
+    index = _ORDER_INDEX.get(deal.status)
+    if index is None:
+        return
+    now = datetime.now(UTC)
+    for stage_index, column in _STAGE_MARKERS:
+        if index >= stage_index and getattr(deal, column) is None:
+            setattr(deal, column, now)
+
+
 def validate_transition(current: PropertyDealStatus, target: PropertyDealStatus) -> None:
     if current in TERMINAL_STATUSES:
         raise TerminalDeal
@@ -188,6 +208,7 @@ async def apply_progress_update(
         deal.status_reason = payload.status_reason
         if payload.status in TERMINAL_STATUSES:
             deal.closed_at = datetime.now(UTC)
+        _stamp_stages(deal)
         status_changed = True
     elif payload.status_reason is not None:
         deal.status_reason = payload.status_reason

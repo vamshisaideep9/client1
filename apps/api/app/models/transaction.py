@@ -37,6 +37,7 @@ class TransactionType(enum.StrEnum):
     CASHBACK = "cashback"
     REFERRAL_BONUS = "referral_bonus"
     COMMISSION = "commission"
+    CONTEST_REWARD = "contest_reward"  # CS-027 Agent contest prize
 
 
 class TransactionStatus(enum.StrEnum):

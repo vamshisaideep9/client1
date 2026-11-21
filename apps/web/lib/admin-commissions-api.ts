@@ -12,6 +12,36 @@ export type EligibleDeal = Schemas["EligibleDeal"];
 export type CommissionRead = Schemas["CommissionRead"];
 export type CommissionCreate = Schemas["CommissionCreate"];
 export type CommissionPayoutRequest = Schemas["CommissionPayoutRequest"];
+export type CommissionPayoutGroup = Schemas["CommissionPayoutGroup"];
+
+export function listPendingCommissionGroups(limit: number, offset: number) {
+  return apiRequest<Schemas["CommissionPayoutGroupList"]>(
+    `/api/v1/admin/commissions/pending-payout-groups?limit=${limit}&offset=${offset}`,
+  );
+}
+
+export function listPendingGroupCommissions(group: CommissionPayoutGroup, limit: number, offset: number) {
+  const params = new URLSearchParams({
+    awaiting_payout: "true",
+    business_line: group.business_line,
+    agent_profile_uuid: group.agent_profile_uuid,
+    limit: String(limit),
+    offset: String(offset),
+  });
+  return apiRequest<Schemas["CommissionListResponse"]>(`/api/v1/admin/commissions?${params}`);
+}
+
+export function createBulkCommissionPayout(body: Schemas["BulkCommissionPayoutRequest"]) {
+  return apiRequest<Schemas["CommissionPayoutResponse"]>(
+    "/api/v1/admin/commissions/bulk-payout", { method: "POST", body },
+  );
+}
+
+export function listCoveredCommissions(payoutId: string) {
+  return apiRequest<Schemas["CoveredCommission"][]>(
+    `/api/v1/admin/commissions/payouts/${encodeURIComponent(payoutId)}/items`,
+  );
+}
 
 // Same reasoning as REFERRAL_PAYOUT_PAGE_LIMIT — requested explicitly so a
 // filter switch and the initial load always agree on how much can be truncated.

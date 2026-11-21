@@ -35,8 +35,10 @@ from app.schemas.property_details import (
     PropertyStructuredDetails,
 )
 
-PropertyImageContentType = Literal["image/jpeg", "image/png", "image/webp"]
-PropertyPanoramaContentType = Literal["image/jpeg", "image/webp"]
+PropertyImageContentType = Literal["image/jpeg", "image/png", "image/webp", "image/avif"]
+# 360 images accept the same formats as listing photos.
+PropertyPanoramaContentType = PropertyImageContentType
+MAX_PANORAMAS = 10
 PropertyDocumentContentType = Literal["application/pdf"]
 PropertyMediaContentType = PropertyImageContentType | PropertyDocumentContentType
 
@@ -44,7 +46,7 @@ _PRIVATE_KEY_PATTERN = (
     r"^private/property-submissions/staging/"
     r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/"
     r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/"
-    r"asset\.(jpg|png|webp|pdf)$"
+    r"asset\.(jpg|png|webp|avif|pdf)$"
 )
 
 
@@ -52,15 +54,13 @@ class SubmissionMediaInput(BaseModel):
     kind: Literal["image", "document", "panorama"]
     content_type: PropertyMediaContentType
     object_key: str = Field(min_length=1, max_length=600, pattern=_PRIVATE_KEY_PATTERN)
-    position: int = Field(ge=0, le=12)
+    position: int = Field(ge=0, le=21)
 
     @model_validator(mode="after")
     def validate_kind_matches_type(self) -> SubmissionMediaInput:
         is_document = self.content_type == "application/pdf"
         if (self.kind == "document") != is_document:
             raise ValueError("Media kind does not match content type.")
-        if self.kind == "panorama" and self.content_type not in {"image/jpeg", "image/webp"}:
-            raise ValueError("Panoramas must be JPEG or WebP images.")
         return self
 
 
@@ -70,6 +70,7 @@ class SubmissionFacts(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     type: str = Field(min_length=1, max_length=40)
     location: str = Field(min_length=1, max_length=160)
+    developer_name: str | None = Field(default=None, max_length=120)
     meta: str | None = Field(default=None, max_length=120)
     category: PropertyCategory
     property_subtype: PropertySubtype
@@ -100,6 +101,15 @@ class SubmissionFacts(BaseModel):
     def _blank_rera_is_none(cls, value: object) -> object:
         if isinstance(value, str) and not value.strip():
             return None
+        return value
+
+    @field_validator("developer_name", mode="before")
+    @classmethod
+    def _normalize_developer_name(cls, value: object) -> object:
+        """Collapse internal whitespace; a blank name means "not provided"."""
+        if isinstance(value, str):
+            collapsed = " ".join(value.split())
+            return collapsed or None
         return value
 
     @field_validator("amenities")
@@ -206,7 +216,8 @@ class SubmissionFacts(BaseModel):
 
 
 class SubmissionCreate(SubmissionFacts):
-    media: list[SubmissionMediaInput] = Field(min_length=1, max_length=13)
+    # 10 images + 2 PDFs + up to 10 panoramas.
+    media: list[SubmissionMediaInput] = Field(min_length=1, max_length=22)
 
     @model_validator(mode="after")
     def validate_submission(self) -> SubmissionCreate:
@@ -217,8 +228,8 @@ class SubmissionCreate(SubmissionFacts):
             raise ValueError("A submission requires between one and ten images.")
         if len(documents) > 2:
             raise ValueError("A submission may include at most two PDF documents.")
-        if len(panoramas) > 1:
-            raise ValueError("A submission may include at most one panorama.")
+        if len(panoramas) > MAX_PANORAMAS:
+            raise ValueError(f"A submission may include at most {MAX_PANORAMAS} 360 images.")
         keys = [asset.object_key for asset in self.media]
         positions = [asset.position for asset in self.media]
         if len(keys) != len(set(keys)):
@@ -262,6 +273,7 @@ class SubmissionRead(BaseModel):
     title: str
     type: str
     location: str
+    developer_name: str | None = None
     meta: str | None
     image: str | None
     category: PropertyCategory
@@ -337,8 +349,6 @@ class PropertyMediaUploadRequest(BaseModel):
         is_document = self.content_type == "application/pdf"
         if (self.kind == "document") != is_document:
             raise ValueError("Media kind does not match content type.")
-        if self.kind == "panorama" and self.content_type not in {"image/jpeg", "image/webp"}:
-            raise ValueError("Panoramas must be JPEG or WebP images.")
         return self
 
 

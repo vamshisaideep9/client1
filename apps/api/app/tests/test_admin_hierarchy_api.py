@@ -119,11 +119,13 @@ async def _additional_admin(client: AsyncClient) -> tuple[str, uuid.UUID, uuid.U
 
     async with session_mod.AsyncSessionLocal() as db:
         profile = await db.scalar(
-            select(StaffProfile).where(
+            select(StaffProfile)
+            .where(
                 StaffProfile.role == StaffRole.ADMIN,
                 StaffProfile.status == ProfileStatus.ACTIVE,
                 StaffProfile.is_primary_admin.is_(False),
             )
+            .limit(1)
         )
     if profile is None:
         mobile = unique_mobile()
@@ -163,6 +165,243 @@ async def _additional_admin(client: AsyncClient) -> tuple[str, uuid.UUID, uuid.U
 
 def _headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.mark.asyncio
+async def test_scoped_access_pending_activation_revoke_and_restore(client: AsyncClient) -> None:
+    main_token, _, _ = await _primary_admin(client)
+    additional_token, _, _ = await _additional_admin(client)
+    main, additional = _headers(main_token), _headers(additional_token)
+    payload = {
+        "first_name": "Scoped",
+        "last_name": "Reviewer",
+        "mobile": unique_mobile(),
+        "email": unique_email(),
+        "role": "sub_admin",
+    }
+    media = {"assignment": "media_sub_admin", "business_line": "real_estate", "actions": ["view"]}
+    finance = {
+        "assignment": "account_manager",
+        "business_line": "loans",
+        "actions": ["view", "prepare"],
+    }
+    create_url = "/api/v1/admin/users/create"
+    denied = await client.post(
+        create_url, headers=additional, json={**payload, "sub_admin_grants": [media]}
+    )
+    assert denied.status_code == 403
+    created = await client.post(create_url, headers=additional, json=payload)
+    assert created.status_code == 201, created.text
+    user_id = uuid.UUID(created.json()["auth_user_uuid"])
+
+    pending = await client.get("/api/v1/admin/staff-access?pending_only=true", headers=additional)
+    assert pending.status_code == 200, pending.text
+    entry = next(
+        e for e in pending.json()["entries"] if e["staff_code"] == created.json()["staff_code"]
+    )
+    assert entry["sub_admin_access"] == {"status": "pending", "grants": [], "version": 1}
+    staff_id = uuid.UUID(entry["staff_profile_uuid"])
+    access_url = f"/api/v1/admin/staff-access/{staff_id}/dashboard"
+
+    def reviewer(version: int) -> dict:
+        return _headers(
+            _staff_token(
+                user_id=user_id, profile_id=staff_id, role="sub_admin", session_version=version
+            )
+        )
+
+    pending_home = await client.get("/api/v1/auth/me", headers=reviewer(1))
+    assert pending_home.json()["sub_admin_access"]["status"] == "pending"
+    assert (await client.get("/api/v1/banners", headers=reviewer(1))).status_code == 403
+    assert (await client.get("/api/v1/attendance/me", headers=reviewer(1))).status_code == 403
+
+    activate = {"status": "active", "expected_version": 1, "grants": [media, finance]}
+    assert (await client.put(access_url, headers=additional, json=activate)).status_code == 403
+    active = await client.put(access_url, headers=main, json=activate)
+    assert active.status_code == 200, active.text
+    assert (await client.put(access_url, headers=main, json=activate)).status_code == 409
+    assert (await client.get("/api/v1/banners", headers=reviewer(1))).status_code == 401
+    assert (await client.get("/api/v1/banners", headers=reviewer(2))).status_code == 200
+    assert (await client.get("/api/v1/manager/teams", headers=reviewer(2))).status_code == 403
+    assert (await client.get("/api/v1/sub-admin/home", headers=reviewer(2))).status_code == 403
+    assert (await client.get("/api/v1/payouts", headers=reviewer(2))).status_code == 200
+    search_url = "/api/v1/payouts/recipients?q=Scoped&business_line="
+    assert (await client.get(search_url + "real_estate", headers=reviewer(2))).status_code == 403
+    assert (await client.get(search_url + "loans", headers=reviewer(2))).status_code == 200
+    _, recipient_mobile = await full_registration(client)
+    recipient = await _user_id(recipient_mobile)
+    payout = _manual_payout(recipient, "scoped-account-manager")
+    attempted = await client.post(
+        "/api/v1/payouts", headers=reviewer(2), json={**payout, "business_line": "real_estate"}
+    )
+    assert attempted.status_code == 403
+    prepared = await client.post("/api/v1/payouts", headers=reviewer(2), json=payout)
+    assert prepared.status_code == 201, prepared.text
+    assert prepared.json()["status"] == "pending_approval"
+    payout_id = prepared.json()["id"]
+    assert (
+        await client.post(f"/api/v1/payouts/{payout_id}/approve", headers=reviewer(2))
+    ).status_code == 403
+
+    removal = await client.put(
+        access_url, headers=main, json={"status": "inactive", "expected_version": 2, "grants": []}
+    )
+    assert removal.status_code == 200, removal.text
+    assert (await client.get("/api/v1/auth/me", headers=reviewer(2))).status_code == 401
+    restored = await client.put(
+        access_url, headers=main, json={"status": "active", "expected_version": 3, "grants": []}
+    )
+    assert restored.status_code == 200, restored.text
+    assert (await client.get("/api/v1/payouts", headers=reviewer(4))).status_code == 403
+    history_url = f"/api/v1/admin/staff-access/{staff_id}/history"
+    history = await client.get(history_url, headers=main)
+    assert history.status_code == 200, history.text
+    assert [item["after"]["version"] for item in history.json()] == [4, 3, 2, 1]
+
+
+@pytest.mark.asyncio
+async def test_relationship_scope_filters_agent_identity_and_activity(client: AsyncClient) -> None:
+    from app.db import session
+    from app.models.profile import AgentProfile
+
+    main_token, _, _ = await _primary_admin(client)
+    legacy_token, user_id, staff_id, _ = await _sub_admin(client)
+    ids = {}
+    for line in ("loans", "real_estate"):
+        _, mobile = await full_registration(client)
+        agent_user_id = await _user_id(mobile)
+        async with session.AsyncSessionLocal() as db:
+            agent = AgentProfile(
+                auth_user_uuid=agent_user_id,
+                agent_code=f"SCOPED{uuid.uuid4().hex[:10]}",
+                business_line=line,
+                status=ProfileStatus.ACTIVE,
+            )
+            db.add(agent)
+            await db.commit()
+            ids[line] = str(agent.id)
+
+    grant = {
+        "assignment": "relationship_manager",
+        "business_line": "loans",
+        "actions": ["view", "follow_up"],
+        "agent_profile_ids": [ids["real_estate"]],
+    }
+    url = f"/api/v1/admin/staff-access/{staff_id}/dashboard"
+    response = await client.put(
+        url,
+        headers=_headers(main_token),
+        json={
+            "expected_version": 0,
+            "status": "active",
+            "grants": [grant],
+        },
+    )
+    assert response.status_code == 422
+    grant["agent_profile_ids"] = [ids["loans"]]
+    response = await client.put(
+        url,
+        headers=_headers(main_token),
+        json={
+            "expected_version": 0,
+            "status": "active",
+            "grants": [grant],
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert (
+        await client.get("/api/v1/relationships", headers=_headers(legacy_token))
+    ).status_code == 401
+    headers = _headers(
+        _staff_token(user_id=user_id, profile_id=staff_id, role="sub_admin", session_version=2)
+    )
+    visible = await client.get("/api/v1/relationships", headers=headers)
+    assert visible.status_code == 200, visible.text
+    assert [agent["id"] for agent in visible.json()] == [ids["loans"]]
+    assert "mobile" not in visible.json()[0]
+    body = {"kind": "recommendation", "note": "Follow up on onboarding."}
+    activity = f"/api/v1/relationships/{ids['loans']}/activity"
+    denied = f"/api/v1/relationships/{ids['real_estate']}/activity"
+    assert (await client.get(denied, headers=headers)).status_code == 404
+    assert (await client.post(denied, headers=headers, json=body)).status_code == 404
+    assert (await client.post(activity, headers=headers, json=body)).status_code == 201
+    assert (await client.get(activity, headers=headers)).json()[0]["note"] == body["note"]
+
+
+@pytest.mark.asyncio
+async def test_team_and_media_permissions_are_independent_by_line(client: AsyncClient) -> None:
+    from app.db import session
+    from app.models.campaign_media import CampaignMediaAsset
+    from app.models.staff_team import StaffTeam
+
+    main_token, _, _ = await _primary_admin(client)
+    _, user_id, staff_id, _ = await _sub_admin(client)
+    assets = {}
+    async with session.AsyncSessionLocal() as db:
+        for line in ("loans", "real_estate", "both"):
+            image_ref = f"public/campaign-media/{uuid.uuid4()}/artwork.png"
+            asset = CampaignMediaAsset(
+                title=f"Test artwork {line}",
+                business_line=line,
+                usage_type="dashboard_offer",
+                image_ref=image_ref,
+                alt_text="Example campaign artwork",
+                source_type="upload",
+                mime_type="image/png",
+                byte_size=1024,
+            )
+            db.add(asset)
+            assets[line] = asset
+            if line != "both":
+                db.add(
+                    StaffTeam(
+                        manager_staff_profile_uuid=staff_id,
+                        name=f"Scoped {line}",
+                        business_line=line,
+                        member_role="employee",
+                    )
+                )
+        await db.commit()
+    response = await client.put(
+        f"/api/v1/admin/staff-access/{staff_id}/dashboard",
+        headers=_headers(main_token),
+        json={
+            "expected_version": 0,
+            "status": "active",
+            "grants": [
+                {"assignment": "team_manager", "business_line": "loans", "actions": ["view"]},
+                {
+                    "assignment": "media_sub_admin",
+                    "business_line": "real_estate",
+                    "actions": ["view", "edit"],
+                },
+            ],
+        },
+    )
+    assert response.status_code == 200, response.text
+    headers = _headers(
+        _staff_token(user_id=user_id, profile_id=staff_id, role="sub_admin", session_version=2)
+    )
+    teams = await client.get("/api/v1/manager/teams", headers=headers)
+    assert teams.status_code == 200, teams.text
+    assert [team["business_line"] for team in teams.json()["teams"]] == ["loans"]
+    visible = await client.get("/api/v1/campaign-media", headers=headers)
+    assert visible.status_code == 200, visible.text
+    returned_ids = {row["id"] for row in visible.json()["assets"]}
+    assert str(assets["real_estate"].id) in returned_ids
+    assert not returned_ids.intersection(str(assets[line].id) for line in ("loans", "both"))
+    denied = await client.patch(
+        f"/api/v1/campaign-media/{assets['loans'].id}",
+        headers=headers,
+        json={"title": "Out of scope"},
+    )
+    assert denied.status_code == 404
+    allowed = await client.patch(
+        f"/api/v1/campaign-media/{assets['real_estate'].id}",
+        headers=headers,
+        json={"title": "In scope"},
+    )
+    assert allowed.status_code == 200, allowed.text
 
 
 def _manual_payout(recipient_user_uuid: uuid.UUID, suffix: str) -> dict:
