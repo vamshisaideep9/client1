@@ -6499,6 +6499,721 @@
         "title": "AnalyticsTrend",
         "type": "object"
       },
+      "AttendanceBalance": {
+        "properties": {
+          "allocated_units": {
+            "title": "Allocated Units",
+            "type": "integer"
+          },
+          "leave_type": {
+            "pattern": "^[a-z][a-z0-9_]{0,31}$",
+            "title": "Leave Type",
+            "type": "string"
+          },
+          "used_units": {
+            "title": "Used Units",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "leave_type",
+          "allocated_units",
+          "used_units"
+        ],
+        "title": "AttendanceBalance",
+        "type": "object"
+      },
+      "AttendanceCorrectionInput": {
+        "additionalProperties": false,
+        "properties": {
+          "check_in": {
+            "format": "date-time",
+            "title": "Check In",
+            "type": "string"
+          },
+          "check_out": {
+            "format": "date-time",
+            "title": "Check Out",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "check_in",
+          "check_out",
+          "reason"
+        ],
+        "title": "AttendanceCorrectionInput",
+        "type": "object"
+      },
+      "AttendanceDayRead": {
+        "properties": {
+          "check_in": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Check In"
+          },
+          "check_out": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Check Out"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "late": {
+            "title": "Late",
+            "type": "boolean"
+          },
+          "leave_units": {
+            "title": "Leave Units",
+            "type": "integer"
+          },
+          "original_check_in": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Check In"
+          },
+          "original_check_out": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Check Out"
+          },
+          "policy_version": {
+            "title": "Policy Version",
+            "type": "integer"
+          },
+          "source": {
+            "enum": [
+              "clock",
+              "rollover",
+              "leave",
+              "correction"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "staff_profile_id": {
+            "format": "uuid",
+            "title": "Staff Profile Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "checked_in",
+              "present",
+              "half_day",
+              "short_day",
+              "absent",
+              "missing_checkout",
+              "on_leave",
+              "holiday",
+              "week_off"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "worked_minutes": {
+            "title": "Worked Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "staff_profile_id",
+          "day",
+          "policy_version",
+          "status",
+          "source",
+          "original_check_in",
+          "original_check_out",
+          "check_in",
+          "check_out",
+          "worked_minutes",
+          "late",
+          "leave_units"
+        ],
+        "title": "AttendanceDayRead",
+        "type": "object"
+      },
+      "AttendanceDecisionInput": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_decisions": {
+            "minimum": 0.0,
+            "title": "Expected Decisions",
+            "type": "integer"
+          },
+          "note": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Note",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "approved",
+              "rejected",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "note",
+          "expected_decisions"
+        ],
+        "title": "AttendanceDecisionInput",
+        "type": "object"
+      },
+      "AttendanceDecisionRead": {
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "actor_role": {
+            "title": "Actor Role",
+            "type": "string"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "actor_id",
+          "actor_role",
+          "at",
+          "note"
+        ],
+        "title": "AttendanceDecisionRead",
+        "type": "object"
+      },
+      "AttendanceHolidayInput": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "AttendanceHolidayInput",
+        "type": "object"
+      },
+      "AttendanceHolidayRead": {
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "day"
+        ],
+        "title": "AttendanceHolidayRead",
+        "type": "object"
+      },
+      "AttendanceInboxRead": {
+        "properties": {
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceRequestRead"
+            },
+            "title": "Requests",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "requests",
+          "total"
+        ],
+        "title": "AttendanceInboxRead",
+        "type": "object"
+      },
+      "AttendanceLeaveInput": {
+        "additionalProperties": false,
+        "properties": {
+          "end_day": {
+            "format": "date",
+            "title": "End Day",
+            "type": "string"
+          },
+          "half_day": {
+            "title": "Half Day",
+            "type": "boolean"
+          },
+          "leave_type": {
+            "pattern": "^[a-z][a-z0-9_]{0,31}$",
+            "title": "Leave Type",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          },
+          "start_day": {
+            "format": "date",
+            "title": "Start Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start_day",
+          "end_day",
+          "leave_type",
+          "half_day",
+          "reason"
+        ],
+        "title": "AttendanceLeaveInput",
+        "type": "object"
+      },
+      "AttendancePolicyInput": {
+        "additionalProperties": false,
+        "properties": {
+          "full_day_minutes": {
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Full Day Minutes",
+            "type": "integer"
+          },
+          "grace_minutes": {
+            "maximum": 1440.0,
+            "minimum": 0.0,
+            "title": "Grace Minutes",
+            "type": "integer"
+          },
+          "half_day_minutes": {
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Half Day Minutes",
+            "type": "integer"
+          },
+          "leave_quotas": {
+            "maxProperties": 12,
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,31}$": {
+                "maximum": 732.0,
+                "minimum": 0.0,
+                "type": "integer"
+              }
+            },
+            "title": "Leave Quotas",
+            "type": "object"
+          },
+          "shift_minutes": {
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Shift Minutes",
+            "type": "integer"
+          },
+          "shift_start_minute": {
+            "maximum": 1439.0,
+            "minimum": 0.0,
+            "title": "Shift Start Minute",
+            "type": "integer"
+          },
+          "weekly_off": {
+            "items": {
+              "maximum": 6.0,
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "maxItems": 6,
+            "title": "Weekly Off",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shift_start_minute",
+          "shift_minutes",
+          "grace_minutes",
+          "half_day_minutes",
+          "full_day_minutes",
+          "weekly_off",
+          "leave_quotas"
+        ],
+        "title": "AttendancePolicyInput",
+        "type": "object"
+      },
+      "AttendancePolicyRead": {
+        "additionalProperties": false,
+        "properties": {
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "full_day_minutes": {
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Full Day Minutes",
+            "type": "integer"
+          },
+          "grace_minutes": {
+            "maximum": 1440.0,
+            "minimum": 0.0,
+            "title": "Grace Minutes",
+            "type": "integer"
+          },
+          "half_day_minutes": {
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Half Day Minutes",
+            "type": "integer"
+          },
+          "leave_quotas": {
+            "maxProperties": 12,
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,31}$": {
+                "maximum": 732.0,
+                "minimum": 0.0,
+                "type": "integer"
+              }
+            },
+            "title": "Leave Quotas",
+            "type": "object"
+          },
+          "shift_minutes": {
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Shift Minutes",
+            "type": "integer"
+          },
+          "shift_start_minute": {
+            "maximum": 1439.0,
+            "minimum": 0.0,
+            "title": "Shift Start Minute",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "weekly_off": {
+            "items": {
+              "maximum": 6.0,
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "maxItems": 6,
+            "title": "Weekly Off",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shift_start_minute",
+          "shift_minutes",
+          "grace_minutes",
+          "half_day_minutes",
+          "full_day_minutes",
+          "weekly_off",
+          "leave_quotas",
+          "version",
+          "effective_from"
+        ],
+        "title": "AttendancePolicyRead",
+        "type": "object"
+      },
+      "AttendancePolicyState": {
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttendancePolicyRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scheduled": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttendancePolicyRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "active",
+          "scheduled"
+        ],
+        "title": "AttendancePolicyState",
+        "type": "object"
+      },
+      "AttendanceRequestRead": {
+        "properties": {
+          "approved_units": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Approved Units",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceDecisionRead"
+            },
+            "title": "Decisions",
+            "type": "array"
+          },
+          "end_day": {
+            "format": "date",
+            "title": "End Day",
+            "type": "string"
+          },
+          "half_day": {
+            "title": "Half Day",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "leave",
+              "correction"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "leave_type": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z][a-z0-9_]{0,31}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leave Type"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_check_in": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Check In"
+          },
+          "requested_check_out": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Check Out"
+          },
+          "staff_profile_id": {
+            "format": "uuid",
+            "title": "Staff Profile Id",
+            "type": "string"
+          },
+          "start_day": {
+            "format": "date",
+            "title": "Start Day",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "staff_profile_id",
+          "kind",
+          "status",
+          "start_day",
+          "end_day",
+          "reason",
+          "leave_type",
+          "half_day",
+          "requested_check_in",
+          "requested_check_out",
+          "approved_units",
+          "decisions",
+          "created_at"
+        ],
+        "title": "AttendanceRequestRead",
+        "type": "object"
+      },
+      "AttendanceRosterMember": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "telecaller",
+              "employee"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "staff_code": {
+            "title": "Staff Code",
+            "type": "string"
+          },
+          "staff_profile_id": {
+            "format": "uuid",
+            "title": "Staff Profile Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "staff_profile_id",
+          "name",
+          "staff_code",
+          "role"
+        ],
+        "title": "AttendanceRosterMember",
+        "type": "object"
+      },
+      "AttendanceRosterRead": {
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceDayRead"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceRosterMember"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "configured",
+          "members",
+          "days",
+          "total"
+        ],
+        "title": "AttendanceRosterRead",
+        "type": "object"
+      },
       "AudienceCity": {
         "additionalProperties": false,
         "description": "A city target: a district and its state from the pincode reference list.",
@@ -6756,6 +7471,8 @@
           "client_export_downloaded",
           "contest_created",
           "contest_updated",
+          "attendance_updated",
+          "attendance_exported",
           "contest_submitted",
           "contest_deleted",
           "contest_approved",
@@ -16805,6 +17522,85 @@
         "title": "MobileChangeVerifyOtpRequest",
         "type": "object"
       },
+      "MyAttendanceRead": {
+        "properties": {
+          "balance_year": {
+            "title": "Balance Year",
+            "type": "integer"
+          },
+          "balances": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceBalance"
+            },
+            "title": "Balances",
+            "type": "array"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceDayRead"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "holidays": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceHolidayRead"
+            },
+            "title": "Holidays",
+            "type": "array"
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttendancePolicyRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceRequestRead"
+            },
+            "title": "Requests",
+            "type": "array"
+          },
+          "server_time": {
+            "format": "date-time",
+            "title": "Server Time",
+            "type": "string"
+          },
+          "today": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttendanceDayRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "work_day": {
+            "format": "date",
+            "title": "Work Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "policy",
+          "server_time",
+          "work_day",
+          "today",
+          "days",
+          "holidays",
+          "requests",
+          "balance_year",
+          "balances"
+        ],
+        "title": "MyAttendanceRead",
+        "type": "object"
+      },
       "MyContestDetail": {
         "properties": {
           "audience": {
@@ -17582,6 +18378,7 @@
           "contest_reviewed",
           "contest_live",
           "contest_updated",
+          "attendance_request_updated",
           "contest_won",
           "commission_rate_submitted",
           "commission_rate_reviewed"
@@ -39086,6 +39883,958 @@
         "summary": "Get Transaction Detail",
         "tags": [
           "agent"
+        ]
+      }
+    },
+    "/api/v1/attendance/check-in": {
+      "post": {
+        "operationId": "check_in_api_v1_attendance_check_in_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceDayRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Check In",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/check-out": {
+      "post": {
+        "operationId": "check_out_api_v1_attendance_check_out_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceDayRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Check Out",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/corrections": {
+      "post": {
+        "operationId": "request_correction_api_v1_attendance_corrections_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceCorrectionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceRequestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Request Correction",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/export": {
+      "get": {
+        "operationId": "export_attendance_api_v1_attendance_export_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "team_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "staff_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Staff Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "checked_in",
+                    "present",
+                    "half_day",
+                    "short_day",
+                    "absent",
+                    "missing_checkout",
+                    "on_leave",
+                    "holiday",
+                    "week_off"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Attendance",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/holidays": {
+      "get": {
+        "operationId": "get_holidays_api_v1_attendance_holidays_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AttendanceHolidayRead"
+                  },
+                  "title": "Response Get Holidays Api V1 Attendance Holidays Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Holidays",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/holidays/{day}": {
+      "delete": {
+        "operationId": "delete_holiday_api_v1_attendance_holidays__day__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "day",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Day",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Holiday",
+        "tags": [
+          "attendance"
+        ]
+      },
+      "put": {
+        "operationId": "put_holiday_api_v1_attendance_holidays__day__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "day",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Day",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceHolidayInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Put Holiday",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/leave": {
+      "post": {
+        "operationId": "request_leave_api_v1_attendance_leave_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceLeaveInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceRequestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Request Leave",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/me": {
+      "get": {
+        "operationId": "my_attendance_api_v1_attendance_me_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9998,
+                  "minimum": 2000,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 12,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyAttendanceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "My Attendance",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/policy": {
+      "get": {
+        "operationId": "get_policy_api_v1_attendance_policy_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendancePolicyState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Policy",
+        "tags": [
+          "attendance"
+        ]
+      },
+      "put": {
+        "operationId": "put_policy_api_v1_attendance_policy_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendancePolicyInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendancePolicyState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Put Policy",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/requests": {
+      "get": {
+        "operationId": "get_requests_api_v1_attendance_requests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "approved",
+                    "rejected",
+                    "cancelled"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "pending",
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "team_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "staff_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Staff Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceInboxRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Requests",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/requests/{request_id}/cancel": {
+      "post": {
+        "operationId": "cancel_request_api_v1_attendance_requests__request_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceRequestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Cancel Request",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/requests/{request_id}/decision": {
+      "post": {
+        "operationId": "decide_request_api_v1_attendance_requests__request_id__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceDecisionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceRequestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Decide Request",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/roster": {
+      "get": {
+        "operationId": "get_roster_api_v1_attendance_roster_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "team_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "staff_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Staff Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "checked_in",
+                    "present",
+                    "half_day",
+                    "short_day",
+                    "absent",
+                    "missing_checkout",
+                    "on_leave",
+                    "holiday",
+                    "week_off"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceRosterRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Roster",
+        "tags": [
+          "attendance"
         ]
       }
     },

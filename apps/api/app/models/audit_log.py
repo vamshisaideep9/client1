@@ -170,6 +170,8 @@ class AuditAction(enum.StrEnum):
     # and jobs/contest_lifecycle.py: ids, statuses, counts and paise only.
     CONTEST_CREATED = "contest_created"
     CONTEST_UPDATED = "contest_updated"
+    ATTENDANCE_UPDATED = "attendance_updated"
+    ATTENDANCE_EXPORTED = "attendance_exported"
     CONTEST_SUBMITTED = "contest_submitted"
     CONTEST_DELETED = "contest_deleted"
     CONTEST_APPROVED = "contest_approved"

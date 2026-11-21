@@ -1,5 +1,12 @@
 # Feature implementation status
 
+**Implemented — Batch 6 API:** attendance clock, effective-dated policy,
+reviewed leave and corrections, rollover, roster and audited CSV. Focused
+checks cover no-policy gating, concurrent check-in, overnight checkout,
+current manager reach, preserved original punches and override history.
+The platform-scope inventory explicitly covers the policy and holiday
+metadata roles.
+
 **Implemented — Batch 5 web:** minute-level contest controls and across-role
 schedule display, versioned Admin editing, and Admin item award recording.
 The API parent is [upstream #394](https://github.com/brollysolutions/client1/pull/394)

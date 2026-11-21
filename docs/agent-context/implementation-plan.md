@@ -1,5 +1,18 @@
 # Living implementation plan
 
+**Implemented — Batch 6 API: attendance, regularisation and leave**
+
+- Require effective-dated Admin policy before opening the clock or leave.
+- Keep each staff member's attendance on their IST work date, including
+  overnight check-out. Preserve original punches through reviewed corrections.
+- Limit staff and manager access to their current scope, enforce quota and
+  overlap checks under a staff lock, and audit decisions and CSV exports.
+- Seven focused PostgreSQL checks, including schema-wide RLS, passed.
+  The migration has one head and passed scratch upgrade/downgrade/upgrade.
+  Next priority is the personal attendance dashboard.
+- The platform-scope inventory covers the shared, read-only attendance
+  policy and holiday metadata. Person-level records retain live reach checks.
+
 **Implemented — Batch 5 web: contest schedules, prizes and Admin editing**
 
 - Staff author minute-level IST windows and cash or item prizes. Participant
