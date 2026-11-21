@@ -1,6 +1,8 @@
 from datetime import date, datetime, time, timedelta
+from io import BytesIO
 
 import pytest
+from PIL import Image
 from sqlalchemy import delete, update
 
 import app.db.session as db_session
@@ -128,6 +130,18 @@ async def test_monthly_accrual_and_certificate_access(client, monkeypatch):
             assert "private-test" not in result.headers["content-disposition"]
         for denied in (headers(manager), other):
             assert (await client.get(f"{endpoint}/certificate", headers=denied)).status_code == 404
+        png = BytesIO()
+        Image.new("I;16", (4, 4), 1024).save(png, format="PNG")
+        replacement = await client.post(
+            f"{endpoint}/certificate",
+            headers=owner,
+            files={"file": ("certificate.png", png.getvalue(), "image/png")},
+        )
+        assert replacement.status_code == 204, replacement.text
+        refreshed = await client.get(f"{endpoint}/certificate", headers=headers(checker))
+        assert refreshed.status_code == 200, refreshed.text
+        assert refreshed.headers["content-type"] == "image/png"
+        assert len(objects) == 2
         approved = await client.post(
             f"{endpoint}/decision", headers=headers(checker), json=decision
         )
@@ -151,7 +165,7 @@ async def test_monthly_accrual_and_certificate_access(client, monkeypatch):
         )
         assert (sick["allocated_units"], sick["used_units"]) == (10, 0)
         assert (await client.get(f"{endpoint}/certificate", headers=owner)).status_code == 404
-        assert await attendance_certificates.purge_expired() == 1
+        assert await attendance_certificates.purge_expired() == 2
         assert objects == {}
     finally:
         async with db_session.AsyncSessionLocal() as db:

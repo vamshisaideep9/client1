@@ -9,8 +9,10 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    SerializerFunctionWrapHandler,
     StringConstraints,
     field_validator,
+    model_serializer,
     model_validator,
 )
 
@@ -247,6 +249,13 @@ class AttendanceBalance(BaseModel):
     allocated_units: int
     used_units: int
     month: date | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_period(self, handler: SerializerFunctionWrapHandler):
+        result = handler(self)
+        if self.month is None:
+            result.pop("month", None)
+        return result
 
 
 class MyAttendanceRead(BaseModel):

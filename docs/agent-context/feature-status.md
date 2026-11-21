@@ -32,8 +32,8 @@ staff; a missing direct reviewer leaves the existing decision routing in place.
 
 The monthly rules take effect on the first of a month. A qualifying
 employment month earns the configured amount. Existing annual leave types
-keep their annual balances. Certificate files are private to the requesting
-employee and platform Admin reviewers. Approval fails while the certificate
+keep their annual balances and response shape. Certificate files are private
+to the requesting employee and platform Admin reviewers. Approval fails while the certificate
 is missing or expired. Scheduled cleanup retries storage deletion after
 the configured retention window. PostgreSQL scenario, policy inventory,
 single-head migration round trip, and generated contracts passed.

@@ -41,6 +41,9 @@
   medical certificate thresholds by leave type. Certificates are accessible
   to the requesting employee and platform Admin reviewers, with configured
   retention.
+- Annual balances preserve their original response fields. The month field is
+  returned for monthly balances. Certificate replacements preserve access to
+  the new file and place the previous object in the cleanup queue.
 - Verified Main Admin configuration, half-day accrual arithmetic, off-day
   charges, carry-forward, decision gating, exact certificate audience,
   expiry, and storage cleanup in PostgreSQL with synthetic objects. The
