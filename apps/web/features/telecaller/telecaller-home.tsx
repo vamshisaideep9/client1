@@ -16,6 +16,7 @@ import {
   MetricGrid,
 } from "@/features/dashboard/dashboard-ui";
 import { ContestHomeCard } from "@/features/contests/contest-home-card";
+import { AttendanceTodayCard } from "@/features/attendance/staff-attendance-view";
 import { useLine } from "@/features/dashboard/line-provider";
 import { useMe } from "@/features/dashboard/me-provider";
 import { getNotifications, type AppNotification } from "@/lib/notifications";
@@ -214,6 +215,7 @@ export function TelecallerHome() {
       </div>
 
       <ContestHomeCard />
+      <AttendanceTodayCard />
 
       <DashboardPanel
         title="Notifications"
