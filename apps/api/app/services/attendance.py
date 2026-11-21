@@ -17,6 +17,7 @@ from app.models.attendance import (
     AttendanceHoliday,
     AttendanceLineHoliday,
     AttendancePolicy,
+    AttendanceRequest,
 )
 from app.models.audit_log import AuditAction
 from app.models.profile import (
@@ -98,9 +99,12 @@ def allows_personal_attendance(role: str, policy: AttendancePolicy | None) -> bo
     return policy is not None and (role != StaffRole.SUB_ADMIN or policy.session_clock)
 
 
-async def policy_state(db: AsyncSession) -> AttendancePolicyState:
+async def policy_state(
+    db: AsyncSession, *, can_configure_leave_rules: bool = False
+) -> AttendancePolicyState:
     today = work_date(utc_now())
     return AttendancePolicyState(
+        can_configure_leave_rules=can_configure_leave_rules,
         active=await policy_for(db, today),
         scheduled=await db.scalar(
             select(AttendancePolicy)
@@ -247,7 +251,7 @@ async def configure_policy(
     actor: CurrentUser, values: AttendancePolicyInput
 ) -> AttendancePolicyState:
     async with db_session.AsyncSessionLocal() as db:
-        await lock_actor(db, actor)
+        admin = await lock_actor(db, actor)
         await db.execute(select(func.pg_advisory_xact_lock(ATTENDANCE_POLICY_LOCK)))
         latest = await db.scalar(
             select(AttendancePolicy).order_by(AttendancePolicy.version.desc()).limit(1)
@@ -260,16 +264,56 @@ async def configure_policy(
             effective_from = (today.replace(day=28) + timedelta(days=4)).replace(day=1)
         if latest:
             effective_from = max(effective_from, latest.effective_from)
+        values_dict = values.model_dump()
+        previous_rules = latest.monthly_leave_rules if latest else {}
+        previous_retention = latest.certificate_retention_days if latest else None
+        if "monthly_leave_rules" not in values.model_fields_set:
+            values_dict["monthly_leave_rules"] = previous_rules
+        if "certificate_retention_days" not in values.model_fields_set:
+            values_dict["certificate_retention_days"] = previous_retention
+        rules = values_dict["monthly_leave_rules"]
+        retention = values_dict["certificate_retention_days"]
+        if (
+            any(rule["certificate_after_days"] is not None for rule in rules.values())
+            and retention is None
+        ):
+            raise AttendanceInvalid("Set certificate retention before requiring a certificate.")
+        if not rules.keys() <= values.leave_quotas.keys():
+            raise AttendanceInvalid("Keep leave types with monthly rules in the policy.")
+        if rules != previous_rules or retention != previous_retention:
+            if not admin.is_primary_admin:
+                raise AttendanceForbidden("Only Main Admin may configure monthly leave rules.")
+            revised_month = (today.replace(day=28) + timedelta(days=4)).replace(day=1)
+            effective_from = max(effective_from, revised_month)
+            if effective_from.day != 1:
+                effective_from = (effective_from.replace(day=28) + timedelta(days=4)).replace(day=1)
+            affected_types = {
+                kind
+                for kind in previous_rules.keys() | rules.keys()
+                if previous_rules.get(kind) != rules.get(kind) or retention != previous_retention
+            }
+            if affected_types and await db.scalar(
+                select(AttendanceRequest.id)
+                .where(
+                    AttendanceRequest.status.in_(("pending", "approved")),
+                    AttendanceRequest.leave_type.in_(affected_types),
+                    AttendanceRequest.end_day >= effective_from,
+                )
+                .limit(1)
+            ):
+                raise AttendanceError(
+                    "Resolve existing future leave before changing its monthly rules."
+                )
         new = AttendancePolicy(
             version=latest.version + 1 if latest else 1,
             effective_from=effective_from,
             updated_by=actor.id,
-            **values.model_dump(),
+            **values_dict,
         )
         db.add(new)
         await audit(db, actor, "configure_policy", detail={"version": new.version})
         await db.commit()
-        return await policy_state(db)
+        return await policy_state(db, can_configure_leave_rules=admin.is_primary_admin)
 
 
 async def configure_holiday(

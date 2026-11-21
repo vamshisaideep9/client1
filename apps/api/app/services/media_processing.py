@@ -161,6 +161,16 @@ def sanitize_image_bytes(content: bytes, content_type: str, *, max_bytes: int) -
     return result
 
 
+def sanitize_private_document(content: bytes, content_type: str, *, max_bytes: int) -> bytes:
+    if len(content) > max_bytes or storage.sniff_content_type(content[:32]) != content_type:
+        raise MediaProcessingError
+    with _MEDIA_PROCESS_SLOT:
+        if content_type == "application/pdf":
+            scan_bytes(content)
+            return content
+        return sanitize_image_bytes(content, content_type, max_bytes=max_bytes)
+
+
 def validate_panorama_bytes(content: bytes, content_type: str) -> None:
     """Require a bounded equirectangular image suitable for a 360 viewer."""
     expected_format = _IMAGE_FORMAT_BY_CONTENT_TYPE.get(content_type)

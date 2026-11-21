@@ -12,8 +12,10 @@ transitioned. Existing team assignments drive attendance recommendations.
 Slice 3 adds employment dates, line holiday calendars, and direct attendance
 review outside work teams. The attendance calendar remains shared for dates
 with a global holiday. A direct reviewer can reach only records in the assigned
-line and uses the existing decision workflow. Monthly leave rules, certificate
-handling, and closed reporting remain open.
+line and uses the existing decision workflow. Slice 4 adds Main Admin
+configuration for monthly accrual, carry-forward caps, days off inside a
+leave request, and certificate thresholds per leave type. Closed reporting
+remains open.
 
 Slice 1 was merged in [upstream #399](https://github.com/brollysolutions/client1/pull/399).
 Slice 2 adds PostgreSQL coverage for pending activation, stale sessions,
@@ -22,11 +24,20 @@ The migration round trip and single-head check passed. All 1,122 web unit tests
 and the desktop activation and mobile delegated-access browser journeys
 passed. The complete attendance feature remains in progress.
 [Upstream #400](https://github.com/brollysolutions/client1/pull/400) ·
-[Slice 3 changes](https://github.com/brollysolutions/client1/compare/main...feat/attendance-employment-calendars)
+[Upstream #401](https://github.com/brollysolutions/client1/pull/401)
 
 Slice 3's PostgreSQL authorization and calendar scenario and both attendance
 browser journeys passed. Employment configuration is opt-in for existing
 staff; a missing direct reviewer leaves the existing decision routing in place.
+
+The monthly rules take effect on the first of a month. A qualifying
+employment month earns the configured amount. Existing annual leave types
+keep their annual balances. Certificate files are private to the requesting
+employee and platform Admin reviewers. Approval fails while the certificate
+is missing or expired. Scheduled cleanup retries storage deletion after
+the configured retention window. PostgreSQL scenario, policy inventory,
+single-head migration round trip, and generated contracts passed.
+[Slice 4 changes](https://github.com/brollysolutions/client1/compare/feat/attendance-employment-calendars...feat/attendance-leave-policy)
 
 **Implemented — Batch 6 attendance management web**
 

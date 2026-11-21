@@ -2365,6 +2365,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance/requests/{request_id}/certificate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Certificate */
+        get: operations["download_certificate_api_v1_attendance_requests__request_id__certificate_get"];
+        put?: never;
+        /** Attach Certificate */
+        post: operations["attach_certificate_api_v1_attendance_requests__request_id__certificate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attendance/requests/{request_id}/decision": {
         parameters: {
             query?: never;
@@ -8472,6 +8490,8 @@ export interface components {
             allocated_units: number;
             /** Leave Type */
             leave_type: string;
+            /** Month */
+            month?: string | null;
             /** Used Units */
             used_units: number;
         };
@@ -8681,8 +8701,27 @@ export interface components {
              */
             start_day: string;
         };
+        /** AttendanceMonthlyLeaveRule */
+        AttendanceMonthlyLeaveRule: {
+            /** Accrual Units */
+            accrual_units: number;
+            /**
+             * Carry Units
+             * @default 0
+             */
+            carry_units: number;
+            /** Certificate After Days */
+            certificate_after_days?: number | null;
+            /**
+             * Sandwich
+             * @default false
+             */
+            sandwich: boolean;
+        };
         /** AttendancePolicyInput */
         AttendancePolicyInput: {
+            /** Certificate Retention Days */
+            certificate_retention_days?: number | null;
             /** Full Day Minutes */
             full_day_minutes: number;
             /** Grace Minutes */
@@ -8692,6 +8731,10 @@ export interface components {
             /** Leave Quotas */
             leave_quotas: {
                 [key: string]: number;
+            };
+            /** Monthly Leave Rules */
+            monthly_leave_rules?: {
+                [key: string]: components["schemas"]["AttendanceMonthlyLeaveRule"];
             };
             /**
              * Session Clock
@@ -8707,6 +8750,8 @@ export interface components {
         };
         /** AttendancePolicyRead */
         AttendancePolicyRead: {
+            /** Certificate Retention Days */
+            certificate_retention_days?: number | null;
             /**
              * Effective From
              * Format: date
@@ -8721,6 +8766,10 @@ export interface components {
             /** Leave Quotas */
             leave_quotas: {
                 [key: string]: number;
+            };
+            /** Monthly Leave Rules */
+            monthly_leave_rules?: {
+                [key: string]: components["schemas"]["AttendanceMonthlyLeaveRule"];
             };
             /**
              * Session Clock
@@ -8739,6 +8788,11 @@ export interface components {
         /** AttendancePolicyState */
         AttendancePolicyState: {
             active: components["schemas"]["AttendancePolicyRead"] | null;
+            /**
+             * Can Configure Leave Rules
+             * @default false
+             */
+            can_configure_leave_rules: boolean;
             scheduled: components["schemas"]["AttendancePolicyRead"] | null;
         };
         /** AttendanceRequestRead */
@@ -8749,6 +8803,11 @@ export interface components {
             approved_units: {
                 [key: string]: number;
             };
+            /**
+             * Certificate Required
+             * @default false
+             */
+            certificate_required: boolean;
             /**
              * Created At
              * Format: date-time
@@ -9371,6 +9430,11 @@ export interface components {
             video_media_asset_id?: string | null;
             /** Youtube Url */
             youtube_url?: string | null;
+        };
+        /** Body_attach_certificate_api_v1_attendance_requests__request_id__certificate_post */
+        Body_attach_certificate_api_v1_attendance_requests__request_id__certificate_post: {
+            /** File */
+            file: string;
         };
         /** BookmarkCreate */
         BookmarkCreate: {
@@ -21276,6 +21340,68 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AttendanceRequestRead"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_certificate_api_v1_attendance_requests__request_id__certificate_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attach_certificate_api_v1_attendance_requests__request_id__certificate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_attach_certificate_api_v1_attendance_requests__request_id__certificate_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

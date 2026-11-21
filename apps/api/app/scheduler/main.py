@@ -43,6 +43,7 @@ from app.jobs.reconcile_payouts import reconcile_payouts
 from app.jobs.remind_agent_lead_expiry import remind_agent_lead_expiry
 from app.jobs.retention_purge import retention_purge_job
 from app.models.auth import RefreshToken
+from app.services.attendance_certificates import purge_expired as purge_attendance_certificates
 from app.services.contact_change import expire_stale_changes
 
 logger = logging.getLogger("scheduler")
@@ -272,6 +273,15 @@ def build_scheduler() -> AsyncIOScheduler:
         trigger="interval",
         hours=24,
         id="purge_expired_private_media",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    add_operational_job(
+        purge_attendance_certificates,
+        trigger="interval",
+        minutes=15,
+        id="purge_attendance_certificates",
         max_instances=1,
         coalesce=True,
         replace_existing=True,

@@ -20,6 +20,7 @@ import {
   requestAttendanceLeave, setAttendanceClock, type AttendanceAdjustment, type AttendanceLeave, type AttendanceMine,
 } from "@/lib/attendance-api";
 import { ADJUSTMENT_LABELS, ATTENDANCE_STATUS, attendanceCode, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays, previousMonth, requestLabel } from "./attendance-display";
+import { AttendanceCertificateControl } from "./attendance-certificate-control";
 
 type RequestKind = "leave" | "correction" | AttendanceAdjustment["adjustment_type"];
 
@@ -187,7 +188,7 @@ export function StaffAttendanceView() {
               {payload.balances.length ? (
                 <ul className="mt-4 space-y-1 text-sm" aria-label={`Leave balance for ${payload.balance_year}`}>
                   {payload.balances.map((balance) => <li key={balance.leave_type}>
-                    {leaveLabel(balance.leave_type)} · {Math.max(0, balance.allocated_units - balance.used_units) / 2} days left of {balance.allocated_units / 2} ({payload.balance_year})
+                    {leaveLabel(balance.leave_type)} · {Math.max(0, balance.allocated_units - balance.used_units) / 2} days left of {balance.allocated_units / 2} ({balance.month ? new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(balance.month)) : payload.balance_year})
                   </li>)}
                 </ul>
               ) : null}
@@ -203,12 +204,15 @@ export function StaffAttendanceView() {
                       {row.status === "pending" || (!row.two_stage && row.status === "approved" && row.kind === "leave" && row.start_day > istDay(new Date(payload.server_time))) ? (
                         <Button variant="outline" size="sm" disabled={cancelling !== null} onClick={() => void cancel(row.id)}>Cancel request</Button>
                       ) : null}
+                      {row.certificate_required ? <div className="w-full rounded-md border border-border p-3">
+                        <AttendanceCertificateControl requestId={row.id} editable={row.status === "pending"} />
+                      </div> : null}
                     </li>
                   ))}
                 </ul>
               ) : <p className="mt-3 text-sm text-text-secondary">No requests for this month.</p>}
             </DashboardPanel>
-            {request ? <AttendanceRequestDialog kind={request} payload={payload} close={() => setRequest(null)} saved={(day) => { setMonth(day.slice(0, 7)); setMessage("Request submitted."); refresh(); }} /> : null}
+            {request ? <AttendanceRequestDialog kind={request} payload={payload} close={() => setRequest(null)} saved={(day, certificate) => { setMonth(day.slice(0, 7)); setMessage(certificate ? "Request submitted. Upload the required medical certificate below." : "Request submitted."); refresh(); }} /> : null}
           </>}
       {confirmDialog}
     </DashboardPage>
@@ -219,7 +223,7 @@ function AttendanceRequestDialog({ kind, payload, close, saved }: {
   kind: RequestKind;
   payload: AttendanceMine;
   close: () => void;
-  saved: (day: string) => void;
+  saved: (day: string, certificate: boolean) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -249,7 +253,7 @@ function AttendanceRequestDialog({ kind, payload, close, saved }: {
     });
     setBusy(false);
     if (!response.ok) { setError(response.error); return; }
-    saved(response.data.start_day);
+    saved(response.data.start_day, Boolean(response.data.certificate_required));
     close();
   }
   return (
