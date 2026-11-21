@@ -1,6 +1,6 @@
 # Living implementation plan
 
-**Delivered for review — Monthly leave rules and private medical certificates (slice 4)**
+**Delivered for review — Monthly attendance close, revisions, and Analytics (slice 5)**
 
 - Officer labels reuse the existing role ID. The team slot now permits one
   Telecaller team and one Officer team per manager in each business line.
@@ -48,8 +48,17 @@
   charges, carry-forward, decision gating, exact certificate audience,
   expiry, and storage cleanup in PostgreSQL with synthetic objects. The
   additive migration completed its empty round trip, with one Alembic head.
-  [Slice 4 changes](https://github.com/brollysolutions/client1/compare/feat/attendance-employment-calendars...feat/attendance-leave-policy).
-- Next attendance priority is monthly close, revisions, and Analytics.
+  [Upstream #402](https://github.com/brollysolutions/client1/pull/402).
+- Slice 5 adds a platform Admin close/reopen workflow for completed IST
+  months. The API blocks edits to closed dates, saves aggregate revisions,
+  records a reason for each transition, and provides Analytics and CSV views.
+- PostgreSQL verification covers readiness, a pending request, rejected edits
+  to a closed month, a distinct two-stage correction after reopening, and
+  immutable historical CSV. The additive migration completed its empty round
+  trip and retains one Alembic head.
+  [Slice 5 changes](https://github.com/brollysolutions/client1/compare/feat/attendance-leave-policy...feat/attendance-month-close).
+- Next priority is reviewing the three drafts in stack order and collecting
+  full repository, browser-suite, and production-artifact evidence.
 
 **Implemented — Batch 6 attendance management web**
 

@@ -7137,6 +7137,173 @@
         "title": "AttendanceLeaveInput",
         "type": "object"
       },
+      "AttendanceMonthAction": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "note": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_version",
+          "note"
+        ],
+        "title": "AttendanceMonthAction",
+        "type": "object"
+      },
+      "AttendanceMonthRead": {
+        "properties": {
+          "can_close": {
+            "title": "Can Close",
+            "type": "boolean"
+          },
+          "close_blocker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Close Blocker"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "revisions": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceMonthRevisionRead"
+            },
+            "title": "Revisions",
+            "type": "array"
+          },
+          "totals": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceMonthTotal"
+            },
+            "title": "Totals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "month",
+          "can_close",
+          "totals",
+          "revisions"
+        ],
+        "title": "AttendanceMonthRead",
+        "type": "object"
+      },
+      "AttendanceMonthRevisionRead": {
+        "properties": {
+          "closed_at": {
+            "format": "date-time",
+            "title": "Closed At",
+            "type": "string"
+          },
+          "reopened_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reopened At"
+          },
+          "totals": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceMonthTotal"
+            },
+            "title": "Totals",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "closed_at",
+          "reopened_at",
+          "totals"
+        ],
+        "title": "AttendanceMonthRevisionRead",
+        "type": "object"
+      },
+      "AttendanceMonthTotal": {
+        "properties": {
+          "absences": {
+            "title": "Absences",
+            "type": "integer"
+          },
+          "business_line": {
+            "anyOf": [
+              {
+                "enum": [
+                  "loans",
+                  "real_estate"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Line"
+          },
+          "late_days": {
+            "title": "Late Days",
+            "type": "integer"
+          },
+          "leave_units": {
+            "title": "Leave Units",
+            "type": "integer"
+          },
+          "lop_units": {
+            "title": "Lop Units",
+            "type": "integer"
+          },
+          "recorded_days": {
+            "title": "Recorded Days",
+            "type": "integer"
+          },
+          "sandwich_units": {
+            "default": 0,
+            "title": "Sandwich Units",
+            "type": "integer"
+          },
+          "worked_minutes": {
+            "title": "Worked Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "business_line",
+          "recorded_days",
+          "worked_minutes",
+          "leave_units",
+          "lop_units",
+          "late_days",
+          "absences"
+        ],
+        "title": "AttendanceMonthTotal",
+        "type": "object"
+      },
       "AttendanceMonthlyLeaveRule": {
         "additionalProperties": false,
         "properties": {
@@ -41634,6 +41801,228 @@
           }
         ],
         "summary": "My Attendance",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/months/{month}": {
+      "get": {
+        "operationId": "get_month_report_api_v1_attendance_months__month__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Month",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceMonthRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Month Report",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/months/{month}/close": {
+      "post": {
+        "operationId": "close_month_api_v1_attendance_months__month__close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Month",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceMonthAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceMonthRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Close Month",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/months/{month}/export": {
+      "get": {
+        "operationId": "export_month_api_v1_attendance_months__month__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Month",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Month",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/months/{month}/reopen": {
+      "post": {
+        "operationId": "reopen_month_api_v1_attendance_months__month__reopen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Month",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceMonthAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceMonthRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Reopen Month",
         "tags": [
           "attendance"
         ]

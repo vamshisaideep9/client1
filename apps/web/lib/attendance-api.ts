@@ -18,6 +18,7 @@ export type AttendanceHoliday = Schema["AttendanceHolidayRead"];
 export type AttendanceEmployment = Schema["AttendanceEmploymentRead"];
 export type AttendanceEmploymentInput = Schema["AttendanceEmploymentInput"];
 export type AttendanceLine = AttendanceEmploymentInput["business_line"];
+export type AttendanceMonth = Schema["AttendanceMonthRead"];
 
 export function getAttendanceRoster(params: URLSearchParams) {
   return apiRequest<AttendanceRoster>(`${ATTENDANCE_API}/roster?${params}`);
@@ -118,4 +119,18 @@ export function downloadAttendanceCertificate(id: string) {
     const extension = type === "image/jpeg" ? "jpg" : type === "image/png" ? "png" : "pdf";
     return `medical-certificate.${extension}`;
   });
+}
+
+export function getAttendanceMonth(day: string) {
+  return apiRequest<AttendanceMonth>(`${ATTENDANCE_API}/months/${encodeURIComponent(day)}`);
+}
+
+export function changeAttendanceMonth(day: string, action: "close" | "reopen", body: Schema["AttendanceMonthAction"]) {
+  return apiRequest<AttendanceMonth>(`${ATTENDANCE_API}/months/${encodeURIComponent(day)}/${action}`, { method: "POST", body });
+}
+
+export function exportAttendanceMonth(day: string, version?: number) {
+  const params = version ? `?version=${version}` : "";
+  return apiDownload(`${ATTENDANCE_API}/months/${encodeURIComponent(day)}/export${params}`,
+    brandedFilename(`attendance-${day.slice(0, 7)}${version ? `-revision-${version}` : ""}.csv`));
 }

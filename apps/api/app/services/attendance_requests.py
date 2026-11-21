@@ -176,6 +176,7 @@ async def submit(
                 requested_check_out=values.check_out,
             )
         clock.require_employment_days(employment, request.start_day, request.end_day)
+        await clock.ensure_period_open(db, request.start_day, request.end_day)
         if not clock.allows_personal_attendance(profile.role, policy):
             raise clock.AttendanceError("This date predates attendance for Sub Admins.")
         overlap = select(AttendanceRequest.id).where(
@@ -572,6 +573,7 @@ async def _decision(
         today = clock.work_date(now)
         await clock.require_policy(db, today)
         await db.execute(select(func.pg_advisory_xact_lock_shared(ATTENDANCE_POLICY_LOCK)))
+        await clock.ensure_period_open(db, request.start_day, request.end_day)
         before = request.status
         if values is None:
             if request.requester_id != actor.id:

@@ -82,9 +82,14 @@ async def run_attendance_rollover(now: datetime | None = None) -> int:
                     day = max(day, cursor.through_day + clock.DAY)
                 through = None
                 recalculate_months = set()
+                frozen_months = await clock.closed_months(db, day, end)
                 for _ in range(14):
                     if day > end:
                         break
+                    if day.replace(day=1) in frozen_months:
+                        through = day
+                        day += clock.DAY
+                        continue
                     row = await db.get(AttendanceDay, (staff_id, day))
                     policy = (
                         await db.get(AttendancePolicy, row.policy_version)

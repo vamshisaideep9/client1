@@ -2296,6 +2296,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance/months/{month}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Month Report */
+        get: operations["get_month_report_api_v1_attendance_months__month__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/months/{month}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close Month */
+        post: operations["close_month_api_v1_attendance_months__month__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/months/{month}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Month */
+        get: operations["export_month_api_v1_attendance_months__month__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/months/{month}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reopen Month */
+        post: operations["reopen_month_api_v1_attendance_months__month__reopen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attendance/policy": {
         parameters: {
             query?: never;
@@ -8700,6 +8768,65 @@ export interface components {
              * Format: date
              */
             start_day: string;
+        };
+        /** AttendanceMonthAction */
+        AttendanceMonthAction: {
+            /** Expected Version */
+            expected_version: number;
+            /** Note */
+            note: string;
+        };
+        /** AttendanceMonthRead */
+        AttendanceMonthRead: {
+            /** Can Close */
+            can_close: boolean;
+            /** Close Blocker */
+            close_blocker?: string | null;
+            /**
+             * Month
+             * Format: date
+             */
+            month: string;
+            /** Revisions */
+            revisions: components["schemas"]["AttendanceMonthRevisionRead"][];
+            /** Totals */
+            totals: components["schemas"]["AttendanceMonthTotal"][];
+        };
+        /** AttendanceMonthRevisionRead */
+        AttendanceMonthRevisionRead: {
+            /**
+             * Closed At
+             * Format: date-time
+             */
+            closed_at: string;
+            /** Reopened At */
+            reopened_at: string | null;
+            /** Totals */
+            totals: components["schemas"]["AttendanceMonthTotal"][];
+            /** Version */
+            version: number;
+        };
+        /** AttendanceMonthTotal */
+        AttendanceMonthTotal: {
+            /** Absences */
+            absences: number;
+            /** Business Line */
+            business_line: ("loans" | "real_estate") | null;
+            /** Late Days */
+            late_days: number;
+            /** Leave Units */
+            leave_units: number;
+            /** Lop Units */
+            lop_units: number;
+            /** Recorded Days */
+            recorded_days: number;
+            /**
+             * Sandwich Units
+             * @default 0
+             */
+            sandwich_units: number;
+            /** Worked Minutes */
+            worked_minutes: number;
         };
         /** AttendanceMonthlyLeaveRule */
         AttendanceMonthlyLeaveRule: {
@@ -21185,6 +21312,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyAttendanceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_month_report_api_v1_attendance_months__month__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceMonthRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_month_api_v1_attendance_months__month__close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceMonthAction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceMonthRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_month_api_v1_attendance_months__month__export_get: {
+        parameters: {
+            query?: {
+                version?: number | null;
+            };
+            header?: never;
+            path: {
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reopen_month_api_v1_attendance_months__month__reopen_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceMonthAction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceMonthRead"];
                 };
             };
             /** @description Validation Error */

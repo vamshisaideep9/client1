@@ -1,6 +1,6 @@
 # Feature implementation status
 
-**Partially implemented — Officer roles and attendance policy:** Officer
+**Delivered for review — Officer roles and attendance policy:** Officer
 labels, two distinct team types per manager and line, and the session-clock
 workflow with midnight checkout, fractional LOP, scoped two-stage approvals,
 regularizations, and explicit half-day sessions. Legacy policy and request
@@ -14,15 +14,15 @@ review outside work teams. The attendance calendar remains shared for dates
 with a global holiday. A direct reviewer can reach only records in the assigned
 line and uses the existing decision workflow. Slice 4 adds Main Admin
 configuration for monthly accrual, carry-forward caps, days off inside a
-leave request, and certificate thresholds per leave type. Closed reporting
-remains open.
+leave request, and certificate thresholds per leave type. Slice 5 adds monthly
+close and revision history in Staff attendance and Analytics.
 
 Slice 1 was merged in [upstream #399](https://github.com/brollysolutions/client1/pull/399).
 Slice 2 adds PostgreSQL coverage for pending activation, stale sessions,
 cross-line payout and campaign restrictions, and assigned Agent activity.
 The migration round trip and single-head check passed. All 1,122 web unit tests
 and the desktop activation and mobile delegated-access browser journeys
-passed. The complete attendance feature remains in progress.
+passed. The remaining implementation is in the draft PR stack.
 [Upstream #400](https://github.com/brollysolutions/client1/pull/400) ·
 [Upstream #401](https://github.com/brollysolutions/client1/pull/401)
 
@@ -37,7 +37,15 @@ to the requesting employee and platform Admin reviewers. Approval fails while th
 is missing or expired. Scheduled cleanup retries storage deletion after
 the configured retention window. PostgreSQL scenario, policy inventory,
 single-head migration round trip, and generated contracts passed.
-[Slice 4 changes](https://github.com/brollysolutions/client1/compare/feat/attendance-employment-calendars...feat/attendance-leave-policy)
+[Upstream #402](https://github.com/brollysolutions/client1/pull/402)
+
+Slice 5 lets platform Admin close a completed IST month after pending
+requests, open shifts, and scheduled rollover are resolved. Reopening requires
+a reason and preserves the prior revision. Analytics and audited CSV show
+recorded work, leave, sandwich charges, loss of pay, late days and absences by
+business line. Focused PostgreSQL verification passed readiness, denied access,
+closed-date protection, reopened corrections, and historical export.
+[Slice 5 changes](https://github.com/brollysolutions/client1/compare/feat/attendance-leave-policy...feat/attendance-month-close)
 
 **Implemented — Batch 6 attendance management web**
 

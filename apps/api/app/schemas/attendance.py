@@ -289,3 +289,35 @@ class AttendanceRosterRead(BaseModel):
 class AttendanceInboxRead(BaseModel):
     requests: list[AttendanceRequestRead]
     total: int
+
+
+class AttendanceMonthAction(AttendanceInput):
+    expected_version: Annotated[int, Field(ge=0)]
+    note: Reason
+
+
+class AttendanceMonthTotal(BaseModel):
+    business_line: AttendanceLine | None
+    recorded_days: int
+    worked_minutes: int
+    leave_units: int
+    sandwich_units: int = 0
+    lop_units: int
+    late_days: int
+    absences: int
+
+
+class AttendanceMonthRevisionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    version: int
+    closed_at: datetime
+    reopened_at: datetime | None
+    totals: list[AttendanceMonthTotal]
+
+
+class AttendanceMonthRead(BaseModel):
+    month: date
+    can_close: bool
+    close_blocker: str | None = None
+    totals: list[AttendanceMonthTotal]
+    revisions: list[AttendanceMonthRevisionRead]
