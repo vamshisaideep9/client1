@@ -8,6 +8,23 @@ const UPDATED_AT = "2026-08-30T00:00:00Z";
 const publishedBanners = process.argv.includes("--published-banners");
 const sponsor = process.argv.includes("--sponsor");
 const fullCatalogue = process.argv.includes("--full-catalogue");
+// banner-cta-and-offers.spec.ts: an https CTA on the hero and the sponsor
+// strip, and a YouTube banner with no destination (its CTA defaults to the
+// video). Opt-in so other suites keep their own banner scenarios.
+const externalCta = process.argv.includes("--external-cta");
+const externalCtaHero = [
+  { id: "40000000-0000-4000-8000-000000000011", title: "Compare partner home loans", subtitle: "Synthetic external campaign.", image_url: "/banner-templates/homepage/loans.webp", cta_label: "Visit the partner", deep_link: "https://partner.example/home-loans", rera_verified: false },
+  { id: "40000000-0000-4000-8000-000000000012", title: "Take the video tour", subtitle: "Synthetic YouTube campaign without a destination.", image_url: "/banner-templates/homepage/general.webp", cta_label: null, deep_link: null, rera_verified: false, youtube_video_id: "dQw4w9WgXcQ", video_url: null },
+];
+const externalCtaSponsor = {
+  id: "40000000-0000-4000-8000-000000000013",
+  title: "Plans from a verified partner",
+  subtitle: "Synthetic external sponsor.",
+  image_url: "/banner-templates/homepage_ad/personal-finance.webp",
+  cta_label: "Compare plans",
+  deep_link: "https://partner.example/plans",
+  rera_verified: false,
+};
 const sponsorFixture = {
   id: "40000000-0000-4000-8000-000000000004",
   title: "A little planning. A bigger possibility.",
@@ -125,9 +142,12 @@ const server = createServer((request, response) => {
     return;
   }
   if (url.pathname === "/api/v1/public/banners") {
-    const banners = url.searchParams.get("placement") === "homepage_ad"
-      ? (sponsor ? [sponsorFixture] : [])
-      : (publishedBanners ? bannerFixtures : []);
+    const homepageAd = url.searchParams.get("placement") === "homepage_ad";
+    const banners = externalCta
+      ? (homepageAd ? [externalCtaSponsor] : url.searchParams.get("placement") === "homepage" ? externalCtaHero : [])
+      : homepageAd
+        ? (sponsor ? [sponsorFixture] : [])
+        : (publishedBanners ? bannerFixtures : []);
     json(response, 200, { banners });
     return;
   }

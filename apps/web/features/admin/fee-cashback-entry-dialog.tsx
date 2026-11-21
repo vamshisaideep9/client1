@@ -119,7 +119,7 @@ export function FeeCashbackEntryDialog({
       open={application != null}
       onOpenChange={(o) => (o ? onOpenChange(true) : resetAndClose())}
     >
-      <DialogContent className="max-w-lg">
+      <DialogContent preventOutsideClose className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Enter processing-fee cashback</DialogTitle>
           <DialogDescription>

@@ -140,6 +140,7 @@ export function SubAdminHome() {
           label="Awaiting approval"
           value={home.pending_approval.length}
           icon={Clock}
+          href="#waiting-on-admin"
           attention={home.pending_approval.length > 0}
         />
         <MetricCard label="Live banners" value={home.live_banners_count} icon={DASHBOARD_ICONS.banners} href="/dashboard/campaigns?type=banners" />
@@ -149,6 +150,8 @@ export function SubAdminHome() {
       {/* Full width, in DOM order, rather than a 1.4fr/1fr pair of 310px boxes:
           the approval queue could only ever show two or three rows there. */}
       <DashboardPanel
+        id="waiting-on-admin"
+        tabIndex={-1}
         title="Waiting on Admin"
         description="Work you have submitted that Admin has not decided yet"
         action={<PendingApprovalDialog items={home.pending_approval} />}

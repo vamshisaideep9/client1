@@ -40,7 +40,10 @@ _ORDER = [
     LoanStatus.CONTACTED,
     LoanStatus.DOCS_COLLECTED,
     LoanStatus.SUBMITTED_TO_BANK,
-    LoanStatus.SANCTIONED,
+    LoanStatus.UNDER_REVIEW,
+    LoanStatus.SANCTIONED,  # labelled "Approved"
+    LoanStatus.AGREEMENT_COLLECTED,
+    LoanStatus.AGREEMENT_SUBMITTED_TO_BANK,
     LoanStatus.DISBURSED,
     LoanStatus.CLOSED,
 ]
@@ -49,6 +52,18 @@ TERMINAL_STATUSES = {LoanStatus.CLOSED, LoanStatus.REJECTED}
 _SIDE_BRANCH = {LoanStatus.ON_HOLD, LoanStatus.REJECTED}
 _SUBMITTED_INDEX = _ORDER_INDEX[LoanStatus.SUBMITTED_TO_BANK]
 _SANCTIONED_INDEX = _ORDER_INDEX[LoanStatus.SANCTIONED]
+# Disbursal stamps disbursed_at, which opens commission, fee-cashback and
+# referral-conversion eligibility, so no status from approval onwards may be
+# reached without the sanctioned amount and lending bank on record (the two
+# agreement stages sit between approval and disbursal). CLOSED is deliberately
+# not listed: it does not stamp disbursed_at, so a never-disbursed close
+# creates no money obligation.
+_TERMS_REQUIRED_STATUSES = {
+    LoanStatus.SANCTIONED,
+    LoanStatus.AGREEMENT_COLLECTED,
+    LoanStatus.AGREEMENT_SUBMITTED_TO_BANK,
+    LoanStatus.DISBURSED,
+}
 
 _STATUS_LABEL = {
     LoanStatus.NEW: "new",
@@ -56,7 +71,13 @@ _STATUS_LABEL = {
     LoanStatus.CONTACTED: "contacted",
     LoanStatus.DOCS_COLLECTED: "in document collection",
     LoanStatus.SUBMITTED_TO_BANK: "submitted to the bank",
-    LoanStatus.SANCTIONED: "sanctioned",
+    LoanStatus.UNDER_REVIEW: "under review at the bank",
+    LoanStatus.SANCTIONED: "approved",
+    # Read in "Your loan application is now {label}."
+    LoanStatus.AGREEMENT_COLLECTED: "at the stage where your loan agreement has been collected",
+    LoanStatus.AGREEMENT_SUBMITTED_TO_BANK: (
+        "at the stage where your loan agreement has been submitted to the bank"
+    ),
     LoanStatus.DISBURSED: "disbursed",
     LoanStatus.CLOSED: "closed",
     LoanStatus.REJECTED: "rejected",
@@ -80,6 +101,11 @@ class TermsNotAllowedAtStage(Exception):
     """Raised when a deal-terms field is set before its stage gate opens."""
 
 
+class SanctionTermsRequired(Exception):
+    """Raised when moving to approved (sanctioned) or later without a sanctioned amount
+    and a bank, either already saved or supplied in the same update."""
+
+
 class UnknownBank(Exception):
     """Raised when bank_id doesn't reference an existing active bank."""
 
@@ -93,6 +119,24 @@ def _effective_index(status: LoanStatus) -> int:
     """_ORDER index for gating purposes; on_hold/rejected have no position of
     their own, so terms gates fall back to NEW (most restrictive) for them."""
     return _ORDER_INDEX.get(status, _ORDER_INDEX[LoanStatus.NEW])
+
+
+_DISBURSED_INDEX = _ORDER_INDEX[LoanStatus.DISBURSED]
+
+
+def _stamp_stages(application: LoanApplication) -> None:
+    """CS-027: record when the application first reached submission and
+    approval. A forward jump stamps every stage it passed; CLOSED (which can
+    end a never-disbursed application) and the side branches stamp nothing,
+    matching `disbursed_at`. Set once, never moved."""
+    index = _ORDER_INDEX.get(application.status)
+    if index is None or index > _DISBURSED_INDEX:
+        return
+    now = datetime.now(UTC)
+    if index >= _SUBMITTED_INDEX and application.submitted_at is None:
+        application.submitted_at = now
+    if index >= _SANCTIONED_INDEX and application.sanctioned_at is None:
+        application.sanctioned_at = now
 
 
 def validate_transition(current: LoanStatus, target: LoanStatus) -> None:
@@ -150,6 +194,7 @@ async def apply_progress_update(
             application.closed_at = datetime.now(UTC)
         if payload.status == LoanStatus.DISBURSED and application.disbursed_at is None:
             application.disbursed_at = datetime.now(UTC)
+        _stamp_stages(application)
         status_changed = True
     elif payload.status_reason is not None:
         application.status_reason = payload.status_reason
@@ -203,6 +248,13 @@ async def apply_progress_update(
         application.processing_fee = payload.processing_fee
     if payload.fee_outcome is not None:
         application.fee_outcome = payload.fee_outcome
+
+    if status_changed and application.status in _TERMS_REQUIRED_STATUSES:
+        # bank_id is synchronized from the relationship only on flush, so a
+        # bank supplied in this payload is checked from the payload itself.
+        has_bank = payload.bank_id is not None or application.bank_id is not None
+        if application.amount_sanctioned is None or not has_bank:
+            raise SanctionTermsRequired
 
     # Relationship assignment (bank) synchronizes its foreign key on flush;
     # compare after that synchronization so a bank-only command cannot evade audit.

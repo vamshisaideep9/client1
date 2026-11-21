@@ -93,6 +93,14 @@ class ClientProfile(Base):
 
 class StaffProfile(Base):
     __tablename__ = "staff_profiles"
+    __table_args__ = (
+        CheckConstraint(
+            "loan_specialty_id IS NULL OR "
+            "(role::text = 'telecaller' AND business_line IS NOT NULL "
+            "AND business_line::text IN ('loans', 'both'))",
+            name="loan_specialty_role_line",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     auth_user_uuid: Mapped[uuid.UUID] = mapped_column(
@@ -102,6 +110,9 @@ class StaffProfile(Base):
     scope: Mapped[ProfileScope] = mapped_column(profile_scope_enum, nullable=False)
     business_line: Mapped[str | None] = mapped_column(business_line_enum, nullable=True)
     staff_code: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    loan_specialty_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("loan_types.id", ondelete="RESTRICT"), nullable=True
+    )
     status: Mapped[ProfileStatus] = mapped_column(
         profile_status_enum, nullable=False, default=ProfileStatus.ACTIVE
     )

@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPaise } from "@/lib/format";
+import { commissionRateLabel } from "@/lib/commission-rate";
 import { rupeesToPaise } from "@/lib/payout-form";
 import type { ApiResponse } from "@/lib/api/client";
 import { apiIssuesToFieldErrors } from "@/lib/form-validation";
@@ -25,7 +26,15 @@ import type { CommissionCreate, CommissionRead, EligibleDeal } from "@/lib/admin
 
 const LINE_LABEL: Record<string, string> = { loans: "Loans", real_estate: "Real Estate" };
 
-export function CommissionEntryDialog({
+export function CommissionEntryDialog(props: {
+  deal: EligibleDeal | null;
+  onOpenChange: (open: boolean) => void;
+  onEnter: (body: CommissionCreate) => Promise<ApiResponse<CommissionRead>>;
+}) {
+  return <CommissionEntryForm key={props.deal?.deal_uuid ?? "closed"} {...props} />;
+}
+
+function CommissionEntryForm({
   deal,
   onOpenChange,
   onEnter,
@@ -34,7 +43,8 @@ export function CommissionEntryDialog({
   onOpenChange: (open: boolean) => void;
   onEnter: (body: CommissionCreate) => Promise<ApiResponse<CommissionRead>>;
 }) {
-  const [amountRupees, setAmountRupees] = React.useState("");
+  const [amountRupees, setAmountRupees] = React.useState(() =>
+    deal?.suggested_amount_paise ? (deal.suggested_amount_paise / 100).toFixed(2) : "");
   const [notes, setNotes] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [notesError, setNotesError] = React.useState<string>();
@@ -95,7 +105,7 @@ export function CommissionEntryDialog({
 
   return (
     <Dialog open={deal != null} onOpenChange={(o) => (o ? onOpenChange(true) : resetAndClose())}>
-      <DialogContent className="max-w-lg">
+      <DialogContent preventOutsideClose className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Enter commission</DialogTitle>
           <DialogDescription>
@@ -108,6 +118,13 @@ export function CommissionEntryDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          {deal?.commission_rate ? (
+            <p className="rounded-xl bg-surface p-3 text-sm">
+              Approved rate: {commissionRateLabel(deal.commission_rate)}.
+              {deal.suggestion_basis === "requested" ? " Based on the requested loan amount." : deal.suggestion_basis === "sanctioned" ? " Based on the sanctioned loan amount." : ""}
+              {" "}You can change the agreed amount.
+            </p>
+          ) : null}
           <div className="space-y-1.5">
             <Label htmlFor="commission-amount">Agreed amount (₹)</Label>
             <Input

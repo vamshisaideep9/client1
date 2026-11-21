@@ -317,7 +317,7 @@ export function AdminVehicleArrangementsView() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && setActiveId(null)}>
-        <DialogContent ref={dialogRef} className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogContent preventOutsideClose ref={dialogRef} className="max-h-[90vh] max-w-2xl overflow-y-auto">
           {active ? (
             <>
               <DialogHeader>
