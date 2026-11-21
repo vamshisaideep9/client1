@@ -32,8 +32,8 @@ staff; a missing direct reviewer leaves the existing decision routing in place.
 
 The monthly rules take effect on the first of a month. A qualifying
 employment month earns the configured amount. Existing annual leave types
-keep their annual balances. Certificate files are private to the requesting
-employee and platform Admin reviewers. Approval fails while the certificate
+keep their annual balances and response shape. Certificate files are private
+to the requesting employee and platform Admin reviewers. Approval fails while the certificate
 is missing or expired. Scheduled cleanup retries storage deletion after
 the configured retention window. PostgreSQL scenario, policy inventory,
 single-head migration round trip, and generated contracts passed.
@@ -48,6 +48,9 @@ closed-date protection, reopened corrections, and historical export.
 [Slice 5 changes](https://github.com/brollysolutions/client1/compare/feat/attendance-leave-policy...feat/attendance-month-close)
 
 **Implemented — Batch 6 attendance management web**
+
+Shared image processing uses Pillow 13.0.0 for the attendance review stack,
+including the JPEG and PNG certificate flow in the next slice.
 
 Scoped roster, monthly attendance grid and review inbox are available to
 managers. Platform Admin handles approval overrides, policy configuration,
