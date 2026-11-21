@@ -209,6 +209,26 @@ def test_media_processor_url_rejects_unsafe_or_ambiguous_shapes(processor_url: s
         )
 
 
+def test_non_https_public_storage_endpoint_rejected_in_production() -> None:
+    # The public endpoint is what browsers receive; it must not downgrade the
+    # https server-side endpoint back to plain http.
+    with pytest.raises(ValidationError, match="SPACES_PUBLIC_ENDPOINT_URL"):
+        Settings(
+            ENV="production",
+            SECRET_KEY=_GOOD_KEY,
+            **{**_REAL_SPACES, "SPACES_PUBLIC_ENDPOINT_URL": "http://localhost:9000"},
+        )
+
+
+def test_https_public_storage_endpoint_accepted_in_production() -> None:
+    s = Settings(
+        ENV="production",
+        SECRET_KEY=_GOOD_KEY,
+        **{**_REAL_SPACES, "SPACES_PUBLIC_ENDPOINT_URL": "https://blr1.digitaloceanspaces.com"},
+    )
+    assert s.SPACES_PUBLIC_ENDPOINT_URL == "https://blr1.digitaloceanspaces.com"
+
+
 def test_non_https_storage_endpoint_rejected_in_production() -> None:
     # A real (non-placeholder) endpoint that's still plain http:// must also
     # be rejected outside dev — presigned URLs carry the SigV4 signature (and

@@ -36,6 +36,10 @@ function example(schema: Schema, depth = 0): unknown {
   return null;
 }
 
+export function schemaExample(name: string): Record<string, unknown> {
+  return example(contract.components.schemas[name]) as Record<string, unknown>;
+}
+
 export async function mockMobileApi(page: Page, role?: UserRole, line = "loans") {
   if (role) {
     // The test sets the hint cookie for its configured origin before navigation.

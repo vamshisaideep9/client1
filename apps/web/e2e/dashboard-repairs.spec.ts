@@ -159,7 +159,7 @@ test("collapsed sidebar shows a white symbol above its toggle and expands beside
     await expect.poll(() => visibleLogo.evaluate((image) => (image as HTMLImageElement).naturalWidth), { timeout: 30_000 }).toBeGreaterThan(0);
     const logo = (await brand.getByRole("link").boundingBox())!;
     const button = (await toggle.boundingBox())!;
-    await expect(visibleLogo).toHaveCSS("filter", "brightness(0) invert(1)");
+    await expect(visibleLogo).toHaveCSS("filter", "none");
     if (name === "Expand sidebar") {
       await expect(visibleLogo).toHaveAttribute("src", "/brand/symbol.png");
       expect(button.y).toBeGreaterThan(logo.y + logo.height);
@@ -238,4 +238,25 @@ test("browser policy permits multipart uploads to the configured storage origin"
   });
   expect(status).toBe(204);
   expect(posted).toBe(true);
+});
+
+test("sub admin awaiting approval card moves focus to the Waiting on Admin panel", async ({ page, baseURL }) => {
+  await signIn(page, baseURL!, "sub_admin");
+  await page.route("**/api/v1/sub-admin/home", (route) => route.fulfill({ json: {
+    content_drafts_count: 0,
+    live_banners_count: 2,
+    live_offers_count: 1,
+    pending_approval: [{ id: FIXTURE_ID, kind: "property_submission", title: "Sample pending listing", business_line: "real_estate", submitted_at: "2026-09-01T12:00:00Z" }],
+    recent_referral_payouts: [],
+  } }));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+  const card = page.getByRole("link", { name: /Awaiting approval/ });
+  await card.focus();
+  await page.keyboard.press("Enter");
+  const panel = page.getByRole("region", { name: "Waiting on Admin" });
+  await expect(panel).toBeFocused();
+  await expect(page).toHaveURL(/#waiting-on-admin$/);
+  await expect(panel).toBeInViewport();
+  await noOverflow(page);
 });
