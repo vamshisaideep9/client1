@@ -17,15 +17,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import campaign_artwork
 from app.core.deps import (
     CurrentUser,
-    get_active_user,
+    check_assignment_line,
+    get_personal_user,
     require_admin,
+    require_assignment,
     require_platform_admin,
     require_sub_admin,
-    require_sub_admin_or_platform_admin,
 )
 from app.db.session import get_db
 from app.models.audit_log import AuditAction
-from app.models.banner import Banner, BannerStatus, BannerTemplate
+from app.models.banner import Banner, BannerPlacement, BannerStatus, BannerTemplate
+from app.models.campaign_media import CampaignMediaAsset
 from app.schemas.banners import (
     BannerCreate,
     BannerImageUploadRequest,
@@ -37,23 +39,28 @@ from app.schemas.banners import (
     BannerTemplateRead,
     BannerUpdate,
     RejectRequest,
+    youtube_id_or_none,
 )
 from app.schemas.personalization import (
     AudienceRules,
-    audience_rules_to_storage,
     audience_rules_valid_for_banner,
 )
+from app.services import pincodes as pincode_service
 from app.services.audit_log import record as record_audit
 from app.services.banners import (
     IMAGE_MAX_BYTES,
     BannerAlreadyReviewed,
+    BannerChanged,
+    BannerHasReplacement,
     BannerInvalidAudience,
     BannerInvalidConfiguration,
+    BannerIsLive,
     BannerNotOwned,
     UnsupportedImageType,
     approve_banner,
     archive_banner,
     create_template_version,
+    delete_banner_before_live,
     presign_banner_image_upload,
     reject_banner,
     remove_banner,
@@ -67,21 +74,84 @@ from app.services.campaign_media import (
     resolve_campaign_asset,
 )
 
+media_view = require_assignment("media_sub_admin", "view", include_admin=True)
+media_edit = require_assignment("media_sub_admin", "edit")
+media_shared_edit = require_assignment("media_sub_admin", "edit")
+
+
+async def shared_media_edit(user: CurrentUser = Depends(media_shared_edit)) -> CurrentUser:
+    check_assignment_line(user, "media_sub_admin", "edit", "both")
+    return user
+
+
+async def media_record_reader(user: CurrentUser = Depends(get_personal_user)) -> CurrentUser:
+    if user.sub_admin_access is not None and not user.sub_admin_access.lines_for(
+        "media_sub_admin", "view"
+    ):
+        raise HTTPException(403, detail="This operation requires a dashboard grant.")
+    return user
+
+
 router = APIRouter()
+
+
+async def _stored_audience_rules(db: AsyncSession, rules: AudienceRules) -> dict:
+    """CS-026: every pincode and city target must be on the reference list."""
+    try:
+        return await pincode_service.audience_rules_for_storage(db, rules)
+    except pincode_service.UnknownAudiencePlaces as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Choose places from the list: {exc}.",
+        ) from exc
 
 
 def _read(banner: Banner) -> BannerRead:
     return BannerRead.model_validate(banner, from_attributes=True).model_copy(
-        update={"image_url": asset_image_url(banner.image_key) if banner.image_key else None}
+        update={
+            "image_url": asset_image_url(banner.image_key) if banner.image_key else None,
+            "video_url": asset_image_url(banner.video_key) if banner.video_key else None,
+        }
     )
+
+
+async def _resolve_video_asset(
+    db: AsyncSession,
+    *,
+    asset_id: UUID | None,
+    business_line: str,
+    placement: BannerPlacement,
+) -> CampaignMediaAsset | None:
+    """A banner video must be an active, processed `banner_video` asset for
+    this line, on a public placement. Raises 422 otherwise."""
+    if asset_id is None:
+        return None
+    if placement not in campaign_artwork.VIDEO_PLACEMENTS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Dashboard banners cannot carry a video.",
+        )
+    try:
+        return await resolve_campaign_asset(
+            db,
+            asset_id=asset_id,
+            business_line=business_line,
+            allowed_usage_types={campaign_artwork.BANNER_VIDEO},
+        )
+    except CampaignMediaInvalid as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Choose an active banner video for this business line.",
+        ) from exc
 
 
 @router.post("", response_model=BannerRead, status_code=status.HTTP_201_CREATED)
 async def create_banner(
     payload: BannerCreate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> BannerRead:
+    check_assignment_line(current_user, "media_sub_admin", "edit", payload.business_line)
     try:
         template, _, _ = await validate_banner_configuration(
             db,
@@ -121,13 +191,21 @@ async def create_banner(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Choose an active banner asset for this business line.",
         ) from exc
-    values = payload.model_dump(exclude={"audience_rules"})
+    video_asset = await _resolve_video_asset(
+        db,
+        asset_id=payload.video_media_asset_id,
+        business_line=payload.business_line,
+        placement=payload.placement,
+    )
+    values = payload.model_dump(exclude={"audience_rules", "youtube_url"})
     values["media_asset_id"] = template.media_asset_id if template else payload.media_asset_id
     if template is not None:
         values["image_key"] = None
     if media_asset is not None:
         values["image_key"] = media_asset.image_ref
-    values["audience_rules"] = audience_rules_to_storage(payload.audience_rules)
+    values["youtube_video_id"] = youtube_id_or_none(payload.youtube_url)
+    values["video_key"] = video_asset.image_ref if video_asset else None
+    values["audience_rules"] = await _stored_audience_rules(db, payload.audience_rules)
     values["category_key"] = template.category_key if template else None
     banner = Banner(created_by_uuid=current_user.id, **values)
     db.add(banner)
@@ -169,7 +247,7 @@ def _template_read(template: BannerTemplate) -> BannerTemplateRead:
 @router.get("/templates", response_model=BannerTemplateListResponse)
 async def list_banner_templates(
     active_only: bool = True,
-    current_user: CurrentUser = Depends(require_sub_admin_or_platform_admin),
+    current_user: CurrentUser = Depends(media_view),
     db: AsyncSession = Depends(get_db),
 ) -> BannerTemplateListResponse:
     stmt = select(BannerTemplate).order_by(
@@ -184,7 +262,7 @@ async def list_banner_templates(
 @router.post("/templates", response_model=BannerTemplateRead, status_code=status.HTTP_201_CREATED)
 async def add_banner_template_version(
     payload: BannerTemplateCreate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(shared_media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> BannerTemplateRead:
     try:
@@ -202,7 +280,7 @@ async def add_banner_template_version(
 @router.post("/templates/image-upload-url", response_model=BannerImageUploadResponse)
 async def get_template_image_upload_url(
     payload: BannerImageUploadRequest,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(shared_media_edit),
 ) -> BannerImageUploadResponse:
     try:
         url, fields, object_key = presign_banner_image_upload(
@@ -221,7 +299,7 @@ async def get_template_image_upload_url(
 @router.post("/image-upload-url", response_model=BannerImageUploadResponse)
 async def get_banner_image_upload_url(
     payload: BannerImageUploadRequest,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
 ) -> BannerImageUploadResponse:
     # No DB row yet -- a banner may not exist until after the image is
     # picked (create_banner takes image_key as a plain field). The key
@@ -246,7 +324,7 @@ async def get_banner_image_upload_url(
 @router.get("", response_model=BannerListResponse)
 async def list_banners(
     status_filter: BannerStatus | None = None,
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(media_record_reader),
     db: AsyncSession = Depends(get_db),
 ) -> BannerListResponse:
     # RLS scopes the rows: sub_admin and admin see the shared queue, anyone else
@@ -261,7 +339,7 @@ async def list_banners(
 @router.get("/{banner_id}", response_model=BannerRead)
 async def get_banner(
     banner_id: UUID,
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(media_record_reader),
     db: AsyncSession = Depends(get_db),
 ) -> BannerRead:
     banner = await db.scalar(
@@ -277,7 +355,7 @@ async def get_banner(
 async def update_banner(
     banner_id: UUID,
     payload: BannerUpdate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> BannerRead:
     visible_banner = await db.scalar(
@@ -288,6 +366,7 @@ async def update_banner(
     # RLS and this application guard both restrict mutation to draft/rejected
     # rows. The queue is intentionally shared across the Sub Admin team, so
     # authorship is audit provenance rather than an edit-authorization boundary.
+    check_assignment_line(current_user, "media_sub_admin", "edit", visible_banner.business_line)
     if visible_banner.status not in (BannerStatus.DRAFT, BannerStatus.REJECTED):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -368,11 +447,41 @@ async def update_banner(
             status_code=status.HTTP_409_CONFLICT,
             detail="This campaign changed after you opened it. Refresh before saving.",
         )
-    values = payload.model_dump(exclude_unset=True, exclude={"audience_rules", "expected_version"})
+    video_asset = None
+    if "video_media_asset_id" in payload.model_fields_set:
+        video_asset = await _resolve_video_asset(
+            db,
+            asset_id=payload.video_media_asset_id,
+            business_line=banner.business_line,
+            placement=banner.placement,
+        )
+    youtube_id = (
+        youtube_id_or_none(payload.youtube_url)
+        if "youtube_url" in payload.model_fields_set
+        else banner.youtube_video_id
+    )
+    if youtube_id is not None and banner.placement not in campaign_artwork.VIDEO_PLACEMENTS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Dashboard banners cannot carry a video.",
+        )
+    values = payload.model_dump(
+        exclude_unset=True, exclude={"audience_rules", "expected_version", "youtube_url"}
+    )
     if "audience_rules" in payload.model_fields_set and payload.audience_rules is not None:
-        values["audience_rules"] = audience_rules_to_storage(payload.audience_rules)
+        values["audience_rules"] = await _stored_audience_rules(db, payload.audience_rules)
     if "media_asset_id" in payload.model_fields_set:
         values["image_key"] = media_asset.image_ref if media_asset else None
+    # One video source at a time: choosing either replaces the other.
+    if "youtube_url" in payload.model_fields_set:
+        values["youtube_video_id"] = youtube_id
+        if youtube_id is not None:
+            values["video_media_asset_id"] = None
+            values["video_key"] = None
+    if "video_media_asset_id" in payload.model_fields_set:
+        values["video_key"] = video_asset.image_ref if video_asset else None
+        if video_asset is not None:
+            values["youtube_video_id"] = None
     # Template-backed campaigns mirror the template's asset; media-backed ones
     # keep the asset the author chose. Only the template branch may overwrite it.
     if template is not None:
@@ -416,7 +525,7 @@ async def update_banner(
 @router.post("/{banner_id}/submit", response_model=BannerRead)
 async def submit(
     banner_id: UUID,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> BannerRead:
     try:
@@ -446,32 +555,39 @@ async def submit(
     return _read(banner)
 
 
+_LIVE_NEEDS_ADMIN = "Live banners can only be taken down by an Admin."
+
+
 @router.delete("/{banner_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_banner_draft(
+async def delete_banner_draft(  # name kept: it is the published operationId
     banner_id: UUID,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    banner = await db.scalar(select(Banner).where(Banner.id == banner_id).with_for_update())
-    if banner is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Banner not found.")
-    if banner.status != BannerStatus.DRAFT:
+    """Sub Admin hard-deletes a banner until it goes live (draft, pending
+    approval, rejected or approved). Live banners come down only through the
+    Admin's soft Remove; archived and removed rows are kept."""
+    try:
+        deleted = await delete_banner_before_live(db, banner_id, current_user.id, current_user.role)
+    except BannerIsLive as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_LIVE_NEEDS_ADMIN) from exc
+    except BannerAlreadyReviewed as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Only a never-submitted draft can be deleted.",
-        )
-    await record_audit(
-        db,
-        action=AuditAction.BANNER_DELETED,
-        entity_type="banner",
-        entity_uuid=banner.id,
-        actor_uuid=current_user.id,
-        actor_role=current_user.role,
-        business_line=banner.business_line,
-        detail={"placement": banner.placement.value},
-    )
-    await db.delete(banner)
-    await db.commit()
+            detail="Archived banners are kept for the record and cannot be deleted.",
+        ) from exc
+    except BannerHasReplacement as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Another campaign is set to replace this banner. Delete that one first.",
+        ) from exc
+    except BannerChanged as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This banner changed after you opened it. Refresh and try again.",
+        ) from exc
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Banner not found.")
 
 
 @router.post("/{banner_id}/archive", response_model=BannerRead)
@@ -481,6 +597,8 @@ async def archive(
 ) -> BannerRead:
     try:
         banner = await archive_banner(banner_id, current_user.id, current_user.role)
+    except BannerIsLive as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_LIVE_NEEDS_ADMIN) from exc
     except BannerAlreadyReviewed as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -508,12 +626,13 @@ async def remove(
 )
 async def create_replacement(
     banner_id: UUID,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> BannerRead:
     source = await db.scalar(select(Banner).where(Banner.id == banner_id))
     if source is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Banner not found.")
+    check_assignment_line(current_user, "media_sub_admin", "edit", source.business_line)
     if source.status not in (BannerStatus.APPROVED, BannerStatus.LIVE, BannerStatus.ARCHIVED):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -548,6 +667,9 @@ async def create_replacement(
         cta_label=source.cta_label,
         image_key=source.image_key if source.template_id is None else None,
         media_asset_id=source.media_asset_id,
+        youtube_video_id=source.youtube_video_id,
+        video_media_asset_id=source.video_media_asset_id,
+        video_key=source.video_key,
         deep_link=source.deep_link,
         audience_rules=source.audience_rules,
         priority=source.priority,

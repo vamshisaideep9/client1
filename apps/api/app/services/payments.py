@@ -46,6 +46,7 @@ from typing import Protocol
 import httpx
 from sqlalchemy import func, or_, select, text, update
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.masking import mask_bank_account, mask_cheque_reference, mask_vpa
@@ -59,11 +60,12 @@ from app.models.payout import (
     PayoutStatus,
     PayoutType,
 )
-from app.models.profile import AgentProfile, ClientProfile, StaffProfile
+from app.models.profile import AgentProfile, ClientProfile, StaffProfile, SubAdminAccessProfile
 from app.models.transaction import Transaction, TransactionStatus, TransactionType
 from app.services import payout_links
 from app.services.admin_notify import notify_admins
 from app.services.audit_log import record as record_audit
+from app.services.sub_admin_access import read_access
 
 logger = logging.getLogger(__name__)
 
@@ -176,6 +178,88 @@ def _is_live() -> bool:
     return bool(settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET)
 
 
+SIMULATED_GATEWAY_PREFIX = "pout_sim_"
+# Gateway outcomes a tester may choose, by the payout state they apply to. They
+# are the RazorpayX webhook events settle_from_webhook already understands, so a
+# simulated outcome takes exactly the path a real webhook would.
+SIMULATOR_IN_FLIGHT_EVENTS = ("payout.processed", "payout.failed", "payout.rejected")
+SIMULATOR_SETTLED_EVENTS = ("payout.reversed",)
+# Transient gateway_status while one chosen outcome is being applied. It makes a
+# second, concurrent choice for the same payout see "nothing to apply" (409)
+# instead of settling a contradictory event after the first one.
+SIMULATOR_CLAIM_STATUS = "simulating"
+
+
+def gateway_simulator_active() -> bool:
+    """Development-only and mock-only, re-checked on every call (fail closed)."""
+    return settings.PAYOUT_GATEWAY_SIMULATOR and settings.ENV == "development" and not _is_live()
+
+
+def simulator_events_for(payout: Payout) -> list[str]:
+    """Gateway outcomes the simulator can apply to this payout right now."""
+    if (
+        not gateway_simulator_active()
+        or payout.provider != PayoutProvider.RAZORPAYX
+        or not payout.gateway_payout_id
+        or payout.gateway_status == SIMULATOR_CLAIM_STATUS
+    ):
+        return []
+    if payout.status in {PayoutStatus.INITIATED, PayoutStatus.PROCESSING}:
+        return list(SIMULATOR_IN_FLIGHT_EVENTS)
+    if payout.status == PayoutStatus.PAID and payout.reversal_transaction_id is None:
+        return list(SIMULATOR_SETTLED_EVENTS)
+    return []
+
+
+async def simulate_gateway_event(
+    *, payout_id: uuid.UUID, event: str, actor_user_uuid: uuid.UUID
+) -> None:
+    """Apply a tester-chosen gateway outcome through the real webhook path.
+
+    Hidden (not found) unless the simulator is active, so production and live
+    gateways can never reach it. The state check and a claim happen under one
+    row lock, so concurrent choices for the same payout cannot both apply; the
+    settle then runs through settle_from_webhook's own compare-and-swap, which
+    replaces the claim with the gateway's final status.
+    """
+    if not gateway_simulator_active():
+        raise PayoutNotFound("Payout not found.")
+    async with AsyncSessionLocal() as db:
+        payout = await db.scalar(select(Payout).where(Payout.id == payout_id).with_for_update())
+        if payout is None:
+            raise PayoutNotFound("Payout not found.")
+        if payout.recipient_user_uuid == actor_user_uuid:
+            raise SelfPayoutForbidden("You cannot settle a payout to your own account.")
+        if event not in simulator_events_for(payout):
+            raise PayoutStateError("That gateway outcome does not apply to this payout now.")
+        gateway_payout_id = payout.gateway_payout_id
+        previous_gateway_status = payout.gateway_status
+        payout.gateway_status = SIMULATOR_CLAIM_STATUS
+        await db.commit()
+    logger.info(
+        "PAYOUT_SIMULATED payout_id=%s event=%s actor=%s", payout_id, event, actor_user_uuid
+    )
+    try:
+        await settle_from_webhook(
+            event=event,
+            gateway_payout_id=gateway_payout_id,
+            provider=PayoutProvider.RAZORPAYX,
+        )
+    finally:
+        # Release the claim if the settle did not record a gateway status, so a
+        # tester can choose again rather than leaving the payout stuck.
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                update(Payout)
+                .where(
+                    Payout.id == payout_id,
+                    Payout.gateway_status == SIMULATOR_CLAIM_STATUS,
+                )
+                .values(gateway_status=previous_gateway_status)
+            )
+            await db.commit()
+
+
 def _provider_for_destination(destination_type: PayoutDestination) -> PayoutProvider:
     if destination_type == PayoutDestination.CHEQUE:
         return PayoutProvider.MANUAL
@@ -203,226 +287,275 @@ async def create_payout(
     idempotency_key: str,
     maker_user_uuid: uuid.UUID,
     actor_role: str | None = None,
+    allow_standalone: bool = True,
+    scoped_staff_id: uuid.UUID | None = None,
 ) -> uuid.UUID:
     """Validate the safety guards, provision the gateway fund account (real
     mode), and persist a payout. Main Admin payouts start approved; all others
     require a different Admin checker. Returns the new payout id.
 
+    ``allow_standalone=False`` removes the Main Admin exception for one
+    payout: it always starts pending approval by a different Admin (CS-027
+    contest prizes).
+
     Runs entirely on the bypass session: the guard reads (recipient, daily cap,
     dedupe) and the insert must not depend on the caller's RLS scope.
     """
-    # Pydantic's Field(gt=0, le=10_000_000_000) on PayoutCreate (the one
-    # existing HTTP caller) bounded this at the schema layer only — a second
-    # caller reaching this function directly (api/v1/referrals.py) had no
-    # such bound. The invariant belongs with the money path, not with one of
-    # its two routes in.
+    async with AsyncSessionLocal() as db, db.begin():
+        if scoped_staff_id is not None:
+            staff = await db.get(StaffProfile, scoped_staff_id, with_for_update={"read": True})
+            access = read_access(await db.get(SubAdminAccessProfile, scoped_staff_id))
+            if (
+                staff is None
+                or staff.auth_user_uuid != maker_user_uuid
+                or staff.role != "sub_admin"
+                or staff.status != "active"
+                or access is None
+                or business_line not in access.lines_for("account_manager", "prepare")
+            ):
+                raise SelfPayoutForbidden(
+                    "Payout requests require current access to this business line."
+                )
+            allow_standalone = False
+        payout = await prepare_payout(
+            db,
+            recipient_user_uuid=recipient_user_uuid,
+            payout_type=payout_type,
+            business_line=business_line,
+            amount_paise=amount_paise,
+            destination_type=destination_type,
+            destination=destination,
+            idempotency_key=idempotency_key,
+            maker_user_uuid=maker_user_uuid,
+            actor_role=actor_role,
+            allow_standalone=allow_standalone,
+        )
+
+    await initiate_standalone_payout(payout)
+    return payout.id
+
+
+async def prepare_payout(
+    db: AsyncSession,
+    *,
+    recipient_user_uuid: uuid.UUID,
+    payout_type: PayoutType,
+    business_line: str,
+    amount_paise: int,
+    destination_type: PayoutDestination,
+    destination: dict,
+    idempotency_key: str,
+    maker_user_uuid: uuid.UUID,
+    actor_role: str | None = None,
+    allow_standalone: bool = True,
+) -> Payout:
+    """Prepare a payout in the caller's bypass transaction without initiating it."""
     if not 0 < amount_paise <= 10_000_000_000:
         raise PayoutAmountExceeded("Amount must be greater than 0 and within the payout bound.")
     provider = _provider_for_destination(destination_type)
 
-    async with AsyncSessionLocal() as db:
-        # Serialize the daily-cap read+insert against concurrent creates: a
-        # transaction-scoped advisory lock keyed on the UTC date closes the
-        # TOCTOU window where two racing makers both read a stale daily total and
-        # jointly exceed the cap. Held until this transaction commits/rolls back.
-        # Admin-driven create volume is low, so contention is negligible.
-        today_key = int(datetime.now(UTC).strftime("%Y%m%d"))
-        await db.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": today_key})
+    # Serialize the daily-cap read+insert against concurrent creates: a
+    # transaction-scoped advisory lock keyed on the UTC date closes the
+    # TOCTOU window where two racing makers both read a stale daily total and
+    # jointly exceed the cap. Held until this transaction commits/rolls back.
+    # Admin-driven create volume is low, so contention is negligible.
+    today_key = int(datetime.now(UTC).strftime("%Y%m%d"))
+    await db.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": today_key})
 
-        # Main Admin is the only approval-free maker. Derive this from the live
-        # staff row inside the trusted service; callers cannot request or forge
-        # the exception.
-        standalone = bool(
+    # Main Admin is the only approval-free maker. Derive this from the live
+    # staff row inside the trusted service; callers cannot request or forge
+    # the exception.
+    standalone = allow_standalone and bool(
+        await db.scalar(
+            select(StaffProfile.id).where(
+                StaffProfile.auth_user_uuid == maker_user_uuid,
+                StaffProfile.role == "admin",
+                StaffProfile.status == "active",
+                StaffProfile.is_primary_admin.is_(True),
+            )
+        )
+    )
+
+    # Guard (d): recipient must be a real, usable platform account.
+    recipient_status = await db.scalar(
+        select(_auth_users_table().c.status).where(_auth_users_table().c.id == recipient_user_uuid)
+    )
+    if recipient_status is None:
+        raise RecipientNotFound("Unknown recipient account.")
+    if str(recipient_status) in ("suspended", "soft_deleted"):
+        raise RecipientInactive("Recipient account is not active.")
+
+    if business_line not in {"loans", "real_estate"}:
+        raise RecipientLineMismatch("A payout requires one operational business line.")
+
+    # Guard (d cont.): business_line must match a profile the
+    # recipient actually holds, or the ledger row silently mis-tags itself
+    # for per-line reporting/reconciliation even though RLS visibility (by
+    # user_uuid) is unaffected. A staff profile with no line (line-agnostic
+    # staff) matches any requested line. Every self-registered CLIENT is
+    # dual-line by design (auth_service.register_set_password creates one
+    # ClientProfile per line, always both), so this only ever rejects in
+    # practice for a single-line Agent/Staff recipient (e.g. a commission
+    # payout tagged with the line the agent doesn't hold).
+    client_match = (
+        select(ClientProfile.auth_user_uuid)
+        .where(
+            ClientProfile.auth_user_uuid == recipient_user_uuid,
+            ClientProfile.business_line == business_line,
+        )
+        .exists()
+    )
+    agent_match = (
+        select(AgentProfile.auth_user_uuid)
+        .where(
+            AgentProfile.auth_user_uuid == recipient_user_uuid,
+            AgentProfile.business_line == business_line,
+        )
+        .exists()
+    )
+    staff_match = (
+        select(StaffProfile.auth_user_uuid)
+        .where(
+            StaffProfile.auth_user_uuid == recipient_user_uuid,
+            or_(
+                StaffProfile.business_line.in_((business_line, "both")),
+                StaffProfile.business_line.is_(None),
+            ),
+        )
+        .exists()
+    )
+    matched = await db.scalar(select(or_(client_match, agent_match, staff_match)))
+    if not matched:
+        raise RecipientLineMismatch(
+            "Recipient does not hold a profile on the specified business line."
+        )
+
+    # Insider-fraud guard: the maker cannot pay themselves. (approve adds the
+    # symmetric checker!=recipient guard, so no single admin can self-disburse.)
+    if recipient_user_uuid == maker_user_uuid:
+        raise SelfPayoutForbidden("A payout cannot be created to your own account.")
+
+    # Guard (a): per-payout cap. 0 ⇒ unset: fail-closed when live, no cap in mock.
+    max_cap = settings.PAYOUT_MAX_AMOUNT_PAISE
+    if max_cap <= 0 and _requires_configured_caps(provider):
+        raise PayoutCapNotConfigured("Per-payout cap is not configured.")
+    if max_cap > 0 and amount_paise > max_cap:
+        raise PayoutAmountExceeded("Amount exceeds the per-payout cap.")
+
+    # Guard (c): daily aggregate cap over today's non-dead payouts (under the lock).
+    daily_cap = settings.PAYOUT_DAILY_CAP_PAISE
+    if daily_cap <= 0 and _requires_configured_caps(provider):
+        raise PayoutCapNotConfigured("Daily payout cap is not configured.")
+    if daily_cap > 0:
+        start_of_day = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_total = (
             await db.scalar(
-                select(StaffProfile.id).where(
-                    StaffProfile.auth_user_uuid == maker_user_uuid,
-                    StaffProfile.role == "admin",
-                    StaffProfile.status == "active",
-                    StaffProfile.is_primary_admin.is_(True),
+                select(func.coalesce(func.sum(Payout.amount_paise), 0)).where(
+                    Payout.created_at >= start_of_day,
+                    Payout.status.not_in(_DEDUPE_DEAD_STATES),
                 )
             )
+        ) or 0
+        if today_total + amount_paise > daily_cap:
+            raise PayoutDailyCapExceeded("Amount would exceed the daily payout cap.")
+
+    # Guard (b): dedupe window over active payouts with the same natural key.
+    window = timedelta(seconds=settings.PAYOUT_DEDUPE_WINDOW_SECONDS)
+    cutoff = datetime.now(UTC) - window
+    dup = await db.scalar(
+        select(func.count())
+        .select_from(Payout)
+        .where(
+            Payout.recipient_user_uuid == recipient_user_uuid,
+            Payout.type == payout_type,
+            Payout.amount_paise == amount_paise,
+            Payout.idempotency_key == idempotency_key,
+            Payout.status.not_in(_DEDUPE_DEAD_STATES),
+            Payout.created_at >= cutoff,
         )
+    )
+    if dup:
+        raise DuplicatePayout("A matching payout was already created recently.")
 
-        # Guard (d): recipient must be a real, usable platform account.
-        recipient_status = await db.scalar(
-            select(_auth_users_table().c.status).where(
-                _auth_users_table().c.id == recipient_user_uuid
-            )
-        )
-        if recipient_status is None:
-            raise RecipientNotFound("Unknown recipient account.")
-        if str(recipient_status) in ("suspended", "soft_deleted"):
-            raise RecipientInactive("Recipient account is not active.")
-
-        if business_line not in {"loans", "real_estate"}:
-            raise RecipientLineMismatch("A payout requires one operational business line.")
-
-        # Guard (d cont.): business_line must match a profile the
-        # recipient actually holds, or the ledger row silently mis-tags itself
-        # for per-line reporting/reconciliation even though RLS visibility (by
-        # user_uuid) is unaffected. A staff profile with no line (line-agnostic
-        # staff) matches any requested line. Every self-registered CLIENT is
-        # dual-line by design (auth_service.register_set_password creates one
-        # ClientProfile per line, always both), so this only ever rejects in
-        # practice for a single-line Agent/Staff recipient (e.g. a commission
-        # payout tagged with the line the agent doesn't hold).
-        client_match = (
-            select(ClientProfile.auth_user_uuid)
-            .where(
-                ClientProfile.auth_user_uuid == recipient_user_uuid,
-                ClientProfile.business_line == business_line,
-            )
-            .exists()
-        )
-        agent_match = (
-            select(AgentProfile.auth_user_uuid)
-            .where(
-                AgentProfile.auth_user_uuid == recipient_user_uuid,
-                AgentProfile.business_line == business_line,
-            )
-            .exists()
-        )
-        staff_match = (
-            select(StaffProfile.auth_user_uuid)
-            .where(
-                StaffProfile.auth_user_uuid == recipient_user_uuid,
-                or_(
-                    StaffProfile.business_line.in_((business_line, "both")),
-                    StaffProfile.business_line.is_(None),
-                ),
-            )
-            .exists()
-        )
-        matched = await db.scalar(select(or_(client_match, agent_match, staff_match)))
-        if not matched:
-            raise RecipientLineMismatch(
-                "Recipient does not hold a profile on the specified business line."
-            )
-
-        # Insider-fraud guard: the maker cannot pay themselves. (approve adds the
-        # symmetric checker!=recipient guard, so no single admin can self-disburse.)
-        if recipient_user_uuid == maker_user_uuid:
-            raise SelfPayoutForbidden("A payout cannot be created to your own account.")
-
-        # Guard (a): per-payout cap. 0 ⇒ unset: fail-closed when live, no cap in mock.
-        max_cap = settings.PAYOUT_MAX_AMOUNT_PAISE
-        if max_cap <= 0 and _requires_configured_caps(provider):
-            raise PayoutCapNotConfigured("Per-payout cap is not configured.")
-        if max_cap > 0 and amount_paise > max_cap:
-            raise PayoutAmountExceeded("Amount exceeds the per-payout cap.")
-
-        # Guard (c): daily aggregate cap over today's non-dead payouts (under the lock).
-        daily_cap = settings.PAYOUT_DAILY_CAP_PAISE
-        if daily_cap <= 0 and _requires_configured_caps(provider):
-            raise PayoutCapNotConfigured("Daily payout cap is not configured.")
-        if daily_cap > 0:
-            start_of_day = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-            today_total = (
-                await db.scalar(
-                    select(func.coalesce(func.sum(Payout.amount_paise), 0)).where(
-                        Payout.created_at >= start_of_day,
-                        Payout.status.not_in(_DEDUPE_DEAD_STATES),
-                    )
-                )
-            ) or 0
-            if today_total + amount_paise > daily_cap:
-                raise PayoutDailyCapExceeded("Amount would exceed the daily payout cap.")
-
-        # Guard (b): dedupe window over active payouts with the same natural key.
-        window = timedelta(seconds=settings.PAYOUT_DEDUPE_WINDOW_SECONDS)
-        cutoff = datetime.now(UTC) - window
-        dup = await db.scalar(
-            select(func.count())
-            .select_from(Payout)
-            .where(
-                Payout.recipient_user_uuid == recipient_user_uuid,
-                Payout.type == payout_type,
-                Payout.amount_paise == amount_paise,
-                Payout.idempotency_key == idempotency_key,
-                Payout.status.not_in(_DEDUPE_DEAD_STATES),
-                Payout.created_at >= cutoff,
-            )
-        )
-        if dup:
-            raise DuplicatePayout("A matching payout was already created recently.")
-
-        # Provision online destinations now (no money moves) so approval carries
-        # no raw PII. Manual cheques collect their reference only at issuance.
-        # In every case only a masked hint is persisted.
-        hint = _mask_destination(destination_type, destination)
-        contact_id: str | None = None
-        fund_account_id: str | None = None
-        if provider == PayoutProvider.RAZORPAYX:
-            try:
-                contact_id, fund_account_id = await _provision_fund_account(
-                    recipient_user_uuid=recipient_user_uuid,
-                    destination_type=destination_type,
-                    destination=destination,
-                    provider=provider,
-                )
-            except httpx.HTTPError:
-                # Never stringify the httpx error — its body can echo the destination.
-                logger.warning("payout.provision_failed recipient=%s", recipient_user_uuid)
-                raise GatewayError(
-                    "Could not validate the destination with the payment gateway."
-                ) from None
-
-        payout = Payout(
-            recipient_user_uuid=recipient_user_uuid,
-            business_line=business_line,
-            type=payout_type,
-            amount_paise=amount_paise,
-            currency="INR",
-            status=(PayoutStatus.APPROVED if standalone else PayoutStatus.PENDING_APPROVAL),
-            destination_type=destination_type,
-            provider=provider,
-            destination_hint=hint,
-            idempotency_key=idempotency_key,
-            maker_user_uuid=maker_user_uuid,
-            gateway_contact_id=contact_id,
-            gateway_fund_account_id=fund_account_id,
-        )
-        db.add(payout)
+    # Provision online destinations now (no money moves) so approval carries
+    # no raw PII. Manual cheques collect their reference only at issuance.
+    # In every case only a masked hint is persisted.
+    hint = _mask_destination(destination_type, destination)
+    contact_id: str | None = None
+    fund_account_id: str | None = None
+    if provider == PayoutProvider.RAZORPAYX:
         try:
-            await db.flush()
-            if standalone:
-                # The user-approved Main Admin exception is explicit and auditable:
-                # there is no checker and no fabricated self-approval identity.
-                await record_audit(
-                    db,
-                    action=AuditAction.PAYOUT_APPROVED,
-                    entity_type="payout",
-                    entity_uuid=payout.id,
-                    actor_uuid=maker_user_uuid,
-                    actor_role=actor_role or "admin",
-                    business_line=business_line,
-                    detail={
-                        "amount_paise": amount_paise,
-                        "payout_type": payout_type.value,
-                        "maker_user_uuid": str(maker_user_uuid),
-                        "approval_mode": "primary_admin_standalone",
-                    },
-                )
-            await db.commit()
-        except IntegrityError:
-            # The partial-unique index catches a dedupe race the SELECT missed.
-            # Only a unique-violation means "duplicate" — re-raise anything else.
-            await db.rollback()
-            raise DuplicatePayout("A matching payout already exists.") from None
-        payout_id = payout.id
+            contact_id, fund_account_id = await _provision_fund_account(
+                recipient_user_uuid=recipient_user_uuid,
+                destination_type=destination_type,
+                destination=destination,
+                provider=provider,
+            )
+        except httpx.HTTPError:
+            # Never stringify the httpx error — its body can echo the destination.
+            logger.warning("payout.provision_failed recipient=%s", recipient_user_uuid)
+            raise GatewayError(
+                "Could not validate the destination with the payment gateway."
+            ) from None
 
-    if standalone:
+    payout = Payout(
+        recipient_user_uuid=recipient_user_uuid,
+        business_line=business_line,
+        type=payout_type,
+        amount_paise=amount_paise,
+        currency="INR",
+        status=(PayoutStatus.APPROVED if standalone else PayoutStatus.PENDING_APPROVAL),
+        destination_type=destination_type,
+        provider=provider,
+        destination_hint=hint,
+        idempotency_key=idempotency_key,
+        maker_user_uuid=maker_user_uuid,
+        gateway_contact_id=contact_id,
+        gateway_fund_account_id=fund_account_id,
+    )
+    db.add(payout)
+    try:
+        await db.flush()
+        if standalone:
+            # The user-approved Main Admin exception is explicit and auditable:
+            # there is no checker and no fabricated self-approval identity.
+            await record_audit(
+                db,
+                action=AuditAction.PAYOUT_APPROVED,
+                entity_type="payout",
+                entity_uuid=payout.id,
+                actor_uuid=maker_user_uuid,
+                actor_role=actor_role or "admin",
+                business_line=business_line,
+                detail={
+                    "amount_paise": amount_paise,
+                    "payout_type": payout_type.value,
+                    "maker_user_uuid": str(maker_user_uuid),
+                    "approval_mode": "primary_admin_standalone",
+                },
+            )
+    except IntegrityError as exc:
+        # The partial-unique index catches a dedupe race the SELECT missed.
+        # Only a unique-violation means "duplicate" — re-raise anything else.
+        if getattr(exc.orig, "sqlstate", None) != "23505":
+            raise
+        raise DuplicatePayout("A matching payout already exists.") from None
+    return payout
+
+
+async def initiate_standalone_payout(payout: Payout) -> None:
+    """Run the Main Admin side effects after the payout and its links commit."""
+    if payout.status == PayoutStatus.APPROVED:
         await notify_admins(
             notification_type=NotificationType.ADMIN_PAYOUT_REVIEWED,
             title="Standalone payout authorized",
             body=(
-                f"A {payout_type.value.replace('_', ' ')} payout was authorized by the Main Admin."
+                f"A {payout.type.value.replace('_', ' ')} payout was authorized by the Main Admin."
             ),
             href="/dashboard/payouts",
-            exclude_user_uuid=maker_user_uuid,
+            exclude_user_uuid=payout.maker_user_uuid,
         )
-        await initiate_payout(payout_id)
-    return payout_id
+        await initiate_payout(payout.id)
 
 
 # ---------------------------------------------------------------------------
@@ -506,9 +639,18 @@ async def reject_payout(
     reason: str,
     rejector_role: str | None = None,
 ) -> None:
-    """Reject a pending payout. Reject is not value-moving, so maker==rejector is allowed."""
+    """Reject a pending payout. Reject is not value-moving, so maker==rejector is allowed.
+
+    The row is locked before the status check. approve_payout's
+    compare-and-swap then waits on this lock and re-reads the row, so the two
+    can never both succeed. Without the lock a concurrent approve and reject
+    each returned success and the payout ended rejected after the approver
+    was told it was approved; a reject reading a stale pending row could also
+    overwrite a paid payout and release its linked commission, cashback or
+    referral for a second payment.
+    """
     async with AsyncSessionLocal() as db:
-        payout = await db.get(Payout, payout_id)
+        payout = await db.scalar(select(Payout).where(Payout.id == payout_id).with_for_update())
         if payout is None:
             raise PayoutNotFound("Payout not found.")
         if payout.status != PayoutStatus.PENDING_APPROVAL:
@@ -777,6 +919,15 @@ async def initiate_payout(payout_id: uuid.UUID) -> None:
             if payout is None:
                 return
 
+            if gateway_simulator_active():
+                # Development simulator: hand off to a synthetic gateway and wait
+                # for a tester to choose the outcome (simulate_gateway_event).
+                payout.gateway_payout_id = f"{SIMULATED_GATEWAY_PREFIX}{uuid.uuid4().hex[:14]}"
+                payout.gateway_status = "queued"
+                logger.info("PAYOUT_SIMULATOR_QUEUED payout_id=%s", payout.id)
+                await db.commit()
+                return
+
             if not _is_live():
                 # Mock producer: fabricate a gateway id, settle to paid, emit ledger.
                 payout.gateway_payout_id = f"pout_mock_{uuid.uuid4().hex[:14]}"
@@ -822,13 +973,25 @@ async def settle_from_webhook(
         return
     async with AsyncSessionLocal() as db:
         payout = await db.scalar(
-            select(Payout).where(
+            select(Payout)
+            .where(
                 Payout.provider == provider,
                 Payout.gateway_payout_id == gateway_payout_id,
             )
+            .with_for_update()
         )
         if payout is None:
             logger.warning("payout.webhook_unmatched gateway_payout_id=%s", gateway_payout_id)
+            return
+
+        # Serialize the state read with settlement. A failure/reversal that read
+        # INITIATED before another transaction paid must re-read PAID before
+        # deciding whether to ignore the event or post its compensating debit.
+        # Keep our accounting state REVERSED even if its notification preceded
+        # PAID. A late processed event must not recreate a credit. RazorpayX
+        # Current accounts may subsequently label a reversal "failed"; that
+        # does not undo the return of funds or release the obligation again.
+        if payout.status == PayoutStatus.REVERSED:
             return
 
         if target == PayoutStatus.PAID:
@@ -1201,6 +1364,7 @@ def _ledger_description(payout_type: PayoutType) -> str:
         PayoutType.CASHBACK: "Cashback payout",
         PayoutType.REFERRAL_BONUS: "Referral bonus payout",
         PayoutType.COMMISSION: "Commission payout",
+        PayoutType.CONTEST_REWARD: "Contest prize payout",
     }[payout_type]
 
 

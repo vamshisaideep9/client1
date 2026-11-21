@@ -11,9 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import campaign_artwork
 from app.core.deps import (
     CurrentUser,
-    get_active_user,
+    check_assignment_line,
+    get_personal_user,
+    require_assignment,
     require_platform_admin,
     require_sub_admin,
+    require_sub_admin_or_platform_admin,
 )
 from app.db.session import get_db
 from app.models.audit_log import AuditAction
@@ -27,7 +30,8 @@ from app.schemas.offers import (
     OfferRejectRequest,
     OfferUpdate,
 )
-from app.schemas.personalization import AudienceRules, audience_rules_to_storage
+from app.schemas.personalization import AudienceRules
+from app.services import pincodes as pincode_service
 from app.services.audit_log import record as record_audit
 from app.services.banners import IMAGE_MAX_BYTES, UnsupportedImageType, presign_banner_image_upload
 from app.services.campaign_media import (
@@ -42,7 +46,32 @@ from app.services.offers import (
     transition_offer,
 )
 
+media_view = require_assignment("media_sub_admin", "view", include_admin=True)
+media_edit = require_assignment("media_sub_admin", "edit")
+
+
+async def media_record_reader(user: CurrentUser = Depends(get_personal_user)) -> CurrentUser:
+    if user.sub_admin_access is not None and not user.sub_admin_access.lines_for(
+        "media_sub_admin", "view"
+    ):
+        raise HTTPException(403, detail="This operation requires a dashboard grant.")
+    return user
+
+
 router = APIRouter()
+
+
+async def _stored_audience_rules(db: AsyncSession, rules: AudienceRules) -> dict:
+    """CS-026: every pincode and city target must be on the reference list."""
+    try:
+        return await pincode_service.audience_rules_for_storage(db, rules)
+    except pincode_service.UnknownAudiencePlaces as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Choose places from the list: {exc}.",
+        ) from exc
+
+
 _EDITABLE_STATUSES = (OfferStatus.DRAFT, OfferStatus.REJECTED)
 
 
@@ -55,7 +84,7 @@ def _read(offer: Offer) -> OfferRead:
 @router.post("/image-upload-url", response_model=OfferImageUploadResponse)
 async def get_offer_image_upload_url(
     payload: OfferImageUploadRequest,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
 ) -> OfferImageUploadResponse:
     try:
         url, fields, object_key = presign_banner_image_upload(
@@ -77,9 +106,10 @@ async def get_offer_image_upload_url(
 @router.post("", response_model=OfferRead, status_code=status.HTTP_201_CREATED)
 async def create_offer(
     payload: OfferCreate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> OfferRead:
+    check_assignment_line(current_user, "media_sub_admin", "edit", payload.business_line)
     try:
         media_asset = await resolve_campaign_asset(
             db,
@@ -95,7 +125,7 @@ async def create_offer(
     values = payload.model_dump(exclude={"audience_rules"})
     if media_asset is not None:
         values["image_key"] = media_asset.image_ref
-    values["audience_rules"] = audience_rules_to_storage(payload.audience_rules)
+    values["audience_rules"] = await _stored_audience_rules(db, payload.audience_rules)
     offer = Offer(created_by_uuid=current_user.id, **values)
     db.add(offer)
     await db.flush()
@@ -117,7 +147,7 @@ async def create_offer(
 @router.get("", response_model=OfferListResponse)
 async def list_offers(
     status_filter: OfferStatus | None = None,
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(media_record_reader),
     db: AsyncSession = Depends(get_db),
 ) -> OfferListResponse:
     stmt = select(Offer).where(Offer.removed_at.is_(None)).order_by(Offer.created_at.desc())
@@ -130,7 +160,7 @@ async def list_offers(
 @router.get("/{offer_id}", response_model=OfferRead)
 async def get_offer(
     offer_id: UUID,
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(media_record_reader),
     db: AsyncSession = Depends(get_db),
 ) -> OfferRead:
     offer = await db.scalar(select(Offer).where(Offer.id == offer_id, Offer.removed_at.is_(None)))
@@ -143,7 +173,7 @@ async def get_offer(
 async def update_offer(
     offer_id: UUID,
     payload: OfferUpdate,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> OfferRead:
     offer = await db.scalar(
@@ -177,7 +207,7 @@ async def update_offer(
             ) from exc
     values = payload.model_dump(exclude_unset=True, exclude={"audience_rules", "expected_version"})
     if "audience_rules" in payload.model_fields_set and payload.audience_rules is not None:
-        values["audience_rules"] = audience_rules_to_storage(payload.audience_rules)
+        values["audience_rules"] = await _stored_audience_rules(db, payload.audience_rules)
     if "media_asset_id" in payload.model_fields_set:
         values["image_key"] = media_asset.image_ref if media_asset else None
     for field, value in values.items():
@@ -248,7 +278,7 @@ async def _transition(
 @router.post("/{offer_id}/submit", response_model=OfferRead)
 async def submit(
     offer_id: UUID,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> OfferRead:
     return await _transition(offer_id, OfferStatus.PENDING_APPROVAL, current_user, db)
@@ -278,7 +308,7 @@ async def reject(
 @router.post("/{offer_id}/schedule", response_model=OfferRead)
 async def schedule(
     offer_id: UUID,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(require_sub_admin_or_platform_admin),
     db: AsyncSession = Depends(get_db),
 ) -> OfferRead:
     return await _transition(offer_id, OfferStatus.SCHEDULED, current_user, db)
@@ -287,7 +317,7 @@ async def schedule(
 @router.post("/{offer_id}/activate", response_model=OfferRead)
 async def activate(
     offer_id: UUID,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(require_sub_admin_or_platform_admin),
     db: AsyncSession = Depends(get_db),
 ) -> OfferRead:
     return await _transition(offer_id, OfferStatus.ACTIVE, current_user, db)
@@ -305,7 +335,7 @@ async def archive(
 @router.delete("/{offer_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_offer_draft(
     offer_id: UUID,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    current_user: CurrentUser = Depends(media_edit),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     offer = await db.scalar(

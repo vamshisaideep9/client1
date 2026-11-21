@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Download, FileWarning, Inbox, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Download, Eye, FileWarning, Inbox, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
+import { DocumentViewerDialog } from "@/components/documents/document-viewer";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field-error";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -92,14 +93,21 @@ const DEFAULT_FILTERS: FilterBarValue = { ...EMPTY_FILTERS, status: "pending" };
  */
 function DocumentTile({ document }: { document: AgentApplicationDocument & { download_url: string } }) {
   const [failed, setFailed] = React.useState(false);
+  const [viewing, setViewing] = React.useState(false);
   const label = DOC_LABELS[document.doc_type];
 
   return (
     <li className="overflow-hidden rounded-xl border border-border">
-      <div className="flex h-44 items-center justify-center bg-muted/40">
+      <button
+        type="button"
+        onClick={() => setViewing(true)}
+        aria-label={`View ${label}`}
+        className="flex h-44 w-full items-center justify-center bg-muted/40 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      >
         {failed ? (
-          <span className="px-4 text-center text-xs text-text-secondary">
-            Preview unavailable — use the download below.
+          <span className="flex flex-col items-center gap-2 px-4 text-center text-xs text-text-secondary">
+            <Eye className="h-5 w-5" aria-hidden="true" />
+            View document
           </span>
         ) : (
           // Presigned storage URLs are short-lived and not a configured
@@ -112,7 +120,7 @@ function DocumentTile({ document }: { document: AgentApplicationDocument & { dow
             onError={() => setFailed(true)}
           />
         )}
-      </div>
+      </button>
       <a
         href={document.download_url}
         target="_blank"
@@ -122,6 +130,11 @@ function DocumentTile({ document }: { document: AgentApplicationDocument & { dow
         <Download className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span className="truncate">{label}</span>
       </a>
+      <DocumentViewerDialog
+        url={viewing ? document.download_url : null}
+        title={label}
+        onClose={() => setViewing(false)}
+      />
     </li>
   );
 }
@@ -218,7 +231,7 @@ function AgentSetupLinksSection({ active }: { active: boolean }) {
       </DashboardPanel>
 
       <Dialog open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent showCloseButton={false} className={PANEL_DIALOG_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_CLASS}>
           {selected ? (
             <>
               <WorkspaceDialogHeader
@@ -501,7 +514,7 @@ export function AgentQueueView() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && setActiveId(null)}>
-        <DialogContent showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
           {active ? (
             <>
               <WorkspaceDialogHeader

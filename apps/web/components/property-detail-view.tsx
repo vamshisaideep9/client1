@@ -175,6 +175,11 @@ export function PropertyDetailView({
                 <MapPin className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
                 {listing.location}
               </p>
+              {listing.developerName ? (
+                <p className="mt-1.5 text-sm text-text-secondary">
+                  By <span className="font-semibold text-foreground">{listing.developerName}</span>
+                </p>
+              ) : null}
               <p className="mt-5 font-heading text-3xl font-semibold text-brand-link">
                 {listing.price}
               </p>

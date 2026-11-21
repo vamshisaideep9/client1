@@ -23,9 +23,15 @@ import { requiredTextError } from "@/lib/form-validation";
 import {
   getAdminLeadDetails,
   updateAdminLeadDetails,
+  type AdminLeadDetails,
   type AdminLeadDetailsPatch,
   type LeadDetails,
 } from "@/lib/lead-details-api";
+import {
+  REQUEST_KIND_LABEL,
+  formatAppliedAt,
+  statusLabel,
+} from "@/features/telecaller/telecaller-requests";
 
 const OWNER_LABEL: Record<string, string> = {
   agent: "Agent",
@@ -77,7 +83,7 @@ export function LeadDetailsDialog({
     },
     [controlled, onOpenChange],
   );
-  const [details, setDetails] = React.useState<LeadDetails | null>(null);
+  const [details, setDetails] = React.useState<AdminLeadDetails | null>(null);
   const [name, setName] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [reason, setReason] = React.useState("");
@@ -147,7 +153,7 @@ export function LeadDetailsDialog({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-lg">
+      <DialogContent preventOutsideClose className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Correct lead details</DialogTitle>
           <DialogDescription>
@@ -169,6 +175,30 @@ export function LeadDetailsDialog({
           </div>
         ) : (
           <form onSubmit={save} className="space-y-4">
+            <section aria-labelledby={`${nameId}-requests`} className="space-y-2">
+              <h3 id={`${nameId}-requests`} className="text-sm font-medium text-text-primary">
+                Applications & requests
+              </h3>
+              {details.requests.length === 0 ? (
+                <p className="text-sm text-text-secondary">Nothing applied for on this lead yet.</p>
+              ) : (
+                <ul className="max-h-48 space-y-2 overflow-y-auto">
+                  {details.requests.map((request) => (
+                    <li
+                      key={`${request.kind}:${request.id}`}
+                      className="rounded-lg border border-border px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium text-text-primary">{request.title}</span>
+                      <span className="block text-xs text-text-secondary">
+                        {REQUEST_KIND_LABEL[request.kind]} · {statusLabel(request.status)} · applied{" "}
+                        <time dateTime={request.applied_at}>{formatAppliedAt(request.applied_at)}</time>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Label htmlFor={nameId}>Lead name</Label>

@@ -1,4 +1,4 @@
-import { SITE_NAME, TRUST_LINE } from "@/lib/brand";
+import { SITE_NAME, TRUST_LINES } from "@/lib/brand";
 
 type SiteEnvironment = Record<string, string | undefined>;
 
@@ -16,12 +16,39 @@ type SiteConfig = {
   contact: SiteContact;
 };
 
+// Public business contact details confirmed by the client (2026-11-12). The
+// NEXT_PUBLIC_CONTACT_* variables can still override them per deployment.
 const LOCAL_DEFAULTS = {
   siteUrl: "https://www.example.com",
-  phone: "+91 98765 43210",
-  email: "hello@example.com",
-  hours: "Monday to Saturday|10:00 AM to 7:00 PM",
-  address: "1st Floor, Sample Towers|Banjara Hills, Hyderabad 500034",
+  phone: "+91 90100 53010",
+  email: "dhanadhara@gmail.com",
+  hours: "Monday to Saturday|10 AM to 6 PM|Sunday closed",
+  address: "APHB Colony|Vikarabad, Telangana",
+} as const;
+
+// The retired sample number must never reach a production build.
+const SAMPLE_PHONE = "+91 98765 43210";
+
+/** Client-confirmed public facts for About, footer and Organization schema.
+ * Anything not listed here must not be stated on the site. */
+export const BUSINESS_FACTS = {
+  legalName: "Dhanadhara",
+  businessType: "Proprietorship",
+  proprietor: "R Rohini",
+  udyamNumber: "UDYAM-TS-28-0042986",
+  founded: "2026",
+  advisors: 5,
+  languages: ["English", "Hindi", "Telugu"],
+  languageCodes: ["en", "hi", "te"],
+  experience: "10 years in loans, 5 years in banking and 5 years in real estate",
+  officeLocality: "Vikarabad",
+  officeStreet: "APHB Colony",
+  region: "Telangana",
+  openingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  opens: "10:00",
+  closes: "18:00",
+  loanAreas: "Hyderabad and Telangana",
+  propertyArea: "Hyderabad",
 } as const;
 
 const CONFIG_KEYS = {
@@ -115,7 +142,7 @@ export function resolveSiteConfig(env: SiteEnvironment): SiteConfig {
   if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
     throw new Error(`${CONFIG_KEYS.phone} must be a dialable international number.`);
   }
-  if (strict && phone === LOCAL_DEFAULTS.phone) {
+  if (strict && normalizedPhone === SAMPLE_PHONE.replace(/[^+\d]/g, "")) {
     throw new Error(`${CONFIG_KEYS.phone} cannot use the sample number in production.`);
   }
 
@@ -166,4 +193,4 @@ const siteConfig = resolveSiteConfig({
 
 export const SITE_URL = siteConfig.siteUrl;
 export const SITE_CONTACT = siteConfig.contact;
-export { SITE_NAME, TRUST_LINE };
+export { SITE_NAME, TRUST_LINES };

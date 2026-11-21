@@ -259,11 +259,13 @@ async def test_response_omits_internal_fields(client: AsyncClient) -> None:
             "rera_number",
             "rera_verification_status",
             "structured_details",
+            "developer_name",
         }
         assert row["media"] == []
         assert row["property_subtype"] is None
         assert row["rera_verification_status"] == "verified"
         assert row["structured_details"] is None
+        assert row["developer_name"] is None
         for internal_field in (
             "active",
             "created_at",

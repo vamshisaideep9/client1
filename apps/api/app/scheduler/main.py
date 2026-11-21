@@ -23,13 +23,16 @@ import app.db.session as db_session
 from app.core.config import settings
 from app.jobs.assign_unassigned_employee_work import assign_unassigned_employee_work
 from app.jobs.assign_unassigned_leads import assign_unassigned_leads
+from app.jobs.attendance_rollover import attendance_rollover
 from app.jobs.audit_paid_payouts import audit_paid_payouts
 from app.jobs.backfill_customer_codes import backfill_customer_codes
 from app.jobs.backfill_referral_codes import backfill_referral_codes
 from app.jobs.cms_activation import cms_activation
+from app.jobs.contest_lifecycle import contest_lifecycle
 from app.jobs.expire_agent_leads import expire_agent_leads
 from app.jobs.managed_media import process_pending_media, purge_expired_private_media
 from app.jobs.purge_agent_application_orphans import purge_agent_application_orphans
+from app.jobs.purge_agent_cheque_orphans import purge_agent_cheque_orphans
 from app.jobs.purge_banner_image_orphans import purge_banner_image_orphans
 from app.jobs.purge_loan_document_orphans import purge_loan_document_orphans
 from app.jobs.purge_personalization_locations import purge_personalization_locations
@@ -37,8 +40,11 @@ from app.jobs.purge_property_media import purge_property_media
 from app.jobs.purge_task_document_orphans import purge_task_document_orphans
 from app.jobs.reconcile_payout_links import reconcile_payout_links
 from app.jobs.reconcile_payouts import reconcile_payouts
+from app.jobs.remind_agent_lead_expiry import remind_agent_lead_expiry
 from app.jobs.retention_purge import retention_purge_job
 from app.models.auth import RefreshToken
+from app.services.attendance_certificates import purge_expired as purge_attendance_certificates
+from app.services.contact_change import expire_stale_changes
 
 logger = logging.getLogger("scheduler")
 logging.basicConfig(level=settings.LOG_LEVEL.upper())
@@ -142,6 +148,16 @@ def build_scheduler() -> AsyncIOScheduler:
         replace_existing=True,
     )
     add_operational_job(
+        expire_stale_changes,
+        trigger="interval",
+        minutes=15,  # CS-025: an abandoned change keeps its raw new value for
+        # at most one window plus this interval
+        id="expire_contact_changes",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    add_operational_job(
         backfill_customer_codes,
         trigger="interval",
         hours=6,  # safety net; registration provisions codes synchronously, so hits are ~0
@@ -208,6 +224,15 @@ def build_scheduler() -> AsyncIOScheduler:
         replace_existing=True,
     )
     add_operational_job(
+        purge_agent_cheque_orphans,
+        trigger="interval",
+        hours=24,  # private financial document cleanup, not time-critical
+        id="purge_agent_cheque_orphans",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    add_operational_job(
         purge_task_document_orphans,
         trigger="interval",
         hours=24,  # storage cost cleanup, not time-critical
@@ -253,6 +278,15 @@ def build_scheduler() -> AsyncIOScheduler:
         replace_existing=True,
     )
     add_operational_job(
+        purge_attendance_certificates,
+        trigger="interval",
+        minutes=15,
+        id="purge_attendance_certificates",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    add_operational_job(
         purge_personalization_locations,
         trigger="interval",
         hours=24,
@@ -268,6 +302,24 @@ def build_scheduler() -> AsyncIOScheduler:
         # homepage's 60s ISR window puts a banner live within ~6 min of its
         # starts_at. Cost is 4 indexed UPDATEs matching 0 rows most ticks.
         id="cms_activation",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    add_operational_job(
+        attendance_rollover,
+        trigger="interval",
+        minutes=5,
+        id="attendance_rollover",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    add_operational_job(
+        contest_lifecycle,
+        trigger="interval",
+        minutes=1,
+        id="contest_lifecycle",
         max_instances=1,
         coalesce=True,
         replace_existing=True,
@@ -295,6 +347,15 @@ def build_scheduler() -> AsyncIOScheduler:
         trigger="interval",
         minutes=15,
         id="expire_agent_leads",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    add_operational_job(
+        remind_agent_lead_expiry,
+        trigger="interval",
+        hours=1,  # reminder is day-granular; hourly is ample
+        id="remind_agent_lead_expiry",
         max_instances=1,
         coalesce=True,
         replace_existing=True,
