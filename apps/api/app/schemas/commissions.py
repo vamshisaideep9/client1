@@ -9,16 +9,29 @@ uses for amount/recipient.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.models.payout import PayoutDestination
+from app.models.payout import PayoutDestination, PayoutProvider, PayoutStatus
+from app.models.transaction import TransactionStatus, TransactionType
 from app.schemas.payments import PayoutDestinationInput, validate_destination
 
 DealType = Literal["loan_application", "property_deal"]
+
+
+class EligibleDealCommissionRate(BaseModel):
+    """The product's approved indicative rate (CS-028) at the time of reading."""
+
+    id: UUID
+    kind: Literal["percent", "fixed"]
+    # Basis points (150 = 1.5 %) for a percent rate; paise for a fixed one.
+    percent_bps: int | None
+    amount_paise: int | None
+    note: str | None
 
 
 class EligibleDeal(BaseModel):
@@ -37,6 +50,17 @@ class EligibleDeal(BaseModel):
     # so this is an event marker, not live status), closed_at for a property
     # deal (CLOSED genuinely is terminal there).
     eligible_since: datetime | None
+    # CS-028 pre-fill, loans only (null for property deals): the loan's
+    # product, its current approved rate, and the suggested commission —
+    # the fixed amount, or the percent of the sanctioned amount (requested
+    # when none was sanctioned) in integer paise rounded half up. The Admin
+    # still enters the commission amount; this only pre-fills it.
+    loan_type_id: UUID | None = None
+    product_label: str | None = None
+    commission_rate: EligibleDealCommissionRate | None = None
+    suggested_amount_paise: int | None = None
+    suggestion_basis: Literal["sanctioned", "requested", "fixed"] | None = None
+    basis_amount_paise: int | None = None
 
 
 class EligibleDealListResponse(BaseModel):
@@ -77,36 +101,121 @@ class CommissionCancelRequest(BaseModel):
     reason: str = Field(min_length=1, max_length=500)
 
 
+CommissionStatusLiteral = Literal["pending", "paid", "cancelled"]
+
+
 class AgentEarningsRow(BaseModel):
+    """One commission in the Agent's history (CS-022).
+
+    ``client_name`` follows the Admin's Agent "Lead name" rule and
+    ``deal_amount`` the Agent "Loan and deal amounts" rule; a hidden value is
+    null and listed in the response's ``hidden_fields``.
+    """
+
     id: UUID
     business_line: str
     deal_type: DealType
     deal_uuid: UUID
     agreed_amount_paise: int
-    status: str
+    status: CommissionStatusLiteral
     payout_txn_uuid: UUID | None
     created_at: datetime
+    lead_uuid: UUID | None
+    lead_status: str | None
+    client_name: str | None
+    product_uuid: UUID | None
+    product_label: str | None
+    bank_uuid: UUID | None
+    bank_name: str | None
+    property_uuid: UUID | None
+    property_title: str | None
+    property_category: str | None
+    deal_status: str | None
+    deal_amount: Decimal | None
+    # When the settled ledger row was written (null until paid).
+    paid_at: datetime | None
 
 
 class AgentEarningsTotals(BaseModel):
+    """Totals over every commission the Agent has on this line (filters do not
+    change them). ``last_month_*`` is the previous calendar month in IST."""
+
     pending_amount_paise: int
     paid_amount_paise: int
     total_amount_paise: int
+    last_month_paid_amount_paise: int
+    last_month_start: date | None
+    last_month_end: date | None
 
 
 class AgentEarningsResponse(BaseModel):
     rows: list[AgentEarningsRow]
     totals: AgentEarningsTotals
+    # Agent field rules the Admin switched off ("client_name", "deal_amount").
+    hidden_fields: list[str]
+
+
+class AgentPayoutActor(BaseModel):
+    """A staff member on the payout trail: display name (null when the Admin
+    hides payout staff names) and staff role."""
+
+    name: str | None
+    role: str | None
+
+
+class AgentPayoutTrail(BaseModel):
+    status: PayoutStatus
+    method: PayoutDestination
+    provider: PayoutProvider
+    # Already masked at payout creation (never the raw UPI ID or account).
+    destination_hint: str
+    reference: str | None = None
+    requested_at: datetime
+    approved_at: datetime | None
+    issued_at: datetime | None
+    paid_at: datetime | None
+    reversed_at: datetime | None
+    requested_by: AgentPayoutActor | None
+    approved_by: AgentPayoutActor | None
+    # "standalone": the Main Admin approved their own request (no checker).
+    approval_mode: Literal["maker_checker", "standalone"] | None
+
+
+class AgentTransactionItem(BaseModel):
+    """A commission covered by a payment."""
+
+    commission_id: UUID
+    amount_paise: int
+    status: CommissionStatusLiteral
+    deal_type: DealType
+    deal_uuid: UUID
+    lead_uuid: UUID
+    client_name: str | None
+    product_label: str | None
+    bank_name: str | None
+    property_title: str | None
+    deal_status: str | None
+    deal_amount: Decimal | None
+    entered_at: datetime
+
+
+class AgentTransactionDetail(BaseModel):
+    id: UUID
+    type: TransactionType
+    status: TransactionStatus
+    amount_paise: int
+    currency: str
+    description: str
+    created_at: datetime
+    payout: AgentPayoutTrail | None
+    items: list[AgentTransactionItem]
+    # Agent field rules the Admin switched off ("client_name", "deal_amount",
+    # "staff_names").
+    hidden_fields: list[str]
 
 
 class CommissionPayoutRequest(BaseModel):
-    """No amount, no recipient: both come from the commission row
-    (services/commissions.py::attach_payout), never the request body — same
-    invariant as ReferralPayoutRequest. The idempotency key is derived
-    server-side from the commission id (`com-{uuid.hex}`), not accepted from
-    the client, for the identical reason ReferralPayoutRequest's docstring
-    records: a client-chosen key let two concurrent "Pay commission" clicks
-    each pick a fresh key and both slip past create_payout's dedupe guard."""
+    """Destination supplied by the maker. The locked commissions determine the payment."""
 
     destination_type: PayoutDestination
     destination: PayoutDestinationInput
@@ -119,3 +228,38 @@ class CommissionPayoutRequest(BaseModel):
 
 class CommissionPayoutResponse(BaseModel):
     payout_id: UUID
+
+
+MAX_COMMISSION_PAYOUT_ITEMS = 200
+
+
+class BulkCommissionPayoutRequest(CommissionPayoutRequest):
+    commission_ids: list[UUID] = Field(min_length=1, max_length=MAX_COMMISSION_PAYOUT_ITEMS)
+
+    @field_validator("commission_ids")
+    @classmethod
+    def _unique_commissions(cls, ids: list[UUID]) -> list[UUID]:
+        if len(set(ids)) != len(ids):
+            raise ValueError("Select each commission only once.")
+        return ids
+
+
+class CoveredCommission(BaseModel):
+    id: UUID
+    deal_type: DealType
+    deal_uuid: UUID
+    amount_paise: int
+
+
+class CommissionPayoutGroup(BaseModel):
+    agent_profile_uuid: UUID
+    agent_code: str
+    agent_name: str | None
+    business_line: str
+    pending_count: int
+    pending_amount_paise: int
+
+
+class CommissionPayoutGroupList(BaseModel):
+    groups: list[CommissionPayoutGroup]
+    total: int

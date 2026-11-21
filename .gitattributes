@@ -8,3 +8,7 @@ packages/contracts/generated/*.d.ts text eol=lf
 
 # Shell scripts must stay LF regardless of platform.
 *.sh text eol=lf
+
+# Binary fixtures: never normalize line endings.
+*.mp4 binary
+*.gz binary
