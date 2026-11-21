@@ -94,6 +94,50 @@ async def _seed_cases(agent, loan_type, count: int) -> None:
         )
 
 
+async def test_agent_item_prize_is_snapshotted_and_awarded_without_payout(client) -> None:
+    _, maker, _ = await sub_admin_token()
+    admin, _ = await admin_token()
+    _, agent = await seed_agent()
+    loan_type = await seed_loan_type("Item award loan")
+    await _seed_cases(agent, loan_type, 1)
+    item = {
+        "label": "Headphones",
+        "details": "Collect from the office",
+        "estimated_value_paise": 400000,
+    }
+    contest = await _ended_contest(
+        maker,
+        loan_type,
+        criteria=_loan_criteria(loan_type, count_at_least=1),
+        prize_kind="item",
+        prize_paise=None,
+        item_prize=item,
+    )
+    snapshot = next(r for r in await _results(contest.id) if r.agent_profile_uuid == agent.id)
+    assert snapshot.item_prize == item and snapshot.payment_status == "none"
+    url = f"/api/v1/contests/{contest.id}"
+    response = await client.post(f"{url}/finalize", headers=headers(admin))
+    assert response.status_code == 200, response.text
+    row = next(r for r in await _results(contest.id) if r.id == snapshot.id)
+    assert row.won and row.prize_paise == 0 and row.payment_status == "unpaid"
+    response = await client.get(f"{url}/standings", headers=headers(admin))
+    assert response.json()["winners"] == 1
+    assert response.json()["prize_total_paise"] == 0
+    assert (
+        await client.post(f"{url}/results/{row.id}/payout", json=_VPA, headers=headers(admin))
+    ).status_code == 409
+    for expected in (200, 409):
+        response = await client.post(
+            f"{url}/results/{row.id}/mark-paid",
+            json={"reference": "Office collection"},
+            headers=headers(admin),
+        )
+        assert response.status_code == expected, response.text
+    awarded = next(r for r in await _results(contest.id) if r.id == row.id)
+    assert awarded.payment_status == "paid" and awarded.paid_reference == "Office collection"
+    assert awarded.payout_uuid is None and awarded.payout_txn_uuid is None
+
+
 async def test_finalize_top_n_with_tie_and_maker_checker(client: AsyncClient) -> None:
     maker_token, maker_user, maker_profile = await sub_admin_token()
     admin, _ = await admin_token()

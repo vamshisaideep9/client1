@@ -298,8 +298,7 @@ def build_scheduler() -> AsyncIOScheduler:
     add_operational_job(
         contest_lifecycle,
         trigger="interval",
-        minutes=5,  # CS-027: contests go live / end within 5 min of the IST
-        # date boundary; standings are computed by date, not by this tick
+        minutes=1,
         id="contest_lifecycle",
         max_instances=1,
         coalesce=True,

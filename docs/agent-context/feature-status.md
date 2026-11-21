@@ -1,7 +1,15 @@
 # Feature implementation status
 
-**In progress — Batch 4: grouped commission payouts and transaction history**
-(2026-11-20). API drafts
+**Implemented — Batch 5 API:** minute-level IST contest windows, item awards and
+versioned Admin edits. Covered by targeted contest and payout tests against
+PostgreSQL with Redis and a migration round-trip. Participant and Admin UI
+follows in the next slice. The current editor submits the existing all-day
+cash defaults against the regenerated contract.
+The hosted API run passed 2,926 cases and identified one stale policy
+inventory entry from Batch 4. The inventory now covers that policy.
+
+**Merged upstream — Batch 4: grouped commission payouts and transaction history**
+(2026-11-20). API PRs
 ([upstream #392](https://github.com/brollysolutions/client1/pull/392),
 [mirror #93](https://github.com/vamshisaideep9/client1/pull/93)).
 Web branch `feat/batch4-commission-payouts-web` is stacked on `c3d09cc3`.

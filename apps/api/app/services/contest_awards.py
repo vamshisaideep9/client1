@@ -206,10 +206,11 @@ async def finalize(
             person = people[row.id]
             row.won = person.won
             row.prize_paise = person.prize_paise
+            row.item_prize = row.item_prize or person.item_prize if person.item_prize else None
             row.excluded_reason = person.excluded_reason
             row.payment_status = (
                 ContestPaymentStatus.UNPAID.value
-                if person.prize_paise > 0
+                if person.prize_paise > 0 or row.item_prize
                 else ContestPaymentStatus.NONE.value
             )
             if person.prize_paise > 0:
@@ -233,6 +234,7 @@ async def finalize(
                 body=(
                     f"You are a winner of “{contest.title}”."
                     + (f" Prize: ₹{row.prize_paise / 100:,.2f}." if row.prize_paise > 0 else "")
+                    + (f" Prize: {row.item_prize['label']}." if row.item_prize else "")
                 ),
                 href=f"/dashboard/contests?contest={contest.id}",
             )
@@ -268,7 +270,7 @@ async def _prize_row(
         raise ContestNotFound("Result not found.")
     if contest.status != ContestStatus.FINALIZED.value:
         raise ContestPrizeError("Prizes are paid only after the winners are confirmed.")
-    if not row.won or row.prize_paise <= 0:
+    if not row.won or (row.prize_paise <= 0 and row.item_prize is None):
         raise ContestPrizeError("This result has no prize.")
     if row.payment_status != ContestPaymentStatus.UNPAID.value or row.payout_uuid is not None:
         raise ContestPrizeError("This prize is already being paid or has been paid.")
@@ -293,6 +295,8 @@ async def request_agent_prize_payout(
     async with db_session.AsyncSessionLocal() as session:
         contest = await _locked(session, contest_id, actor_uuid)
         row = await _prize_row(session, contest, result_id)
+        if row.item_prize is not None:
+            raise ContestPrizeError("Item prizes are awarded outside Payouts.")
         if row.agent_profile_uuid is None:
             raise ContestPrizeError("Staff prizes are marked paid, not sent through Payouts.")
         if row.recipient_user_uuid is None:
@@ -372,7 +376,7 @@ async def mark_staff_prize_paid(
     async with db_session.AsyncSessionLocal() as session:
         contest = await _locked(session, contest_id, actor_uuid)
         row = await _prize_row(session, contest, result_id)
-        if row.agent_profile_uuid is not None:
+        if row.agent_profile_uuid is not None and row.item_prize is None:
             raise ContestPrizeError("Agent prizes are paid through Payouts.")
         if row.recipient_user_uuid == actor_uuid:
             raise ContestMakerChecker("You cannot mark your own prize as paid.")
@@ -394,7 +398,11 @@ async def mark_staff_prize_paid(
             AuditAction.CONTEST_PRIZE_MARKED_PAID,
             actor_uuid,
             actor_role,
-            {"amount_paise": row.prize_paise, "result_kind": row.kind},
+            {
+                "amount_paise": row.prize_paise,
+                "result_kind": row.kind,
+                "prize_kind": "item" if row.item_prize else "cash",
+            },
             entity_uuid=row.id,
             entity_type="contest_result",
         )

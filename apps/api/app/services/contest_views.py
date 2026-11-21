@@ -52,7 +52,7 @@ from app.schemas.contests import (
     TeamStanding,
 )
 from app.services.contest_scoring import Participant, compute_standings
-from app.services.contests import ContestNotFound, parse_criteria, reads_for
+from app.services.contests import ContestNotFound, parse_criteria, reads_for, schedule_and_prize
 from app.services.field_visibility import effective_modes
 
 LEADERBOARD_SIZE = 10
@@ -85,6 +85,7 @@ class Row:
     rank: int | None = None
     won: bool = False
     prize_paise: int = 0
+    item_prize: dict | None = None
     excluded_reason: str | None = None
     payment_status: str = ContestPaymentStatus.NONE.value
     result_id: uuid.UUID | None = None
@@ -182,6 +183,7 @@ async def _snapshot_rows(session: AsyncSession, contest: Contest) -> list[Row]:
                 rank=result.rank,
                 won=result.won,
                 prize_paise=result.prize_paise,
+                item_prize=result.item_prize,
                 excluded_reason=result.excluded_reason,
                 payment_status=result.payment_status,
                 result_id=result.id,
@@ -318,6 +320,7 @@ def _standing(row: Row, prize_row: Row | None, finalized: bool) -> MyStanding:
         qualified=row.qualified,
         won=source.won if finalized else None,
         prize_paise=source.prize_paise if finalized else None,
+        item_prize=source.item_prize if finalized else None,
         payment_status=source.payment_status if finalized else None,
         excluded_reason=source.excluded_reason if finalized else None,
     )
@@ -385,6 +388,7 @@ def _summary_fields(ctx: _Context) -> dict:
         "member_min_contribution": contest.member_min_contribution,
         "starts_on": contest.starts_on,
         "ends_on": contest.ends_on,
+        **schedule_and_prize(contest),
         "status": contest.status,
         "my_role": ctx.role,
         "eligible": eligible,
@@ -478,6 +482,7 @@ async def get_my_contest(
                     meets_member_minimum=(r.metric_value >= minimum) if minimum else None,
                     won=r.won if finalized else None,
                     prize_paise=r.prize_paise if finalized else None,
+                    item_prize=r.item_prize if finalized else None,
                     payment_status=r.payment_status if finalized else None,
                     is_me=r.staff_profile_uuid == viewer.profile_uuid,
                 )
@@ -524,6 +529,7 @@ def _standing_row(row: Row) -> StandingRow:
         qualified=row.qualified,
         won=row.won,
         prize_paise=row.prize_paise,
+        item_prize=row.item_prize if row.won else None,
         excluded_reason=row.excluded_reason,
         payment_status=row.payment_status,
         payout_uuid=row.payout_uuid,
@@ -542,7 +548,7 @@ async def admin_standings(
     prize_rows = [
         r
         for r in [*board.ranked, *board.team_people]
-        if r.kind != ContestResultKind.TEAM and r.prize_paise > 0
+        if r.won and r.kind != ContestResultKind.TEAM and (r.prize_paise > 0 or r.item_prize)
     ]
     return ContestStandingsResponse(
         contest=(await reads_for([contest], viewer_uuid))[0],

@@ -9459,6 +9459,66 @@ export interface components {
          * @enum {string}
          */
         ContentStatus: "draft" | "published" | "archived";
+        /** ContestAdminUpdate */
+        ContestAdminUpdate: {
+            audience: components["schemas"]["ContestAudience"];
+            /** Budget Cap Paise */
+            budget_cap_paise?: number | null;
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            criteria: components["schemas"]["ContestCriteria"];
+            /** Description */
+            description?: string | null;
+            /**
+             * End Time
+             * Format: time
+             * @default 23:59:00
+             */
+            end_time: string;
+            /**
+             * Ends On
+             * Format: date
+             */
+            ends_on: string;
+            /** Expected Version */
+            expected_version: number;
+            item_prize?: components["schemas"]["ContestItemPrize"] | null;
+            manager_item_prize?: components["schemas"]["ContestItemPrize"] | null;
+            /** Manager Prize Paise */
+            manager_prize_paise?: number | null;
+            member_item_prize?: components["schemas"]["ContestItemPrize"] | null;
+            /** Member Min Contribution */
+            member_min_contribution?: number | null;
+            /** Member Prize Paise */
+            member_prize_paise?: number | null;
+            metric: components["schemas"]["ContestMetric"];
+            /** @default cash */
+            prize_kind: components["schemas"]["ContestPrizeKind"];
+            /** Prize Paise */
+            prize_paise?: number | null;
+            /**
+             * Start Time
+             * Format: time
+             * @default 00:00:00
+             */
+            start_time: string;
+            /**
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+            team_member_role?: components["schemas"]["ContestTeamMemberRole"] | null;
+            /** Terms */
+            terms?: string | null;
+            /** Title */
+            title: string;
+            /** Top N */
+            top_n?: number | null;
+            win_mode: components["schemas"]["ContestWinMode"];
+        };
         /**
          * ContestAudience
          * @enum {string}
@@ -9502,19 +9562,36 @@ export interface components {
             /** Description */
             description?: string | null;
             /**
+             * End Time
+             * Format: time
+             * @default 23:59:00
+             */
+            end_time: string;
+            /**
              * Ends On
              * Format: date
              */
             ends_on: string;
+            item_prize?: components["schemas"]["ContestItemPrize"] | null;
+            manager_item_prize?: components["schemas"]["ContestItemPrize"] | null;
             /** Manager Prize Paise */
             manager_prize_paise?: number | null;
+            member_item_prize?: components["schemas"]["ContestItemPrize"] | null;
             /** Member Min Contribution */
             member_min_contribution?: number | null;
             /** Member Prize Paise */
             member_prize_paise?: number | null;
             metric: components["schemas"]["ContestMetric"];
+            /** @default cash */
+            prize_kind: components["schemas"]["ContestPrizeKind"];
             /** Prize Paise */
             prize_paise?: number | null;
+            /**
+             * Start Time
+             * Format: time
+             * @default 00:00:00
+             */
+            start_time: string;
             /**
              * Starts On
              * Format: date
@@ -9529,6 +9606,15 @@ export interface components {
             top_n?: number | null;
             win_mode: components["schemas"]["ContestWinMode"];
         };
+        /** ContestItemPrize */
+        ContestItemPrize: {
+            /** Details */
+            details?: string | null;
+            /** Estimated Value Paise */
+            estimated_value_paise?: number | null;
+            /** Label */
+            label: string;
+        };
         /** ContestListResponse */
         ContestListResponse: {
             /** Contests */
@@ -9542,6 +9628,11 @@ export interface components {
          * @enum {string}
          */
         ContestMetric: "cases" | "amount" | "calls_logged" | "follow_ups_on_time" | "tasks_completed" | "tasks_on_time" | "site_visits_completed";
+        /**
+         * ContestPrizeKind
+         * @enum {string}
+         */
+        ContestPrizeKind: "cash" | "item";
         /**
          * ContestPrizeMarkPaid
          * @description How a staff prize was paid (for example "November payroll"). No
@@ -9621,6 +9712,12 @@ export interface components {
             criteria: components["schemas"]["ContestCriteria"];
             /** Description */
             description: string | null;
+            /**
+             * End Time
+             * Format: time
+             * @default 23:59:00
+             */
+            end_time: string;
             /** Ended At */
             ended_at: string | null;
             /**
@@ -9637,21 +9734,32 @@ export interface components {
             id: string;
             /** Is Mine */
             is_mine: boolean;
+            item_prize?: components["schemas"]["ContestItemPrize"] | null;
             /** Live At */
             live_at: string | null;
+            manager_item_prize?: components["schemas"]["ContestItemPrize"] | null;
             /** Manager Prize Paise */
             manager_prize_paise: number | null;
+            member_item_prize?: components["schemas"]["ContestItemPrize"] | null;
             /** Member Min Contribution */
             member_min_contribution: number | null;
             /** Member Prize Paise */
             member_prize_paise: number | null;
             metric: components["schemas"]["ContestMetric"];
+            /** @default cash */
+            prize_kind: components["schemas"]["ContestPrizeKind"];
             /** Prize Paise */
             prize_paise: number | null;
             /** Review Note */
             review_note: string | null;
             /** Reviewed At */
             reviewed_at: string | null;
+            /**
+             * Start Time
+             * Format: time
+             * @default 00:00:00
+             */
+            start_time: string;
             /**
              * Starts On
              * Format: date
@@ -11420,6 +11528,12 @@ export interface components {
             /** Eligible */
             eligible: boolean;
             /**
+             * End Time
+             * Format: time
+             * @default 23:59:00
+             */
+            end_time: string;
+            /**
              * Ends On
              * Format: date
              */
@@ -11429,11 +11543,14 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            item_prize?: components["schemas"]["ContestItemPrize"] | null;
             /** Leaderboard */
             leaderboard: components["schemas"]["LeaderboardEntry"][];
+            manager_item_prize?: components["schemas"]["ContestItemPrize"] | null;
             /** Manager Prize Paise */
             manager_prize_paise: number | null;
             me: components["schemas"]["MyStanding"] | null;
+            member_item_prize?: components["schemas"]["ContestItemPrize"] | null;
             /** Member Min Contribution */
             member_min_contribution: number | null;
             /** Member Prize Paise */
@@ -11446,8 +11563,16 @@ export interface components {
             my_role: "participant" | "team_member" | "team_manager";
             /** Participants */
             participants: number | null;
+            /** @default cash */
+            prize_kind: components["schemas"]["ContestPrizeKind"];
             /** Prize Paise */
             prize_paise: number | null;
+            /**
+             * Start Time
+             * Format: time
+             * @default 00:00:00
+             */
+            start_time: string;
             /**
              * Starts On
              * Format: date
@@ -11480,6 +11605,12 @@ export interface components {
             /** Eligible */
             eligible: boolean;
             /**
+             * End Time
+             * Format: time
+             * @default 23:59:00
+             */
+            end_time: string;
+            /**
              * Ends On
              * Format: date
              */
@@ -11489,9 +11620,12 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            item_prize?: components["schemas"]["ContestItemPrize"] | null;
+            manager_item_prize?: components["schemas"]["ContestItemPrize"] | null;
             /** Manager Prize Paise */
             manager_prize_paise: number | null;
             me: components["schemas"]["MyStanding"] | null;
+            member_item_prize?: components["schemas"]["ContestItemPrize"] | null;
             /** Member Min Contribution */
             member_min_contribution: number | null;
             /** Member Prize Paise */
@@ -11504,8 +11638,16 @@ export interface components {
             my_role: "participant" | "team_member" | "team_manager";
             /** Participants */
             participants: number | null;
+            /** @default cash */
+            prize_kind: components["schemas"]["ContestPrizeKind"];
             /** Prize Paise */
             prize_paise: number | null;
+            /**
+             * Start Time
+             * Format: time
+             * @default 00:00:00
+             */
+            start_time: string;
             /**
              * Starts On
              * Format: date
@@ -11536,6 +11678,7 @@ export interface components {
         MyStanding: {
             /** Excluded Reason */
             excluded_reason?: string | null;
+            item_prize?: components["schemas"]["ContestItemPrize"] | null;
             /** Metric Value */
             metric_value: number;
             /** Payment Status */
@@ -11591,7 +11734,7 @@ export interface components {
          * NotificationType
          * @enum {string}
          */
-        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "agent_lead_expiry_reminder" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed" | "contest_submitted" | "contest_reviewed" | "contest_live" | "contest_won" | "commission_rate_submitted" | "commission_rate_reviewed";
+        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "agent_lead_expiry_reminder" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed" | "contest_submitted" | "contest_reviewed" | "contest_live" | "contest_updated" | "contest_won" | "commission_rate_submitted" | "commission_rate_reviewed";
         /** OfferCreate */
         OfferCreate: {
             audience_rules?: components["schemas"]["AudienceRules"];
@@ -13765,6 +13908,7 @@ export interface components {
             agent_profile_uuid?: string | null;
             /** Excluded Reason */
             excluded_reason: string | null;
+            item_prize?: components["schemas"]["ContestItemPrize"] | null;
             /** Kind */
             kind: string;
             /** Metric Value */
@@ -14497,6 +14641,7 @@ export interface components {
              * @default false
              */
             is_me: boolean;
+            item_prize?: components["schemas"]["ContestItemPrize"] | null;
             /** Meets Member Minimum */
             meets_member_minimum: boolean | null;
             /** Metric Value */
@@ -21863,7 +22008,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ContestDefinition"];
+                "application/json": components["schemas"]["ContestAdminUpdate"] | components["schemas"]["ContestDefinition"];
             };
         };
         responses: {

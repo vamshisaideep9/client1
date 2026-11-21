@@ -138,6 +138,8 @@ _ALL_PLATFORM_SCOPE_POLICIES = {
     ("commissions", "commissions_select"),
     ("commissions", "commissions_insert"),
     ("commissions", "commissions_update"),
+    # c9e1a3b5d7f2: platform Admin reads preserved payout membership.
+    ("commission_payout_items", "commission_payout_items_select"),
     ("fee_cashbacks", "fee_cashbacks_select"),
     ("fee_cashbacks", "fee_cashbacks_insert"),
     ("fee_cashbacks", "fee_cashbacks_update"),

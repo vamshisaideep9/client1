@@ -325,6 +325,9 @@ export function buildContestDefinition(form: ContestFormState): Definition {
     budget_cap_paise: rupeesToPaise(form.budgetCapRupees),
     starts_on: form.startsOn,
     ends_on: form.endsOn,
+    start_time: "00:00",
+    end_time: "23:59",
+    prize_kind: "cash",
   };
 }
 

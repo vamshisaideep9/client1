@@ -24,6 +24,7 @@ from app.core.deps import (
 from app.db.session import get_db
 from app.models.contest import ContestAudience, ContestStatus
 from app.schemas.contests import (
+    ContestAdminUpdate,
     ContestCancel,
     ContestDefinition,
     ContestListResponse,
@@ -151,11 +152,20 @@ async def contest_standings(
 @router.put("/{contest_id}", response_model=ContestRead)
 async def update_contest(
     contest_id: UUID,
-    payload: ContestDefinition,
-    current_user: CurrentUser = Depends(require_sub_admin),
+    payload: ContestAdminUpdate | ContestDefinition,
+    current_user: CurrentUser = Depends(require_sub_admin_or_platform_admin),
     db: AsyncSession = Depends(get_db),
 ) -> ContestRead:
     try:
+        if is_platform_admin(current_user):
+            if not isinstance(payload, ContestAdminUpdate):
+                raise contest_service.ContestInvalid("Supply the contest version when editing.")
+            contest = await contest_service.admin_update_contest(
+                contest_id, payload, actor_uuid=current_user.id, actor_role=current_user.role
+            )
+            return await _read(contest, current_user)
+        if isinstance(payload, ContestAdminUpdate):
+            raise contest_service.ContestInvalid("Admin contest editing requires a platform Admin.")
         contest = await contest_service.update_contest(
             db, contest_id, payload, actor_uuid=current_user.id, actor_role=current_user.role
         )

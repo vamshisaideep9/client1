@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 import app.db.session as db_session
 from app.models.audit_log import AuditAction, AuditLog
 from app.models.contest import Contest
+from app.models.notification import Notification, NotificationType
 from app.models.profile import StaffRole
 from app.services.contests import today_ist
 from app.tests.contest_support import (
@@ -20,6 +21,7 @@ from app.tests.contest_support import (
     definition,
     headers,
     seed_agent,
+    seed_contest,
     seed_loan_type,
     seed_staff,
     sub_admin_token,
@@ -115,6 +117,67 @@ async def test_only_the_maker_edits_and_submits(client: AsyncClient) -> None:
     response = await client.get(f"/api/v1/contests/{created['id']}", headers=headers(other))
     assert response.status_code == 200
     assert response.json()["is_mine"] is False
+
+
+async def test_admin_edit_checks_version_and_exact_window_even_if_scheduler_lags(client) -> None:
+    maker, maker_user, maker_profile = await sub_admin_token()
+    admin, _ = await admin_token()
+    participant, _ = await seed_agent("loans")
+    yesterday, tomorrow = (today_ist() + timedelta(days=offset) for offset in (-1, 1))
+    contest = await seed_contest(
+        created_by=maker_user, status="approved", starts_on=yesterday, ends_on=tomorrow
+    )
+    url = f"/api/v1/contests/{contest.id}"
+    body = definition(
+        expected_version=contest.version,
+        title="Updated sprint",
+        description=None,
+        terms=None,
+        starts_on=str(yesterday),
+        ends_on=str(tomorrow),
+        prize_paise=contest.prize_paise,
+        metric=contest.metric,
+        criteria=contest.criteria,
+    )
+    maker_as_admin = token_for(
+        maker_user, "admin", platform_scope="true", staff_profile=maker_profile
+    )
+    for token, update, code in (
+        (maker, body, 422),
+        (maker_as_admin, body, 403),
+        (admin, {**body, "prize_paise": 999}, 409),
+        (admin, {**body, "end_time": "22:00"}, 409),
+        (admin, body, 200),
+        (admin, body, 409),
+    ):
+        response = await client.put(url, json=update, headers=headers(token))
+        assert response.status_code == code, response.text
+    async with db_session.AsyncSessionLocal() as db:
+        stored = await db.get(Contest, contest.id)
+        assert stored.title == "Updated sprint" and stored.status == "approved"
+        assert stored.checker_uuid == contest.checker_uuid
+        audit = await db.scalar(
+            select(AuditLog).where(
+                AuditLog.action == AuditAction.CONTEST_UPDATED, AuditLog.entity_uuid == contest.id
+            )
+        )
+        assert audit.detail["before"]["title"] == contest.title
+        assert audit.detail["after"]["title"] == "Updated sprint"
+        notification = await db.scalar(
+            select(Notification).where(
+                Notification.type == NotificationType.CONTEST_UPDATED,
+                Notification.user_uuid == participant.id,
+                Notification.href == f"/dashboard/contests?contest={contest.id}",
+            )
+        )
+        assert notification is not None
+        stored.starts_on = yesterday - timedelta(days=1)
+        stored.ends_on = yesterday
+        await db.commit()
+    response = await client.put(
+        url, json={**body, "expected_version": contest.version + 1}, headers=headers(admin)
+    )
+    assert response.status_code == 409 and "ended" in response.json()["detail"]
 
 
 async def test_full_review_cycle_with_maker_checker(client: AsyncClient) -> None:
