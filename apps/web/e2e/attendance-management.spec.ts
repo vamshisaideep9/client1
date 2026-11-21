@@ -5,6 +5,7 @@ const DAY = "2026-11-21";
 const NOW = "2026-11-21T04:30:00Z";
 const STAFF = "51000000-0000-4000-8000-000000000001";
 const REQUEST = "61000000-0000-4000-8000-000000000001";
+const REVIEWER = "51000000-0000-4000-8000-000000000002";
 
 test("an Admin configures attendance and reviews a staff leave request", async ({ page, baseURL }) => {
   test.setTimeout(120_000);
@@ -20,6 +21,7 @@ test("an Admin configures attendance and reviews a staff leave request", async (
   let configured = false;
   let decision: Record<string, unknown> | null = null;
   let policy: Record<string, unknown> | null = null;
+  let assignment: Record<string, unknown> | null = null;
   await page.route("**/api/v1/attendance/**", async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname.endsWith("/policy")) {
@@ -31,7 +33,17 @@ test("an Admin configures attendance and reviews a staff leave request", async (
         active: configured ? { ...policy, version: 1, effective_from: DAY } : null, scheduled: null,
       } });
     }
-    if (pathname.endsWith("/holidays")) return route.fulfill({ json: [] });
+    if (pathname.endsWith("/holidays")) {
+      const line = new URL(route.request().url()).searchParams.get("business_line");
+      return route.fulfill({ json: line === "real_estate" ? [{ day: DAY, name: "Real estate holiday" }] : [] });
+    }
+    if (pathname.endsWith("/employment/reviewers")) return route.fulfill({ json: [
+      { staff_profile_id: REVIEWER, name: "Synthetic Reviewer", staff_code: "SA-1", role: "sub_admin" },
+    ] });
+    if (pathname.endsWith(`/employment/${STAFF}`)) {
+      if (route.request().method() === "PUT") assignment = route.request().postDataJSON();
+      return route.fulfill({ json: assignment ? { ...assignment, staff_profile_id: STAFF, version: 1 } : null });
+    }
     if (pathname.endsWith("/decision")) {
       decision = route.request().postDataJSON();
       return route.fulfill({ json: { ...leave, status: "approved" } });
@@ -46,7 +58,19 @@ test("an Admin configures attendance and reviews a staff leave request", async (
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/dashboard/attendance-management", { waitUntil: "domcontentloaded" });
   await expect(page.getByText(/Admin setup is pending/)).toBeVisible({ timeout: 25_000 });
+  const editAssignment = page.getByRole("button", { name: "Edit attendance assignment for Synthetic Staff" });
+  await editAssignment.click();
+  const assignmentDialog = page.getByRole("dialog", { name: "Attendance assignment" });
+  await assignmentDialog.getByLabel("Employment start").fill(DAY);
+  await assignmentDialog.getByLabel("Calendar").selectOption("real_estate");
+  await assignmentDialog.getByLabel("Direct attendance reviewer (optional)").selectOption(REVIEWER);
+  await assignmentDialog.getByRole("button", { name: "Save assignment" }).click();
+  await expect(editAssignment).toBeFocused();
+  await expect(page.getByText("Attendance assignment saved.")).toBeVisible();
+  expect(assignment).toEqual({ start_day: DAY, end_day: null, business_line: "real_estate", reviewer_id: REVIEWER, expected_version: 0 });
   await page.getByRole("tab", { name: "Policy & holidays" }).click();
+  await page.getByLabel("Calendar", { exact: true }).selectOption("real_estate");
+  await expect(page.getByText(/Real estate holiday/)).toBeVisible();
   await expect(page.getByLabel("Shift start (IST)")).toHaveValue("09:30");
   await page.getByLabel("Shift start (IST)").fill("09:00");
   await page.getByLabel("Shift duration (minutes)").fill("480");

@@ -2175,6 +2175,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance/employment/reviewers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Employment Reviewers */
+        get: operations["get_employment_reviewers_api_v1_attendance_employment_reviewers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/employment/{staff_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Employment */
+        get: operations["get_employment_api_v1_attendance_employment__staff_id__get"];
+        /** Put Employment */
+        put: operations["put_employment_api_v1_attendance_employment__staff_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attendance/export": {
         parameters: {
             query?: never;
@@ -8560,6 +8595,49 @@ export interface components {
              */
             status: "pending" | "approved" | "rejected" | "cancelled";
         };
+        /** AttendanceEmploymentInput */
+        AttendanceEmploymentInput: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** End Day */
+            end_day?: string | null;
+            /** Expected Version */
+            expected_version: number;
+            /** Reviewer Id */
+            reviewer_id?: string | null;
+            /**
+             * Start Day
+             * Format: date
+             */
+            start_day: string;
+        };
+        /** AttendanceEmploymentRead */
+        AttendanceEmploymentRead: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** End Day */
+            end_day: string | null;
+            /** Reviewer Id */
+            reviewer_id: string | null;
+            /**
+             * Staff Profile Id
+             * Format: uuid
+             */
+            staff_profile_id: string;
+            /**
+             * Start Day
+             * Format: date
+             */
+            start_day: string;
+            /** Version */
+            version: number;
+        };
         /** AttendanceHolidayInput */
         AttendanceHolidayInput: {
             /** Name */
@@ -8734,7 +8812,7 @@ export interface components {
              * Role
              * @enum {string}
              */
-            role: "telecaller" | "employee";
+            role: "telecaller" | "employee" | "sub_admin";
             /** Staff Code */
             staff_code: string;
             /**
@@ -12200,6 +12278,10 @@ export interface components {
             balances: components["schemas"]["AttendanceBalance"][];
             /** Days */
             days: components["schemas"]["AttendanceDayRead"][];
+            /** Employment End */
+            employment_end?: string | null;
+            /** Employment Start */
+            employment_start?: string | null;
             /** Holidays */
             holidays: components["schemas"]["AttendanceHolidayRead"][];
             policy: components["schemas"]["AttendancePolicyRead"] | null;
@@ -20758,6 +20840,103 @@ export interface operations {
             };
         };
     };
+    get_employment_reviewers_api_v1_attendance_employment_reviewers_get: {
+        parameters: {
+            query: {
+                business_line: "loans" | "real_estate";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRosterMember"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_employment_api_v1_attendance_employment__staff_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                staff_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceEmploymentRead"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_employment_api_v1_attendance_employment__staff_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                staff_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceEmploymentInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceEmploymentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     export_attendance_api_v1_attendance_export_get: {
         parameters: {
             query: {
@@ -20796,6 +20975,7 @@ export interface operations {
             query: {
                 start: string;
                 end: string;
+                business_line?: ("loans" | "real_estate") | null;
             };
             header?: never;
             path?: never;
@@ -20825,7 +21005,9 @@ export interface operations {
     };
     put_holiday_api_v1_attendance_holidays__day__put: {
         parameters: {
-            query?: never;
+            query?: {
+                business_line?: ("loans" | "real_estate") | null;
+            };
             header?: never;
             path: {
                 day: string;
@@ -20858,7 +21040,9 @@ export interface operations {
     };
     delete_holiday_api_v1_attendance_holidays__day__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                business_line?: ("loans" | "real_estate") | null;
+            };
             header?: never;
             path: {
                 day: string;

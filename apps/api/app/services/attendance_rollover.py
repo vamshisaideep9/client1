@@ -6,8 +6,10 @@ from sqlalchemy import func, or_, select
 
 import app.db.session as db_session
 from app.models.attendance import (
+    ATTENDANCE_POLICY_LOCK,
     ATTENDANCE_ROLLOVER_LOCK,
     AttendanceDay,
+    AttendanceEmployment,
     AttendancePolicy,
     AttendanceRolloverState,
 )
@@ -30,6 +32,9 @@ async def run_attendance_rollover(now: datetime | None = None) -> int:
                 select(StaffProfile.id)
                 .join(User, User.id == StaffProfile.auth_user_uuid)
                 .outerjoin(
+                    AttendanceEmployment, AttendanceEmployment.staff_profile_id == StaffProfile.id
+                )
+                .outerjoin(
                     AttendanceRolloverState,
                     AttendanceRolloverState.staff_profile_id == StaffProfile.id,
                 )
@@ -38,6 +43,15 @@ async def run_attendance_rollover(now: datetime | None = None) -> int:
                     StaffProfile.status == ProfileStatus.ACTIVE,
                     User.status == UserStatus.ACTIVE,
                     StaffProfile.created_at < datetime.combine(today, time.min, clock.IST),
+                    or_(
+                        AttendanceEmployment.start_day.is_(None),
+                        AttendanceEmployment.start_day < today,
+                    ),
+                    or_(
+                        AttendanceEmployment.end_day.is_(None),
+                        AttendanceRolloverState.through_day.is_(None),
+                        AttendanceRolloverState.through_day < AttendanceEmployment.end_day,
+                    ),
                     or_(
                         AttendanceRolloverState.through_day.is_(None),
                         AttendanceRolloverState.through_day < today - clock.DAY,
@@ -54,14 +68,22 @@ async def run_attendance_rollover(now: datetime | None = None) -> int:
                     profile = await clock.lock_staff(db, staff_id)
                 except clock.AttendanceNotFound:
                     continue
+                await db.execute(select(func.pg_advisory_xact_lock_shared(ATTENDANCE_POLICY_LOCK)))
                 cursor = await db.get(AttendanceRolloverState, staff_id)
-                day = max(first, clock.work_date(profile.created_at))
+                employment = await db.get(AttendanceEmployment, staff_id)
+                start = employment.start_day if employment else clock.work_date(profile.created_at)
+                end = (
+                    min(today - clock.DAY, employment.end_day)
+                    if employment and employment.end_day
+                    else today - clock.DAY
+                )
+                day = max(first, start)
                 if cursor is not None:
                     day = max(day, cursor.through_day + clock.DAY)
                 through = None
                 recalculate_months = set()
                 for _ in range(14):
-                    if day >= today:
+                    if day > end:
                         break
                     row = await db.get(AttendanceDay, (staff_id, day))
                     policy = (
@@ -74,9 +96,17 @@ async def run_attendance_rollover(now: datetime | None = None) -> int:
                     if (
                         row is None
                         and clock.allows_personal_attendance(profile.role, policy)
-                        and profile.created_at <= clock.shift_start(day, policy)
+                        and (employment or profile.created_at <= clock.shift_start(day, policy))
                     ):
-                        status = await clock.day_without_clock(db, day, policy)
+                        line = (
+                            employment.business_line
+                            if employment
+                            else profile.business_line
+                            if policy.session_clock
+                            and profile.business_line in ("loans", "real_estate")
+                            else None
+                        )
+                        status = await clock.day_without_clock(db, day, policy, line)
                         row = clock.new_day(
                             staff_id,
                             day,
@@ -84,9 +114,7 @@ async def run_attendance_rollover(now: datetime | None = None) -> int:
                             status,
                             "rollover",
                             calendar_status=status,
-                            business_line=profile.business_line
-                            if profile.business_line != "both"
-                            else None,
+                            business_line=line,
                         )
                         if policy.session_clock:
                             row.uncovered_units = row.lop_units = 4 if status == "absent" else 0

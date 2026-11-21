@@ -9,9 +9,11 @@ and management of scoped Sub Admin access. Team Manager, Media Sub Admin,
 Account Manager, and Relationship Manager grants are evaluated per action and
 business line. Legacy Sub Admins keep their current access until explicitly
 transitioned. Existing team assignments drive attendance recommendations.
-Separate direct attendance reporting assignments, employment dates, line
-holiday calendars, monthly leave rules, certificates, and closed reporting
-remain open.
+Slice 3 adds employment dates, line holiday calendars, and direct attendance
+review outside work teams. The attendance calendar remains shared for dates
+with a global holiday. A direct reviewer can reach only records in the assigned
+line and uses the existing decision workflow. Monthly leave rules, certificate
+handling, and closed reporting remain open.
 
 Slice 1 was merged in [upstream #399](https://github.com/brollysolutions/client1/pull/399).
 Slice 2 adds PostgreSQL coverage for pending activation, stale sessions,
@@ -19,9 +21,17 @@ cross-line payout and campaign restrictions, and assigned Agent activity.
 The migration round trip and single-head check passed. All 1,122 web unit tests
 and the desktop activation and mobile delegated-access browser journeys
 passed. The complete attendance feature remains in progress.
-[Slice 2 changes](https://github.com/brollysolutions/client1/compare/main...feat/scoped-sub-admin-access)
+[Upstream #400](https://github.com/brollysolutions/client1/pull/400) ·
+[Slice 3 changes](https://github.com/brollysolutions/client1/compare/main...feat/attendance-employment-calendars)
+
+Slice 3's PostgreSQL authorization and calendar scenario and both attendance
+browser journeys passed. Employment configuration is opt-in for existing
+staff; a missing direct reviewer leaves the existing decision routing in place.
 
 **Implemented — Batch 6 attendance management web**
+
+Shared image processing uses Pillow 13.0.0 for the attendance review stack,
+including the JPEG and PNG certificate flow in the next slice.
 
 Scoped roster, monthly attendance grid and review inbox are available to
 managers. Platform Admin handles approval overrides, policy configuration,

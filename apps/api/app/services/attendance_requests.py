@@ -12,6 +12,7 @@ from app.core.deps import CurrentUser
 from app.models.attendance import (
     ATTENDANCE_POLICY_LOCK,
     AttendanceDay,
+    AttendanceEmployment,
     AttendancePolicy,
     AttendanceRequest,
 )
@@ -58,9 +59,15 @@ async def _admins(db: AsyncSession) -> set[UUID]:
 
 
 async def _reviewers(
-    db: AsyncSession, target: StaffProfile, *, business_line: str | None = None
+    db: AsyncSession,
+    target: StaffProfile,
+    *,
+    business_line: str | None = None,
+    include_direct: bool = True,
 ) -> set[UUID]:
-    managers = await clock.managers_for(db, target, business_line=business_line)
+    managers = await clock.managers_for(
+        db, target, business_line=business_line, include_direct=include_direct
+    )
     if managers:
         return managers
     return await _admins(db)
@@ -86,6 +93,9 @@ async def submit(
 ) -> AttendanceRequest:
     async with db_session.AsyncSessionLocal() as db:
         profile = await clock.lock_actor(db, actor)
+        employment = await db.get(AttendanceEmployment, profile.id)
+        first_day = employment.start_day if employment else clock.work_date(profile.created_at)
+        calendar_line = employment.business_line if employment else actor.business_line
         now = clock.utc_now()
         today = clock.work_date(now)
         active_policy = await clock.require_policy(db, today)
@@ -114,7 +124,7 @@ async def submit(
                 leave_session=values.leave_session,
             )
         elif isinstance(values, AttendanceAdjustmentInput):
-            if values.day < clock.work_date(profile.created_at) or (
+            if values.day < first_day or (
                 values.day > today and values.adjustment_type != "on_duty"
             ):
                 raise clock.AttendanceInvalid("Choose an eligible work date.")
@@ -125,13 +135,13 @@ async def submit(
                 kind="adjustment",
                 adjustment_type=values.adjustment_type,
                 start_day=values.day,
-                end_day=await attendance_adjustments.comp_off_date(db, values.day)
+                end_day=await attendance_adjustments.comp_off_date(db, values.day, calendar_line)
                 if values.adjustment_type == "comp_off"
                 else values.day,
                 reason=values.reason,
             )
         else:
-            if values.day < clock.work_date(profile.created_at) or values.day > today:
+            if values.day < first_day or values.day > today:
                 raise clock.AttendanceInvalid("Choose an existing work date for your account.")
             row = await db.get(AttendanceDay, (profile.id, values.day))
             policy = (
@@ -148,6 +158,7 @@ async def submit(
                 requested_check_in=values.check_in,
                 requested_check_out=values.check_out,
             )
+        clock.require_employment_days(employment, request.start_day, request.end_day)
         if not clock.allows_personal_attendance(profile.role, policy):
             raise clock.AttendanceError("This date predates attendance for Sub Admins.")
         overlap = select(AttendanceRequest.id).where(
@@ -171,7 +182,7 @@ async def submit(
         request.staff_profile_id, request.requester_id = profile.id, actor.id
         request.created_at = now
         request.two_stage = policy.session_clock
-        request.business_line = actor.business_line if policy.session_clock else None
+        request.business_line = calendar_line if employment or policy.session_clock else None
         db.add(request)
         await db.flush()
         await clock.audit(
@@ -179,7 +190,9 @@ async def submit(
         )
         notify(
             db,
-            await _reviewers(db, profile, business_line=request.business_line),
+            await _reviewers(
+                db, profile, business_line=request.business_line, include_direct=request.two_stage
+            ),
             "Attendance request submitted",
             "A staff request is ready for review.",
             "/dashboard/attendance-management",
@@ -228,7 +241,7 @@ async def _apply_leave(db: AsyncSession, request: AttendanceRequest) -> None:
             raise clock.AttendanceError(
                 "This leave type is unavailable for part of the requested period."
             )
-        if await clock.day_without_clock(db, day, policy) == "absent":
+        if await clock.day_without_clock(db, day, policy, request.business_line) == "absent":
             row = await db.get(AttendanceDay, (request.staff_profile_id, day))
             if row is None:
                 row = clock.new_day(
@@ -316,7 +329,9 @@ async def _undo_leave(db: AsyncSession, request: AttendanceRequest, today: date)
             if day >= today:
                 await db.delete(row)
             else:
-                row.status = await clock.day_without_clock(db, day, policy)
+                row.status = row.calendar_status or await clock.day_without_clock(
+                    db, day, policy, row.business_line
+                )
                 row.source = "rollover"
                 if policy.session_clock:
                     row.uncovered_units = row.lop_units = 4 if row.status == "absent" else 0
@@ -345,7 +360,9 @@ async def _apply_correction(db: AsyncSession, request: AttendanceRequest, now: d
             policy,
             "present",
             "correction",
-            calendar_status=await clock.day_without_clock(db, request.start_day, policy)
+            calendar_status=await clock.day_without_clock(
+                db, request.start_day, policy, request.business_line
+            )
             if policy.session_clock
             else None,
             business_line=request.business_line,
@@ -391,7 +408,10 @@ async def _undo_correction(db: AsyncSession, request: AttendanceRequest, now: da
     if not before:
         row.check_in, row.check_out, row.worked_minutes, row.late = None, None, 0, False
         row.status = (
-            "on_leave" if row.leave_units else await clock.day_without_clock(db, row.day, policy)
+            "on_leave"
+            if row.leave_units
+            else row.calendar_status
+            or await clock.day_without_clock(db, row.day, policy, row.business_line)
         )
         row.source = "leave" if row.leave_units else "rollover"
         if policy.session_clock:
@@ -501,8 +521,7 @@ async def _decision(
         now = clock.utc_now()
         today = clock.work_date(now)
         await clock.require_policy(db, today)
-        if request.kind in ("leave", "adjustment"):
-            await db.execute(select(func.pg_advisory_xact_lock_shared(ATTENDANCE_POLICY_LOCK)))
+        await db.execute(select(func.pg_advisory_xact_lock_shared(ATTENDANCE_POLICY_LOCK)))
         before = request.status
         if values is None:
             if request.requester_id != actor.id:
@@ -529,7 +548,13 @@ async def _decision(
             elif values.stage == "recommendation":
                 raise clock.AttendanceError("This request follows the earlier approval policy.")
             elif reviewer.role == StaffRole.SUB_ADMIN:
-                if not await clock.managers_for(db, target, reviewer.id):
+                if not await clock.managers_for(
+                    db,
+                    target,
+                    reviewer.id,
+                    business_line=request.business_line,
+                    include_direct=False,
+                ):
                     raise clock.AttendanceNotFound("Attendance request not found.")
                 if before != "pending" or values.status == "cancelled":
                     raise clock.AttendanceError("Only Admin can override an attendance decision.")
@@ -550,6 +575,9 @@ async def _decision(
             else:
                 await _undo_correction(db, request, now)
         if status == "approved":
+            clock.require_employment_days(
+                await db.get(AttendanceEmployment, target.id), request.start_day, request.end_day
+            )
             if request.kind == "leave":
                 await _apply_leave(db, request)
             elif request.kind == "adjustment":

@@ -11,7 +11,7 @@ import { FetchError } from "@/features/dashboard/fetch-error";
 import { ListLoadingState } from "@/features/dashboard/list-states";
 import {
   getAttendanceHolidays, getAttendancePolicy, saveAttendancePolicy, setAttendanceHoliday,
-  type AttendanceHoliday, type AttendancePolicyState,
+  type AttendanceHoliday, type AttendanceLine, type AttendancePolicyState,
 } from "@/lib/attendance-api";
 import { attendanceDate, istDay, monthDays } from "./attendance-display";
 
@@ -40,6 +40,8 @@ function parseQuotas(text: string) {
 export function AttendancePolicyPanel() {
   const [policy, setPolicy] = useState<AttendancePolicyState | null>(null);
   const [holidays, setHolidays] = useState<AttendanceHoliday[]>([]);
+  const [line, setLine] = useState<AttendanceLine | "">("");
+  const [calendarLoading, setCalendarLoading] = useState(true);
   const [month, setMonth] = useState(() => istDay().slice(0, 7));
   const [error, setError] = useState<{ status: number; message: string } | null>(null);
   const [message, setMessage] = useState("");
@@ -53,20 +55,22 @@ export function AttendancePolicyPanel() {
   useEffect(() => {
     let current = true;
     const days = monthDays(month);
-    void Promise.all([getAttendancePolicy(), getAttendanceHolidays(days[0], days[days.length - 1])])
+    void Promise.all([getAttendancePolicy(), getAttendanceHolidays(days[0], days[days.length - 1], line || undefined)])
       .then(([state, calendar]) => {
         if (!current) return;
         if (!state.ok || !calendar.ok) {
           const failure = !state.ok ? state : calendar;
           if (!failure.ok) setError({ status: failure.status, message: failure.error });
+          setCalendarLoading(false);
           return;
         }
         setPolicy(state.data);
         setHolidays(calendar.data);
+        setCalendarLoading(false);
         setError(null);
       });
     return () => { current = false; };
-  }, [month, revision]);
+  }, [line, month, revision]);
 
   async function savePolicy(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -108,10 +112,11 @@ export function AttendancePolicyPanel() {
   async function changeHoliday(day: string, name: string | null) {
     setHolidayBusy(true);
     setHolidayMessage("");
-    const result = await setAttendanceHoliday(day, name);
+    const result = await setAttendanceHoliday(day, name, line || undefined);
     setHolidayBusy(false);
     setHolidayMessage(result.ok ? (name === null ? "Holiday removed." : "Holiday saved.") : result.error);
     if (result.ok) {
+      setCalendarLoading(true);
       setMonth(day.slice(0, 7));
       refresh((value) => value + 1);
     }
@@ -157,16 +162,23 @@ export function AttendancePolicyPanel() {
           {message ? <p role="status" className="text-sm text-text-secondary">{message}</p> : null}
         </form>
       </DashboardPanel>
-      <DashboardPanel title="Holidays" description="Changes apply to today or future work dates.">
+      <DashboardPanel title="Holidays" description="All-staff holidays also apply to both line calendars. Changes apply to today or future work dates.">
+        <div className="mb-3 max-w-xs"><Label htmlFor="holiday-calendar">Calendar</Label>
+          <select id="holiday-calendar" className="min-h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={line} disabled={holidayBusy} onChange={(event) => {
+            setCalendarLoading(true); setHolidayMessage(""); setLine(event.target.value as AttendanceLine | "");
+          }}>
+            <option value="">All staff</option><option value="loans">Loans</option><option value="real_estate">Real estate</option>
+          </select>
+        </div>
         <form onSubmit={(event) => void saveHoliday(event)} className="flex flex-wrap items-end gap-3">
           <div><Label htmlFor="holiday-day">Holiday date</Label><Input id="holiday-day" name="day" type="date" min={today} required /></div>
           <div className="min-w-0 flex-1"><Label htmlFor="holiday-name">Holiday name</Label><Input id="holiday-name" name="name" required maxLength={120} /></div>
           <Button type="submit" disabled={holidayBusy || !policy.active}>Save holiday</Button>
         </form>
         <div className="mt-4 max-w-xs"><Label htmlFor="holiday-month">Show holidays for</Label>
-          <Input id="holiday-month" type="month" value={month} onChange={(event) => { if (event.target.value) setMonth(event.target.value); }} /></div>
+          <Input id="holiday-month" type="month" value={month} onChange={(event) => { if (event.target.value) { setCalendarLoading(true); setMonth(event.target.value); } }} /></div>
         {holidayMessage ? <p role="status" className="mt-2 text-sm">{holidayMessage}</p> : null}
-        <ul className="mt-2 divide-y divide-border">
+        {calendarLoading ? <ListLoadingState rows={1} /> : <ul className="mt-2 divide-y divide-border">
           {holidays.map((holiday) => <li key={holiday.day} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
             <span className="min-w-0 [overflow-wrap:anywhere]">{attendanceDate(holiday.day)} · {holiday.name}</span>
             {holiday.day >= today ? <Button variant="outline" size="sm" disabled={holidayBusy} onClick={async () => {
@@ -175,8 +187,8 @@ export function AttendancePolicyPanel() {
               }
             }}>Remove</Button> : null}
           </li>)}
-        </ul>
-        {!holidays.length ? <p className="mt-2 text-sm text-text-secondary">No holidays in this month.</p> : null}
+        </ul>}
+        {!calendarLoading && !holidays.length ? <p className="mt-2 text-sm text-text-secondary">No holidays in this calendar for the month.</p> : null}
       </DashboardPanel>
       {confirmDialog}
     </>

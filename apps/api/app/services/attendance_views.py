@@ -9,7 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.attendance import (
     AttendanceDay,
+    AttendanceEmployment,
     AttendanceHoliday,
+    AttendanceLineHoliday,
     AttendancePolicy,
     AttendanceRequest,
 )
@@ -23,7 +25,18 @@ def validate_period(start: date, end: date) -> None:
         raise clock.AttendanceInvalid("Choose a date range of one to 31 days.")
 
 
-async def holidays(db: AsyncSession, start: date, end: date) -> list[AttendanceHoliday]:
+async def holidays(db: AsyncSession, start: date, end: date, business_line: str | None = None):
+    if business_line is not None:
+        return list(
+            await db.scalars(
+                select(AttendanceLineHoliday)
+                .where(
+                    AttendanceLineHoliday.business_line == business_line,
+                    AttendanceLineHoliday.day.between(start, end),
+                )
+                .order_by(AttendanceLineHoliday.day)
+            )
+        )
     return list(
         await db.scalars(
             select(AttendanceHoliday)
@@ -34,13 +47,27 @@ async def holidays(db: AsyncSession, start: date, end: date) -> list[AttendanceH
 
 
 async def personal(
-    db: AsyncSession, staff_id: UUID, role: str, year: int | None, month: int | None
+    db: AsyncSession,
+    staff_id: UUID,
+    role: str,
+    year: int | None,
+    month: int | None,
+    business_line: str | None,
 ):
     now = clock.utc_now()
     today = clock.work_date(now)
     year, month = year or today.year, month or today.month
     start, end = date(year, month, 1), date(year, month, monthrange(year, month)[1])
     policy = await clock.policy_for(db, today)
+    employment = await db.get(AttendanceEmployment, staff_id)
+    line = (
+        employment.business_line
+        if employment
+        else (business_line if policy and policy.session_clock else None)
+    )
+    calendar = {row.day: row for row in await holidays(db, start, end)}
+    if line is not None:
+        calendar.update({row.day: row for row in await holidays(db, start, end, line)})
     active = await clock.open_day(db, staff_id)
     if active is not None:
         day_policy = await db.get(AttendancePolicy, active.policy_version)
@@ -63,7 +90,9 @@ async def personal(
                 .order_by(AttendanceDay.day)
             )
         ),
-        holidays=await holidays(db, start, end),
+        holidays=[calendar[day] for day in sorted(calendar)],
+        employment_start=employment.start_day if employment else None,
+        employment_end=employment.end_day if employment else None,
         requests=list(
             await db.scalars(
                 select(AttendanceRequest)
@@ -84,7 +113,7 @@ async def personal(
 
 
 _ROSTER = (
-    text("SELECT * FROM attendance_roster(:team_id)")
+    text("SELECT * FROM attendance_reporting_roster(:team_id)")
     .columns(
         staff_profile_id=Uuid(),
         name=String(),
