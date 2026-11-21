@@ -39,6 +39,9 @@ class PayoutType(enum.StrEnum):
     CASHBACK = "cashback"
     REFERRAL_BONUS = "referral_bonus"
     COMMISSION = "commission"
+    # CS-027: an Agent's contest prize, created only from a finalized contest
+    # result (services/contest_awards.py), never through the generic create.
+    CONTEST_REWARD = "contest_reward"
 
 
 class PayoutStatus(enum.StrEnum):

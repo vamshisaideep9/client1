@@ -207,6 +207,17 @@ export const INFO = {
   buyAdvantage:
     "Home equity minus the renter's corpus. Positive means buying wins by then, negative means renting is ahead.",
   rvbBreakEven: "The first year owning pulls ahead of renting, if it happens in your horizon.",
+
+  // Compound interest
+  ciPrincipal: "The lump sum you invest or deposit today.",
+  ciRate: "The yearly interest rate the money earns, before tax.",
+  ciYears: "How many years the money stays invested.",
+  ciFrequency:
+    "How often interest is added to your balance. More frequent compounding earns slightly more.",
+  ciMonthly: "An optional amount you add at the end of every month.",
+  ciMaturity: "What your money grows to at the end of the period.",
+  ciInvested: "Everything you put in: the lump sum plus all monthly additions.",
+  ciInterest: "The interest earned over the period (maturity value minus what you invested).",
 } as const;
 
 export type InfoKey = keyof typeof INFO;

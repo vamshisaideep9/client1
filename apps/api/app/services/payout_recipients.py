@@ -35,6 +35,7 @@ async def _resolve_identities(
     user_uuids: Collection[UUID],
     *,
     prefer_line: Mapping[UUID, str | None] | None = None,
+    profile_line: str | None = None,
 ) -> dict[UUID, Identity]:
     """Batch-resolve auth_user uuids to a display name + best profile code.
 
@@ -48,6 +49,9 @@ async def _resolve_identities(
     if not ids:
         return {}
     prefer_line = prefer_line or {}
+    client_line = ClientProfile.business_line == profile_line if profile_line else True
+    agent_line = AgentProfile.business_line == profile_line if profile_line else True
+    staff_line = StaffProfile.business_line.in_((profile_line, "both")) if profile_line else True
 
     users = (
         await db.execute(select(User.id, User.first_name, User.last_name).where(User.id.in_(ids)))
@@ -65,7 +69,7 @@ async def _resolve_identities(
                 ClientProfile.business_line,
                 ClientProfile.customer_code,
             )
-            .where(ClientProfile.auth_user_uuid.in_(ids))
+            .where(ClientProfile.auth_user_uuid.in_(ids), client_line)
             .order_by(ClientProfile.created_at.asc())
         )
     ).all()
@@ -76,7 +80,7 @@ async def _resolve_identities(
     agent_rows = (
         await db.execute(
             select(AgentProfile.auth_user_uuid, AgentProfile.agent_code).where(
-                AgentProfile.auth_user_uuid.in_(ids)
+                AgentProfile.auth_user_uuid.in_(ids), agent_line
             )
         )
     ).all()
@@ -85,7 +89,7 @@ async def _resolve_identities(
     staff_rows = (
         await db.execute(
             select(StaffProfile.auth_user_uuid, StaffProfile.staff_code).where(
-                StaffProfile.auth_user_uuid.in_(ids)
+                StaffProfile.auth_user_uuid.in_(ids), staff_line
             )
         )
     ).all()
@@ -122,6 +126,7 @@ async def resolve_payout_identities(
     user_uuids: Collection[UUID],
     *,
     prefer_line: Mapping[UUID, str | None] | None = None,
+    profile_line: str | None = None,
 ) -> dict[UUID, Identity]:
     """Narrow bypass projection for an already-authorized payout surface.
 
@@ -129,7 +134,9 @@ async def resolve_payout_identities(
     payout destination data. Authorization remains at the payout router.
     """
     async with AsyncSessionLocal() as db:
-        return await _resolve_identities(db, user_uuids, prefer_line=prefer_line)
+        return await _resolve_identities(
+            db, user_uuids, prefer_line=prefer_line, profile_line=profile_line
+        )
 
 
 @dataclass(frozen=True)
@@ -142,7 +149,7 @@ class RecipientHit:
 
 
 async def _search_recipients(
-    db: AsyncSession, *, q: str, limit: int, exclude_user_uuid: UUID
+    db: AsyncSession, *, q: str, limit: int, exclude_user_uuid: UUID, line: str | None = None
 ) -> list[RecipientHit]:
     """Admin-only recipient picker search. Filters mirror the create_payout
     guards (services/payments.py) so the picker never offers a choice that
@@ -155,10 +162,14 @@ async def _search_recipients(
     escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     like = f"%{escaped}%"
 
+    client_line = ClientProfile.business_line == line if line else True
+    agent_line = AgentProfile.business_line == line if line else True
+    staff_line = StaffProfile.business_line.in_((line, "both")) if line else True
     client_exists = (
         select(ClientProfile.auth_user_uuid)
         .where(
             ClientProfile.auth_user_uuid == User.id,
+            client_line,
             ClientProfile.customer_code.ilike(like, escape="\\"),
         )
         .exists()
@@ -167,6 +178,7 @@ async def _search_recipients(
         select(AgentProfile.auth_user_uuid)
         .where(
             AgentProfile.auth_user_uuid == User.id,
+            agent_line,
             AgentProfile.agent_code.ilike(like, escape="\\"),
         )
         .exists()
@@ -175,6 +187,7 @@ async def _search_recipients(
         select(StaffProfile.auth_user_uuid)
         .where(
             StaffProfile.auth_user_uuid == User.id,
+            staff_line,
             StaffProfile.staff_code.ilike(like, escape="\\"),
         )
         .exists()
@@ -189,14 +202,30 @@ async def _search_recipients(
         staff_exists,
     ]
     stripped = q.strip()
-    if stripped.isdigit() and len(stripped) >= 6:
+    if line is None and stripped.isdigit() and len(stripped) >= 6:
         filters.append(User.mobile.like(f"%{stripped}"))
 
+    line_match = (
+        or_(
+            select(ClientProfile.id)
+            .where(ClientProfile.auth_user_uuid == User.id, client_line)
+            .exists(),
+            select(AgentProfile.id)
+            .where(AgentProfile.auth_user_uuid == User.id, agent_line)
+            .exists(),
+            select(StaffProfile.id)
+            .where(StaffProfile.auth_user_uuid == User.id, staff_line)
+            .exists(),
+        )
+        if line
+        else True
+    )
     stmt = (
         select(User.id, User.first_name, User.last_name, User.mobile)
         .where(
             User.id != exclude_user_uuid,
             User.status.not_in(_INACTIVE_STATUSES),
+            line_match,
             or_(*filters),
         )
         # Most-recently-created first: a deterministic tiebreak (created_at is
@@ -214,7 +243,7 @@ async def _search_recipients(
     client_rows = (
         await db.execute(
             select(ClientProfile.auth_user_uuid, ClientProfile.customer_code).where(
-                ClientProfile.auth_user_uuid.in_(ids)
+                ClientProfile.auth_user_uuid.in_(ids), client_line
             )
         )
     ).all()
@@ -225,7 +254,7 @@ async def _search_recipients(
     agent_rows = (
         await db.execute(
             select(AgentProfile.auth_user_uuid, AgentProfile.agent_code).where(
-                AgentProfile.auth_user_uuid.in_(ids)
+                AgentProfile.auth_user_uuid.in_(ids), agent_line
             )
         )
     ).all()
@@ -234,7 +263,7 @@ async def _search_recipients(
     staff_rows = (
         await db.execute(
             select(StaffProfile.auth_user_uuid, StaffProfile.staff_code).where(
-                StaffProfile.auth_user_uuid.in_(ids)
+                StaffProfile.auth_user_uuid.in_(ids), staff_line
             )
         )
     ).all()
@@ -259,7 +288,7 @@ async def _search_recipients(
                 name=f"{first} {last}".strip(),
                 codes=codes,
                 kind=kind,
-                mobile_last4=mobile[-4:],
+                mobile_last4=mobile[-4:] if line is None else "",
             )
         )
     return hits
@@ -277,7 +306,7 @@ async def search_recipients(
 
 
 async def search_payout_recipients(
-    *, q: str, limit: int, exclude_user_uuid: UUID
+    *, q: str, limit: int, exclude_user_uuid: UUID, line: str | None = None
 ) -> list[RecipientHit]:
     """Minimal bypass search after the router proves payout-request access."""
     async with AsyncSessionLocal() as db:
@@ -286,4 +315,5 @@ async def search_payout_recipients(
             q=q,
             limit=limit,
             exclude_user_uuid=exclude_user_uuid,
+            line=line,
         )

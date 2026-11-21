@@ -6,14 +6,8 @@ import { Database, Loader2, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FilterSelect } from "@/features/dashboard/filter-select";
 import {
   listAdminAuthEvents,
   listAdminEnquiries,
@@ -33,6 +27,7 @@ import {
   type AdminTransaction,
 } from "@/lib/admin-operations-api";
 import type { ApiResponse } from "@/lib/api/client";
+import { roleLabel } from "@/lib/role-label";
 
 import { filterOperationalRecords, type OperationalRecord } from "./operational-records-filter";
 
@@ -138,16 +133,17 @@ function authEventRecord(row: AdminAuthEvent): OperationalRecord {
   };
 }
 
-function enquiryRecord(row: AdminEnquiry): OperationalRecord {
+export function enquiryRecord(row: AdminEnquiry): OperationalRecord {
   return {
     id: row.id,
     title: row.title,
     subtitle: `${row.locality}, ${row.city}`,
     status: humanize(row.status),
     fields: [
+      // When the client sent it, shown first so staff can work requests in order.
+      { label: "Submitted on", value: formatWhen(row.created_at) },
       { label: "Property reference", value: row.property_ref },
       { label: "Client account", value: row.user_uuid },
-      { label: "Created", value: formatWhen(row.created_at) },
       { label: "Last updated", value: formatWhen(row.updated_at) },
     ],
   };
@@ -174,7 +170,7 @@ export function fieldVisibilityConfigRecord(
   return {
     id: row.id,
     title: `${humanize(row.entity)} ${humanize(row.field_key)}`,
-    subtitle: `${humanize(row.target_role)} / ${humanize(row.entity)} policy`,
+    subtitle: `${roleLabel(row.target_role)} / ${humanize(row.entity)} policy`,
     status: humanize(row.mode),
     fields: [
       { label: "Field key", value: row.field_key },
@@ -217,20 +213,21 @@ function loanHistoryRecord(row: AdminLoanTransactionHistory): OperationalRecord 
   };
 }
 
-function siteVisitRecord(row: AdminSiteVisit): OperationalRecord {
+export function siteVisitRecord(row: AdminSiteVisit): OperationalRecord {
   return {
     id: row.id,
     title: row.title,
     subtitle: `${row.locality}, ${row.city}`,
     status: humanize(row.status),
     fields: [
-      { label: "Property reference", value: row.property_ref },
-      { label: "Client account", value: row.user_uuid },
+      // When the client sent the request, kept apart from the visit's own slot.
+      { label: "Submitted on", value: formatWhen(row.created_at) },
       {
-        label: "Preferred slot",
+        label: "Visit on",
         value: `${formatDate(row.preferred_date)} · ${humanize(row.preferred_time_slot)}`,
       },
-      { label: "Requested", value: formatWhen(row.created_at) },
+      { label: "Property reference", value: row.property_ref },
+      { label: "Client account", value: row.user_uuid },
       { label: "Cancelled", value: formatWhen(row.cancelled_at) },
     ],
   };
@@ -489,17 +486,13 @@ export function OperationalRecordsView() {
                   maxLength={100}
                   onChange={(event) => setSearch(event.target.value)}
                 />
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger aria-label="Filter operational records by status" className="w-full">
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    {statusOptions.map((status) => (
-                      <SelectItem key={status} value={status}>{status}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FilterSelect
+                  label="Status"
+                  ariaLabel="Filter operational records by status"
+                  value={statusFilter}
+                  options={statusOptions.map((status) => ({ value: status, label: status }))}
+                  onValueChange={setStatusFilter}
+                />
               </div>
               {visibleRecords.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-text-secondary">

@@ -105,7 +105,7 @@ function LoanDetail({ application: a }: { application: LoanApplication }) {
 
       <MetricGrid>
         <MetricCard label="Requested" value={formatAmount(a.amountRequested)} icon={DASHBOARD_ICONS.loanApplications} />
-        <MetricCard label="Sanctioned" value={formatAmount(a.amountSanctioned)} icon={DASHBOARD_ICONS.earnings} />
+        <MetricCard label="Approved" value={formatAmount(a.amountSanctioned)} icon={DASHBOARD_ICONS.earnings} />
         <MetricCard label="Interest rate" value={formatRate(a.interestRate)} icon={DASHBOARD_ICONS.loanConfiguration} />
         <MetricCard
           label="Processing fee"
@@ -141,7 +141,7 @@ function LoanDetail({ application: a }: { application: LoanApplication }) {
       <DashboardPanel title="Loan details" description="Terms recorded against this application.">
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">
           <Term label="Amount requested" value={formatAmount(a.amountRequested)} />
-          <Term label="Amount sanctioned" value={formatAmount(a.amountSanctioned)} />
+          <Term label="Amount approved" value={formatAmount(a.amountSanctioned)} />
           <Term label="Interest rate" value={formatRate(a.interestRate)} />
           <Term
             label="Processing fee"

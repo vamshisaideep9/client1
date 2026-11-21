@@ -6,6 +6,7 @@ import { ArrowRight, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { HELP_TOPICS, START_STEPS } from "./help-content";
 import type { UserRole } from "@/lib/auth";
+import { roleLabel } from "@/lib/role-label";
 import { isDashboardPathAllowed, type DashboardAccessContext } from "@/features/dashboard/nav-items";
 
 export function HelpCenter({ role, started = false, access }: { role?: UserRole; started?: boolean; access?: DashboardAccessContext }) {
@@ -14,8 +15,8 @@ export function HelpCenter({ role, started = false, access }: { role?: UserRole;
   const topics = HELP_TOPICS.filter((topic) => (!access || isDashboardPathAllowed(topic.href, access)) && (!topic.roles || (role ? topic.roles.includes(role) : topic.roles.includes("client"))) && `${topic.title} ${topic.answer}`.toLowerCase().includes(query.trim().toLowerCase()));
   return <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-8 sm:px-6 sm:py-12">
     <header className="max-w-3xl space-y-4 border-b border-border pb-8">
-      <p className="text-sm font-medium text-brand-link">Dhanadhara guides{role ? ` · ${role.replace("_", " ")}` : ""}</p>
-      <h1 className="text-3xl font-semibold tracking-tight text-brand-heading sm:text-4xl">{started ? "Get started with Dhanadhara" : "Dhanadhara Help Center"}</h1>
+      <p className="text-sm font-medium text-brand-link">Dhanadhara guides{role ? ` · ${roleLabel(role)}` : ""}</p>
+      <h1 className="text-3xl font-semibold tracking-tight text-brand-heading sm:text-4xl">{started ? "Get started in 3 steps" : "How can we help?"}</h1>
       <p className="max-w-2xl text-base leading-7 text-text-secondary">{started ? "A practical guide to your account, your workspace and the people helping you move forward." : "Find clear answers about your account, enquiries and everyday work."}</p>
       <Link href={`${base}/${started ? "help-center" : "get-started"}`} className="inline-flex min-h-11 items-center gap-2 font-medium text-brand-link">{started ? "Browse the Help Center" : "New here? Get started"}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
     </header>

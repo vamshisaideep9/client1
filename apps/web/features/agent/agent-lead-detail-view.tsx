@@ -6,16 +6,21 @@ import { Check, Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ResubmissionBadge } from "@/features/dashboard/resubmission-badge";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { DashboardBackLink, DashboardPage, DashboardHeader, DashboardPanel } from "@/features/dashboard/dashboard-ui";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { formatMobile } from "@/lib/phone";
+import { agentLeadUpdate } from "@/lib/agent-lead-update";
 import { cn } from "@/lib/utils";
 
+import { AgentLeadHistorySection } from "./agent-lead-history";
 import { useAgentLeadDetail } from "./use-agent-lead-detail";
-import { formatAgentLeadExpiry, isAgentLeadExpiryDue } from "./lead-expiry";
+import { AGENT_LEAD_EXPIRY_POLICY, formatAgentLeadExpiry, isAgentLeadExpiryDue } from "./lead-expiry";
+import { ResubmitLeadButton } from "./resubmit-lead-button";
 
 const STATUS_LABEL: Record<string, string> = {
   new: "New",
@@ -31,18 +36,18 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
   const searchParams = useSearchParams();
   const fromPage = Number(searchParams.get("page") ?? 1);
   const backHref = Number.isSafeInteger(fromPage) && fromPage > 1 ? `/dashboard/leads?page=${fromPage}` : "/dashboard/leads";
-  const { lead, status, error, errorStatus, retry, update } = useAgentLeadDetail(leadId);
+  const { lead, status, error, errorStatus, retry, update, resubmit } = useAgentLeadDetail(leadId);
   const [notes, setNotes] = React.useState("");
+  const [email, setEmail] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const editable = lead?.editable ?? false;
 
   React.useEffect(() => {
-    if (lead?.requirement && typeof lead.requirement === "object") {
-      const value = (lead.requirement as Record<string, unknown>).notes;
-      if (typeof value === "string") setNotes(value);
-    }
+    const requirement = lead?.requirement as Record<string, unknown> | null;
+    setNotes(typeof requirement?.notes === "string" ? requirement.notes : "");
+    setEmail(typeof requirement?.email === "string" ? requirement.email : "");
   }, [lead]);
 
   React.useEffect(() => {
@@ -53,8 +58,10 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
+    const payload = agentLeadUpdate(lead?.requirement as Record<string, unknown> | null, notes, email);
+    if (!payload) { toast.info("No changes to save"); return; }
     setSaving(true);
-    const res = await update({ requirement: { notes: notes.trim() } });
+    const res = await update(payload);
     setSaving(false);
     if (res.ok) {
       toast.success("Updated");
@@ -99,7 +106,9 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
 
   const readOnlyReason =
     lead.status === "expired"
-      ? "This lead returned to the open pool and can no longer be edited here."
+      ? lead.resubmittable
+        ? "This lead expired and returned to the open pool. Resubmit it to restart your 30-day window."
+        : "This lead returned to the open pool and can no longer be edited here."
       : isAgentLeadExpiryDue(lead.status, lead.expires_at, lead.expired_at)
         ? "This lead's conversion window ended and it is awaiting pool release."
         : "A telecaller is already working this lead, so it can no longer be edited here.";
@@ -108,6 +117,7 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
     <DashboardPage className="max-w-4xl">
       <DashboardBackLink href={backHref}>Back to leads</DashboardBackLink>
       <DashboardHeader title={lead.name ?? "Lead details"} description="Registration, attribution and operational progress" />
+      <ResubmissionBadge count={lead.resubmit_count} at={lead.last_resubmitted_at} />
       <DashboardPanel
         title={lead.name ?? "Unnamed lead"}
         description={formatMobile(lead.mobile)}
@@ -140,13 +150,36 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
           </Button>
         ) : null}
         <p className="mt-3 text-sm font-medium text-text-primary">
-          {formatAgentLeadExpiry(lead.status, lead.expires_at, lead.expired_at)}
+          {formatAgentLeadExpiry(lead.status, lead.expires_at, lead.expired_at, {
+            resubmittable: lead.resubmittable,
+          })}
         </p>
+        {lead.status !== "converted" && lead.status !== "closed" ? (
+          <p className="mt-1 text-xs text-text-secondary">{AGENT_LEAD_EXPIRY_POLICY}</p>
+        ) : null}
+        {lead.resubmittable ? (
+          <ResubmitLeadButton className="mt-3" leadName={lead.name} onResubmit={resubmit} />
+        ) : null}
       </DashboardPanel>
 
       <DashboardPanel title="Requirement">
+        {typeof (lead.requirement as Record<string, unknown> | null)?.property_type_label === "string" ? (
+          <p className="mb-3 text-sm">Property type: {String((lead.requirement as Record<string, unknown>).property_type_label)}</p>
+        ) : null}
+        {typeof (lead.requirement as Record<string, unknown> | null)?.interest_title === "string" ? (
+          <p className="mb-3 text-sm">
+            <span className="text-text-secondary">Interested in: </span>
+            <span className="font-medium text-text-primary">
+              {String((lead.requirement as Record<string, unknown>).interest_title)}
+            </span>
+          </p>
+        ) : null}
         {editable ? (
           <form className="space-y-3" onSubmit={(e) => void onSave(e)}>
+            <div>
+              <Label htmlFor="lead-email">Email (optional)</Label>
+              <Input id="lead-email" type="email" value={email} maxLength={254} onChange={(e) => setEmail(e.target.value)} />
+            </div>
             <div>
               <Label htmlFor="notes">What are they looking for?</Label>
               <Textarea
@@ -164,11 +197,14 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
           </form>
         ) : (
           <>
+            {email ? <p className="mb-2 break-all text-sm">Email: {email}</p> : null}
             <p className="text-sm text-text-secondary">{notes || "No requirement notes."}</p>
             <p className="mt-3 text-xs text-text-secondary">{readOnlyReason}</p>
           </>
         )}
       </DashboardPanel>
+
+      <AgentLeadHistorySection leadId={lead.id} />
     </DashboardPage>
   );
 }

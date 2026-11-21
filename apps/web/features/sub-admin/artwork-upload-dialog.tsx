@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { canActOnLine, type AccessLine } from "@/lib/sub-admin-access";
 import { ImageIcon, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,6 +29,11 @@ import {
 import {
   CAMPAIGN_IMAGE_ACCEPT,
   CAMPAIGN_IMAGE_MAX_BYTES,
+  CAMPAIGN_VIDEO_ACCEPT,
+  CAMPAIGN_VIDEO_MAX_BYTES,
+  CAMPAIGN_VIDEO_MAX_SECONDS,
+  exceedsBannerVideoLength,
+  readVideoDuration,
   uploadCampaignArtwork,
   type CampaignMediaAsset,
 } from "@/lib/campaign-media-api";
@@ -49,6 +55,7 @@ export function ArtworkUploadDialog({
   fixedUsageType,
   defaultUsageType = "campaign",
   defaultBusinessLine = "both",
+  allowedLines,
   allowedUsageTypes,
 }: {
   open: boolean;
@@ -58,6 +65,7 @@ export function ArtworkUploadDialog({
   fixedUsageType?: ArtworkUsageType;
   defaultUsageType?: ArtworkUsageType;
   defaultBusinessLine?: BusinessLine;
+  allowedLines?: readonly AccessLine[];
   allowedUsageTypes?: readonly ArtworkUsageType[];
 }) {
   const [file, setFile] = React.useState<File | null>(null);
@@ -67,6 +75,7 @@ export function ArtworkUploadDialog({
   const [source, setSource] = React.useState("");
   const [line, setLine] = React.useState<BusinessLine>(defaultBusinessLine);
   const [usage, setUsage] = React.useState<ArtworkUsageType>(fixedUsageType ?? defaultUsageType);
+  const isVideo = usage === "banner_video";
   const [busy, setBusy] = React.useState(false);
   const { confirm, confirmDialog } = useConfirm();
 
@@ -111,11 +120,19 @@ export function ArtworkUploadDialog({
   }
 
   async function submit() {
+    if (allowedLines && !canActOnLine(allowedLines, line)) return;
     if (!file || !title.trim() || !altText.trim()) {
       toast.error("Add artwork, an internal title, and alt text");
       return;
     }
     setBusy(true);
+    if (isVideo && exceedsBannerVideoLength(await readVideoDuration(file))) {
+      setBusy(false);
+      toast.error("This video is too long", {
+        description: `Banner videos can be up to ${CAMPAIGN_VIDEO_MAX_SECONDS} seconds. Trim it or link a YouTube video instead.`,
+      });
+      return;
+    }
     const result = await uploadCampaignArtwork({
       file,
       title: title.trim(),
@@ -142,7 +159,7 @@ export function ArtworkUploadDialog({
   return (
     <Dialog open={open} onOpenChange={close}>
       {confirmDialog}
-      <DialogContent showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
+      <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_WIDE_CLASS}>
         <WorkspaceDialogHeader
           title="Upload campaign artwork"
           description="Images are scanned, stripped of metadata, re-encoded, and stored as immutable campaign assets."
@@ -155,9 +172,9 @@ export function ArtworkUploadDialog({
               icon={ImageIcon}
               value={file}
               onChange={setFile}
-              accept={CAMPAIGN_IMAGE_ACCEPT}
-              maxBytes={CAMPAIGN_IMAGE_MAX_BYTES}
-              hint="JPG, PNG or WEBP · max 4 MB"
+              accept={isVideo ? CAMPAIGN_VIDEO_ACCEPT : CAMPAIGN_IMAGE_ACCEPT}
+              maxBytes={isVideo ? CAMPAIGN_VIDEO_MAX_BYTES : CAMPAIGN_IMAGE_MAX_BYTES}
+              hint={isVideo ? `MP4 · max 20 MB · up to ${CAMPAIGN_VIDEO_MAX_SECONDS} seconds` : "JPG, PNG or WEBP · max 5 MB"}
               disabled={busy}
             />
             <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs leading-5 text-text-secondary">
@@ -230,9 +247,9 @@ export function ArtworkUploadDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="both">Both lines</SelectItem>
-                    <SelectItem value="loans">Loans</SelectItem>
-                    <SelectItem value="real_estate">Real Estate</SelectItem>
+                    {(!allowedLines || canActOnLine(allowedLines, "both")) ? <SelectItem value="both">Both lines</SelectItem> : null}
+                    {(!allowedLines || canActOnLine(allowedLines, "loans")) ? <SelectItem value="loans">Loans</SelectItem> : null}
+                    {(!allowedLines || canActOnLine(allowedLines, "real_estate")) ? <SelectItem value="real_estate">Real Estate</SelectItem> : null}
                   </SelectContent>
                 </Select>
               </div>

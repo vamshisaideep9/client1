@@ -6,10 +6,13 @@ import { DashboardPageSkeleton } from "@/features/dashboard/dashboard-page-skele
 
 import { useAuth } from "@/components/auth/session-provider";
 import { FinanceOverview } from "@/features/sub-admin/finance-overview";
+import { ScopedFinanceOverview } from "@/features/sub-admin/scoped-finance-overview";
+import { useMe } from "@/features/dashboard/me-provider";
 
 export default function FinancePage() {
   const router = useRouter();
   const { session, isLoading } = useAuth();
+  const { me } = useMe();
   const allowed = session?.role === "sub_admin";
 
   React.useEffect(() => {
@@ -21,5 +24,5 @@ export default function FinancePage() {
       <DashboardPageSkeleton />
     );
   }
-  return <FinanceOverview />;
+  return me?.subAdminAccess ? <ScopedFinanceOverview /> : <FinanceOverview />;
 }

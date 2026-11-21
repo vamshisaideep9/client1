@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getPersonalizationPreference,
+  grantPersonalizationLocationConsent,
   revokePersonalizationLocation,
   setPersonalizationPreference,
   type PersonalizationPreference,
@@ -39,6 +40,20 @@ export function PersonalizationSettingsCard() {
     if (result.ok) {
       setPreference(result.data);
       toast.success(enabled ? "Personalized content enabled." : "Personalized content disabled.");
+    } else {
+      toast.error(result.error);
+    }
+  }
+
+  async function setAreaOffers(enabled: boolean) {
+    setBusy(true);
+    const result = enabled
+      ? await grantPersonalizationLocationConsent()
+      : await revokePersonalizationLocation();
+    setBusy(false);
+    if (result.ok) {
+      setPreference(result.data);
+      toast.success(enabled ? "Offers for your area turned on." : "Offers for your area turned off.");
     } else {
       toast.error(result.error);
     }
@@ -82,12 +97,34 @@ export function PersonalizationSettingsCard() {
         <span>
           <span className="block text-sm font-medium text-text-primary">Personalized content</span>
           <span className="mt-1 block text-xs text-text-secondary">
-            Turning this off also removes any saved personalization signals.
+            Turning this off also removes any saved personalization signals and turns off offers
+            for your area.
           </span>
         </span>
       </Label>
 
-      {preference.location_enabled ? (
+      {/* CS-026: area offers need their own, separately revocable consent. */}
+      <Label
+        className={`flex items-start gap-3 rounded-lg border border-border p-4 font-normal ${
+          preference.personalization_enabled ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+        }`}
+      >
+        <Checkbox
+          checked={preference.location_enabled}
+          disabled={busy || !preference.personalization_enabled}
+          onCheckedChange={(checked) => void setAreaOffers(checked === true)}
+          aria-label="Offers for your area, using your profile pincode"
+        />
+        <span>
+          <span className="block text-sm font-medium text-text-primary">Offers for your area</span>
+          <span className="mt-1 block text-xs text-text-secondary">
+            Uses the pincode saved in your profile to show offers near you. Your device location
+            is not used. Needs personalized content; turn it off at any time.
+          </span>
+        </span>
+      </Label>
+
+      {preference.location_enabled && preference.location_captured_at ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/30 p-4">
           <div className="flex items-start gap-3">
             <MapPinOff className="mt-0.5 h-4 w-4 text-text-secondary" aria-hidden="true" />

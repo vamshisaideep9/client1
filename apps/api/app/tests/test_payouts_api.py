@@ -950,6 +950,91 @@ async def test_concurrent_approve_emits_single_ledger_row(client: AsyncClient) -
 
 
 @pytest.mark.asyncio
+async def test_concurrent_approve_and_reject_have_exactly_one_winner(client: AsyncClient) -> None:
+    """Security audit finding #4: approve and reject racing on one payout.
+
+    Before the row lock in reject_payout, both requests could return 200 and
+    the payout ended rejected after the approver was told it was approved.
+    Every round must have one 200 and one 409, and the stored payout must
+    match the request that won.
+    """
+    import app.db.session as _session_mod
+
+    maker_token, _ = await _make_admin(client)
+    checker_token, _ = await _make_admin(client)
+    _, recipient_mobile = await full_registration(client, lines=["loans"])
+    recipient_uid = await _auth_user_id(recipient_mobile)
+
+    for _round in range(8):
+        created = await client.post(
+            "/api/v1/payouts",
+            headers=_headers(maker_token),
+            json=_create_body(recipient_uid, type="cashback"),
+        )
+        assert created.status_code == 201, created.text
+        payout_id = created.json()["id"]
+
+        approve, reject = await asyncio.gather(
+            client.post(f"/api/v1/payouts/{payout_id}/approve", headers=_headers(checker_token)),
+            client.post(
+                f"/api/v1/payouts/{payout_id}/reject",
+                headers=_headers(maker_token),
+                json={"reason": "race check"},
+            ),
+        )
+        assert sorted([approve.status_code, reject.status_code]) == [200, 409], (
+            approve.text,
+            reject.text,
+        )
+
+        async with _session_mod.AsyncSessionLocal() as db:
+            row = (
+                await db.execute(
+                    text(
+                        "SELECT status, checker_user_uuid, rejected_by_user_uuid, "
+                        "ledger_transaction_id FROM payouts WHERE id = :i"
+                    ),
+                    {"i": payout_id},
+                )
+            ).one()
+        if approve.status_code == 200:
+            assert str(row.status) == "paid"
+            assert row.rejected_by_user_uuid is None
+            assert row.ledger_transaction_id is not None
+        else:
+            assert str(row.status) == "rejected"
+            assert row.checker_user_uuid is None
+            assert row.ledger_transaction_id is None
+
+
+@pytest.mark.asyncio
+async def test_reject_after_approval_conflicts_and_keeps_paid(client: AsyncClient) -> None:
+    maker_token, _ = await _make_admin(client)
+    checker_token, _ = await _make_admin(client)
+    _, recipient_mobile = await full_registration(client, lines=["loans"])
+    recipient_uid = await _auth_user_id(recipient_mobile)
+    created = await client.post(
+        "/api/v1/payouts",
+        headers=_headers(maker_token),
+        json=_create_body(recipient_uid, type="cashback"),
+    )
+    payout_id = created.json()["id"]
+    approved = await client.post(
+        f"/api/v1/payouts/{payout_id}/approve", headers=_headers(checker_token)
+    )
+    assert approved.json()["status"] == "paid"
+
+    rejected = await client.post(
+        f"/api/v1/payouts/{payout_id}/reject",
+        headers=_headers(maker_token),
+        json={"reason": "too late"},
+    )
+    assert rejected.status_code == 409
+    listed = await client.get("/api/v1/payouts?status_filter=paid", headers=_headers(maker_token))
+    assert payout_id in [p["id"] for p in listed.json()["payouts"]]
+
+
+@pytest.mark.asyncio
 async def test_initiate_failure_marks_failed_no_ledger(client: AsyncClient, monkeypatch) -> None:
     """A settle fault leaves the payout FAILED and emits no ledger row."""
 

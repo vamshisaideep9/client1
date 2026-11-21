@@ -1,11 +1,6 @@
-// Transactions client for the authenticated dashboard.
-//
-// Calls /api/v1/transactions through the typed fetch wrapper in
-// lib/api/client.ts. Wire shapes come from the generated contract; this maps
-// them to the camelCase shape the UI consumes (same pattern as lib/site-visits.ts).
-// Read-only: there is no create endpoint, rows come from a future money-layer producer.
+// Read-only transaction history for the authenticated dashboard.
 
-import type { components } from "@contracts/generated/schema";
+import type { components, paths } from "@contracts/generated/schema";
 
 import { apiRequest, type ApiResponse } from "@/lib/api/client";
 
@@ -13,6 +8,11 @@ type Schemas = components["schemas"];
 
 export type TransactionType = Schemas["TransactionType"];
 export type TransactionStatus = Schemas["TransactionStatus"];
+export type TransactionDetail = Schemas["TransactionDetail"];
+export type TransactionPage = Schemas["TransactionSearchResponse"];
+export type TransactionQuery = NonNullable<
+  paths["/api/v1/transactions/search"]["get"]["parameters"]["query"]
+>;
 
 export type Transaction = {
   id: string;
@@ -24,7 +24,7 @@ export type Transaction = {
   createdAt: string;
 };
 
-function mapTransaction(raw: Schemas["TransactionRead"]): Transaction {
+export function mapTransaction(raw: Schemas["TransactionRead"]): Transaction {
   return {
     id: raw.id,
     type: raw.type,
@@ -36,8 +36,14 @@ function mapTransaction(raw: Schemas["TransactionRead"]): Transaction {
   };
 }
 
-export async function getTransactions(): Promise<ApiResponse<Transaction[]>> {
-  const res = await apiRequest<Schemas["TransactionListResponse"]>("/api/v1/transactions");
-  if (!res.ok) return res;
-  return { ok: true, status: res.status, data: res.data.transactions.map(mapTransaction) };
+export function getTransactions(query: TransactionQuery) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  }
+  return apiRequest<TransactionPage>(`/api/v1/transactions/search?${params}`);
+}
+
+export function getTransaction(id: string): Promise<ApiResponse<TransactionDetail>> {
+  return apiRequest<TransactionDetail>(`/api/v1/transactions/${encodeURIComponent(id)}`);
 }
