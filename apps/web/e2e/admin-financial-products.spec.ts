@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import type { AdminLoanType, ProductCategory, ProductFormDefinition } from "@/lib/loan-config-api";
+import type { CommissionRateInput, ProductCommissionRates } from "@/lib/commission-rates-api";
 import { LOAN_PRODUCTS } from "@/lib/products";
 import seeds from "./fixtures/financial-product-forms.json";
 import { mockMobileApi } from "./helpers/mobile-fixtures";
@@ -68,6 +69,62 @@ async function openProduct(page: Page, label: string) {
 }
 
 test.use({ contextOptions: { reducedMotion: "reduce" } });
+
+test("product commission editing preserves failed input and never saves the product", async ({ page, baseURL }, info) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const { products, patches } = await mockCatalogue(page);
+  const loan = products.find((item) => item.category === "loan")!;
+  let saveAttempts = 0;
+  const entry: ProductCommissionRates = {
+    loan_type_id: loan.id, product_slug: loan.name, product_label: loan.label,
+    product_active: true, current: null,
+    pending: null, history: [],
+  };
+  await page.route("**/api/v1/commission-rates{,/*}", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({ json: { products: [entry] } });
+      return;
+    }
+    saveAttempts++;
+    if (saveAttempts === 1) {
+      await route.fulfill({ status: 503, json: { detail: "Synthetic rate save failed. Try again." } });
+      return;
+    }
+    const body = route.request().postDataJSON() as CommissionRateInput;
+    entry.current = {
+      id: "30000000-0000-4000-8000-000000000001", loan_type_id: loan.id,
+      kind: body.kind, percent_bps: body.percent_bps ?? null, amount_paise: body.amount_paise ?? null,
+      note: body.note ?? null, status: "approved",
+      created_by_uuid: "40000000-0000-4000-8000-000000000001",
+      created_by_name: "Admin Reviewer", created_by_role: "admin", is_mine: true,
+      checker_name: null, reviewed_at: "2026-11-20T10:00:00Z", review_note: null,
+      version: 1, created_at: "2026-11-20T10:00:00Z", updated_at: "2026-11-20T10:00:00Z",
+    };
+    await route.fulfill({ json: entry });
+  });
+  await page.context().addCookies([{ name: "session_hint", value: "1", url: baseURL! }]);
+  await page.goto("/dashboard/loan-config", { waitUntil: "networkidle" });
+  const workspace = await openProduct(page, loan.label);
+  await workspace.getByRole("tab", { name: "Agent commission", exact: true }).click();
+  await expect(workspace.getByRole("button", { name: "Save product", exact: true })).toHaveCount(0);
+  await workspace.getByRole("button", { name: "Set rate", exact: true }).click();
+  const form = page.getByRole("dialog", { name: "Set agent commission", exact: true });
+  await form.getByLabel("Percent of disbursed amount (%)").fill("0.75");
+  await form.getByLabel("Note for agents (optional)").fill("Paid after disbursal");
+  await form.getByRole("button", { name: "Set commission", exact: true }).click();
+  await expect(form.getByRole("alert")).toContainText("Please try again");
+  await expect(form.getByLabel("Percent of disbursed amount (%)")).toHaveValue("0.75");
+  await expect(form.getByLabel("Note for agents (optional)")).toHaveValue("Paid after disbursal");
+  expect(saveAttempts).toBe(1);
+  await form.getByRole("button", { name: "Set commission", exact: true }).click();
+  await expect(form).toHaveCount(0);
+  await expect(workspace.getByText("0.75% of disbursed amount", { exact: true })).toBeVisible();
+  expect(saveAttempts).toBe(2);
+  expect(patches).toHaveLength(0);
+  expect(await workspace.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  await page.screenshot({ path: info.outputPath("product-agent-commission-390.png"), animations: "disabled" });
+});
 
 test("every public service and Equipment Financing expose editable Admin fields and settings", async ({ page, baseURL }) => {
   test.setTimeout(240_000);

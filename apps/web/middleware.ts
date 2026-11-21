@@ -15,22 +15,31 @@ import type { NextRequest } from "next/server";
 // all, so keep session-provider.tsx's cookie in sync with any real session or
 // this redirects a still-valid user straight to /login.
 //
+// CS-025: the equally non-authoritative "email_required" hint sends a signed-in
+// account that still owes the "Add your email" step to /add-email before the
+// dashboard loads (the API refuses its business endpoints regardless). The
+// add-email page itself needs a session, so it gets the same login redirect.
+//
 // Next.js route groups like (app) don't appear in the URL, so this matcher
 // can't reference the group directly: add new (app) routes to the matcher
 // array by hand, or they silently get no edge coverage (falling back to
 // AppGuard-only protection, which is safe, just not fast).
 export function middleware(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
   if (!request.cookies.has("session_hint")) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set(
       "return_to",
-      `${request.nextUrl.pathname}${request.nextUrl.search}`,
+      pathname.startsWith("/dashboard") ? `${pathname}${search}` : "/dashboard",
     );
     return NextResponse.redirect(loginUrl);
+  }
+  if (pathname.startsWith("/dashboard") && request.cookies.get("email_required")?.value === "1") {
+    return NextResponse.redirect(new URL("/add-email", request.url));
   }
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/add-email"],
 };

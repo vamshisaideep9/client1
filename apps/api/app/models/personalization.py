@@ -32,11 +32,15 @@ class PersonalizationPreference(Base):
             "personalization_enabled OR NOT location_enabled",
             name="location_requires_personalization",
         ),
+        # CS-026 (migration f6b8d0a2c4e7): location consent may exist without a
+        # saved point, so a consenting Client's profile pincode alone is used.
         CheckConstraint(
             "(NOT location_enabled AND latitude_e2 IS NULL AND longitude_e2 IS NULL "
             "AND location_captured_at IS NULL AND location_consented_at IS NULL) OR "
-            "(location_enabled AND latitude_e2 IS NOT NULL AND longitude_e2 IS NOT NULL "
-            "AND location_captured_at IS NOT NULL AND location_consented_at IS NOT NULL)",
+            "(location_enabled AND location_consented_at IS NOT NULL AND ("
+            "(latitude_e2 IS NOT NULL AND longitude_e2 IS NOT NULL "
+            "AND location_captured_at IS NOT NULL) OR "
+            "(latitude_e2 IS NULL AND longitude_e2 IS NULL AND location_captured_at IS NULL)))",
             name="location_consistent",
         ),
     )

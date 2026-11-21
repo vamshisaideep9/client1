@@ -40,6 +40,18 @@ async def require_personalization_viewer(
     return current_user
 
 
+async def require_personalization_owner(
+    current_user: CurrentUser = Depends(get_active_user),
+) -> CurrentUser:
+    """Consent and coarse-location settings are Client-only (CS-021 amends CS-008)."""
+    if current_user.role != "client":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Personalized content settings are available to client accounts only.",
+        )
+    return current_user
+
+
 def _private_no_store(response: Response) -> None:
     response.headers["Cache-Control"] = "private, no-store"
     response.headers["Vary"] = "Authorization"
@@ -48,7 +60,7 @@ def _private_no_store(response: Response) -> None:
 @router.get("/preferences", response_model=PersonalizationPreferenceRead)
 async def get_preferences(
     response: Response,
-    current_user: CurrentUser = Depends(require_personalization_viewer),
+    current_user: CurrentUser = Depends(require_personalization_owner),
     db: AsyncSession = Depends(get_db),
 ) -> PersonalizationPreferenceRead:
     _private_no_store(response)
@@ -61,7 +73,7 @@ async def update_preferences(
     payload: PersonalizationPreferenceUpdate,
     request: Request,
     response: Response,
-    current_user: CurrentUser = Depends(require_personalization_viewer),
+    current_user: CurrentUser = Depends(require_personalization_owner),
     db: AsyncSession = Depends(get_db),
 ) -> PersonalizationPreferenceRead:
     preference = await personalization.set_personalization_consent(
@@ -80,7 +92,7 @@ async def put_location(
     payload: LocationCaptureRequest,
     request: Request,
     response: Response,
-    current_user: CurrentUser = Depends(require_personalization_viewer),
+    current_user: CurrentUser = Depends(require_personalization_owner),
     db: AsyncSession = Depends(get_db),
     cache: RedisCache = Depends(get_cache),
 ) -> PersonalizationPreferenceRead:
@@ -117,11 +129,44 @@ async def put_location(
     return PersonalizationPreferenceRead(**personalization.preference_read_values(preference))
 
 
+@router.put("/location/consent", response_model=PersonalizationPreferenceRead)
+async def put_location_consent(
+    request: Request,
+    response: Response,
+    current_user: CurrentUser = Depends(require_personalization_owner),
+    db: AsyncSession = Depends(get_db),
+) -> PersonalizationPreferenceRead:
+    """CS-026: turn on location-based content using the profile pincode only.
+
+    No device position is sent or stored. Revoke with ``DELETE /location``
+    (or by turning personalized content off).
+    """
+    try:
+        preference = await personalization.grant_location_consent(
+            db,
+            auth_user_uuid=current_user.id,
+            ip=get_client_ip(request),
+            user_agent=request.headers.get("user-agent"),
+        )
+    except personalization.PersonalizationConsentRequired as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Enable personalized content before enabling location.",
+        ) from exc
+    except personalization.ProfilePincodeRequired as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Add a pincode to your profile first.",
+        ) from exc
+    _private_no_store(response)
+    return PersonalizationPreferenceRead(**personalization.preference_read_values(preference))
+
+
 @router.delete("/location", response_model=PersonalizationPreferenceRead)
 async def delete_location(
     request: Request,
     response: Response,
-    current_user: CurrentUser = Depends(require_personalization_viewer),
+    current_user: CurrentUser = Depends(require_personalization_owner),
     db: AsyncSession = Depends(get_db),
 ) -> PersonalizationPreferenceRead:
     preference = await personalization.revoke_location(

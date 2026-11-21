@@ -1,6 +1,2321 @@
 # Feature implementation status
 
+**Implemented — Batch 6 API:** attendance clock, effective-dated policy,
+reviewed leave and corrections, rollover, roster and audited CSV. Focused
+checks cover no-policy gating, concurrent check-in, overnight checkout,
+current manager reach, preserved original punches and override history.
+The platform-scope inventory explicitly covers the policy and holiday
+metadata roles.
+
+**Implemented — Batch 5 web:** minute-level contest controls and across-role
+schedule display, versioned Admin editing, and Admin item award recording.
+The API parent is [upstream #394](https://github.com/brollysolutions/client1/pull/394)
+and [mirror #95](https://github.com/vamshisaideep9/client1/pull/95).
+
+**Implemented — Batch 5 API:** minute-level IST contest windows, item awards and
+versioned Admin edits. Covered by targeted contest and payout tests against
+PostgreSQL with Redis and a migration round-trip. Participant and Admin UI
+follows in the next slice. The current editor submits the existing all-day
+cash defaults against the regenerated contract.
+The hosted API run passed 2,926 cases and identified one stale policy
+inventory entry from Batch 4. The inventory now covers that policy.
+
+**Merged upstream — Batch 4: grouped commission payouts and transaction history**
+(2026-11-20). API PRs
+([upstream #392](https://github.com/brollysolutions/client1/pull/392),
+[mirror #93](https://github.com/vamshisaideep9/client1/pull/93)).
+Web branch `feat/batch4-commission-payouts-web` is stacked on `c3d09cc3`.
+
+- One claim path handles single and grouped payouts for one Agent and line.
+  Payout creation, commission claims and historical membership commit together
+  before a standalone transfer can begin.
+- Platform Admin can read pending Agent groups and the original covered items.
+  Ledger search provides server-side filters, stable ordering, pagination and
+  totals. The established ledger visibility applies. Payment trails are scoped
+  to the owner and platform Admin. Agent deal data follows existing field rules.
+- The migration backfills available live links and retains future membership
+  through reversal and retry. Earlier payments whose links were already cleared
+  keep the ledger details still available for those payments.
+- Admin web groups pending commissions and reviews the selection and amounts
+  before raising the payout. The payout review shows covered items. Users can
+  search and filter transaction history with server totals and open individual
+  payments. Existing Agent history continues to show the source deals.
+- Web lint, typecheck and all 1,119 unit tests passed. Six changed and neighboring
+  browser journeys passed together on synthetic routes. Additional neighboring
+  development checks timed out during low memory. The production build and
+  full local API check are still in progress.
+
+**Delivered for review - Batch 3 web: staff specialties and role identifiers**
+(2026-11-20), branch `feat/staff-specialty-badges-web`, stacked on final API
+`5e392e00` ([upstream #390](https://github.com/brollysolutions/client1/pull/390),
+[mirror #91](https://github.com/vamshisaideep9/client1/pull/91)).
+
+- Implemented: specialty provisioning/editing, incompatible role/line clearing,
+  catalogue loading/empty/error/retry, retained save input and directory refresh.
+  Successful saves follow server metadata; delayed saves preserve another open
+  account. Shared role badges use actual assigned codes, specialty and both team
+  lines in menus/settings, Admin accounts and reached manager member detail.
+  Both task directions show counterpart names/codes without adding contacts.
+- Verification: full lint/typecheck and **1,119 units in 154 files pass**; Node 22
+  Linux production build passes all **118 pages**, with all eight original font
+  hashes preserved. Final Playwright run: **26 passed together**, exit 0, 1.6 minutes
+  (18 new and eight neighboring journeys), with synthetic API fixtures. The first
+  run's single failure was an assertion expecting raw 503 detail; it now asserts
+  the shared client's exact safe generic message and retains retry-body/input
+  assertions. Application source did not change after the build. Targeted E2E
+  lint passes. API/contracts remain identical to the final parent after restacking.
+- Seven final screenshots at 320/390/768/1440px were inspected. Approved tokens,
+  original fonts, private routes and staff profile locks remain. No dependency,
+  new motion or public route change. Design/Apple and code/security review found
+  no outstanding actionable finding in the changed surfaces. Manual screenreader,
+  physical-device, large-text/zoom and narrow account-edit visual checks were not
+  run. Evidence: `apps/web/e2e/review/staff-specialty/README.md`.
+- Hosted CI is separate: the parent secret scan passed; inherited Python audit
+  has 63 advisories in four unchanged locked packages, so Node audit was not
+  reached. The parent's shared-label fixture correction passes 20 routing tests
+  locally and preserves complete 2,920-node coverage; hosted verification reruns
+  on the correction. No green hosted gate or merge is claimed. Web [upstream #391](https://github.com/brollysolutions/client1/pull/391) and
+  [mirror #92](https://github.com/vamshisaideep9/client1/pull/92) are open against
+  their respective main branches. Both copies carry the identical web head.
+
+No requirement-percentage change. Next: review the Batch 3 stack and resolve the
+inherited dependency gate before merging. Batches 4-6 have not started.
+
+**Delivered for review — Batch 3 API** (2026-11-20), branch
+`feat/staff-specialty-routing-api`, baseline `78567697` after upstream #388/#389
+merged. Scope: Admin-managed Telecaller loan specialty and independent routing
+pools, task-confined staff name/code projection, own/Admin profile metadata and
+dual-line team names. Existing assignments, sticky resubmit, staff profile locks
+and contact privacy remain invariants. API/contracts precede the web slice.
+Final evidence covers **all 2,920 collected API tests**, with no missing,
+duplicate, skipped, errored or failed cases in the retained results. Four isolated
+PostgreSQL/Redis groups cover 676/704/768/772 tests. A new bounded-retry test
+initially fell outside the oldest 200 leads; its setup now gives the lead
+priority and asserts visitation. Its entire file plus all unreached files pass
+together (37 tests), retaining unchanged passing files. No single uninterrupted
+full-suite pass is claimed. Deprecated 422 constants found earlier are corrected.
+Ruff/format (645 files), one head `b7d9f1a3c5e7`, populated migration rollback/
+re-upgrade preserving legacy rotation and both contract scripts pass. Compatible
+web lint/typecheck, 1,113 units and the 118-page Node 22 build pass. Code/security
+review has no outstanding actionable finding. [Upstream #390](https://github.com/brollysolutions/client1/pull/390) and
+[mirror #91](https://github.com/vamshisaideep9/client1/pull/91) are open/mergeable
+against their respective main branches at the same head. No percentage change.
+Next: separate Batch 3 web delivery; Batches 4–6 remain unstarted.
+Hosted shared-database verification passed 2,919 tests and found one fixture
+assumption about the seeded Personal Loan label being unique. An earlier history
+test deliberately duplicates that label, correctly invoking ambiguous fallback.
+The public-capture test now uses a unique product. The duplicate-label failure
+was reproduced locally; the corrected whole routing file passes all 20 tests
+in that same database, with Ruff/format passing and runtime/contracts unchanged.
+Final retained local coverage remains complete; hosted verification needs a
+fresh run. Secret scan passed, but Python dependency audit failed with 63
+advisories in four unchanged locked packages; Node audit was not reached.
+No allowlist, bypass or dependency change was made.
+Migration rollout must quiesce assignment and update API/single scheduler together.
+Downgrade removes optional specialty/new-pool history; legacy all-pool rotation
+survives, and application rollback must support the retained audit enum action.
+
+**Merged upstream — Batch 2: Agent leads (web slice)** (2026-11-20; CS-028),
+branch `feat/agent-lead-intake-web`, stacked on API `e70b18c3`:
+[upstream #388](https://github.com/brollysolutions/client1/pull/388),
+[mirror #89](https://github.com/vamshisaideep9/client1/pull/89).
+The email/property intake, local spreadsheet workflow, resubmission filters/badges,
+approved commission display, proposal/review and editable suggestion are complete;
+[Upstream #389](https://github.com/brollysolutions/client1/pull/389) merged as
+`78567697`. [Mirror #90](https://github.com/vamshisaideep9/client1/pull/90)
+remains open against `main`, refreshed to the merged history and independently
+rechecked while continuing Batch 3.
+No completion-percentage change.
+
+Web lint/typecheck and 1,113 unit tests (153 files) pass. The Node 22 Alpine
+production build generates all 118 pages; all eight font hashes match the prior
+artifact. Restacking changes no runtime file relative to verified candidate
+`2010d74a` and inherits the final API/contracts unchanged. Fresh post-restack
+changed-test lint/typecheck pass. The final combined production-browser run is
+**11 passed**, exit 0, 3.1 minutes, using synthetic API mocks. The email-only test
+waits for DOM readiness and retains its exact request assertion after an earlier
+full-load timeout with the form already rendered. There are 36 distinct passing
+new/neighboring journeys across segmented runs, not a final combined 36-test pass.
+
+Security/design review covers hidden-note preservation, formula-safe bounded
+spreadsheets, generated contract consumers, mobile result cards and the embedded
+commission error/retry without an unrelated product save. Six synthetic screenshots
+and evidence are in `apps/web/e2e/review/agent-lead-intake/README.md`.
+Hosted CI was unavailable at Batch 2 delivery: the upstream PR had no check runs; all three mirror
+Actions jobs are blocked before startup by billing/spending restrictions (verify
+had zero steps). GitGuardian was neutral. The next priority at that delivery was
+Batch 3 API, now in progress above; Batches 4–6 have not started.
+
 Status: **Derived living implementation ledger**
+
+**Merged upstream — Batch 2: Agent leads (API slice)** (2026-11-20; CS-028;
+client-reported), branch `feat/agent-lead-intake-api` built on merged Batch 1.
+PR [#388](https://github.com/brollysolutions/client1/pull/388), mirror [#89](https://github.com/vamshisaideep9/client1/pull/89), both against `main`.
+Both repository/base/head identities were independently checked; no
+requirement-percentage change.
+
+- Final frozen candidate `5c5c4467` passes **2,884 API tests, zero failed,
+  errors or skipped**, in 6,276.70 seconds (exit 0), using fresh synthetic
+  PostgreSQL data, Redis and `CI=1`. Docker exit, command result and JUnit
+  independently agree. API tree: `250ed0078b10be2487c667a1345a4cbb3cbf6336`.
+  All 640 API files pass Ruff/format; one Alembic head `a6c8e0f2b4d6`.
+- Final policy correction: Sub Admins read approved rates and their own
+  workflow rows only; eligible loans/both-line TC/Employee reads are approved-
+  only. Any recorded checker differs from its maker. Direct Admin entry has
+  no fabricated reviewer/timestamp and records `admin_standalone`; the Agent
+  approval date falls back to creation time. Final focused correction: 29
+  passed; operational/classification/RLS/route coverage: 28 passed. The populated
+  real-trigger downgrade/upgrade leaves all 28 rate rows identical, preserving
+  terms, status, version, timestamps and genuine distinct reviews.
+- Lead email/deletion, original-backfill compatibility, sticky resubmission,
+  bulk intake and rates passed the 189-test targeted gate before the policy
+  correction, then the full final suite above. Top-level/nested email share
+  one owned key; conflicting input is rejected. The legacy name/null-
+  requirement notes-clear respects ownership and preserves email/interests.
+  Deletion erases the deleted person's active/historical lead email while
+  preserving third-party prospects; its migration up/down/up passes.
+- Both contract scripts pass with no drift. The final policy correction only
+  changes an operation description; all schemas, paths, auth and request/
+  response shapes remain unchanged. Web lint/typecheck, 1,106 unit tests and
+  the Node 22 Linux production build (116 pages) pass for the unchanged web
+  runtime. Safe script regressions: 102 distinct passes, including Linux
+  reruns resolving the three Windows platform skips.
+- Earlier full runs are not substituted for the final result: `9a60ded9`
+  had 2,865 passes / three stale assertions, now fixed without weakening the
+  guards; the superseded follow-up was intentionally interrupted after
+  1,144 passes (exit 2) for the original-brief policy correction.
+- Review/security: no remaining actionable finding. Historical limit: the
+  original backfill attributes known fields by recorded Agent origin, so
+  already-claimed pre-ledger rows can retain earlier merged input with that
+  descriptor. No per-key acceptance/claim audit proves their authorship; the
+  regression verifies the actual backfill and subsequent claims. Current/new
+  claims remain isolated. This inherited limit is explicitly disclosed.
+- History alignment: Batch 1 merged upstream as `5c785a77`; mirror #88
+  was fast-forwarded to that merged history. Rebasing the unpublished API
+  branch changed no tracked files (full tree `7637e607` before/after);
+  the API and contract fingerprints remain identical to the passing
+  candidate. Hosted CI is tracked separately on each PR and is not part
+  of the local passing-check claim.
+- Next: Batch 2 web. The session stops after Batch 2 as requested; Batches
+  3–6 resume in a new session.
+
+- Lead form fields (`requirement.email`, `requirement.property_type`) and
+  the per-role requirement allowlist as described in
+  `implementation-plan.md` (Batch 2). Role matrix tests in
+  `test_agent_lead_requirement_keys.py` (owner Agent, claiming Agent,
+  assigned / other Telecaller, Employee, Client, Admin) pass; the
+  neighbouring lead suites (Agent, Telecaller, Admin assign / release,
+  ownership, Employee, assignment, leads RLS, facets, history, team
+  manager) 231 passed.
+- Sticky resubmission and resubmit visibility (migration `c2e4a6b8d0f1`,
+  up / down / up on the scratch database): new
+  `test_agent_lead_sticky_resubmit.py` 9 passed (returns to the last
+  Telecaller with the cursor unmoved; falls back when they are inactive or
+  deleted; off-line Telecallers never qualify, dual-line ones do; a lead
+  the pool already reassigned keeps its Telecaller; expiry, stale repair
+  and Admin release record the cleared assignee; the trigger refuses the
+  three forged writes; Telecaller and Admin reads show the count). With
+  the expiry system test and the Agent, Telecaller, Admin assign / release,
+  assignment, requirement-key and leads RLS suites: 165 passed.
+- Bulk lead submit (enum migration `d3f5b7c9e1a2`): new
+  `test_agent_lead_bulk.py` 25 passed (mobile normalisation table,
+  per-line requirement matching and ambiguity, dry run creates and records
+  nothing, mixed created / duplicate / invalid / in-file / already
+  introduced / own-expired rows with recorded attempts and a counts-only
+  audit, a failing row leaves the others committed, wrong-line
+  requirements invalid, more than 200 rows / unknown columns 422 without
+  using the budget, per-Agent submit and dry-run limits, non-Agents 403);
+  with the Agent, refinements, eligibility, requirement-key, sticky and
+  audit-log suites 153 passed.
+- Per-product commission rates (migration `e4a6c8d0f2b3`, up / down / up on
+  the scratch database): new `test_commission_rates_api.py` 19 passed
+  (propose → pending with the Admin fan-out, approve with checker name and
+  maker notification, supersede, Admin direct entry approved at once with a
+  waiting proposal kept, reject needs a note, the maker cannot check even
+  with an Admin token, own proposal replaced / another's blocked, withdraw
+  by the maker only, staff routes refuse line Admins / Agents / Clients /
+  Telecallers / anonymous, input validation and loan products only, loans
+  Agent sees approved rates of active products only and a real-estate
+  Agent none, absent from public catalogue / loan-type / Client reads,
+  suggestion maths table, eligible-deal pre-fill for percent, no-rate and
+  property rows) and `test_commission_rates_rls.py` 4 passed (read matrix
+  for platform / line Admin, Sub Admin, loans / real-estate Agent,
+  Telecaller, Employee, Client and anonymous; maker-only pending inserts;
+  maker-only withdrawal, column grant, no delete; CHECK, trigger and
+  unique indexes on the bypass session). Ledgers updated (business-line
+  classification, Admin coverage, platform-scope policy); with the
+  commission, commission RLS / payout, loan configuration, financial
+  product, notification, platform-scope, classification, coverage, RLS
+  coverage and route-authorization suites: 142 + 42 + 51 passed.
+- Contract: `./scripts/generate-openapi.sh` and
+  `./scripts/generate-client.sh` (openapi-typescript 7.13.0) regenerated
+  `packages/contracts`; the only removed lines are the two extended enums.
+  `apps/web` type-only follow-ups for the regenerated schema: label / icon
+  entries for the six new audit actions and two notification types, and
+  the two test fixtures that build full lead rows. `pnpm typecheck` and
+  `pnpm lint` pass; the touched dashboard / Telecaller unit tests 95
+  passed.
+- Evidence (2026-11-19, `python:3.13.14-slim-trixie` container on
+  `client1_default`, scratch database migrated to head): new
+  `test_agent_lead_requirement_keys.py` plus `test_agent_api.py` and
+  `test_agent_dashboard_refinements.py` 74 passed;
+  `test_lead_detail_ownership_api.py`, `test_lead_eligibility.py` and
+  `test_lead_auto_assignment.py` 56 passed.
+
+**In review — Batch 1: UI fixes (web)** (2026-11-19; client-reported;
+PR [#387](https://github.com/brollysolutions/client1/pull/387), mirror
+vamshisaideep9/client1#88), branch `fix/dialog-autoclose-and-mobile-hover` from
+`upstream/main` `e4d7c40e`. No requirement-percentage change.
+- Upstream #387 merged on 2026-11-20. Mirror #88 remains open and now
+  carries the merged main history `5c785a77` after a verified fast-forward.
+- Dialog auto-close root causes, mobile hover gating, Telecaller greeting
+  and PAN-card name copy as described in `implementation-plan.md`
+  (Batch 1: UI fixes).
+- Reproduction (Playwright, `pnpm dev` on port 3167, mocked API, Sub Admin
+  New contest form with typed values): clicking the form's own error toast
+  closed the dialog and lost the input; clicking the overlay closed it; a
+  401 followed by a `/auth/refresh` 500 signed the user out to `/`. A 401
+  followed by a successful refresh, `visibilitychange` / `focus` events and
+  choosing a Select option by touch left the same dialog node mounted.
+- Evidence (2026-11-19, this branch): `pnpm lint` and `pnpm typecheck`
+  pass; `pnpm test` 1106 passed (150 files; new `components/ui/dialog.test.tsx`
+  for `preventOutsideClose`, `isRefreshRejected` cases in `lib/auth.test.ts`,
+  `features/telecaller/telecaller-home.test.ts`). Playwright against
+  `pnpm dev` (port 3167, mocked API), 49 passed: new
+  `dialog-persistence.spec.ts` 4 (overlay and error-toast clicks keep the
+  typed contest form, Esc and Close still close it, a read-only detail
+  dialog still closes outside, a refresh 503 keeps the page and form, a
+  refresh 401 still signs out to `/`; tests 1 and 3 fail with the two fixes
+  reverted), `profile-menu-touch.spec.ts` 2 (tap opens and the menu stays
+  open at 390 px — fails without the fix; mouse hover still opens it),
+  `register-pan-name.spec.ts` 1, `telecaller-home-greeting.spec.ts` 1,
+  `settings-by-role.spec.ts` 6 (PAN wording for Clients only), plus
+  `contests-admin` 2, `contests-participant` 4, `contact-change` 10,
+  `sub-admin-teams` 6, `telecaller-request-workspace` 4,
+  `payout-gateway-simulator` 3, `staff-shell-quick-wins` 6.
+
+**In progress — Batch G PR 5: participant contests, home card and team
+progress (web)** (2026-11-17; CS-027), branch
+`feat/batch-g-contests-participant-web` stacked on G4. Web only; the last
+slice of the last batch; no requirement-percentage change.
+- Participant page, home card, My team panel and navigation as described in
+  `implementation-plan.md` (Batch G5).
+- Evidence: `pnpm typecheck` and `pnpm lint` pass; `pnpm test` 1095 passed
+  (new `lib/contest-rules.test.ts`: progress rows with the at-most limit
+  and money totals, connect rate needing the minimum calls; navigation
+  lists updated); Playwright against `pnpm dev` (port 3167, mocked API):
+  new `contests-participant.spec.ts` 3 passed (Agent home card, grouped
+  list, contest page with progress bars, at-most row, leaderboard with
+  hidden names / amounts, 390 px without overflow; team member sees only
+  their contribution; managing Sub Admin's team contests with member
+  contributions, 390 px without overflow) and `contests-admin.spec.ts` 2
+  passed. Design review (light / dark, 1440 / 390 px): unmet progress bars
+  were navy on the dark surface (now the link token), the contest page now
+  carries the contest's title and dates, and phones show the leaderboard
+  before the rules.
+- Security review fix (MEDIUM, client-side path traversal): the participant
+  page uses `?contest=` only when it is a canonical UUID and otherwise shows
+  the list; links encode the id. New Playwright case: `..`,
+  `../../admin/users`, an encoded and a suffixed value each show the list
+  and request nothing under `/api/v1/my-contests/` or `/api/v1/admin`.
+- Final stack evidence (2026-11-17): `pnpm test` 1098 passed (148 files);
+  Playwright `contests-participant.spec.ts` 4 passed and
+  `contests-admin.spec.ts` 2 passed against `pnpm dev`; `pnpm build` in
+  `node:22-alpine` (clean `--frozen-lockfile` install, retried after
+  registry network errors) passed, exit 0, 116 static pages. Full API suite
+  (python:3.13.14-slim-trixie, fresh database migrated to head, 1 h 21 min,
+  API as of `b9d9d892`): 2778 passed, 3 failed — the three failures already
+  known on `main` (`test_client_loan_copy_migration::test_single_alembic_head_includes_this_revision`,
+  `test_public_banners` / `test_public_properties`
+  `::test_response_omits_internal_fields`); no new failure. After the three
+  later API review fixes, every contest suite plus ledgers, retention purge
+  and payout-link reconcile: 111 passed; migrations `f6b8d0a2c4e7` ↔ head
+  round-tripped twice. PRs: upstream #382–#386, mirrors
+  vamshisaideep9/client1#83–#87; #382–#385 merged to `main` (`12a1f2cf`),
+  which is merged into this branch.
+
+**In progress — Batch G PR 4: Sub Admin contests and Admin contest
+approvals (web)** (2026-11-17; CS-027), branch
+`feat/batch-g-contests-admin-web` stacked on G3. Web only; consumes the
+G1–G3 contracts; no requirement-percentage change.
+- Pages, form, review desk and prize actions as described in
+  `implementation-plan.md` (Batch G4); `lib/contests-api.ts`,
+  `lib/contest-form.ts`, `lib/contest-rules.ts`,
+  `features/contests/*`; nav and route rules; form-surface registry
+  entries; the contact-change spec's placeholder password replaced.
+- Evidence: `pnpm typecheck` and `pnpm lint` pass; `pnpm test` 1093 passed
+  after registering the two new form surfaces (new
+  `lib/contest-form.test.ts`: reference example in paise, at-most needs
+  at-least, threshold needs a target, metrics by audience, team prize
+  shape, round trip, rule wording); Playwright against `pnpm dev` (port
+  3167, mocked API): new `contests-admin.spec.ts` 2 passed (Sub Admin draft
+  with the at-most error, POST body in paise, submit, 1440 / 390 px without
+  overflow; Admin approve, team winners with the member-minimum exclusion,
+  mark paid), `contact-change.spec.ts` 10 passed.
+  `dashboard-navigation.spec.ts` needs a live API (`apiRequestContext` to
+  :8000) and was not run here.
+- Design review (light and dark, 1440 and 390 px screenshots of the review
+  desk, form and rules dialogs): the three contest dialogs were capped by the
+  dialog's default `sm:max-w-lg`, which clipped the winners table and dates;
+  they now widen at `sm` and up. "1 winners" pluralised. Specs re-run: 2
+  passed.
+- Security review fix (automated commit review, MEDIUM, client-side path
+  traversal): ids that reach API paths come from links (`?contest=`), so
+  `lib/contests-api.ts` now accepts only canonical UUIDs (`isContestId`)
+  and encodes every id; a crafted id returns a 400-shaped error without any
+  request. The Sub Admin and Admin views and the page redirect ignore a
+  non-UUID `?contest=`. New `lib/contests-api.test.ts`: 3 passed (guard,
+  no request for `..` / `../../admin/users` / encoded / suffixed ids, valid
+  paths).
+
+**In progress — Batch G PR 3: contest finalization and prizes (API)**
+(2026-11-17; CS-027), branch `feat/batch-g-contests-awards` stacked on G2.
+API, regenerated contracts and two web type labels; no migration (the
+`contest_reward` labels came with G1); no requirement-percentage change.
+- Admin cancel / recalculate / finalize, Agent prize payouts through the
+  Payouts maker-checker (`contest_reward`, never approval-free, one per
+  result, budget cap), payout hooks and reconciliation, staff mark-paid, and
+  the generic payout create refusing contest prizes — see
+  `implementation-plan.md` (Batch G3).
+- Evidence (same container and scratch database): `ruff` passes; new
+  `test_contest_awards_api.py` (top N with a tie at the cut-off, maker and
+  Sub Admin refused, recalculate then finalize, winner notifications,
+  finalized is terminal; Agent payout created pending approval with the
+  result's amount / recipient / key, second request 409, maker cannot
+  approve, second Admin approves and the mock settle marks the result paid
+  with a `contest_reward` ledger row; rejected payout frees the prize,
+  reconciliation idempotent, generic create of `contest_reward` 422; team
+  manager / member prizes with the member minimum, staff prize refused for
+  Payouts, mark-paid refused for the recipient, audited, second mark 409;
+  budget cap drops a crossing tie group; Admin cancels a live contest the
+  maker cannot; batch security review: the retention purge of a de-linked paid contest prize payout and its ledger row succeeds and the result keeps its prize; a reference with an account number is 422): 7 passed after the review. Web `pnpm typecheck` passes.
+
+**In progress — Batch G PR 2: contest scoring, lifecycle job and standings
+(API)** (2026-11-17; CS-027), branch `feat/batch-g-contests-scoring`
+stacked on G1. API, migration `b9e1a3c5d7f0` (security fix) and
+regenerated contracts; no requirement-percentage change.
+- Scoring, winner rules, lifecycle job, participant pages and Admin
+  standings as described in `implementation-plan.md` (Batch G2);
+  `services/commissions.py` exposes the commission-eligibility predicates
+  it already used, shared with Agent contest credit.
+- Batch security review (MEDIUM, credit steering): Telecaller credit also
+  needs a call by the current holder on the lead at or before the stage
+  time, so a manager reassigning an already-counted lead near the end moves
+  no credit (tests: no call, a call after the stage, a call before it).
+- Security review fix (MEDIUM, prize manipulation; see the plan): Employee
+  credit needs a task completed at or before the case's stage time, task
+  activity uses the new database-stamped `tasks.completed_at`, and a team
+  managed by the contest's maker takes no part. New tests: a task created
+  after the counted stage, an open task, and a task completed before the
+  stage (only the last earns credit); on time judged by `completed_at`
+  although `updated_at` is later; a request session cannot backdate the
+  completion and it never moves once set; the maker's own team is left out.
+  Migration downgrade to `a8d0f2b4c6e9` and upgrade to head pass.
+- Evidence (same container and scratch database): `ruff` passes; new
+  `test_contest_winners.py` (ranking ties, threshold, top N cut-off ties,
+  zero results, budget cap groups, team member minimum, at-most and
+  connect-rate targets), `test_contest_scoring.py` (Agent loans with true
+  amount recomputed live, filters and the at-most rule; sanctioned stage
+  excludes rejected cases and applies per-case bounds; Agent real estate by
+  category, city and stage with listing-price fallback; eligibility by
+  tenure, KYC, line and status; Telecaller credit follows the current
+  assignee, calls / connect rate / follow-ups kept; Employee tasks, on-time
+  and site visits by completion time and the case-credit rule; completion
+  stamping; team union, member contributions and the maker's team left
+  out),
+  `test_contest_lifecycle.py` (IST midnight boundaries, idempotent go-live
+  and end, one notification, snapshot rows, overdue contest in one tick,
+  approval on the start day, job registration) and
+  `test_my_contests_api.py` (visibility, minimal leaderboard keys, hidden
+  names / amounts, team member vs manager views, Admin standings guard):
+  25 passed after the fix.
+
+**In progress — Batch G PR 1: contest model, migration, criteria grammar,
+authoring and review (API)** (2026-11-17; CS-027), branch
+`feat/batch-g-contests-model` from `upstream/main` `9f2c479f` (Batches A–F
+merged). API, migration `a8d0f2b4c6e9` and regenerated contracts; no
+requirement-percentage change.
+- Model and migration as described in `implementation-plan.md` (Batch G1):
+  `contests`, `contest_results` (RLS enabled and forced, business-line
+  immutability triggers, consistency CHECKs incl. maker ≠ checker; payout links `ON DELETE SET NULL` after the batch security review found that `RESTRICT` would block the 7-year retention purge), five
+  loan / deal stage markers stamped once by
+  `services/loan_applications.py` / `services/property_deals.py`, enum
+  labels for `contest_reward` and the contest audit / notification values.
+- `schemas/contests.py`: version-1 grammar (`loans` | `real_estate`,
+  `activity`, `eligibility`), definition rules (line- and
+  audience-mismatched dimensions refused, at-most needs at-least, connect
+  rate needs minimum calls, metric fits audience and criteria, threshold
+  needs a target, team prize shape, budget cap ≥ one prize, ≤ 366 days).
+- `/api/v1/contests`: Sub Admin create / edit (draft or rejected → draft) /
+  submit (start date not passed) / withdraw / cancel / delete (draft);
+  Sub Admin and platform Admin list (status, audience, line, search, mine)
+  and read; platform Admin approve / reject, refused for the maker's own
+  account (403) and for line-scoped Admins.
+- Ledgers: classification and Admin coverage add `contests`,
+  `contest_results` and `pincodes` (missing since CS-026, which made the
+  two "every mapped table" tests fail on `main`); platform-scope policy
+  ledger adds both select policies as documented Sub Admin exceptions.
+- Evidence (python:3.13.14-slim-trixie on `client1_default`, scratch
+  database `app_gcontests` migrated to head, Redis index 13): migration
+  downgrade to `f6b8d0a2c4e7` and upgrade to head pass, single head;
+  `ruff check` and `ruff format --check` pass; new
+  `test_contest_criteria.py`, `test_contest_stage_markers.py`,
+  `test_contests_api.py`, `test_contests_rls.py` plus the platform-scope,
+  classification, Admin coverage, route-authorization and RLS-coverage
+  ledgers: 63 passed; loan / deal progress, loans / deals RLS and
+  business-line contract regressions: 88 passed.
+
+**Done — Batch F PR 3 (merged as part of `9f2c479f`): profile pincode, "Use my location" and
+campaign place targets (web)** (2026-11-17; CS-026; PR
+[#381](https://github.com/brollysolutions/client1/pull/381), mirror
+vamshisaideep9/client1#82),
+branch `feat/batch-f-location-web` stacked on Batch F PR 2. Web only;
+consumes the F1–F2 contracts; no requirement-percentage change.
+- Profile (`components/profile/pincode-field.tsx` inside
+  `optional-profile-fields.tsx`, so the registration profile step and Client
+  Settings): numeric Pincode field; a complete pincode is looked up and its
+  place shown ("Area, District, State"; unknown pincodes may still be
+  saved); "Use my location" calls `getCurrentPosition` once (low accuracy,
+  `maximumAge: 0`), POSTs the position to `/pincodes/nearest` and fills the
+  suggested pincode — saved only with the profile; copy says the position is
+  not stored; GeoNames CC BY 4.0 credit. `lib/pincodes.ts` holds the
+  helpers; `lib/auth.ts` maps `pincode`/`place` and sends `pincode`.
+- `Permissions-Policy`: `geolocation=()` → `geolocation=(self)` (same origin
+  only; frames still blocked).
+- Personalization card: a separate "Offers for your area" checkbox (the
+  CS-008 location consent, given through `PUT
+  /personalization/location/consent` with no position and withdrawn through
+  `DELETE /personalization/location`; disabled while personalized content is
+  off); the legacy saved-point notice shows only when a point exists.
+- Sub Admin audience (`audience-rule-fields.tsx` + `place-targets.tsx`):
+  "Pincodes and cities" for Clients-only audiences — pincode list with
+  format check and chips, city picker (`SearchableSelect`, now with
+  `disabled`) from `/pincodes/districts`; choosing Agents clears them; the
+  rule is version 2 only when they are used; summary counts cities and
+  pincodes.
+- Privacy notice: pincode and place-name source, one-time device location
+  (not stored), area offers only with both personalized content and
+  "Offers for your area" on, GeoNames credit; dated
+  17 November 2026. Flagged for legal review.
+- Evidence: `pnpm lint` and `pnpm typecheck` pass; `pnpm test` 1083 passed
+  (145 files, incl. new `lib/pincodes.test.ts` and extended profile,
+  audience, auth and security-header tests, two surfaces added to the form
+  registry); Playwright against `pnpm dev` (port 3157, mocked API, mocked
+  geolocation): new `pincode-location.spec.ts` 6 passed (typed pincode →
+  place, unlisted pincode, one-time location fills the pincode with the
+  position only in a POST body and nothing saved until Save, then only the
+  pincode saved, `Permissions-Policy: geolocation=(self)`, 1440 / 390 px with
+  no overflow; malformed pincode refused; "Offers for your area" consent
+  PUT/DELETE without a position; Sub Admin pincode/city targets 1280 / 390
+  px), and `settings-by-role`, `registration-profile`, `contact-change`,
+  `security-headers`, `banner-cta-and-offers`: 22 passed, 2 skipped
+  (pre-existing skips). `pnpm build` in `node:22-alpine` (clean
+  `--frozen-lockfile` install): passed, exit 0 (114 static pages).
+
+**In progress — Batch F PR 2: audience rules version 2 (API)** (2026-11-17;
+CS-026; PR [#380](https://github.com/brollysolutions/client1/pull/380), mirror
+vamshisaideep9/client1#81), branch `feat/batch-f-audience-v2-api`
+stacked on Batch F PR 1. API, migration `f6b8d0a2c4e7` and regenerated
+contracts; no requirement-percentage change.
+- Grammar (`schemas/personalization.py`): version 1 or 2; version 2 adds
+  `pincodes` and `cities` ({district, state}); both need a Client-only
+  audience and fail closed in version 1; storage keeps version 1 for rules
+  without them.
+- Matching (`services/personalization.py`): circles, pincodes and cities are
+  one "where" dimension; the Client's profile pincode gives the pincode, city
+  and circle point, ahead of a legacy coarse point, read only while both
+  personalized content and the location consent are on; revoking either
+  stops all location matching; Agents and staff never match location
+  targets.
+- Location consent without a point (security review finding on the first
+  F2 commit — profile pincode was used with personalization consent alone —
+  fixed before ship): migration `f6b8d0a2c4e7` relaxes CHECK
+  `location_consistent` (consent needs a consent time; a point is complete or
+  absent; downgrade withdraws point-less consent); `PUT
+  /personalization/location/consent` (Client only; 409 without personalized
+  content or a profile pincode; idempotent; auth event `{"enabled": true}`
+  only); `DELETE /personalization/location` still revokes; the 30-day purge
+  only touches rows with a point.
+- Authoring: banner/offer create and update validate every pincode and city
+  against the list (422 naming the unknown ones) and store the list
+  spelling. `GET /api/v1/pincodes/districts` (signed in; shared lookup
+  budget; private cache) feeds the campaign form's city picker.
+- Evidence (python 3.13 container, scratch database): new
+  `test_audience_rules_v2.py` (version-1 parse/store/match unchanged,
+  version-2 round trip and minimal stored version, 12 invalid rules refused,
+  caps, pincode/city/one-dimension/consent matching, end to end: profile
+  pincode targets only after consent, another pincode keeps the city but
+  loses the pincode and 5 km circle, revoking consent stops it, profile
+  pincode beats a valid coarse point, offer and banner authoring refuse
+  unknown places and canonicalise cities, district list) with
+  `test_pincodes_api.py`: 84 passed. With banner, offer, campaign-media,
+  personalization, public-campaign, CMS-activation and coverage modules
+  (before the consent fix): 309 passed, 1 failed —
+  `test_public_banners.py::test_response_omits_internal_fields` (expects no
+  `youtube_video_id` / `video_url`; a known failure on `main`, unrelated).
+  Consent fix: `test_audience_rules_v2.py` (now with the both-consent end to
+  end, consent endpoint, CHECK and purge cases) with personalization API /
+  RLS / rules, account deletion, retention purge and coverage: 110 passed;
+  migration `f6b8d0a2c4e7` down (3 point-less consent rows withdrawn) and
+  up again clean, one head. The full API suite was started on the stack and stopped
+  deliberately (no failure up to 13 %) to free the machine; the plan requires
+  it only before the last slice of E and G. Ruff clean; contracts
+  regenerated; web `pnpm typecheck` passes.
+
+**In progress — Batch F PR 1: pincode reference data, profile pincode and
+lookups (API)** (2026-11-17; CS-026; PR
+[#379](https://github.com/brollysolutions/client1/pull/379), mirror
+vamshisaideep9/client1#80), branch
+`feat/batch-f-pincode-api` stacked on Batch E PR 4. API, migration and
+regenerated contracts; no requirement-percentage change.
+- Data: `pincodes` seeded by migration `e5a7c9b1d3f6` from
+  `apps/api/app/data/pincodes.csv.gz` — GeoNames India postal codes
+  (CC BY 4.0, retrieved 2026-11-17, `IN.zip` SHA-256 `9d607ef6…6db5e`),
+  normalised to one row per pincode (19,238 rows, all with a centroid;
+  212,551 bytes gzip). The Department of Posts file on data.gov.in (GODL)
+  could not be downloaded without an API key. Licence, attribution, changes
+  and rebuild steps: `apps/api/app/data/SOURCES.md`;
+  `scripts/build_pincode_reference.py` reproduces the file byte for byte.
+- Profile: `auth_users.pincode` (CHECK, no FK); `/auth/me` adds `pincode`
+  and `place` (area, district, state from the list, null if unlisted);
+  `PATCH /auth/me` saves/clears it for Client, Agent and Admin; deletion
+  clears it.
+- Routes: `GET /api/v1/pincodes/{pincode}` (any signed-in role; 404
+  unknown, 422 malformed; 120 lookups/hour/account; private cache) and
+  `POST /api/v1/pincodes/nearest` (Client, Agent, Admin; India bounding box,
+  NaN/Infinity/extra fields refused; nearest centroid within 100 km or 404;
+  10/hour/account; no-store). The position is matched against an in-memory
+  centroid grid, so it never reaches a query, log, audit row, auth event,
+  Redis key or table.
+- Evidence (python 3.13 container, scratch database; `alembic upgrade head`
+  → `downgrade -1` → `upgrade head` clean): new `test_pincodes_api.py`
+  (seed checksum vs SOURCES.md, one valid row per pincode, malformed seed
+  rows refused, table seeded, loader idempotent and self-repairing, api_user
+  read-only, lookup auth/found/unknown/malformed/roles/budget, nearest equals
+  a brute-force Haversine scan on 309 positions, pincode + place only,
+  far-off 404, out-of-box/NaN/Infinity/extra fields 422, staff 403,
+  Agent/Admin allowed, budget, coordinates absent from logs, auth events,
+  audit, Redis and the account, profile save/derive/keep/clear, unlisted
+  pincode kept without place, validation, DB CHECK, staff 403) with
+  `test_update_me.py`, `test_delete_account.py` (pincode now erased),
+  `test_profile_schemas.py`, RLS coverage and route-authorization coverage:
+  128 passed; the whole `auth/` directory, personalization API + RLS,
+  contact-change self-service + staff, Admin users and `system/`: 463
+  passed. Ruff check/format clean; one Alembic head; contracts regenerated
+  (additions only); web `pnpm typecheck` passes on them.
+
+**In progress — Batch E PR 4: mandatory email and contact changes (web)**
+(2026-11-17; CS-025; PR
+[#378](https://github.com/brollysolutions/client1/pull/378), mirror
+vamshisaideep9/client1#79), branch `feat/batch-e-contact-change-web` stacked on
+Batch E PR 3. Web only; consumes the E1–E3 contracts; no
+requirement-percentage change.
+- Registration: after the phone code, a "Verify your email" step (email →
+  code → the upgraded registration token) when the server requires it; the
+  step indicator shows it only then. The optional email field on the profile
+  step is gone (PATCH no longer accepts email).
+- Blocking step: `/add-email` (auth layout; sign-out available) verifies the
+  address on file or, for Clients/Agents/Admins, adds another with password +
+  code; staff may only verify the Admin-set address or open a contact-change
+  request. `middleware.ts` sends `/dashboard/*` to `/add-email` while the
+  non-authoritative `email_required` cookie (set from the tokens and kept in
+  step with `/auth/me` by the dashboard guard) is present and covers
+  `/add-email` with the login redirect; `DashboardRouteGuard` redirects on
+  `me.emailRequired`.
+- Settings: "Phone and email" card (`contact-details-card.tsx`): Change
+  phone / Change email (`contact-change-dialog.tsx`: password → current code
+  → new value → new code; a full navigation to `/login?changed=…`, whose
+  notice explains every device was signed out), Add / verify email
+  (`add-email-form.tsx`, shared with `/add-email`), resume or cancel an
+  unfinished change; staff get "Request a contact change"
+  (`staff-contact-request-dialog.tsx`) and a pending notice with Withdraw;
+  everyone gets "Lost access to your number? Recover your account" →
+  `/change-mobile`. The profile form no longer shows email/mobile inputs;
+  staff's read-only profile keeps names. `settingsForRole` adds
+  `contactChange: "self" | "request"`.
+- Admin: the support-tickets queue section is now "Contact change requests":
+  staff requests (`staff-contact-requests.tsx`: current → requested value,
+  "changed since" flag, Review with password, Approve and apply or Reject with
+  a PII-free reason) above the existing two-Admin "Lost number" reviews; a
+  "Contact history" dialog (`contact-history-dialog.tsx`: old → new, method,
+  proof category/reference, approver, time; noted as audited) on each staff
+  request, in the lost-number review and in the account dialog on Users.
+- Privacy notice (`components/help/privacy-content.tsx`, public and
+  dashboard): email collected and code-verified; contact change history
+  recorded, kept for the life of the account, platform Admins only, erased
+  with the account; how to change phone/email. Flagged for legal review.
+- Evidence: `pnpm lint` and `pnpm typecheck` pass; `pnpm test` 1076 passed
+  (144 files, incl. new `lib/contact-change.test.ts`, extended middleware,
+  settings-by-role and auth tests, four forms added to the form-surface
+  registry); Playwright against `pnpm dev` (port 3141, mocked API): new
+  `contact-change.spec.ts` 10 passed (client phone change 1440 / 390 px,
+  Add email without a verified one, staff request 1280 / 390 px, blocking
+  add-email step 1440 / 390 px, registration email step, Admin approval and
+  contact history 1365 / 390 px; no page overflow), with settings-by-role and
+  registration-profile passing; `dashboard-navigation` and `personalization`
+  need a live API on :8000 and three `dashboard-refinement` checks fail the
+  same way on the E3 base. `pnpm build` passes in `node:22-alpine`. Full API
+  suite on the stack: see Batch E PR 3 (no new failure after its two fixes).
+
+**In progress — Batch E PR 3: staff contact-change requests and one-Admin
+approval (API)** (2026-11-17; CS-025; PR
+[#377](https://github.com/brollysolutions/client1/pull/377), mirror
+vamshisaideep9/client1#78), branch `feat/batch-e-staff-requests-api`
+stacked on Batch E PR 2. API and regenerated contracts; no migration; no
+requirement-percentage change.
+- Staff (Telecaller, Employee, Sub Admin incl. managers): `POST
+  /auth/contact-change/requests` (field, new value, current password; same
+  budgets, login lock, one-change rule and pre-checks as self-service) sends a
+  code to the new value; `requests/verify` moves it to `pending_approval` for
+  `CONTACT_CHANGE_REQUEST_EXPIRE_DAYS` (7), audits `contact_change_requested`
+  and notifies every active Admin; `requests/resend`; withdraw through the
+  shared `cancel`. These three admit an account still owing the email step,
+  so an employee whose Admin-set address is wrong can fix it through an
+  Admin. Clients, Agents and Admins get 403 (they self-serve).
+- Admin: `GET /admin/contact-change-requests` (platform Admin; live Admin
+  profile re-checked; `private, no-store`) lists pending requests oldest
+  first with name, role, field, live current value, requested value and a
+  "changed since" flag; `/{id}/approve` (password re-entry sharing the login
+  lock) applies it exactly like a self-service change (session version,
+  refresh tokens, push, history `admin_approved` with the approver, audit
+  `contact_changed` by the Admin, notices; an Admin-set address that was
+  never verified is not recorded as a previous email); `/{id}/reject` (password, PII-free reason
+  as in the lost-number flow) notifies the requester and audits
+  `contact_change_rejected`. The requester's own account can never be
+  decided by them (409); expired requests leave the queue.
+- Evidence: new `test_contact_change_staff.py` (13: phone change for each
+  staff role with one Admin, sessions ended, history with approver, audit
+  trail; email request clears the email step for an enforced employee;
+  Admin cannot file or decide their own; wrong password and a forged Admin
+  token without a live profile refused, Sub Admin cannot see the queue;
+  rejection with password and PII-free reason (a number in the reason 422)
+  and notice; not reviewable before the code; one active request; another
+  staff member cannot verify it; Client 403; wrong password / registered
+  number / malformed number; expiry; withdraw; Admins notified). Full API
+  suite on the stack (fresh scratch database at `d4f6a8c0e2b4`): 2618 passed,
+  5 failed — three pre-existing on main (`test_client_loan_copy_migration`
+  pinned head, `test_public_banners` / `test_public_properties` internal
+  fields) and two of this batch, both fixed: the platform-scope policy ledger
+  (E1) and "Admins notified", which assumed one Admin's row although
+  `notify_admins` caps its fan-out at 25 and the suite database held 34; it
+  now asserts the call. Rerun: 17 passed.
+
+**In progress — Batch E PR 2: self-service phone/email change and contact
+history (API)** (2026-11-17; CS-025; PR
+[#376](https://github.com/brollysolutions/client1/pull/376), mirror
+vamshisaideep9/client1#77), branch `feat/batch-e-contact-change-api`
+stacked on Batch E PR 1. API and regenerated contracts; no migration (E1's
+schema); no requirement-percentage change.
+- Journey (Client, Agent, Admin; Telecaller / Employee / Sub Admin 403):
+  `POST /auth/contact-change/start` (field + password; shares the login
+  failure lock; per-account hourly and per-IP budgets; 409 while any change
+  or an open lost-number request exists; an email change needs a verified
+  email) sends a code to the CURRENT value; `verify-current`; `new-value`
+  (E.164 or email, normalized; same value or a number registered elsewhere
+  refused before any code; per-target daily cap; resubmission rebinds the
+  code); `verify-new` applies in one transaction under the account row lock:
+  number/email replaced and marked verified, lead/referral/enquiry/visit/
+  application numbers carried over (shared `contact_identity` helpers), an
+  unverified copy of the address elsewhere released, session version bumped,
+  every refresh token revoked, push subscriptions removed, history row,
+  `contact_changed` audit (ids, field, method), auth event and in-app
+  notification; after the commit the number caches are cleared and notices
+  go to the old and new address (email) or the verified email (phone).
+  `resend` (whichever stage is pending), `cancel`, `GET active` (masked).
+  Every step re-checks the row's step, expiry and that the current value is
+  still the one it started from (otherwise the change is cancelled).
+- Lost number: `/change-mobile` (two Admins, proof category) unchanged; its
+  completion now writes history with the proof category, PII-free reference
+  and checker; the request row still clears both numbers.
+- History read: `GET /admin/users/{id}/contact-history` (platform Admin; RLS
+  session, so the table policy also applies; `contact_history_viewed` audit
+  on every read; `Cache-Control: private, no-store`).
+- Evidence (python 3.13 container, scratch database at `d4f6a8c0e2b4`): new
+  `test_contact_change_self_service.py` (23: phone change ends every session
+  (old access token, refresh cookie and login number dead, live refresh
+  tokens 0, version 2), history/audit/auth event hold no values in audit,
+  email change notices to old and new, phone notice to the verified email,
+  Admin may self-serve, staff 403 ×3, wrong passwords lock login, start
+  budget, steps cannot be skipped, current-stage code never verifies the new
+  value, another account's change 404 and its code 400, resubmission
+  rebinds, expiry, phone and email never together, open lost-number request
+  409, email change needs a verified email, same/taken/invalid values,
+  verified address elsewhere refused after the code, current value changed
+  mid-flow, target cap, history Admin-only and audited, lost-number recovery
+  still two Admins and now recorded) passed; with the mobile-change (+ RLS),
+  all auth, route-authorization, RLS-coverage, ledger, Admin users/deletion,
+  audit, lead RLS and referral-attribution modules: 426 passed, exit 0.
+  Ruff clean; one Alembic head; contracts regenerated (additions only); web
+  `pnpm typecheck` passes.
+
+**In progress — Batch E PR 1: mandatory email behind a server gate (API)**
+(2026-11-17; CS-025; PR
+[#375](https://github.com/brollysolutions/client1/pull/375), mirror
+vamshisaideep9/client1#76), branch `feat/batch-e-email-required-api` stacked on
+Batch D PR 2. API, one migration and regenerated contracts (plus the web
+label maps the new notification and audit values require); no
+requirement-percentage change.
+- Store: migration `d4f6a8c0e2b4` (revises `c7e9a1b3d5f8`) adds
+  `contact_change_requests` (kind `self_service` / `email_add` /
+  `staff_request`, field, status per kind by CHECK, keyed fingerprint of the
+  current value, raw new value only while active by CHECK, one active row per
+  account by partial unique index) and `contact_change_history` (field, old,
+  new, method, proof category and reference, approver, time). RLS enabled and
+  forced on both: requests SELECT for owner or platform Admin; history SELECT
+  for platform Admin only; no api_user write grant; confined definer
+  `erase_contact_change_data(uuid)` refuses unless the caller is the owner or
+  a platform Admin AND the account is already soft-deleted; called in account
+  deletion Phase A. Audit values `contact_changed`, `contact_change_requested`,
+  `contact_change_rejected`, `contact_history_viewed`; notification values
+  `contact_changed`, `contact_change_requested`, `contact_change_rejected`.
+  Ledgers: both tables `identity`; Admin coverage minimized (requests) and
+  full Admin-only (history).
+- Gate: `EMAIL_REQUIRED_ENFORCED` (default off). `CurrentUser.email_required`
+  is read from the live row each request; `get_active_user` answers 403 (with
+  `X-Email-Required: 1`) while it is set; `get_active_user_allow_email_pending`
+  admits `GET /auth/me`, the email add/verify endpoints and `DELETE /auth/me`;
+  logout, refresh and change-password never used `get_active_user`.
+  `MeResponse`, login/refresh tokens and the registration token response carry
+  `email_required`.
+- Registration: `POST /auth/register/email/initiate` / `verify` (registration
+  token required, code keyed to the mobile and bound to the address's keyed
+  fingerprint, per-address daily cap, no existence lookup) upgrade the token;
+  set-password refuses without it when enforced and stores the address
+  verified (a verified holder elsewhere is refused, an unverified copy is
+  released).
+- Add email: `POST /auth/email/add` (password; shares the login failure lock
+  and a per-account hourly budget), `/resend`, `/verify` (code keyed to the
+  change id and stage, bound to the address; returns `/auth/me`). Staff may
+  only verify the Admin-set address. `PATCH /auth/me` refuses a different or
+  cleared email (422) and accepts the address on file as a no-op.
+- Housekeeping: `expire_contact_changes` scheduler job (15 min) expires
+  abandoned rows and clears their value.
+- Evidence (python 3.13 container, scratch database migrated to
+  `d4f6a8c0e2b4`; upgrade → downgrade → upgrade): new
+  `auth/test_email_required.py` (26: gate on/off, the endpoints left open,
+  logout/refresh/password change never locked out, add-email password,
+  budget, single-use code bound to its change and address, resubmission,
+  expiry and sweep, one active change, verified/unverified holders, staff
+  limits, registration with and without enforcement, history Admin-only RLS,
+  no api_user write, erasure refused while live and done with the account,
+  DB CHECKs) with the affected auth, mobile-change, deletion, Admin, ledger,
+  RLS-coverage, route-authorization, scheduler, notification, audit and
+  eligibility modules: 489 passed, 1 failed (`test_email_verify` changed the
+  address through PATCH; it now changes it directly) and the three email
+  modules rerun 55 passed. Ruff check/format clean; one Alembic head; web
+  `pnpm typecheck` and `pnpm lint` pass on the regenerated types. The full
+  API suite (run on the stack before the web slice) found the platform-scope
+  policy ledger in `test_platform_scope_rls.py` missing the two new
+  admin-gated policies; they are now listed (4 passed).
+
+**In progress — Batch D PR 2: lead and referral eligibility (web)**
+(2026-11-17; CS-024; PR
+[#374](https://github.com/brollysolutions/client1/pull/374), mirror
+vamshisaideep9/client1#75), branch `feat/batch-d-eligibility-web` stacked on
+Batch D PR 1. Web only; consumes the D1 contracts; no requirement-percentage
+change.
+- Shared (`features/dashboard`): `eligibility.ts` (Eligible / Not eligible /
+  Duplicate labels and tones, the two filter option lists, row and attempt
+  matching, the Not eligible split for the hint), `use-eligibility.ts`
+  (summary + attempts, each with its own error), `eligibility-ui.tsx` (badge
+  with the API's reason label, a one-card three-column summary that stays
+  side by side on phones, and the "Not accepted" list with its own
+  Eligibility filter, masked number, result, reason and date).
+- Agent Leads: summary (Eligible / Not eligible "n leads · m not accepted" /
+  Duplicate), tabs "Leads (n)" and "Not accepted (n)", FilterBar with search
+  (name or mobile digits), Status, Eligibility and "More filters" Product
+  (product, bank, loan status) or Property (category, type, deal status) from
+  the row facets — Batch C's option sources and one-application matching,
+  without the Telecaller-only Lead group (`leadSignalFilterGroups` gains
+  `lead: false`); an Eligibility column with the reason under a Not eligible
+  badge; the Registered column moves off phones; resubmitting reloads the
+  counts.
+- Client Referrals: the same summary, tabs "Referrals (n)" / "Not accepted
+  (n)", an Eligibility filter, and an Eligibility column (under the status on
+  phones). Fix: the table's screen-reader-only "Details" header could widen
+  the page on a phone; the scroll box now contains it.
+- Evidence: `pnpm lint`, `pnpm typecheck` pass; `pnpm test` 1063 passed
+  (143 files, incl. new `eligibility.test.ts`); Playwright against `pnpm dev`
+  (port 3141, mocked API): new `lead-eligibility.spec.ts` (4: Agent 1440 px
+  and 390 px dark mode, Client 1440 and 390 px, no page overflow) and the agent
+  refinements, agent money, lead-signal, Batch C filters, filter-system,
+  dashboard repairs and sub-admin teams specs, 47 passed; `pnpm build`
+  passes in `node:22-alpine`.
+
+**In progress — Batch D PR 1: lead and referral eligibility (API)**
+(2026-11-17; CS-024; PR
+[#373](https://github.com/brollysolutions/client1/pull/373), mirror
+vamshisaideep9/client1#74), branch `feat/batch-d-eligibility-api` stacked on
+Batch C PR 2. API, one migration and regenerated contracts; no
+requirement-percentage change.
+- Store: migration `c7e9a1b3d5f8` (revises `f1b3d5a7c9e2`) adds
+  `lead_intake_attempts` (actor type `agent` / `referrer`, actor id, owning
+  account, last four digits, keyed HMAC-SHA256 fingerprint, line, outcome
+  `duplicate` / `not_eligible`, reason code; format checks on every column
+  that could otherwise carry free text or a number). RLS enabled and forced:
+  SELECT for the owner only (Agent rows also need the request's Agent
+  profile; no staff or Admin read policy, and the Admin coverage ledger marks
+  the table protected); no api_user INSERT/UPDATE/DELETE; confined definer
+  `erase_lead_intake_attempts(uuid)` (owner or platform Admin, 42501
+  otherwise), called in account deletion Phase A.
+- Recording: `capture_agent_lead` raises `AgentLeadConflict(reason)` and,
+  after its own session has rolled back, records the attempt on a separate
+  session (registered number, another Agent's / line's / worked lead, unique
+  race → duplicate `already_linked`; only the Agent's own expired lead → not
+  eligible `own_lead_window_ended`). `attribute_signup` records
+  `already_referred` for a later referrer (not for the first referrer
+  re-using their own code) and `self_referral`; an unknown code has no owner
+  and is not recorded. Best-effort, a repeat within 24 hours stored once; the
+  409 detail is unchanged.
+- Derived: `services/eligibility.py` holds every reason code and label and
+  maps Agent leads (`agent_expired_at` → not eligible `attribution_expired`)
+  and referrals (`self_referral`, `referrer_not_client`,
+  `below_min_conversion`, `cap_reached`, or `void` → not eligible; the rest
+  eligible).
+- API: `GET /agent/leads` rows add `eligibility`, `eligibility_reason`,
+  `eligibility_reason_label` and `facets` (from `lead_list_signals`' Agent
+  branch; ids, labels, enums); `GET /agent/leads/{id}` adds the eligibility
+  fields. `GET /referrals` rows add the eligibility fields (the raw
+  `accrual_reason` stays Admin-only). New `GET /agent/lead-eligibility`,
+  `GET /referrals/eligibility` (eligible / not eligible / duplicate /
+  not accepted) and `GET /agent/lead-attempts`, `GET /referrals/attempts`
+  (masked `***1234`, reason, label, line, date; `limit` ≤ 500, `offset`).
+- Ledgers: `lead_intake_attempts` classified `optional_audit` (line on Agent
+  attempts, NULL on referral attempts) and Admin coverage `protected`.
+- Evidence (python 3.13 container, scratch database migrated to
+  `c7e9a1b3d5f8`): new `test_lead_eligibility.py` (26: every rejection
+  branch recorded and kept after the rollback, no raw number in any column,
+  a recording failure leaves the 409 unchanged, 24-hour repeat stored once,
+  derived mapping, summaries, owner-only RLS for Agents / Clients / staff /
+  Admin, no api_user insert, erasure by Admin removal and by self-deletion,
+  definer refuses another account) with 23 other affected modules: 325
+  passed in total.
+  The one remaining failure in the wider contract set,
+  `test_client_loan_copy_migration::test_single_alembic_head_includes_this_revision`,
+  pins an old head and fails on the base too. Ruff check/format clean; one
+  Alembic head; upgrade → downgrade → upgrade on a second scratch database;
+  OpenAPI regenerated (4 new paths, 3 new schemas, `AgentLeadRead` and
+  `ReferralRead` extended, no removals); web `pnpm typecheck` passes on the
+  regenerated types.
+
+**In review — Batch C PR 2: filters by product, property, status,
+transactions and earnings (web)** (2026-11-17; CS-023; PR
+[#372](https://github.com/brollysolutions/client1/pull/372), mirror
+vamshisaideep9/client1#73), branch
+`feat/batch-c-filters-web` stacked on Batch C PR 1. Web only; consumes the
+C1 contracts; no requirement-percentage change.
+- Shared: `product-filter-options.ts` (labels, `mergeOptions`, bank-name
+  normalising, rupee parsing), `use-product-catalogue.ts` (`/loans/loan-types`
+  lending products + `/loans/banks`, one fetch per page),
+  `amount-range-fields.tsx` (Min / Max with an inverted-range note).
+- Lead lists (Telecaller, Employee, team work): Product or Property group by
+  line; Telecaller and Telecaller-team Money group (Transactions has / none,
+  Transaction date From / To, Transaction bank, Transaction amount); one
+  application, deal or transaction must match every filter of its group;
+  Admin-hidden transaction parts and other-line filters never filter, count
+  or chip.
+- Analytics: My analytics and team analytics add Product / Property groups,
+  Telecaller amount (hidden when the API lists it in `hidden_filters`),
+  Agent commission status and commission amount; requests carry only offered
+  filters, amounts as plain rupees after a short pause, an inverted range not
+  applied. Admin reports: Product and Property on the leads report, amount on
+  leads / loans / deals, property type on deals; changing line drops the
+  other line's filters.
+- Lists: Admin loan applications (Product, Bank, requested amount), Admin
+  property deals (quoted price); Agent earnings options from the same sources.
+- Logic fixes: team work kept a closed or released status filter applied
+  after switching to "Open"; My analytics could request a filter of the
+  previous line after a line switch; the Admin leads report kept a hidden
+  other-line filter.
+- Evidence: `pnpm lint`, `pnpm typecheck` pass; `pnpm test` 1055 passed
+  (142 files, incl. new `product-filter-options.test.ts` and the extended
+  lead-signal, analytics-range and earnings tests); Playwright against
+  `pnpm dev` (port 3121, mocked API): new `batch-c-filters.spec.ts` (5) and
+  the filter-system, lead-signal, staff-analytics, admin-analytics, agent
+  money, sub-admin-teams and telecaller workspace specs, 38 passed.
+
+**In review — Batch C PR 1: filters by product, property, status,
+transactions and earnings (API)** (2026-11-17; CS-023; PR
+[#371](https://github.com/brollysolutions/client1/pull/371), mirror
+vamshisaideep9/client1#72), branch
+`feat/batch-c-filters-api` stacked on Batch B PR 2. API, one migration and
+regenerated contracts; no requirement-percentage change.
+- Readers: migration `f1b3d5a7c9e2` (revises `e8b0d2f4a6c9`) drops and
+  recreates `lead_list_signals(uuid[])` and `team_lead_signals(uuid[])`
+  (SECURITY DEFINER, `search_path = pg_catalog, public, pg_temp`, EXECUTE only
+  for `api_user`). New columns: `loan_items` (id, product id + label, bank id
+  + name, status, requested amount), `deal_items` (id, status, category,
+  subtype, quoted price) and a transaction summary (count, banks, min/max,
+  first/last date, latest 50 transactions) for the assigned Telecaller, or
+  the manager through that Telecaller. New Agent branch: own introduced leads
+  on the Agent's line, no referral code, calls or transactions.
+- Lists: Telecaller leads (`facets`, `transactions`), Employee tasks
+  (`lead_facets`) and team work (`signals.facets`, `signals.transactions`);
+  ids, labels and enums only, no application or deal amounts; Telecaller
+  rules `loan_transaction.bank_name` / `amount` / `txn_date` null the hidden
+  parts and list them in `hidden_fields`.
+- Analytics: `/me/analytics` and `/manager/teams/{id}/overview|members/{id}/analytics`
+  take `loan_type_id`, `bank_id`, `loan_status`, `deal_status`,
+  `property_category`, `property_subtype`, `amount_min/max` (Telecaller:
+  requested amount or quoted price; Agent: commission) and Agent
+  `commission_status`; one application or deal must match all product
+  filters; role, line, loan + property mix, min > max and an amount the
+  Admin hides from Telecallers are 422, and responses list `hidden_filters`.
+- Admin reports: leads report takes product and property filters (one
+  application or deal matching all), loans and deals reports take
+  `amount_min/max`, deals take `property_subtype`.
+- Logic fixes: team analytics lead source never matched "client" (the
+  manager path read `lead_list_signals`, which answers only the lead's own
+  staff); the Agent lead-status filter left commission KPIs unfiltered; the
+  Admin "Referred by client" missed referrals matched through the lead's
+  client account.
+- Evidence (python 3.13 container, scratch database migrated to
+  `f1b3d5a7c9e2`): new `test_lead_signal_facets.py` (29) and the 16 affected
+  modules 273 passed; ruff check/format clean; one Alembic head;
+  upgrade → downgrade → upgrade round trip on a second scratch database;
+  OpenAPI regenerated (5 new schemas, 12 paths and 6 schemas changed, no
+  removals); web `pnpm typecheck` passes on the regenerated types.
+
+**In review — Batch B PR 2: Agent money and lead history (web)**
+(2026-11-16; CS-022; PR [#370](https://github.com/brollysolutions/client1/pull/370),
+mirror vamshisaideep9/client1#71), branch `feat/agent-dashboard-web`
+stacked on Batch B PR 1. Web only; consumes the B1 contracts; no requirement-percentage change.
+- Home: Commission summary Total / Pending / Paid; metric card "Commission
+  paid · <month>" shows the previous IST month's paid amount.
+- Earnings: Total / Pending / Paid / "Paid · <month>" cards; FilterBar
+  (search, status, deal type, entered From / To) with More filters Lead /
+  Product or Property / Money and removable chips; commission table; detail
+  sheet with lead link and "View payment trail".
+- Transactions: Agents open a payment-trail sheet per row (payout status,
+  method and masked hint, requested/approved/issued/paid/reversed, who
+  requested and approved with role, what it paid).
+- Lead detail: Applications and deals, Status timeline, Calls (telecaller
+  byline), and notes on Admin-hidden fields.
+- Settings: cancelled-cheque row (type/size checked client-side, presign →
+  storage POST → confirm, Replace / Remove); removing or changing the bank
+  account warns that the cheque goes too. Payout dialog: "View cancelled
+  cheque".
+- Evidence: `pnpm lint`, `pnpm typecheck` pass; `pnpm test` 1030 passed
+  (141 files, incl. new `agent-earnings-filters.test.ts`,
+  `agent-history-format.test.ts` and cheque validation); Playwright against
+  `pnpm dev` (port 3107, mocked API): new `agent-money-history.spec.ts` 6
+  passed (1440 / 390 px) and the related agent, settings, filter-system,
+  payout simulator and telecaller workspace specs 30 passed in total;
+  `pnpm build` passes in `node:22-alpine`.
+
+**In review — Batch B PR 1: Agent commission history, payout trail, lead
+history and cancelled cheque (API)** (2026-11-16; CS-022; PR
+[#369](https://github.com/brollysolutions/client1/pull/369), mirror
+vamshisaideep9/client1#70), branch `feat/agent-dashboard-api` from Batch A
+PR 2 with `upstream/main` (Batch A merged) merged in. API, one migration and
+regenerated contracts; no requirement-percentage change.
+- Reads: `agent_commission_ledger()`, `agent_lead_history(uuid)` and
+  `agent_transaction_detail(uuid)` are SECURITY DEFINER functions (migration
+  `e8b0d2f4a6c9`) that answer only for the calling Agent's account, profile
+  and line and return projected columns; payouts and the audit log stay
+  Admin-only, and no RLS-only route gains rows.
+- `GET /agent/earnings`: filters `status`, `deal_type`, `product_id`,
+  `bank_id`, `property_category`, `amount_min_paise`/`amount_max_paise`,
+  `date_from`/`date_to` (IST, entry date), `q`; rows add client name, lead
+  id/status, product or property, bank, deal status, deal amount, paid date;
+  totals add the previous IST calendar month's paid amount with its dates.
+- `GET /agent/transactions/{id}`: owner-only; payout method + masked hint,
+  requested/approved/issued/paid/reversed, maker and checker name + role
+  (standalone Main Admin approval marked), and the single commission paid.
+- `GET /agent/leads/{id}/history`: originating Agent only; applications,
+  service enquiries, deals, enquiries, site visits, calls (outcome, interest,
+  notes, follow-up, telecaller) and timeline (introduced, assigned, expired,
+  resubmitted, manager status/reassign, loan/deal status changes).
+- Field rules (Agent, default visible): `lead_history.call_notes`,
+  `lead_history.staff_names`, `deal.amount`, `payout.staff_names`; hidden
+  values are null and listed in `hidden_fields`; a hidden client name is not
+  searchable.
+- Cancelled cheque: `POST/PUT/DELETE /agent/payout-details/cheque`,
+  `GET /payouts/{agents|recipients}/{id}/cancelled-cheque` (payout
+  requesters only, self refused, audited), cleared on bank change or
+  payout-details removal, erased with the account, daily
+  `purge_agent_cheque_orphans`.
+- Evidence (python 3.13 container, scratch database migrated to
+  `e8b0d2f4a6c9`): new `test_agent_dashboard_history.py` (13) and
+  `test_agent_payout_cheque.py` (9) pass; 25 affected modules 432 passed;
+  final re-run of the agent, cheque, earnings, refinements, account-delete
+  and commission-payout modules 85 passed; ruff check/format clean; one
+  Alembic head; upgrade → downgrade → upgrade round trip on a second scratch
+  database; OpenAPI export identical to the committed contract; web
+  `pnpm typecheck` passes on the regenerated types.
+
+**Merged — Batch A PR 2: Settings by role, self-service guards, small
+fixes** (2026-11-16; CS-021; PR [#368](https://github.com/brollysolutions/client1/pull/368),
+mirror vamshisaideep9/client1#69), branch `feat/filters-settings-by-role` stacked
+on PR 1. API, one additive data migration, web; no requirement-percentage
+change and no contract shape change.
+- Settings: `settingsForRole` — Client: editable, personalization, delete;
+  Agent and Admin: editable, delete, no personalization card; Telecaller,
+  Employee, Sub Admin (managers): read-only "Your details" with "ask an
+  Admin", no Save, no personalization, no Danger zone.
+- API: `PATCH /auth/me` and `DELETE /auth/me` → 403 for telecaller,
+  employee and sub_admin role claims (delete refuses before the password
+  check; Main Admin protection unchanged). Personalization preference and
+  location endpoints → 403 for every role but client; placements unchanged
+  for client/agent/employee/telecaller and read a stored preference only for
+  a Client, so Agent-activity banners no longer match (role-only Agent
+  banners still do). Migration `d6f8a0b2c4e7` deletes preferences of
+  accounts with an active agent or staff profile (owner statement, no RLS,
+  grant or function change; downgrade no-op).
+- Follow-ups: home table (Lead, Request, Due) five rows tall with an inner
+  scroll and "View all follow-ups"; the "Follow-ups due" card and the link
+  open `/dashboard/leads?followUp=due` (open leads due now or overdue, the
+  same rule as the API home panel), shown as a removable chip.
+- Analytics: My analytics, team and member analytics open on the previous
+  calendar month; KPI tiles without a scope hint show the period. Agent
+  "Commission by status" excludes cancelled.
+- Evidence: API affected tests in the python container 367 passed, 1
+  failed (`lead_list_signals` missing: the shared dev DB is at `c7e9a1b3d5f7`,
+  behind `f3a5c7e9b1d2`; unrelated); ruff clean; one Alembic head; OpenAPI
+  export identical to the committed contract; web lint/typecheck, 1016 unit
+  tests and the container build pass; Playwright 32 passed (settings by role,
+  filter system with follow-ups, staff analytics, team, lead signals,
+  listings, admin analytics).
+
+**Merged — Batch A PR 1: one filter system across every dashboard**
+(2026-11-16; CS-021), branch `feat/unified-dashboard-filters` from
+`upstream/main` `5e8aaf7b`. Web only; no contract, dependency or
+requirement-percentage change.
+- Naming: an unfiltered select shows its field name (`Status`, `Call status`,
+  `Lead interest`, `Lead source`, `Loan status`, `Task type`, `Business
+  line`, …); the first option is `All`; accessible names are `Filter by
+  <field>`. `FilterBar` takes field names (`statusLabel="Payout status"`,
+  `kindLabel="Category"`) on all ~30 surfaces that use it.
+- Lead source: `Direct lead` / `Referred by agent` / `Referred by client`
+  (one `REFERRER_SOURCE_LABEL`); the referrer line reads "Referred by Agent ·
+  AG-…" / "Client · …".
+- More filters: first row keeps search, status, business line, type and the
+  From / To dates; lead signals, product, property, review and money filters
+  move behind "More filters (n)" (popover; bottom sheet under 40rem) with
+  grouped sections, removable chips and one "Clear all". The team work
+  list's own "Filters (n)" disclosure and the listings' "More filters"
+  disclosure now use it.
+- Dates: paired inputs show visible From / To; the analytics calendar shows
+  "From: … To: …" above the months and tags month captions "(From)" /
+  "(To)".
+- Order: Telecaller (default sort; a column sort still overrides, Status
+  sorts by rank), Agent, team work and Admin assigned leads open on New >
+  Assigned > Working > Converted > Closed > Released, then next follow-up.
+  Admin and Client loan lists put closed/rejected applications last.
+- PR [#367](https://github.com/brollysolutions/client1/pull/367), mirror
+  vamshisaideep9/client1#68. Evidence: `pnpm lint`/`typecheck` pass;
+  `pnpm test` 1010 passed (138 files); `pnpm build` passes in
+  `node:22-alpine`; Playwright against `pnpm dev`: the five updated filter
+  specs 20 passed and the new `filter-system.spec.ts` 5 passed (1440/390 px,
+  light/dark). Known: the Telecaller leads table (not the bar) still
+  overflows at 390 px.
+
+**In review — Banner lifecycle fixes (web slice)** (2026-11-16; PR
+[#366](https://github.com/brollysolutions/client1/pull/366), mirror
+vamshisaideep9/client1#67), branch
+`fix/banner-lifecycle-web` stacked on `fix/banner-lifecycle-api`. Web only;
+no dependency or contract change beyond the API slice.
+- Workspace: Delete (with a confirm) for draft, pending, rejected and
+  approved banners; Archive only for pending, approved and rejected; a live
+  banner shows "Live — ask an Admin to remove it." Admin Remove is unchanged.
+- Create: the primary action is Submit for approval (`createBanner` then
+  `submitBanner`); Save draft stays secondary. A failed submit keeps the
+  draft and says why. Server field errors open the step that owns the field,
+  YouTube/uploaded video choices count as unsaved work, and Next no longer
+  submits the form by reusing its button node.
+- Live without reload: `serverFetchJson` takes cache tags and public banner
+  reads are tagged `public-banners`. `app/actions/revalidate-public-banners.ts`
+  verifies the caller's token with `GET /api/v1/auth/me`, then requires the
+  `admin` role claim of that verified token before `revalidateTag`; it runs
+  after approve and Remove. `useBannerQueue` polls every 30 s while visible
+  and refetches on focus (`queue-refresh.ts`); an open workspace adopts a
+  newer copy only with no unsaved edits, action or review note in progress.
+- CTA: `lib/banner-cta.ts` (site path via next/link, or strict https as a
+  new-tab anchor with "(opens in a new tab)"; YouTube fallback "Watch on
+  YouTube") is used by the public mapper, hero, sponsor strip, dashboard
+  banner card, CMS previews and both forms; the destination field explains
+  both kinds.
+- Offers: single-column list; from md the card is artwork (object-cover, 40%)
+  beside the copy, stacked on phones; coupon copy, focus and new-tab links
+  kept. The CMS offer preview uses the same list.
+- Follow-up (not in scope): dashboard-placement banners are still not
+  rendered to signed-in users; `PersonalizedPlacements` shows offers only.
+  Scheduler-activated (future-dated) banners still wait for the job tick
+  plus the 60-second ISR window, and open public pages are not pushed.
+- Evidence: `pnpm lint` and `pnpm typecheck` pass; `pnpm test` 989 passed
+  (136 files) including `lib/banner-cta.test.ts`, the Server Action role
+  tests, `queue-refresh.test.ts` and the offer-card layout tests;
+  `pnpm build` passes in a `node:22-alpine` container. Playwright against
+  `pnpm dev` with the catalogue fixture: new `banner-cta-and-offers.spec.ts`
+  6 passed (https CTA new tab with `window.opener` null, YouTube fallback,
+  create-then-submit only on request, offer card stacked at 390 px and
+  horizontal at 768/1280 px); the ui-refinement offer test passes;
+  `sponsor-highlight.spec.ts` 5 passed with 4 pre-existing failures (it
+  expects no button in the ad, but upstream already renders the dismiss
+  button). `personalization.spec.ts` was not run (needs the compose API
+  container). Design review (Chromium screenshots) found the Next button
+  submitting the form on the last step; fixed with distinct button keys.
+- After merging the API slice (which now includes `upstream/main` #364), the
+  web typecheck failed because #364 added the `client_export_downloaded`
+  audit action to the contract without the Admin audit log's label; this
+  branch adds "Client list exported" so the exhaustive map compiles again.
+
+**In review — Banner lifecycle fixes (API slice)** (2026-11-16; PR
+[#363](https://github.com/brollysolutions/client1/pull/363), mirror
+vamshisaideep9/client1#66), branch
+`fix/banner-lifecycle-api` from `upstream/main` `8493823`. API, one additive
+RLS migration and the regenerated contract; the completion percentage is
+unchanged.
+- Delete: `DELETE /api/v1/banners/{id}` (Sub Admin only) removes a draft,
+  pending, rejected or approved banner in one conditional
+  `DELETE ... RETURNING` under RLS. 404 for missing or soft-removed rows; 409
+  for live ("Live banners can only be taken down by an Admin."), archived, a
+  banner another campaign is set to replace, or a lost race with activation.
+  `BANNER_DELETED` audit keeps `from_status`. Migration `c5e7a9b1d3f4`
+  recreates `banners_delete` as `sub_admin AND removed_at IS NULL AND status
+  IN (draft, pending_approval, rejected, approved)`; downgrade restores the
+  draft-only policy. Admins keep the soft Remove; Admin `DELETE` stays 403.
+- Archive: a Sub Admin can archive pending, approved or rejected banners;
+  live gets the same 409 pointing to Admin Remove.
+- Approve: after `APPROVED`, `activate_banner_if_due` (the job's own rules for
+  one id: due start, publishable property, category / sponsor slot,
+  replacement swap) runs in the same transaction inside a savepoint, so a
+  due banner whose slot is free is `live` in the response; otherwise it stays
+  approved for the job. Approval audit and notification are unchanged.
+- CTA: `deep_link` must be a same-site path or an https URL with a host, no
+  userinfo, a valid port and no whitespace/control characters (422
+  otherwise; blank clears it). The offers https rule moved to
+  `app/core/urls.py` and both offers modules import it unchanged.
+- Evidence (`python:3.13` container, fresh database at the single head
+  `c5e7a9b1d3f4`; upgrade/downgrade/upgrade checked): ruff check and format
+  pass; `test_core_urls`, `test_banners_api`, `test_banners_rls`,
+  `system/test_cms_activation`, `test_public_banners`, `test_offers_api`,
+  route-authorization coverage and `test_platform_scope_rls` give 190 passed
+  and 1 failed, the pre-existing `test_public_banners.py::
+  test_response_omits_internal_fields` (stale exact key set without the
+  public video fields; fails identically on `upstream/main` `8493823`).
+  Full API suite on `09b3093a`: 2447 passed, 6 failed (the 3 known upstream
+  failures, one pgbouncer-routing failure that fails identically on
+  upstream, and two shared-Redis collisions that pass when re-run alone).
+- Merged `upstream/main` `e09659a` (#364) into the branch; its migration
+  `a7c9e1b3d5f6` also revised `b2d4f6a8c0e1`, so the unmerged
+  `c5e7a9b1d3f4` now revises `a7c9e1b3d5f6` (one head; the full chain
+  upgrades, downgrades and re-upgrades on a fresh database).
+
+**In review — API image build fix (Alpine pin bump)** (2026-11-16; upstream PR
+pending), branch `fix/api-dockerfile-alpine-pins` from `upstream/main`
+`e09659a1`. Bumps the `apps/api/Dockerfile` `apk --upgrade` pins `libcrypto3`
+and `libssl3` from `3.5.8-r0` to `3.5.9-r0`: the exact `3.5.8-r0` strings no
+longer resolve in the Alpine `v3.23/main` repository (superseded by `3.5.9-r0`),
+so every API/scheduler image rebuild failed with `apk add ... exit code 9`.
+Forward patch bump (at least as patched as the CVE-reviewed `3.5.8-r0`);
+`sqlite-libs=3.53.4-r0` still resolves and is unchanged. No application
+behavior change — infra/build only. Unblocks the dev-droplet deploy of the
+client-export feature (PR #364). Verification: API image builds on the dev
+droplet.
+
+**In review — admin client-roster CSV export** (2026-11-16; upstream PR
+[#364](https://github.com/brollysolutions/client1/pull/364); origin mirror
+DEFERRED pending fork sync — origin/main is 134
+commits behind upstream/main and was not synced, so only the canonical
+`brollysolutions/client1` PR is opened for now), branch
+`feat/admin-client-export` from `upstream/main` `8493823c`. Adds
+`GET /api/v1/admin/reports/clients/export`, a platform-admin-only streaming CSV
+of every CLIENT account across both business lines. Columns are exactly
+`id, name, phone, created_at, updated_at` (name = `first_name last_name`, phone
+= `mobile`, timestamps in IST ISO-8601). `password_hash` is never selected or
+emitted — the originally-requested "password" column is deliberately omitted
+(one-way hash only; export forbidden by SECURITY.md). A CLIENT is an
+`auth_users` row owning at least one `client_profiles` row; multi-line clients
+appear once (IN-subquery, no fan-out); soft-deleted (tombstoned) accounts are
+excluded. Query/audit logic in `services/reporting.py::export_client_rows`; the
+route stays thin and async and reuses the existing `_csv_cell`
+formula-injection defense and `_csv_chunks` UTF-8-BOM streaming. CSV only (no
+xlsx) to keep the bulk-PII surface minimal.
+- Authorization: `deps.require_platform_admin` (server-derived `role='admin'
+  AND platform_scope='true'`), identical to the sibling report exports. Client,
+  agent, telecaller, employee, sub_admin, or line-scoped admin → 403;
+  unauthenticated → 401. The both-lines span is safe because the
+  `auth_users_rls`/`client_profiles_rls` admin-bypass predicate requires the
+  same scope, so even behind the gate the query cannot leak the other line.
+- Security-review decision: unlike the aggregate report exports (unaudited
+  counts), this row-level PII download records an `audit_log` entry
+  (`CLIENT_EXPORT_DOWNLOADED`, actor pinned to the admin, detail carries only
+  counts/format/truncated — no PII). Additive migration `a7c9e1b3d5f6`
+  (down_revision `b2d4f6a8c0e1`, upstream's current head) adds the enum label
+  (`ALTER TYPE audit_action ADD VALUE`, idempotent, no-op downgrade, ADR-0004
+  direct-to-5432 + rolling-restart ordering noted).
+- Fresh verification on the rebased (upstream-based) tree: `uv run ruff check .`
+  and `uv run ruff format --check .` pass (564 files); `uv run alembic heads`
+  reports exactly one head, `a7c9e1b3d5f6`. OpenAPI + typed-client regenerated
+  cleanly — the new `/clients/export` path is the only contract diff vs
+  `upstream/main`. **UNVERIFIED:** all DB-backed tests (new client-export
+  API/service cases plus the existing reporting suite) — host pytest cannot
+  reach Postgres (`getaddrinfo failed` on the `postgres`/`pgbouncer`
+  hostnames), and the Docker API container mounts a different checkout. Command
+  that would run them:
+  `docker exec client1-api-1 sh -lc 'cd /app && uv run pytest -q app/tests/test_reporting_api.py app/tests/test_reporting_service.py'`
+  (requires this branch mounted and migration `a7c9e1b3d5f6` applied first).
+- No web/UI, schema-table, or dependency change. Next: surface the export in the
+  admin reporting UI; sync the fork and open the deferred origin mirror PR.
+
+**In review — Sub Admin analytics filters (API slice)** (2026-11-16; PR
+[#360](https://github.com/brollysolutions/client1/pull/360), mirror
+vamshisaideep9/client1#64),
+branch `feat/sub-admin-analytics-filters` from `upstream/main` `70f98fa`.
+API and generated contract only; no migration, RLS or table change, so the
+completion percentage is unchanged.
+- `GET /api/v1/me/analytics` accepts five Sub Admin filters, all `Literal`
+  validated: `content_type` (banners|offers), `content_status`
+  (draft|pending_approval|approved|live|rejected|archived), `placement` and
+  `banner_type` (banners only), `discount_type`
+  (percentage|flat|cashback-tie, offers only). `_ROLE_FILTERS["sub_admin"]`
+  lists them, so any other role sending one gets 422 and a Sub Admin sending a
+  Telecaller/Employee/Agent filter still gets 422.
+- `sub_admin_analytics` keeps the `created_by_uuid` and line scope and adds
+  the filters as SQL `where` clauses. Offer statuses fold into the shared
+  vocabulary (approved = approved + scheduled, live = active, archived =
+  archived + expired). A banner-only filter skips the offer query and an
+  offer-only filter skips the banner query, so contradictory combinations
+  return zeroes rather than errors. KPIs, trend and breakdowns come from the
+  narrowed rows.
+- Evidence: `test_staff_analytics_api.py` 18 new parametrized filter cases
+  (each filter, offer status mapping, combinations, contradictions), a
+  KPI/trend/breakdown narrowing test, a cross-Sub-Admin scope regression and 8
+  role-gating 422 cases. With `test_team_manager_api.py` and
+  `test_team_manager_edits_api.py`: 59 passed in a `python:3.13` container on a
+  fresh database migrated to the single head `b2d4f6a8c0e1` (the shared dev
+  database is behind head, so tests needing `staff_teams` or
+  `lead_list_signals` fail there for that reason only). Ruff check and format
+  pass. OpenAPI and TypeScript schema regenerated. Next: the web slice.
+
+**In review — Sub Admin analytics filters and Admin analytics charts (web
+slice)** (2026-11-16; PR [#361](https://github.com/brollysolutions/client1/pull/361),
+mirror vamshisaideep9/client1#65), branch `feat/sub-admin-analytics-filters-web` stacked
+on `feat/sub-admin-analytics-filters`. Web only; no dependency, API or
+contract change beyond slice A.
+- `/dashboard/insights` for a Sub Admin: Content type, Review status,
+  Placement, Banner type and Discount type selects (`filtersForRole` takes
+  the current filters; `withFilter` drops filters the new combination no
+  longer offers, so picking Offers clears Placement and Banner type). A
+  banner-only filter also hides Discount type and the reverse, matching the
+  API, so no combination that always returns zeroes is offered; the newest
+  choice wins. The Team analytics bar is unchanged in behaviour.
+- `/dashboard/analytics`: `ReportCharts` between the tiles and the exports.
+  `useReportChart` reads the same filters independently of table sort and
+  page (`limit=500`, `offset=0`, `sort_by=bucket_start`, `sort_dir=asc`;
+  Agents `sort_by=leads_total`, `limit=10`) with a request-id race guard.
+  Leads/Loans/Deals: "<Noun> per week|month" stacked by line (the existing
+  lazy `TrendChart`, now with an optional label formatter) and a lazy
+  Recharts conversion-rate line (`conversion-chart.tsx`; empty buckets leave
+  a gap). Agents: "Top 10 agents by leads" ranked bars and a "Leads by line"
+  share bar from `team_summaries`. Every chart has "Show as table"; loading
+  skeletons, "No activity in this date range." and error-with-retry states;
+  a note when the period has more than 500 rows. Shaping lives in
+  `report-chart-data.ts` (bucket starts read as IST calendar dates).
+- Evidence: Vitest 915 passed (132 files), including
+  `report-chart-data.test.ts` (9) and the Sub Admin filter cases; lint and
+  typecheck pass; Playwright `staff-analytics.spec.ts` +
+  `admin-analytics-filters.spec.ts` 8 passed against `pnpm dev` (Sub Admin
+  filter params on the request and Clear filters; chart request
+  `limit=500&sort_by=bucket_start`; Agents chart request; 360 px no
+  horizontal scroll). `pnpm build` passes in a `node:22-alpine` container
+  (113/113 pages; the host build hits the known Windows symlink `EPERM`).
+- Follow-up (same day): banner-only and offer-only filters exclude each other
+  in the UI. Re-verified: lint, typecheck, Vitest 915 passed and the two
+  Playwright specs 8 passed on the final candidate; the container build above
+  ran on the commit before this UI-only follow-up.
+
+**In review — Property listings advanced filters and demo Sub Admin
+listings** (2026-11-16; PR [#359](https://github.com/brollysolutions/client1/pull/359),
+mirror vamshisaideep9/client1#63), branch `feat/listing-advanced-filters` from
+`upstream/main` `b04c78c`. Web plus a development-only seed change; no API,
+schema, RLS or contract change, so the completion percentage is unchanged.
+- `/dashboard/my-submissions` (Sub Admin, real-estate Agent, Admin) filters
+  its own rows in the browser: search, status, category, submitted dates,
+  sale/rent and sort, plus a "More filters (n)" disclosure for property type,
+  city, BHK, price and area ranges, furnishing, construction, RERA review,
+  360° images and documents. State lives in the URL (shareable, survives a
+  reload; invalid values fall back to "all"). Status cards are toggle buttons
+  that set the status filter; a no-match state offers Clear filters and the
+  panel shows "Showing X of Y".
+- Sub Admin home: "Awaiting approval" jumps to and focuses the Waiting on
+  Admin panel (`MetricCard` in-page `#id` links, `DashboardPanel` `id`/`tabIndex`).
+- `seed_demo`: the demo Sub Admin (+919000001003) now has 11 listings
+  (pending 5, approved 2, rejected 2, withdrawn 2) covering sale and rent, all
+  5 categories and 9 subtypes, Hyderabad/Warangal/Visakhapatnam and every RERA
+  review state. Approved rows originate the demo villa and plot (no other
+  submission did; there is no uniqueness constraint, so the seed keeps one
+  origin per Property). The original four demo submissions are unchanged.
+- Evidence: `submission-filters.test.ts` (15) in the web unit suite, 904 tests
+  pass; lint and typecheck pass; `e2e/my-submissions-filters.spec.ts` (3) and
+  the new Sub Admin home-card test in `dashboard-repairs.spec.ts` pass against
+  `pnpm dev` (390 px no horizontal scroll). API: ruff check/format pass;
+  `test_seed_helpers.py` + demo-media + `test_seed_bulk.py` 45 passed in a
+  `python:3.13` container on a fresh migrated database (one Alembic head,
+  `b2d4f6a8c0e1`), including a rolled-back DB test that reruns the seed and
+  adds nothing; two real `seed_demo --skip-media` runs on that database gave
+  the 11-row spread and 3 distinct approved origins. Dev droplet data needs a
+  `seed_demo` rerun after merge.
+
+**In review — per-person test data coverage** (2026-11-16), branch
+`chore/bulk-seed-staff-coverage` from `upstream/main` `05e7381`.
+Development-only seeder change; no product, schema or contract change.
+- 1,806 coverage clients (1,200 Loans, 606 Real Estate) with leads, call logs,
+  client referrals, loans, site visits, deals, 1,008 tasks, 564 pickups in all,
+  210 commissions and 60 extra Agent listings.
+- Evidence: `test_seed_bulk.py` + demo-media 27 passed, including per-person
+  minimum tests for every Telecaller, Employee and Agent filter value and the
+  DB phase test with the coverage phase. A full seed on a fresh database
+  (rows, then media against an S3 emulator) gave 2,057 accounts, 2,096 leads,
+  1,615 loan applications, 1,098 tasks; a rerun inserted no rows. Logging in as
+  each active Telecaller, Employee and Agent and counting from the real list
+  endpoints found at least 5 for every filter value (minimum 5-9). Ruff passes.
+  Full API suite: still running when this PR was opened (user chose to ship
+  first; a first run hung without output and was restarted in verbose mode);
+  the result is posted on the PR. Not yet verified.
+
+**In review — documents viewable inside the dashboard** (2026-11-15), branch
+`feat/in-dashboard-document-viewer` stacked on the listing-origins seeder fix.
+Web-only plus one pinned dependency; no API, schema, CSP or contract change.
+- Root cause of the empty Document verification preview: `<object>` blocked by
+  `object-src 'none'` plus an `attachment` signed URL, and URL-extension type
+  detection that misread extension-less task documents.
+- `DocumentViewer`/`ViewDocumentButton` render images and PDFs in-dashboard;
+  bytes-based type detection; 25 MB inline cap; PDF.js 6.4.299 (no eval code
+  path in this major) draws canvases only. Six surfaces wired.
+- Evidence: `lib/document-sniff.test.ts` (3) in the web unit suite, 889 tests
+  pass; typecheck and lint pass; `e2e/document-viewer.spec.ts` 2 passed at 1280
+  and 390 px (two-page PDF drawn as two canvases, PNG via blob URL; screenshots
+  reviewed); `pnpm audit --prod` no known vulnerabilities. Production build passes in `node:22-alpine` with the PDF.js worker self-hosted.
+  Full API suite on the stack tip: 2341 passed, 3 failed (the same three pre-existing upstream failures).
+
+**In review — bulk seeder listing origins** (2026-11-15), branch
+`chore/bulk-seed-listing-origins` from `upstream/main` `bf9b7a3`.
+Development-only seeder fix; no product, schema or contract change.
+- Every one of the 110 bulk listings now has exactly one approved submission
+  (6 planned + 104 origin submissions), so all appear under Listing approvals →
+  Published and in their authors' own listings; each origin carries a private
+  photo and ownership PDF.
+- Evidence: `test_seed_bulk.py` + demo-media tests 23 passed (new catalogue test
+  and a phase-test assertion of 110 approved, distinct listing links); a full
+  `seed_bulk --skip-media` run on a fresh database gave approved 110/110,
+  pending 12, rejected 6; ruff check/format pass. The full API suite runs on
+  the stacked document-viewer PR, which contains this change.
+
+**In review — bulk development test data** (2026-11-15), branch
+`chore/bulk-test-seed` from `upstream/main` `1454770`. Development-only
+scripts; no requirement, schema, API, permission or contract change, so the
+completion percentage is unchanged.
+- `bulk_catalog` (pure plan) and `seed_bulk` (writer) add 251 accounts, 110
+  listings, 24 submissions, 290 leads, 145 loan applications, 79 deals, 90
+  tasks and every money/support state; `docs/demo-data.md` lists the roster.
+  `seed_demo` now shares `add_once`/`put_once` from `seed_helpers`.
+- Evidence (fresh, isolated `python:3.13` container on `client1_default`,
+  throwaway databases, an in-container S3 emulator for media):
+  `test_seed_bulk.py` (9) with the demo-media, seed-helper and roster suites:
+  39 passed. A clean `seed_bulk --verify` run wrote 737 media objects and
+  logged in 12 sample accounts across every role with non-empty role APIs; a
+  rerun inserted no rows or objects; `seed_demo --verify` still passes beside
+  it; the Admin payout link-divergence report is empty. `ruff check` and
+  `ruff format --check` pass for the whole API. Full API suite on a fresh
+  database: 2330 passed, 3 failed; the same three
+  (`test_single_alembic_head_includes_this_revision` and the public banner and
+  property `test_response_omits_internal_fields`) also fail on unmodified
+  `upstream/main`, so they are pre-existing.
+- Not verified here: the dev droplet run (needs its Space and the user's
+  allowlist confirmation) and browser screenshots.
+
+**In review — manager edits and filters (CS-020)** (2026-11-15), branch
+`feat/team-manager-edits-filters` from `upstream/main` `bda242b`: PR 1 (API)
+[#350](https://github.com/brollysolutions/client1/pull/350), mirror
+vamshisaideep9/client1#54; PR 2 (web) on `feat/team-manager-edits-filters-web`
+stacked on it.
+- API: migration `b2d4f6a8c0e1` (one head, upgrade → downgrade → upgrade on a
+  fresh database). Manager writes only through confined definer functions
+  (lead status, task due date / cancel, notes); notes table is SELECT-only to
+  `api_user`; `team_lead_signals` returns referral/agent codes, loan statuses
+  and last call only for leads the manager reaches; manager views apply the
+  Admin's field rules for the member role.
+- Web: team Overview (date range, members, role filters, combined report,
+  member table) and Work (team-wide filtered list) tabs; member page uses the
+  same list and filtered analytics; edit, note, details and move dialogs;
+  "Notes from your manager" on Telecaller lead and Employee task pages; phone
+  filters fold behind one button.
+- Evidence: `test_team_manager_edits_api.py` (7) with the CS-019 team tests
+  (19 in all), affected Telecaller/Employee/analytics/lead-signal/contract
+  suites (109), field-visibility tests (16). Web: typecheck, lint, unit tests
+  (129 files / 886 incl. the new filter logic), Playwright
+  `sub-admin-teams.spec.ts` (6) at 1440 and 360 px with screenshots reviewed.
+  Full API suite: 2318 passed, 4 failed (3 pre-existing on upstream; 1 was
+  leftover data in the reused test database and passes on a fresh one).
+  Production `pnpm build` passes in a `node:22-alpine` container. Security
+  fix after review: lead notes are reached only through the lead's Telecaller,
+  so an Employee-team manager cannot read or add another team's lead notes
+  (regression test added). Completion impact: manager tooling complete for
+  this phase.
+
+**In review — Razorpay payout test mode on dev** (2026-11-15), branch
+`feat/razorpay-payout-simulator` from `upstream/main` `1454770`. Development-only
+behaviour behind `PAYOUT_GATEWAY_SIMULATOR`; additive contract change
+(`PayoutRead.simulate_events`, `POST /api/v1/payouts/{id}/simulate-gateway`); no
+schema, RLS or live-mode change, so the completion percentage is unchanged.
+- API: `gateway_simulator_active`, `simulator_events_for` and
+  `simulate_gateway_event` in `services/payments.py`; Admin-only route; settings
+  validator refuses the flag outside development.
+- Web: `payout-gateway-simulator-dialog.tsx` opens after approval and from a
+  "Test outcome" row action; labelled "Test mode", no Razorpay logo.
+- Infra: `compose.droplet.yml` enables the flag on the dev droplet.
+- Evidence (fresh, isolated `python:3.13` container on `client1_default`):
+  `test_payout_gateway_simulator.py` with the payouts API/webhook, config and
+  route-authorization suites: 132 passed; `ruff check`/`format --check` pass;
+  `test_dev_droplet.py` 10 passed. Web: typecheck, lint, 886 unit tests pass;
+  `payout-gateway-simulator.spec.ts` 3 passed at 1280 and 390 px with
+  screenshots reviewed. Production `pnpm build` passes in a `node:22-alpine`
+  container. Review fix: a chosen outcome claims the payout under its row lock
+  (`gateway_status = simulating`) so two contradictory concurrent choices
+  cannot both settle; covered by a concurrency test (simulator suite now 10).
+  Full API suite on a fresh database after the fix: 2330 passed, 3 failed; the
+  same three also fail on unmodified `upstream/main` `1454770` (pre-existing).
+- Not verified here: the droplet run (after merge) and live RazorpayX.
+
+**In review — item 9: Sub Admin managers over teams (CS-019)** (2026-11-15),
+branch `feat/sub-admin-team-managers` from `upstream/main` `76dced7`: PR 1 (API)
+[#348](https://github.com/brollysolutions/client1/pull/348), mirror
+vamshisaideep9/client1#52; PR 2 (web) on `feat/sub-admin-team-managers-web`
+stacked on it.
+- API: migration `e4f6a8c0b2d5` (one head) adds `staff_teams` (one line, one
+  member role, partial-unique live team per manager per line) and
+  `staff_team_members` (one team per member per line), Main-Admin-only write
+  policies, the live `team_manager_reaches()` predicate, SELECT-only manager
+  policies (leads, call logs, tasks, the five request tables, a lead behind a
+  managed Employee's task, members' staff profiles), names via
+  `team_roster_names()` (auth_users stays closed: it holds the password hash,
+  email and income), and `team_manager_reassign_lead/_task` definer functions.
+  Managers have no UPDATE policy. `/api/v1/admin/teams` (list for platform
+  Admins; create, rename, re-manage, archive, add/remove members for the Main
+  Admin) and `/api/v1/manager` (own teams, overview, member analytics and
+  work, audited lead detail, reassignment inside the team). Eight new audit
+  actions; the personal analytics builders gain manager wording.
+- Web (stacked PR): Admin `/dashboard/teams`, Sub Admin `/dashboard/team` and
+  `/dashboard/team/[teamId]/members/[memberId]`; "My team" appears in the menu
+  only when the manager API returns a team. Analytics charts and the calendar
+  date-range picker from upstream PR #346 are reused; manager analytics pin
+  the team's line, so a dual-line member's other-line work never counts.
+- Evidence: `test_staff_teams_api.py` (5) and `test_team_manager_api.py` (7)
+  pass on a fresh database after upgrade → downgrade → upgrade (one head, on
+  top of `a7c9e1b3d5f2`), together with `test_staff_analytics_api.py` (28 in
+  all). They cover
+  cross-team, cross-line, non-member, forged-identity, deactivation, removal,
+  archive, no direct UPDATE, definer-function refusal and audit rows. Ruff
+  clean; contracts regenerated and verified current. Security review found
+  and fixed one issue (member auth rows were readable). PR review found and
+  fixed one (renaming a team with a deactivated manager returned 500).
+  Web: typecheck, lint, unit tests (128 files / 882); Playwright
+  `sub-admin-teams.spec.ts` (4) and `staff-analytics.spec.ts` (3) pass against
+  `pnpm dev` at 1440 and 360 px with screenshots reviewed.
+  `dashboard-navigation.spec.ts` needs a live API on :8000 and was not run.
+  Full API suite: 2308 passed, 7 failed; the 4 caused by this branch (ledger
+  entries) were fixed and re-run green, and the other 3 pre-exist on
+  `upstream/main` (a hardcoded old Alembic head; public banner and property
+  field lists missing upstream's new fields). Production `pnpm build` of the
+  full stack passes in a `node:22-alpine` container. Completion
+  impact: item 9 delivered pending review; routing unchanged by design.
+
+**Implemented — loan application review and agreement stages** (2026-11-15;
+[PR #347](https://github.com/brollysolutions/client1/pull/347), mirror vamshisaideep9/client1#51, open for review), branch `feat/loan-status-stages` from `upstream/main`
+`e25957f`.
+
+API:
+- `LoanStatus` gains `under_review`, `agreement_collected` and
+  `agreement_submitted_to_bank`. Migration `a7c9e1b3d5f2` adds them with
+  `ALTER TYPE ... ADD VALUE ... AFTER`; the downgrade is a no-op, and api and
+  scheduler must be restarted after it.
+- The forward-only order is: new, assigned, contacted, docs collected,
+  submitted to bank, under review, sanctioned ("Approved"), agreement
+  collected, agreement submitted to bank, disbursed, closed. on_hold and
+  rejected stay side branches.
+- `_TERMS_REQUIRED_STATUSES` adds both agreement stages.
+- Client notification text: "approved", plus new stage phrases.
+- The 422 says "approved amount and bank".
+- The telecaller, admin, reporting and analytics status literals are updated.
+- Contracts regenerated.
+
+Web:
+- Every status map (progress form, Admin loans, telecaller requests,
+  lead-signal filters, the client journey) has the new stages, with
+  "Sanctioned" shown as "Approved".
+- The client's "Under review" now belongs to the real `under_review` stage;
+  `submitted_to_bank` reads "Submitted to bank".
+- The amount field reads "Approved amount (₹)".
+
+Evidence (2026-11-15):
+- API on the isolated `app_feedback` DB (migrated to `a7c9e1b3d5f2`, one
+  head, enum order verified): loan progress/loans/config/telecaller/referral
+  conversion/reporting/analytics suites, 195 passed. New tests cover the full
+  journey through the new stages, no moving backwards, the "approved"
+  notification, and terms required at both agreement stages. ruff is clean.
+- Web: lint and typecheck pass; Vitest 128 files / 881 tests pass (new
+  `loan-format.test.ts`).
+- Playwright (sanction terms, lead filters, telecaller workspace, dashboard
+  repairs, staff shell): 25 passed. `loan-media.spec.ts` needs a live API on
+  :8000 and was not runnable here.
+
+Security review: terms gating is stricter, disbursal and money flow are
+unchanged, and there are no grant or RLS changes. Completion impact: none.
+
+**Implemented — client feedback batch, PR 3: analytics calendar range and
+filters** (2026-11-15; [PR #346](https://github.com/brollysolutions/client1/pull/346), mirror vamshisaideep9/client1#50, open for review), branch
+`feat/analytics-date-range-filters` stacked on PR 2.
+
+API, `GET /me/analytics`:
+- Accepts `date_from`/`date_to`: inclusive IST dates, 422 when only one is
+  sent, reversed, in the future, or longer than 366 days. The legacy `days`
+  is still accepted.
+- The response adds `date_from`, `date_to` and `bucket`. Points are per day up
+  to 92 days, then per Monday-start week.
+- The effective business line (X-Business-Line, validated against the token)
+  is applied explicitly to every query.
+- Role filters: `call_status`, `interest`, `loan_status`, `lead_source`
+  (Telecaller); `task_type` (Employee); `lead_status` (Agent). A filter for
+  another role returns 422.
+
+API, Admin reports:
+- `ReportFilters` adds lead source, telecaller, latest call outcome/interest
+  (correlated latest-activity subquery), lead status, loan status/type/bank,
+  and deal status/property city/category (join on `properties`).
+- CSV/XLSX exports carry the same filters.
+- New `GET /admin/reports/telecallers` (platform Admin only).
+- Contracts regenerated.
+
+Web:
+- `components/ui/calendar.tsx` (react-day-picker 10.0.2, styled with tokens,
+  no stylesheet).
+- `features/analytics/date-range-picker.tsx` and `lib/analytics-range.ts`
+  (IST presets, validation, labels).
+- `StaffAnalyticsFilterBar` replaces the 7/30/90 toggle; its business-line
+  control switches the dashboard line.
+- `ReportFilterBar` uses the picker and per-report filters.
+
+Evidence (2026-11-15), API on the isolated `app_feedback` DB:
+- `test_staff_analytics_api.py`, `test_reporting_api.py`,
+  `test_reporting_service.py`, `test_reporting_rls.py`: 50 passed, including
+  new tests for range, weekly bucketing, 422s, role filters, the line switch,
+  every report filter, export filters and Telecaller options.
+- ruff is clean.
+
+Evidence, web:
+- lint and typecheck pass; Vitest 127 files / 879 tests pass (new
+  `analytics-range.test.ts`).
+- Playwright `staff-analytics.spec.ts` (updated for the picker and filters)
+  plus new `admin-analytics-filters.spec.ts`: 5 passed. Screenshots reviewed.
+- `pnpm audit --prod`: 0 advisories.
+- `pnpm build`: compiled and generated 111/111 pages, then stopped at the
+  known Windows standalone symlink EPERM.
+
+Completion impact: none (client feedback).
+
+**Implemented — client feedback batch, PR 2: lead filters and "referred by"**
+(2026-11-15; [PR #345](https://github.com/brollysolutions/client1/pull/345), mirror vamshisaideep9/client1#49, open for review), branch `feat/lead-filters-referrer` stacked on
+PR 1.
+
+API:
+- Migration `f3a5c7e9b1d2` (one head) adds `lead_list_signals(uuid[])`:
+  SECURITY DEFINER, `search_path` pinned, EXECUTE only for `api_user`, 1000-id
+  cap.
+  - It re-checks role (Telecaller/Employee), staff profile, business line and
+    assignment (Telecaller assigned, or Employee holding/raising a task).
+  - It returns only the client referral code and the latest call's
+    disposition/interest. A Telecaller sees only calls they logged; an
+    Employee sees the lead's latest call by anyone.
+  - No table, grant or policy changes.
+- `services/lead_signals.py` gathers that plus the Agent code (`agent_profiles`
+  RLS) and loan statuses (`loan_applications` RLS) in three queries per page.
+- `TelecallerLeadRead`/detail add `last_interest_level`, `loan_statuses` and
+  `referrer`. `EmployeeTaskRead` adds the `lead_*` equivalents (list, detail,
+  patch, reopen).
+- `status_filter` is an enum (422 on bad input).
+- New field-visibility entries: Telecaller/Employee `lead.referrer` ("Referred
+  by (ID)", default allow).
+- Contracts regenerated.
+
+Web:
+- Shared `lead-signal-filters.ts` and `lead-signal-filter-fields.tsx` on the
+  Telecaller Leads list and the Employee Tasks list (loan status hidden on Real
+  Estate).
+- "Referred by" on list rows, the lead detail page and the task detail page
+  (plus last call, interest and loan status).
+
+Evidence (2026-11-15), API on an isolated `app_feedback` DB migrated from
+scratch:
+- `test_lead_list_signals_rls.py`: 11 passed.
+- Telecaller, Employee and schema suites: 95 passed, including new
+  referrer/interest/loan-status, client-referral, 422 and Admin-hides-referrer
+  tests.
+- Wider lead/RLS/visibility/system sweep: 282 passed and 2 failed. Both
+  failures exist before this branch: `test_single_alembic_head_includes_this_revision`
+  pins an old head, and the classification contract lacks
+  `agent_payout_details`.
+- `alembic downgrade -1` / `upgrade head` round trip passes; ruff is clean.
+
+Evidence, web:
+- lint and typecheck pass; Vitest 126 files / 868 tests pass.
+- Playwright `lead-signal-filters.spec.ts` (3) plus the existing telecaller and
+  staff specs (23) pass against `pnpm dev`. Screenshot reviewed.
+
+Security review: no blocking finding. The deliberate widening is Employees
+seeing the latest call outcome/interest enum on leads they hold a task for.
+
+Completion impact: none (client feedback).
+
+**Implemented — client feedback batch, PR 1: ticker, tablet navigation, banner
+video length, optional amenities** (2026-11-15; [PR #344](https://github.com/brollysolutions/client1/pull/344), mirror vamshisaideep9/client1#48, open for review), branch
+`feat/public-feedback-batch` from `upstream/main` `06b5ae2`.
+
+Web:
+- `AnnouncementBanner` renders one static line on `/loans*` and
+  `/real-estate*`. On every other page it renders a right-to-left ticker of
+  labelled segments, each with its own icon and chip (`TRUST_LINES` gains
+  `kind` and `label`).
+- The public header shows the links from `md` on a second row (between `md`
+  and `xl`). `--site-header-h` is scoped to `.public-site`, so shared property
+  rows under the dashboard keep their 4rem offset.
+- `AppShell` shows the rail from `md`, collapsed until `lg` (new
+  `useMediaQuery`).
+- The artwork dialog rejects videos over 60s before upload.
+- The project amenities description is optional, and blank is sent as null.
+
+API:
+- `BANNER_VIDEO_MAX_DURATION_SECONDS` raised from 30 to 60.
+- Video confirm failures return a video-specific 422.
+- `ProjectResidenceDetails.amenities_description` is optional, with no
+  minimum.
+- Contracts regenerated: one field becomes optional.
+
+Evidence (2026-11-15, this worktree):
+- Web: lint and typecheck pass; Vitest 125 files / 859 tests pass.
+- Playwright against `pnpm dev`:
+  - The new `tablet-navigation.spec.ts` passes 10/10. It covers 768, 820 and
+    1024 on public and dashboard (collapsed rail, no menu button, no
+    horizontal scroll), the phone fallback, ticker right-to-left movement and
+    the static single lines. Screenshots were reviewed.
+  - In the affected specs (sidebar layout/chrome, service directory, brand,
+    property form, dashboard refinement), every failure also fails on an
+    untouched `upstream/main` checkout under the same no-API dev setup. The
+    branch adds no failure.
+- `pnpm build`: compiled, type-checked and generated 111/111 pages, then
+  stopped at the known Windows standalone symlink EPERM.
+- API:
+  - ruff check and format are clean.
+  - Targeted suites in Docker: 224 passed and 6 failed. One failure was a new
+    test's own fixture, fixed and re-run on the host (schema suite 75 passed).
+    The other five are in developer-name, public properties and public
+    banners: catalogue caps/fields that share the local DB noted under CS-018.
+
+Not run: the five API failures on `upstream/main` (the Docker engine stopped
+mid-session), and the full `mobile-layout.spec.ts` route sweep. Completion
+impact: none (client feedback, no SRS requirement change).
+
+**Implemented — property listing form refinements (CS-018)** (2026-11-14; open
+for review), branch `feat/property-form-refinements` stacked on PR #342.
+- API: `ProjectResidenceDetails` adds `unit_or_plot_area_max_sqft` and
+  `uds_area_from`/`uds_area_to`/`uds_area_unit` (ordered-range validation;
+  legacy `uds_sqft` still validates), `2_5_bhk`/`3_5_bhk`, and replaces the
+  digit ban with a 7+-digit (separator-tolerant) rule. Property media accept
+  `image/avif` (sniffed by its `ftyp avif/avis` brand, re-encoded by Pillow);
+  360 images accept JPEG/PNG/WebP/AVIF, up to 10 per listing, minimum
+  1024 x 512; a failing panorama returns a specific 422. Presign limit 36 → 66
+  per hour; media positions up to 21.
+- Migration `c7e9a1b3d5f7` (one head): content-type checks on
+  `property_submission_media` and `property_media`, position bounds 21/19, and a
+  `enforce_max_listing_panoramas` trigger replacing the one-panorama unique
+  indexes. Downgrade refuses while incompatible rows exist. No grant/RLS change.
+- Web: form fields, labels, ranges, approval dropdown, conditional RERA number,
+  common-amenity chips, Description section above media, multi-panorama upload
+  with a browser 2:1/size pre-check, AVIF accept lists, display rows
+  (`lib/property-details.ts`) and media summaries.
+- Evidence: API property/media/sniff suites pass (164) plus new DB constraint
+  tests (10th panorama allowed, 11th refused on both tables; AVIF/PNG
+  accepted; unknown type refused); the downgrade guard refused correctly with
+  test rows present; ruff clean; contracts regenerated. Web: lint, typecheck,
+  unit 123 files / 845 tests; new Playwright spec
+  `property-form-refinements.spec.ts` passes against `pnpm dev` (screenshot
+  reviewed). AVIF encode/decode verified on the dev API's Alpine runtime.
+  Locally `test_developer_name_is_published…` fails only because the shared
+  local DB holds 270 active apartments against the public 12-per-category cap.
+  Not run: a full downgrade/upgrade cycle on a clean database. Completion
+  impact: none.
+
+**Implemented — agent listing submit "Input should be greater than 0"**
+(2026-11-14; open for review), branch `fix/property-submit-price` from
+`upstream/main` `0ae41c0`. Reproduced against the local API: a project listing
+with Undivided share 0 returns 422 "Input should be greater than 0" at
+`structured_details.project_residence.uds_sqft`, which the web showed only as an
+unnamed toast. `lib/property-submit.ts` now rejects an entered UDS that is not a
+whole number above 0, checks every whole-number field (unit/built-up/total/plot
+area, towers, units, floors, plots, minimum lease) with the same integer parse
+used to build the payload, and checks rupee amounts after paise rounding.
+`submissionIssuesToFieldErrors` maps API 422 paths (including tagged
+`structured_details.<variant>.<field>`) onto form fields, and
+`use-submit-property.ts` shows them inline with "Please fix the highlighted
+fields." Evidence: the three new validation tests failed before the fix and
+pass after; mapping tests added; `pnpm lint`, `pnpm typecheck`, `pnpm test`
+(121 files / 831 tests) pass. Not run: a browser walkthrough of the full listing
+form (needs real image uploads). Completion impact: none.
+
+**Implemented — "Submitted on" for enquiries and site visits** (2026-11-14;
+open for review), branch `fix/request-submitted-labels` from `upstream/main`
+`bd49ff2`. Visibility confirmed on the local API before the change: a client's
+new enquiry and site visit appear on the assigned Telecaller's lead page and as
+the newest rows in Admin Operations; another Real Estate Telecaller gets 404 and
+a Real Estate Agent sees neither. Change: `telecaller-request-details.tsx`
+("Enquired"/"Scheduled" → "Submitted on", listed before "Visit on") and
+`operational-records-view.tsx` (enquiry "Created" and site-visit "Requested" →
+"Submitted on", first field; "Preferred slot" → "Visit on"). Evidence: new
+unit tests for both Admin records; new Playwright spec
+`request-submitted-on.spec.ts` passes against `pnpm dev` with a mocked API
+(screenshot reviewed); `pnpm lint`, `pnpm typecheck` and `pnpm test` (121 files /
+826 tests) pass. Completion impact: none.
+
+**Implemented — security audit fixes, PR 5/5: agent KYC canonical copies**
+(2026-11-14; merged as PR #340, mirror #44 open), branch `security/agent-kyc-canonical-copy`
+stacked on PR 4. Audit finding #6 (dev storage: the same presigned policy
+accepted an overwrite of a verified PDF with HTML bytes, 201). Submit verifies
+size and sniffs the real type (`storage.sniffed_content_type`; JPEG/PNG/WebP/
+PDF only, so MP4 bytes are refused), then `media_processing.canonicalize_object`
+writes each document once to `agent-applications/canonical/{jti}/{hex}-{doc}`
+(ClamAV for PDFs, Pillow re-encode without metadata for images, in the shared
+bounded media slot). The row stores only canonical keys; staged uploads are
+deleted after commit. Malware or an unusable image returns 422 and removes the
+attempted copies and staged uploads; scanner/storage unavailability returns
+502, keeps the staged uploads and does not burn the ticket; a lost ticket race
+or failed DB write removes the copies. Canonical keys sit outside every
+ticket's claimable prefix and inside the orphan-purge prefix. Evidence: intake,
+storage-sniff, application RLS, business-line immutability and Admin agent
+suites 79 passed (new tests: canonical storage and cleanup, per-document type
+pass-through, MP4 refusal, malware, scanner outage with same-ticket retry,
+forged canonical key); ruff clean; OpenAPI unchanged. Not run: an end-to-end
+upload against real object storage for this branch (dev runs `main`).
+Completion impact: none.
+
+**Implemented — security audit fixes, PR 4/5: sanction and disbursal need
+terms** (2026-11-14; merged as PR #339, mirror #43 open), branch `fix/loan-sanction-terms-required`
+stacked on PR 3. Audit finding #5 (live probe: `new` → `disbursed` with no
+terms returned 200). `services/loan_applications.py` raises
+`SanctionTermsRequired` (422 "Add the sanctioned amount and bank before marking
+the loan sanctioned or disbursed.") when a status change lands on `sanctioned`
+or `disbursed` without `amount_sanctioned` and a bank; the Telecaller and Admin
+routes map it. Web: `LoanProgressForm` opens the terms block for a forward move
+to "submitted to bank" or later, `validateLoanProgressTerms` gains `bankId` and
+`requireSanctionTerms`, and the bank select carries an inline error. Evidence:
+new parametrized API tests (no terms / amount only / bank only × sanctioned /
+disbursed; nothing changes, `disbursed_at` stays NULL), same-update and
+saved-terms success paths and the Admin route; they fail 7/7 with the rule
+disabled. Loan progress 32 passed; loan progress, referral conversion, loan
+config, commission, fee cashback, agent earnings, reporting, telecaller and
+payout-link suites 233 passed plus 6 corrected new-test cases; one
+`test_reporting_service.py` case failed once in the combined run and passed in
+two isolated reruns (order-dependent, untouched). Web: lint, typecheck, unit
+121 files / 824 tests; new Playwright spec `loan-sanction-terms.spec.ts` passes
+against `pnpm dev` with mocked API (screenshot reviewed). OpenAPI unchanged.
+Completion impact: none.
+
+**Implemented — security audit fixes, PR 3/5: payout reject race**
+(2026-11-14; merged as PR #338, mirror #42 open), branch `fix/payout-reject-race` stacked on PR 2.
+Audit finding #4. `services/payments.py::reject_payout` now loads the payout
+with `SELECT … FOR UPDATE`; `approve_payout`'s conditional UPDATE waits on that
+lock and returns `PayoutStateError` (409) once the row is rejected, and a
+reject after approval sees the advanced status and returns 409. New tests:
+`test_concurrent_approve_and_reject_have_exactly_one_winner` (8 racing rounds;
+exactly one 200 and one 409, stored status/checker/rejector/ledger match the
+winner) and `test_reject_after_approval_conflicts_and_keeps_paid`. Evidence:
+with the lock temporarily removed the race test fails (`[200, 200]`); with it,
+payout, commission-payout, cashback-payout, referral-admin and payout-RLS
+suites pass (110); ruff check/format clean. Completion impact: none.
+
+**Implemented — security audit fixes, PR 2/5: enquiry and site-visit
+scoping** (2026-11-14; merged as PR #337, mirror #41 open), branch
+`security/re-enquiry-visit-scope` stacked on PR 1. Audit finding #3 (live
+probe: a Real Estate Agent token listed 81/81 enquiries and 128/128 site
+visits). `GET /enquiries` and `GET /site-visits` filter on
+`user_uuid = caller`; migration `b4d6f8a0c2e3` (additive policy replacement,
+one head) removes `agent` from both policies' line-staff role list, with the
+admin, owner and telecaller/employee/sub_admin branches unchanged. Tests:
+`test_enquiries_rls.py` / `test_site_visits_rls.py` now assert an Agent sees
+nothing; new parametrized API tests assert Telecaller/Employee/Agent tokens
+never see another client's rows. Evidence: migration downgrade/upgrade with
+live `pg_policies` inspection each way, `alembic heads` = `b4d6f8a0c2e3`;
+enquiry/site-visit API+RLS 52 passed; telecaller, vehicle-arrangement,
+property-deal and Admin coverage-contract suites 76 passed; ruff check/format
+clean (542 files); exported OpenAPI identical to the committed contract.
+Completion impact: none (security hardening).
+
+**Implemented — security audit fixes, PR 1/5: Next.js 15.5.28** (2026-11-14;
+merged as PR #336, mirror #40 open), branch `security/nextjs-15-5-patch` from `upstream/main`
+`12a2aec`. Audit finding #2: `pnpm audit --prod` reported one critical
+(GHSA-2464-fhr4-w9xw, image-optimizer RCE with SVGs) and one high
+(GHSA-p3m5-59mp-jv5r, Server Actions DoS) advisory for `next` 15.5.27, patched
+in 15.5.28. `next` and `eslint-config-next` now resolve to 15.5.28 (`^15.5.28`
+ranges, lockfile pinned); no other package changed. No product behavior or
+API contract change. Evidence: `pnpm audit --prod` reports no known
+vulnerabilities; `pnpm lint` and `pnpm typecheck` pass; `pnpm test` 121 files /
+822 tests pass; `pnpm build` in a clean `node:22-alpine` container (host build hits the known Windows standalone-symlink EPERM) compiles Next.js 15.5.28 and generates 111/111 pages, exit 0. Completion impact: none (security maintenance).
+
+**Implemented — stale Agent lead test fixtures** (2026-11-14; PR #335, mirror #39, open for review), branch
+`fix/agent-lead-stale-tests` stacked on PR #334. Six tests in
+`test_agent_api.py` and `test_lead_detail_ownership_api.py` posted Agent
+`requirement` keys (`k`, `injected`, `message`, `product`, `page`) that the
+allow-list added in `4d2acf0` rejects with 422. Request payloads now use the
+allowed `notes` key; the retry test seeds its system-owned `product` in the
+database; the claim test asserts the public message stays unclaimed. Test-only;
+the allow-list is unchanged. Evidence: the 6 pass; both files 37 passed; ruff
+clean. Recommended: Opus 5.5 / medium (test-only).
+
+**Implemented — agent dashboard refinements** (2026-11-14; PR #334, mirror #38, open for review), branch
+`feat/agent-dashboard-refinements` from `upstream/main` `a927f60`. Lead name
+required; expiry policy copy, same-Agent Resubmit and 7-day reminder;
+encrypted Agent bank/UPI payout details; "Hi <name>" Agent home; 5 MB
+image/document upload limits. Decision record: CS-017 in
+`current-implementation-state.md`.
+- Name: `AgentLeadCreate.name` is required (trimmed, 1-100); an Agent PATCH
+  cannot clear it. The introduce form marks it required with an inline error.
+- Expiry: migration `f8a0c2e4b6d1` replaces
+  `enforce_agent_lead_expiry_immutable` so the expiry columns may be reset only
+  when the service sets `app.agent_lead_resubmit`, the originating Agent,
+  mobile and line are unchanged, the client is unregistered, the lead is not
+  converted/closed, the new deadline is in the future and `resubmit_count`
+  advances by one. The cross-Agent no-reset trigger is unchanged.
+  `POST /agent/leads/{id}/resubmit` (409 when ineligible) keeps any current
+  Telecaller assignment and re-offers an unassigned lead to auto-assignment.
+  `AgentLeadRead.resubmittable`. Hourly `remind_agent_lead_expiry` job sends one
+  reminder per window with 7 days left when the client hasn't registered.
+  Agents see the 30-day policy instead of a day countdown.
+- Payout details: migration `a1b3d5f7c9e2` adds `agent_payout_details`
+  (AES-256-GCM blobs bound to the Agent profile and field, masked hints,
+  owner-only RLS, `erase_agent_payout_details` SECURITY DEFINER for account
+  erasure). New setting `PAYOUT_DETAILS_ENCRYPTION_KEY` (base64 32 bytes; dev
+  fallback key only when `ENV=development`; elsewhere the feature answers 503).
+  `GET/PUT/DELETE /agent/payout-details` return hints only;
+  `GET /payouts/recipients/{user}/saved-destination` and
+  `/payouts/agents/{profile}/saved-destination` decrypt for a payout maker,
+  refuse self, audit every reveal and send `Cache-Control: private, no-store`.
+  Settings card for Agents; "Use saved payout details" in the payout and
+  commission dialogs. `cryptography` declared explicitly (already locked).
+- Uploads: banner/offer images 2→5 MB, campaign images 4→5 MB, provider logos
+  1→5 MB; video stays 20 MB.
+Evidence (this session): new `test_agent_dashboard_refinements.py` 33 passed;
+affected suites (agent, lead ownership, leads RLS, expiry job, scheduler,
+banners, loan config, campaign media, payouts, delete account, admin coverage,
+RLS coverage, auth leads, auto-assignment, business-line contract, offers)
+298 passed, 1 skipped, 6 failed. The same 6 fail identically on unmodified
+`upstream/main` `a927f60` (requirement keys outside notes/property_id/
+product_slug are rejected with 422); pre-existing, not addressed here.
+Migrations upgrade from base, downgrade -2 and upgrade again on a scratch
+database; one head. Ruff check/format clean. Web: lint, `tsc`, vitest 822
+passed; Playwright `agent-dashboard-refinements.spec.ts` 5 passed (greeting,
+required name, policy + resubmit, masked payout details at 360px, not shown
+to clients).
+
+**Implemented — staff dashboard feedback batch, PR C: personal analytics**
+(2026-11-14; merged as PR #333, mirror #37), branch `feat/staff-analytics`
+stacked on PR B (#332). Item 7.
+- API: `GET /api/v1/me/analytics?days=` (clamped to 7/30/90; 422 outside
+  1-365). Role and every filter come from the session: Telecaller (own calls
+  and assigned leads), Employee (own tasks), Agent (leads they introduced,
+  own commissions), Sub Admin (banners/offers they created). Clients and
+  Admin get 403 (Admin keeps `/dashboard/analytics`). Days are India Standard
+  Time; task completion uses `updated_at` of completed tasks (no completion
+  timestamp exists). Part-to-whole parts come in a fixed category order so a
+  part keeps its color.
+- Web: "My analytics" (`/dashboard/insights`, Insights nav for the four
+  roles): KPI tiles, a day-by-day stacked bar chart (Recharts, lazy-loaded via
+  `next/dynamic`, tooltip, legend, table view), segmented share bars and
+  ranked bars with visible labels, and a funnel with step conversion.
+- Dependency review: `recharts@3.10.1` (MIT, released 2026-07-25, three
+  maintainers, no install scripts) and peer `react-is@19.2.7` (matches the
+  installed React), both pinned exactly; 37 packages added to the lock.
+  `pnpm audit --prod` reports no advisory in that tree; it does report two
+  pre-existing advisories in `next` (GHSA-2464-fhr4-w9xw critical,
+  GHSA-p3m5-59mp-jv5r high) that this change does not touch.
+- Palette: reference categorical slots 1-4 validated with the dataviz
+  validator (all checks pass; two slots under 3:1 on white, so every chart has
+  visible labels or a table view).
+Evidence (this session): `test_staff_analytics_api.py` 5 passed (own data
+only, other people's calls/tasks excluded, range clamp, role gating) plus
+telecaller API 37 passed together; full web vitest 811 passed; lint and `tsc`
+clean; Playwright 26 passed including the new `staff-analytics.spec.ts`
+(figures, chart, legend, table view, period switch, 360px fit, Client
+redirect).
+Recommended: Opus 5.5 / high.
+
+**Implemented — staff dashboard feedback batch, PR B: per-application lead
+workspace** (2026-11-14; PR #332, mirror #36, open for review), branch
+`feat/telecaller-application-workspace` stacked on PR A (#331). Items 1, 4 and 6.
+- Data: migration `e7a9c1b3d5f8` adds nullable `lead_uuid` to `enquiries`
+  and `site_visits` (stamped from `ensure_client_line_lead_for_user`; existing
+  rows backfilled to the same client's Real Estate lead live at creation) and
+  five nullable request links on `lead_activities` with
+  `ck_lead_activities_single_request_link` (at most one). `ON DELETE SET NULL`.
+  No grant or policy change.
+- Why re-applications mixed: a converted lead is reused by
+  `_ensure_client_line_lead` (`status != closed`), so every later application
+  lands on the same lead. Kept that model; the lead page now separates work
+  per request instead.
+- API: Telecaller detail adds `opened_at`, card/insurance requests, property
+  enquiries (with the client's message), site visits and `latest_request`;
+  `loan_type_name` is now the readable label, not the slug. Calls accept an
+  optional `request` (`{kind, id}`) validated against the same lead (422
+  otherwise). New `GET /telecaller/leads/{id}/client-history` returns every
+  journey of that client on the line assigned to the caller, with the
+  caller's own calls. Leads list and home add `latest_request`; Admin
+  `GET /admin/leads/{id}/details` adds `requests` (client shape unchanged).
+- Web: "Applications & requests" cards, per-request workspace (loan pipeline,
+  deal, or details), "About" on the call form, call log scoped to the request
+  with a full-screen filtered log, Client history window, applied times on the
+  leads list, home and Admin lead dialog.
+- Security review: every new read starts from a lead assigned to the caller;
+  client history filters own calls explicitly on top of
+  `lead_activities_rls`. Pre-existing, not changed here: `enquiries_rls` and
+  `site_visits_rls` let any same-line agent, employee, sub admin or telecaller
+  read all enquiries/visits (including contact fields) at the database level.
+  Recommend a separate tightening change.
+Evidence (this session): alembic one head, upgrade/downgrade/upgrade clean on
+the dev DB; affected API suites 291 passed, 5 failed — the same 5 fail on
+clean `upstream/main` (`test_lead_detail_ownership_api` requirement-key
+validation x3, `system/test_cms_activation` x2); telecaller + activity RLS
+36 passed after the review fix; full web vitest 806 passed, lint and
+`tsc` clean; Playwright (mocked API, dev server) 23 passed including the new
+`telecaller-request-workspace.spec.ts` (separate applications, scoped and
+full-screen call log, client history, 360px fit).
+Recommended: Opus 5.5 / high.
+
+**Implemented — staff dashboard feedback batch, PR A: shell quick wins**
+(2026-11-13; merged as PR #331, mirror #35 open), branch
+`feat/staff-shell-quick-wins` from `upstream/main`
+`5d69cde`. Items 2, 3, 5 and 8 of a 9-item telecaller/staff list.
+Requirement coverage unchanged; no migration, RLS or new endpoint.
+- Sidebar: `shell-state.ts` no longer fixes operational roles. Every role
+  has the collapse toggle; staff default expanded and keep their choice in
+  guarded `localStorage`; the Client still starts collapsed each session.
+- Add transaction: `telecaller-add-txn-dialog.tsx` replaces the inline
+  four-column form (bank defaults to the application's bank, date to today,
+  ₹ prefix with exact and compact preview, % suffix, 44px buttons on phones);
+  the history table becomes a card list below `sm`.
+- Assignment toast: `AssignmentToaster` reads the caller's own notification
+  feed (no new API) and shows "N new leads/tasks have been assigned to you"
+  with a View action, once per notification per tab, refreshing every 2
+  minutes and on tab focus through a new silent `refreshNotifications`.
+- Notes: `STAFF_NOTE_MAX_CHARS = 10_000` for call-log notes, field-task notes
+  and Employee task notes (was 1,000 characters, about 170 words); the UI
+  limit is 1,500 words with a live counter and auto-growing field.
+Evidence (this session): telecaller + employee API tests 51 passed in a
+`python:3.13` container on the compose network; ruff check/format clean;
+OpenAPI diff is the three `maxLength` values only (generated TS unchanged);
+full web vitest 802 passed (form-surface registry updated for the new
+dialog and note field), `pnpm lint` and `tsc --noEmit` clean, production
+build passed in a clean `node:22-alpine` container (the Windows host build
+compiles and prerenders 110/110 pages but cannot write the standalone
+symlinks: EPERM); Playwright against the dev server: new
+`staff-shell-quick-wins.spec.ts` (toast, collapse persistence, dialog at
+360/768/1024/1440) plus `sidebar-chrome` and `sidebar-layout` passed.
+Recommended: Opus 5.5 / high.
+
+**Implemented — client feedback batch, PR B: Resale filter and Share / Refer
+links** (2026-11-13; merged as PR #329), branch `feat/resale-share-refer` stacked on PR A. Web
+only, no contract or schema change:
+- Resale: "New or resale" filter (from the existing `structured_details.sale_type`;
+  rent listings never match), an "Age of property" filter (under 5 / 5 to 10 /
+  10+ years) once Resale is chosen, filter chips, and a "Resale" badge on
+  dashboard and public property cards.
+- Share sends the plain public page, with no referral code.
+- Refer sends `/register?ref=CODE&return_to=/dashboard/properties/<id>`.
+  Register keeps a visible "Log in" link carrying the code and destination;
+  Login keeps them on its "Sign up" link and explains invite codes apply to new
+  accounts. An existing number on Register gets a "Log in" action instead of a
+  dead end. The latest link opened wins before sign-up; the captured code is
+  cleared after registering. `return_to` is still limited to `/dashboard`
+  paths by `dashboardReturnTo`; attribution, self-referral and first-claim
+  rules stay server-side and unchanged.
+Recommended: Opus 5.5 / high (auth redirect and referral attribution).
+
+**Implemented — client feedback batch, PR A: dashboard and browse UI fixes**
+(2026-11-13; PR #327, mirror #32, open for review), branch `feat/client-feedback-ui` from `upstream/main`
+`6f60cd8`. One of three stacked PRs for an 11-item client list (A: UI fixes,
+B: Resale filter + share/refer links, C: site-visit reschedule + party size).
+Lease/rent needed no work: `ListingIntent.rent` is already "Rent / Lease";
+card badges now say "For rent / lease" consistently. PR A, web only, no
+contract or schema change:
+- Bookmark/Compare buttons painted over the sticky dashboard header and search
+  bar while scrolling (card overlay `z-20` joined the page stacking order);
+  the card image now isolates its stacking context, and buttons are 44px.
+- Every property subtype (9, grouped Residential / Plots & land / Commercial)
+  on the client Real Estate dashboard home (not the public site, per client).
+  Follow-up fix (2026-11-13, branch `fix/property-type-cards`): the tiles
+  went back to the illustrated ExploreArtCard treatment (per-subtype artwork
+  from `PROPERTY_SUBTYPE_ARTWORK`, one-line description, Explore footer)
+  after the client found the small menu icons looked worse than the old cards.
+- Budget filter: stepped slider to ₹20 Cr+ plus optional digits-only Min/Max
+  rupee fields; filter state is now whole rupees (`budgetMin`/`budgetMax`),
+  old `priceMin`/`priceMax` lakh links still read.
+- Support ticket dialog: compact content-sized panel with status, topic,
+  message and a next-step line (resolution note stays staff-only).
+- Calculators inside the Client and Telecaller dashboards
+  (`/dashboard/calculators`), reusing the public registry and islands.
+- Banner position counter ("2/4") on Home, Financial Services and Properties.
+Recommended: Opus 5.5 / high.
+
+**Implemented — synthetic demo media for every media surface** (2026-11-13;
+merged as PR #326, mirror #31),
+branch `feat/demo-media-seed`. Development seed only; requirement coverage
+unchanged. New `app.scripts.demo_media` generates JPEG artwork per campaign
+surface, property photos and a 4096x2048 seamless equirectangular panorama
+with Pillow. A committed 74 KB synthetic MP4 (8 s, muted, H.264 from the
+media runtime's pinned FFmpeg 8.0.1) is the banner video. `seed_demo` adds
+idempotent, fixed-id rows: 6 artwork assets, 1 banner video asset, 5 LIVE
+banners (3 with video, none on the dashboard or the one-slot sponsor
+placement), artwork on the pending banner and the active offer, 3 photos plus
+1 panorama per demo property, 2 photos plus 1 panorama per pending submission,
+and a loan photo (sanitized on confirm) plus a loan video (queued for the
+scheduler/media-runtime pipeline). Unit tests check the generated media
+against the real artwork-spec, panorama, MP4-sniff and banner-placement rules.
+Known product bug found, not fixed here: API containers cannot resolve
+`media-runtime`, so `POST` banner-video uploads fail.
+
+**Implemented — Spaces public reads via per-object ACL** (2026-11-13; merged as
+PR #325, mirror #30), branch
+`fix/spaces-public-object-acl`. On the live dev Space, CORS applied (200) but
+`put_bucket_policy` returned 403 for every policy shape, even with a
+full-access key; `public-read` object ACLs work with the app's limited key.
+New `SPACES_PUBLIC_OBJECT_ACL` (default off; MinIO keeps its bucket policy)
+adds a policy-signed `acl=public-read` to presigned POSTs for `public/` keys
+and `ACL=public-read` to `copy_object`/`put_object_bytes` for `public/`
+destinations; private and look-alike keys never get an ACL.
+`configure_storage` skips the bucket policy in this mode and writes its
+probes through `storage._public_acl`. Evidence: storage/configure/config tests
+101 passed, droplet contract tests 9 passed, API ruff clean. Live droplet
+verification is recorded on the PR.
+
+**Implemented — DigitalOcean Spaces object storage for dev and production**
+(2026-11-13; merged as PR #324, mirror #29), branch `feat/spaces-object-storage`. Infra, API tooling and docs;
+requirement coverage unchanged; no upload-flow, schema, RLS or contract change.
+Recommended: Opus 5.5 / high. The dev droplet overlay now requires every
+`SPACES_*` value from `.env`, clears dev's `localhost:9000` public endpoint and
+passes the Space origin to web as `NEXT_PUBLIC_ASSET_HOST` (credentials reach
+only api and scheduler; MinIO stays profile-disabled). New
+`app.scripts.configure_storage` applies an exact-origin CORS rule and a
+`public/*`-only `s3:GetObject` policy, then probes anonymously: listing,
+private and `public`-look-alike objects denied, `public/` readable, untrusted
+origin refused; it emits the production evidence booleans. Outside development
+`SPACES_PUBLIC_ENDPOINT_URL` must also be https. Dev and production runbooks
+document Space creation, limited keys and the full-access fallback for
+`--apply`. Verified: boto3 1.43 presigns path-style on the regional endpoint;
+targeted API tests 90/90 in a `python:3.13` container on the compose network;
+droplet contract tests 9 passed (35 subtests); full API ruff check/format pass
+(526 files); rendered droplet compose shows correct env per service and fails
+on a missing `SPACES_*`. Full API pytest suite was still running at commit
+time with 5 failures in files this change does not touch; result is recorded
+on the PR. Live droplet rollout (`configure_storage --apply --verify`, demo
+media, browser upload) follows the PR.
+
+**Implemented — loan-page content and insurance unpublish** (2026-11-12; merged as PR #322),
+branch `feat/loan-pages-content-insurance-unpublish`, stack 4 of 4 on
+`feat/seo-titles-homepage-copy`. API data migration plus web; requirement
+coverage unchanged. Recommended: Opus 5.5 / high (xhigh for the migration
+review). Additive data-only migration `d4f6a8c0e2b5` (single head) writes the
+client-approved Home Loan and Personal Loan summary, description, highlights,
+eligibility, documents and FAQ only where the untouched 73f4c2a91d6e seed copy
+remains, so Admin edits survive; it unpublishes the four insurance products and
+clears `homepage_featured` with them (`ck_loan_types_homepage_featured_is_public`).
+No DDL, grant, RLS or contract change. Web: `FINANCIAL_SERVICE_SEO` gives the
+16 catalogue slugs their supplied title, description and H1 (label/summary
+fallback); `FINANCIAL_SERVICE_SECTIONS` renders the drafted RBI LTV table,
+rate factors, borrowing limits and steps for Home and Personal Loan; loan
+Service schema is scoped to Hyderabad and Telangana. Evidence: API tests in a
+`python:3.13` container on the compose network (the API image's pinned Alpine
+packages no longer resolve) 31 passed, 0 skipped, including the TEMP-table
+migration test (seed rows updated, Admin-edited rows untouched, idempotent,
+insurance unpublished and unfeatured, downgrade restores); API ruff check and
+format pass; `alembic heads` = `d4f6a8c0e2b5`; web loan-page and metadata
+tests 55/55, typecheck and lint pass.
+
+**Implemented — public titles, H1s, meta and homepage copy** (2026-11-12;
+[PR #321](https://github.com/brollysolutions/client1/pull/321), mirror
+vamshisaideep9/client1#26), branch `feat/seo-titles-homepage-copy`, stack 3 of 4 on
+`feat/client-facts-copy-seo`. Web only; requirement coverage unchanged.
+Recommended: Opus 5.5 / high. The supplied titles, H1s and meta descriptions
+(sheet v2) are applied to 13 static public pages and 18 calculators;
+compound-interest gets a shortened branded title. Calculator pages keep
+appending `| Dhanadhara`; every rendered title is unique and at most 60
+characters. Home gets a visible H1 intro band, the drafted loans/property bands,
+a 4-step "How it works", partner copy and 5 FAQs; insurance wording leaves Home,
+`/loans` and the fallback hero; property copy says title documents are
+reviewed and recommends the buyer's own lawyer. "Cookie Notice" becomes
+"Cookie Policy". Privacy and Terms keep their proper-noun H1s.
+
+**Implemented — client facts and About page** (2026-11-12;
+[PR #320](https://github.com/brollysolutions/client1/pull/320), mirror
+vamshisaideep9/client1#25), branch
+`feat/client-facts-copy-seo`, stack 2 of 4 on `feat/brand-logo-sidebar-trust-lines`.
+Web only; requirement coverage unchanged. Recommended: Opus 5.5 / high. Contact
+defaults are now the client-confirmed public details (+91 90100 53010,
+dhanadhara@gmail.com, Monday to Saturday 10 AM to 6 PM with Sunday closed, APHB
+Colony, Vikarabad); env overrides and the production guard remain, and the
+guard now pins the retired sample number rather than the default.
+`BUSINESS_FACTS` (proprietorship of R Rohini, Udyam UDYAM-TS-28-0042986, 2026,
+5 advisors, English/Hindi/Telugu) feeds the footer, a new `/about` page
+(sitemap and footer link) and a FinancialService node on Home and About built by
+`organizationJsonLd()`; JSON-LD is escaped with `jsonLdScript`. Stacks 3-4:
+titles/H1/meta and homepage copy, then loan-page content and insurance unpublish.
+Evidence: targeted Vitest 17/17 (site, organization/About, footer, footer links),
+typecheck and lint pass; full Vitest on `7652f33` was 751/752, the one failure
+being the missing `/about` loading-fallback registration, now added
+(loading coverage 20/20).
+
+**Implemented — brand chrome: original logo, caption, white sidebar, trust
+lines** (2026-11-12; [PR #319](https://github.com/brollysolutions/client1/pull/319),
+mirror vamshisaideep9/client1#24), branch `feat/brand-logo-sidebar-trust-lines` from
+`upstream/main` `07cf748`. Web only (plus the email logo height); requirement
+coverage unchanged. Recommended: Opus 5.5 / high. Generated lockups carry a
+"Wealth & Growth" caption (960x232 horizontal, 960x930 stacked); every white
+logo treatment is gone (dark themes still lighten the artwork); the dashboard
+rail is #FFFFFF with navy text and the dark theme keeps its navy rail; action
+hover no longer aliases the rail token; the footer is light; the trust banner
+is a left-to-right ticker showing the lender line on `/loans*`, a property line
+on `/real-estate*` and both elsewhere. Evidence (2026-11-12): web lint and
+typecheck pass; Vitest 744/745 with one unrelated banner-asset timeout under
+load that passes alone (5/5); API brand tests 8/8; production build passes in
+a clean worktree with `output: "standalone"` disabled there only (Windows
+symlink EPERM); affected e2e against that build surfaced stale navy-rail
+assertions and a dark footer/closer colour clash, both fixed.
+
+**Implemented — development seed expansion and lender policy catalogue**
+(2026-11-12), branch `feat/dev-seed-roster-lender-policy` from `upstream/main`
+`07cf748`; [PR #318](https://github.com/brollysolutions/client1/pull/318) (mirror vamshisaideep9/client1#23), merged as `1cead74`. Development-only seed scripts; requirement coverage unchanged and no
+API, schema, permission or contract change. `seed_dev_roster` adds 14 role
+accounts (2 Clients; 2 Agents, Telecallers and Employees per line) with
+one-time generated passwords and 10 published listings. `seed_lender_policy`
+replaces the development provider catalogue with 303 offers from 136 providers
+transcribed from the user's `Bank loan policy.xlsx` (as of 2026-08-31),
+dry-run by default, preserving credit-card/life-insurance offers and any
+provider a loan application references. Evidence: see the change log row in
+`implementation-plan.md` dated 2026-11-12.
+
+**Delivered — 2026-11-11 product batch** via
+[PR #317](https://github.com/brollysolutions/client1/pull/317), merged as
+`07cf748`. Original record:
+
+**Public UI quick wins** (2026-11-11), branch
+`feat/public-ui-quick-wins` from `upstream/main` `966c48b`; stack 1 of 6 for
+the 2026-11-11 product batch. Web only; requirement coverage unchanged.
+The Compound Interest island is registered as a calculator form surface.
+Stack 2, `feat/share-refer-links`: Share and Refer on public and dashboard
+property cards, property detail, provider offers and loan service pages; shared
+links carry the signed-in client's own `?ref=` code (cached after login, cleared
+on logout), public pages remember an incoming code for the session, and
+registration falls back to it. Regression test proves a second transaction by an
+already-rewarded referred person pays nothing; the list labels earned and paid
+referrals as closed. No API, schema or contract change.
+Stack 3, `feat/property-developer-suggestions`: additive migration
+`b7d9f1a3c5e2` adds nullable `developer_name` to `properties` and
+`property_submissions` (table-wide grants and row-level RLS unchanged) with a
+lower-case index; submit/edit forms, approval copy, authenticated and public
+reads, regenerated contracts, a Developer facet plus a name field in the Filters
+sheet, a Developers suggestion group and search haystack. Home shows "Suggested
+for you" from the public catalog ranked against locally cached bookmark ids
+(ids only, session-hint gated, cleared on logout).
+Stack 4, `feat/referral-lead-detail`: each client referral row opens a detail
+dialog with what converted (listing title/location/type or loan product label
+only, resolved through a bypass read constrained to the caller's RLS-visible
+rows), a one-time lifecycle timeline and the referrer's own bonus. Agents pick
+a published property (real estate) or active product (loans) in Introduce Lead
+and confirm it from a details-and-fees popup; the API validates the key set,
+existence and business line, rejects client-supplied titles, and snapshots
+`interest_title` for the Agent and telecaller views. No migration. The product
+picker relies on the API's active-product filter (fixes a type error).
+The interest picker is registered as a mutation form surface.
+Stack 5, `feat/banner-video`: additive migration `c3e5a7b9d1f4` adds
+`youtube_video_id` (11-character id, pattern-checked), `video_media_asset_id`
+(RESTRICT) and `video_key` (canonical public MP4 key) to `banners`, with
+single-source and public-placement-only checks, and the `banner_video` Media
+Library usage type. MP4 uploads (20 MB, 30 s) go through the existing scan +
+isolated transcode + rescan pipeline. Home, Financial Services, Properties and
+sponsor banners render a click-to-play youtube-nocookie facade or a muted MP4
+loop with a pause control, reduced-motion/Save-Data handling and carousel
+autoplay hold. CSP adds only `frame-src https://www.youtube-nocookie.com` and
+`img-src https://i.ytimg.com`. Video changes follow the existing draft and
+maker-checker approval flow.
+Delivery (2026-11-11): only stack 1 reached `main` (#310); #311-#315 merged into
+their parent stack branches. The owner withdrew the glass finish, so
+`feat/land-batch-no-glass` lands stacks 2-5 on `main` together with the public
+navbar no-wrap fix (1280-1535 px) and the wider callback dialog (42rem); #316
+and mirror #21 (which carried glass) are superseded.
+#316 was nevertheless merged into `main` with the glass finish; this branch
+merges `main` with the `ours` strategy, so landing it removes all glass styling
+(backdrop, glass cards, buttons, dropdowns, body marker, Button data hooks) while
+keeping the batch features. The sticky property search bar is solid as well.
+
+**Implemented — development droplet deployment overlay** (2026-11-02),
+branch `chore/dev-droplet-deployment` from `upstream/main` `16d9e14`;
+[PR #309](https://github.com/brollysolutions/client1/pull/309).
+`infra/dev-droplet/` runs the existing development stack on one DigitalOcean
+droplet: PostgreSQL, Redis and PgBouncer publish no host port; API and web
+bind only to `127.0.0.1` behind host Caddy; credentials are freshly
+generated by `init-env.sh` (which refuses to overwrite or accept allow-all
+ranges) and Compose fails closed when one is missing; both API processes get
+the same HTTPS CORS/origin and trusted-proxy settings; every long-running
+service restarts after reboot. MinIO is disabled on the droplet (user
+decision, 2026-11-03): `minio/minio` and `minio/mc` are no longer published on
+Docker Hub or quay.io, so the first droplet `up` failed to pull them. Uploads,
+managed media and banner images do not work there; database-backed journeys
+do. The local dev stack is unchanged but cannot pull those images on a fresh
+machine either. Caddy answers 403 to clients
+outside the IP allowlist before any proxying, and the droplet checks out only
+`apps/api`, `apps/web`, `apps/media-runtime` and `infra/dev-droplet`. Because
+`ENV=development` returns one-time codes in API responses by design, that
+allowlist is the host's access boundary and the runbook says so. The only
+host is `dev.dhanadhara.com`; the apex and `www` stay reserved for
+production. The runbook's sparse checkout runs
+`init --cone` before `set`: on the real Ubuntu 22.04 droplet, Git 2.34 kept
+non-cone patterns (even with `set --cone`) and dropped the root compose files.
+
+Fresh local evidence: 7 new overlay tests pass, including executing
+`init-env.sh`; the three-file stack renders with Docker Compose 5.4.0 to
+the intended ports, restart policies and environment, and a missing secret
+aborts rendering. Caddy 2.6.2 (Ubuntu 24.04's packaged version) adapts the
+Caddyfile with the 403 rule first on both hosts; this caught and fixed a
+directive-order bypass where `handle` would have run before the allowlist.
+Not verified: a real droplet, DNS, certificate issuance and browser journeys.
+No application, API, schema, contract or dependency change; requirement
+coverage is unchanged. Development data only — production launch gates remain
+NO-GO.
+**Implemented — production audit remediation** (2026-10-12),
+branch `security/production-audit`; [PR #308](https://github.com/brollysolutions/client1/pull/308).
+OTP budgets and consumption are atomic across concurrent verification/resends.
+Payout settlement locks the current row and cannot recreate credit after a
+reversal. SMTP failures no longer log provider-echoed PII. Browser response-body
+failures return the existing unavailable result; server fetch preserves Next's
+dynamic-render signals and defaults to localhost only in development. The media
+CSP permits private video on the configured storage origin. Published runtime
+and development dependency fixes are locked, including Next 15.5.27 and Vitest
+4.1.11. Existing roles, RLS, publication filters and financial contracts remain.
+
+Fresh local evidence: lint/typecheck, 714 web tests, production compilation,
+11 release Chromium tests, the actual-response CSP probe, 208 infrastructure
+tests (one platform skip), API lint/format, fresh migrations, one migration head
+and unchanged OpenAPI pass. OTP and payout concurrency regressions were reproduced
+before remediation and pass afterward. The linked PR records the full API and
+Linux standalone CI results; partial local API runs are not passing evidence.
+Windows standalone output needed a local dependency junction after a symlink
+permission warning. Python's production/full dependency scans and Node's
+production scan are clean. The full Node audit still reports development-only
+`braces@3.0.3` (GHSA-vfj7-8cjw-p6xm), used solely by Next's ESLint glob chain;
+the suggested 3.0.4 is unpublished and no advisory is suppressed.
+
+Requirement coverage is unchanged. Next priority: require the linked CI gates,
+human review and existing production environment/capacity/recovery evidence
+before deployment. No live provider or customer-data operations were performed.
+The self-contained public HTML stays a separate local deliverable; earlier
+upstream #307 and origin #13 are closed unmerged. This task has one upstream PR.
 
 **Implemented — complete static homepage sponsor card** (2026-09-16),
 on `feat/auth-actions-footer`. Replaces the former curtain reveal with an
@@ -4069,6 +6384,16 @@ an estimate of calendar time: a single security-sensitive gap can require more
 work than several completed UI requirements.
 
 ## Current work
+
+**Delivered - dev droplet serves the production web build** via
+[#352](https://github.com/brollysolutions/client1/pull/352) (direct user request; infrastructure only, no
+requirement or completion-percentage change). The droplet's web container ran
+`next dev`, so page-speed results there were not representative. The droplet
+overlay now builds the web production image and Caddy compresses responses.
+Evidence: `scripts/tests/test_dev_droplet.py` (10 tests) passes; deployed
+2026-11-15 at `1454770`; Lighthouse homepage medians (3 runs/device) mobile
+perf 83 / LCP 3.2 s (was 33-53 / ~17 s), desktop perf 100 / LCP 0.69 s; full
+before/after table on PR #352.
 
 **In progress - Admin and Sub Admin dashboard UI overhaul, phase 4 of 9** on
 `claude/20260827-admin-subadmin-ui-foundation` (direct user instruction; no

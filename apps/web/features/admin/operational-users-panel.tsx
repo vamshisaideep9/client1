@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FilterSelect } from "@/features/dashboard/filter-select";
 import {
   DataTable,
   DataTablePrimaryCell,
@@ -39,6 +39,7 @@ import {
 } from "@/lib/admin-users-api";
 
 import { StaffAccountDialog } from "./staff-account-dialog";
+import { AccountRoleBadges } from "@/features/dashboard/role-badge";
 
 const STATUS_TONE: Record<string, StatusTone> = {
   active: "success",
@@ -72,12 +73,6 @@ const ACTIONABLE_STATUSES: readonly string[] = ["active", "suspended"];
 
 function profileLine(line: "loans" | "real_estate"): string {
   return line === "real_estate" ? "Real Estate" : "Loans";
-}
-
-function displayRoles(user: AdminUser): string {
-  return user.roles.length === 0
-    ? "No role"
-    : user.roles.map((role) => role.replaceAll("_", " ")).join(", ");
 }
 
 /**
@@ -198,7 +193,7 @@ export function OperationalUsersPanel({ compact = false }: { compact?: boolean }
     {
       key: "roles",
       header: "Access",
-      render: (user) => <span className="capitalize text-text-secondary">{displayRoles(user)}</span>,
+      render: (user) => <AccountRoleBadges user={user} />,
     },
     {
       key: "client_profiles",
@@ -276,7 +271,7 @@ export function OperationalUsersPanel({ compact = false }: { compact?: boolean }
           searchPlaceholder="Name, mobile, or email"
           statusOptions={STATUS_OPTIONS}
           kindOptions={ROLE_OPTIONS}
-          kindLabel="Roles"
+          kindLabel="Role"
           lineOptions={[
             { value: "loans", label: "Loans" },
             { value: "real_estate", label: "Real Estate" },
@@ -290,19 +285,12 @@ export function OperationalUsersPanel({ compact = false }: { compact?: boolean }
             setLoginFilter("all");
           }}
           extra={
-            <Select value={loginFilter} onValueChange={setLoginFilter}>
-              <SelectTrigger aria-label="Filter by sign-in history">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Any sign-in history</SelectItem>
-                {LOGIN_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FilterSelect
+              label="Sign-in history"
+              value={loginFilter}
+              options={LOGIN_OPTIONS}
+              onValueChange={setLoginFilter}
+            />
           }
         /> : null}
 
@@ -344,6 +332,11 @@ export function OperationalUsersPanel({ compact = false }: { compact?: boolean }
 
       <StaffAccountDialog
         user={openUser}
+        onSpecialtySaved={(profiles) => {
+          const id = openUser?.id;
+          setUsers((current) => current.map((user) => user.id === id ? { ...user, role_profiles: profiles } : user));
+          setOpenUser((current) => current && current.id === id ? { ...current, role_profiles: profiles } : current);
+        }}
         open={openUser !== null}
         onOpenChange={(next) => !next && setOpenUser(null)}
         onStatusAction={beginUpdate}
@@ -353,7 +346,7 @@ export function OperationalUsersPanel({ compact = false }: { compact?: boolean }
       />
 
       <Dialog open={pendingUser !== null} onOpenChange={(open) => !open && setPendingUser(null)}>
-        <DialogContent>
+        <DialogContent preventOutsideClose>
           {pendingUser ? (
             <>
               <DialogHeader>

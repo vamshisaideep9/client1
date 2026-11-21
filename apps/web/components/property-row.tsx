@@ -72,7 +72,7 @@ export function PropertyRow({
   }
 
   return (
-    <section id={id} aria-label={heading} className="w-full scroll-mt-16">
+    <section id={id} aria-label={heading} className="w-full scroll-mt-[var(--site-header-h)]">
       <div className="mx-auto flex max-w-7xl items-end justify-between gap-5 px-4 sm:px-6 lg:px-8">
         <div className="min-w-0">
         <h2 className="font-heading text-2xl font-semibold text-[var(--nav-text)] sm:text-3xl">

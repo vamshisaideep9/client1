@@ -96,6 +96,11 @@ async def _expire_batch(session: AsyncSession) -> list[_ExpiredLead]:
             update(Lead)
             .where(Lead.id == due.c.lead_id)
             .values(
+                # CS-028: remember who held the lead (old row values on the
+                # right-hand side) so a resubmission can go back to them.
+                last_telecaller_profile_uuid=func.coalesce(
+                    Lead.assigned_telecaller_profile_uuid, Lead.last_telecaller_profile_uuid
+                ),
                 assigned_telecaller_profile_uuid=None,
                 status=LeadStatus.RELEASED,
                 released_at=func.now(),

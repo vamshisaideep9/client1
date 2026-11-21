@@ -28,10 +28,10 @@ FR-16 does not ask for.
 
 from __future__ import annotations
 
-import csv
 import io
-from collections.abc import Generator
+from dataclasses import replace
 from datetime import date
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
@@ -54,11 +54,164 @@ from app.schemas.reporting import (
     LoansReportResponse,
     LoansReportRow,
     ReportSummary,
+    ReportTelecallerOption,
     TeamPerformanceSummary,
 )
+from app.schemas.telecaller import PropertySubtypeLiteral
 from app.services import reporting
+from app.services.csv_export import csv_cell as _csv_cell
+from app.services.csv_export import csv_chunks as _csv_chunks
+from app.services.staff_analytics import AMOUNT_LIMIT
 
 router = APIRouter()
+
+
+_CallStatus = Literal[
+    "connected",
+    "no_answer",
+    "busy",
+    "switched_off",
+    "wrong_number",
+    "callback_requested",
+    "not_interested",
+]
+_Interest = Literal["hot", "warm", "cold"]
+_LeadStatus = Literal["new", "assigned", "working", "converted", "closed", "released"]
+_LoanStatus = Literal[
+    "new",
+    "assigned",
+    "contacted",
+    "docs_collected",
+    "submitted_to_bank",
+    "under_review",
+    "sanctioned",
+    "agreement_collected",
+    "agreement_submitted_to_bank",
+    "disbursed",
+    "closed",
+    "rejected",
+    "on_hold",
+]
+_DealStatus = Literal[
+    "new",
+    "contacted",
+    "site_visit_done",
+    "negotiation",
+    "booked",
+    "agreement_signed",
+    "closed",
+    "rejected",
+    "on_hold",
+]
+_PropertyCategory = Literal["houses", "apartments", "villas", "plots", "commercial"]
+_PropertySubtype = PropertySubtypeLiteral
+
+
+def _lead_level(
+    telecaller_profile_uuid: list[UUID] | None = Query(default=None, max_length=50),
+    lead_source: Literal["direct", "agent", "client"] | None = None,
+    call_status: _CallStatus | None = Query(default=None, description="Latest call outcome."),
+    interest: _Interest | None = Query(default=None, description="Latest call interest level."),
+) -> reporting.ReportFilters:
+    return reporting.ReportFilters(
+        telecaller_profile_uuids=tuple(telecaller_profile_uuid or ()),
+        lead_source=lead_source,
+        call_status=call_status,
+        interest=interest,
+    )
+
+
+def _amount_range(
+    amount_min: Decimal | None = Query(
+        default=None,
+        ge=0,
+        le=AMOUNT_LIMIT,
+        description="Rupees: requested loan amount or quoted property price, at least.",
+    ),
+    amount_max: Decimal | None = Query(
+        default=None, ge=0, le=AMOUNT_LIMIT, description="Rupees; see amount_min."
+    ),
+) -> tuple[Decimal | None, Decimal | None]:
+    if amount_min is not None and amount_max is not None and amount_min > amount_max:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="amount_min must not be more than amount_max.",
+        )
+    return amount_min, amount_max
+
+
+def leads_report_filters(
+    base: reporting.ReportFilters = Depends(_lead_level),
+    lead_status: _LeadStatus | None = None,
+    loan_status: _LoanStatus | None = Query(
+        default=None, description="Leads with a loan application in this status."
+    ),
+    loan_type_id: UUID | None = Query(
+        default=None, description="Leads with a loan application for this product."
+    ),
+    bank_id: UUID | None = Query(
+        default=None, description="Leads with a loan application at this bank."
+    ),
+    deal_status: _DealStatus | None = Query(
+        default=None, description="Leads with a property deal in this status."
+    ),
+    property_category: _PropertyCategory | None = Query(
+        default=None, description="Leads with a deal on a property of this category."
+    ),
+    property_subtype: _PropertySubtype | None = Query(
+        default=None, description="Leads with a deal on a property of this subtype."
+    ),
+    amount: tuple[Decimal | None, Decimal | None] = Depends(_amount_range),
+) -> reporting.ReportFilters:
+    """Loan filters must all match one application, property filters one deal."""
+    return replace(
+        base,
+        lead_status=lead_status,
+        loan_status=loan_status,
+        loan_type_id=loan_type_id,
+        bank_id=bank_id,
+        deal_status=deal_status,
+        property_category=property_category,
+        property_subtype=property_subtype,
+        amount_min=amount[0],
+        amount_max=amount[1],
+    )
+
+
+def loans_report_filters(
+    base: reporting.ReportFilters = Depends(_lead_level),
+    loan_status: _LoanStatus | None = None,
+    loan_type_id: UUID | None = None,
+    bank_id: UUID | None = None,
+    amount: tuple[Decimal | None, Decimal | None] = Depends(_amount_range),
+) -> reporting.ReportFilters:
+    return replace(
+        base,
+        loan_status=loan_status,
+        loan_type_id=loan_type_id,
+        bank_id=bank_id,
+        amount_min=amount[0],
+        amount_max=amount[1],
+    )
+
+
+def deals_report_filters(
+    base: reporting.ReportFilters = Depends(_lead_level),
+    deal_status: _DealStatus | None = None,
+    property_city: str | None = Query(default=None, min_length=1, max_length=120),
+    property_category: _PropertyCategory | None = None,
+    property_subtype: _PropertySubtype | None = None,
+    amount: tuple[Decimal | None, Decimal | None] = Depends(_amount_range),
+) -> reporting.ReportFilters:
+    return replace(
+        base,
+        deal_status=deal_status,
+        property_city=property_city,
+        property_category=property_category,
+        property_subtype=property_subtype,
+        amount_min=amount[0],
+        amount_max=amount[1],
+    )
 
 
 def _validate_range(date_from: date, date_to: date) -> None:
@@ -74,36 +227,6 @@ def _map_sort_error(exc: reporting.InvalidSortField) -> HTTPException:
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail=f"Cannot sort by {exc}.",
     )
-
-
-_FORMULA_LEAD_CHARS = ("=", "+", "-", "@", "\t", "\r")
-
-
-def _csv_cell(value: object) -> str:
-    """Defends against CSV/formula injection (OWASP): `agent_name` is free-text
-    supplied by the agent themself at registration, not by the admin who later
-    opens this export. A name starting with =, +, -, @, tab, or CR is opened
-    as a live formula by Excel/Sheets/LibreOffice — prefixing a leading quote
-    forces it to render as inert text instead. Applied to every cell, not
-    just agent_name, since a future column could add another free-text field."""
-    s = str(value)
-    if s and s[0] in _FORMULA_LEAD_CHARS:
-        return "'" + s
-    return s
-
-
-def _csv_chunks(rows: list[dict], header: list[str]) -> Generator[bytes, None, None]:
-    yield "﻿".encode()  # UTF-8 BOM so Excel reads the rupee glyph / non-ASCII names intact
-    buf = io.StringIO()
-    writer = csv.writer(buf)
-    writer.writerow(header)
-    yield buf.getvalue().encode("utf-8")
-
-    for row in rows:
-        buf = io.StringIO()
-        writer = csv.writer(buf)
-        writer.writerow([_csv_cell(row.get(col, "")) for col in header])
-        yield buf.getvalue().encode("utf-8")
 
 
 def _export_filename(
@@ -197,6 +320,7 @@ async def get_leads_report(
     bucket: Literal["week", "month"] = "week",
     business_line: Literal["loans", "real_estate"] | None = None,
     agent_profile_uuid: list[UUID] | None = Query(default=None),
+    report_filters: reporting.ReportFilters = Depends(leads_report_filters),
     sort_by: str | None = None,
     sort_dir: Literal["asc", "desc"] = "desc",
     limit: int = Query(default=50, ge=1, le=500),
@@ -214,6 +338,7 @@ async def get_leads_report(
             bucket=bucket,
             business_line=business_line,
             agent_profile_uuids=agent_profile_uuid,
+            report_filters=report_filters,
             sort_by=sort_by,
             sort_dir=sort_dir,
             limit=limit,
@@ -233,6 +358,7 @@ async def export_leads_report(
     bucket: Literal["week", "month"] = "week",
     business_line: Literal["loans", "real_estate"] | None = None,
     agent_profile_uuid: list[UUID] | None = Query(default=None),
+    report_filters: reporting.ReportFilters = Depends(leads_report_filters),
     current_user: CurrentUser = Depends(get_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
@@ -247,6 +373,7 @@ async def export_leads_report(
             bucket=bucket,
             business_line=business_line,
             agent_profile_uuids=agent_profile_uuid,
+            report_filters=report_filters,
         ),
     )
     return _export_response(
@@ -261,6 +388,7 @@ async def export_leads_report_xlsx(
     bucket: Literal["week", "month"] = "week",
     business_line: Literal["loans", "real_estate"] | None = None,
     agent_profile_uuid: list[UUID] | None = Query(default=None),
+    report_filters: reporting.ReportFilters = Depends(leads_report_filters),
     current_user: CurrentUser = Depends(get_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
@@ -275,6 +403,7 @@ async def export_leads_report_xlsx(
             bucket=bucket,
             business_line=business_line,
             agent_profile_uuids=agent_profile_uuid,
+            report_filters=report_filters,
         ),
     )
     return _xlsx_response(
@@ -297,6 +426,7 @@ async def get_loans_report(
     bucket: Literal["week", "month"] = "week",
     business_line: Literal["loans", "real_estate"] | None = None,
     agent_profile_uuid: list[UUID] | None = Query(default=None),
+    report_filters: reporting.ReportFilters = Depends(loans_report_filters),
     sort_by: str | None = None,
     sort_dir: Literal["asc", "desc"] = "desc",
     limit: int = Query(default=50, ge=1, le=500),
@@ -314,6 +444,7 @@ async def get_loans_report(
             bucket=bucket,
             business_line=business_line,
             agent_profile_uuids=agent_profile_uuid,
+            report_filters=report_filters,
             sort_by=sort_by,
             sort_dir=sort_dir,
             limit=limit,
@@ -333,6 +464,7 @@ async def export_loans_report(
     bucket: Literal["week", "month"] = "week",
     business_line: Literal["loans", "real_estate"] | None = None,
     agent_profile_uuid: list[UUID] | None = Query(default=None),
+    report_filters: reporting.ReportFilters = Depends(loans_report_filters),
     current_user: CurrentUser = Depends(get_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
@@ -347,6 +479,7 @@ async def export_loans_report(
             bucket=bucket,
             business_line=business_line,
             agent_profile_uuids=agent_profile_uuid,
+            report_filters=report_filters,
         ),
     )
     return _export_response(
@@ -361,6 +494,7 @@ async def export_loans_report_xlsx(
     bucket: Literal["week", "month"] = "week",
     business_line: Literal["loans", "real_estate"] | None = None,
     agent_profile_uuid: list[UUID] | None = Query(default=None),
+    report_filters: reporting.ReportFilters = Depends(loans_report_filters),
     current_user: CurrentUser = Depends(get_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
@@ -375,6 +509,7 @@ async def export_loans_report_xlsx(
             bucket=bucket,
             business_line=business_line,
             agent_profile_uuids=agent_profile_uuid,
+            report_filters=report_filters,
         ),
     )
     return _xlsx_response(
@@ -397,6 +532,7 @@ async def get_deals_report(
     bucket: Literal["week", "month"] = "week",
     business_line: Literal["loans", "real_estate"] | None = None,
     agent_profile_uuid: list[UUID] | None = Query(default=None),
+    report_filters: reporting.ReportFilters = Depends(deals_report_filters),
     sort_by: str | None = None,
     sort_dir: Literal["asc", "desc"] = "desc",
     limit: int = Query(default=50, ge=1, le=500),
@@ -414,6 +550,7 @@ async def get_deals_report(
             bucket=bucket,
             business_line=business_line,
             agent_profile_uuids=agent_profile_uuid,
+            report_filters=report_filters,
             sort_by=sort_by,
             sort_dir=sort_dir,
             limit=limit,
@@ -433,6 +570,7 @@ async def export_deals_report(
     bucket: Literal["week", "month"] = "week",
     business_line: Literal["loans", "real_estate"] | None = None,
     agent_profile_uuid: list[UUID] | None = Query(default=None),
+    report_filters: reporting.ReportFilters = Depends(deals_report_filters),
     current_user: CurrentUser = Depends(get_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
@@ -447,6 +585,7 @@ async def export_deals_report(
             bucket=bucket,
             business_line=business_line,
             agent_profile_uuids=agent_profile_uuid,
+            report_filters=report_filters,
         ),
     )
     return _export_response(
@@ -461,6 +600,7 @@ async def export_deals_report_xlsx(
     bucket: Literal["week", "month"] = "week",
     business_line: Literal["loans", "real_estate"] | None = None,
     agent_profile_uuid: list[UUID] | None = Query(default=None),
+    report_filters: reporting.ReportFilters = Depends(deals_report_filters),
     current_user: CurrentUser = Depends(get_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
@@ -475,6 +615,7 @@ async def export_deals_report_xlsx(
             bucket=bucket,
             business_line=business_line,
             agent_profile_uuids=agent_profile_uuid,
+            report_filters=report_filters,
         ),
     )
     return _xlsx_response(
@@ -483,6 +624,23 @@ async def export_deals_report_xlsx(
         truncated,
         _export_filename("deals", business_line, date_from, date_to, "xlsx"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Filter options
+# ---------------------------------------------------------------------------
+
+
+@router.get("/telecallers", response_model=list[ReportTelecallerOption])
+async def list_report_telecallers(
+    business_line: Literal["loans", "real_estate"] | None = None,
+    current_user: CurrentUser = Depends(get_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[ReportTelecallerOption]:
+    """Telecallers for the Analytics "Telecaller" filter (platform Admin only)."""
+    await require_platform_admin(current_user)
+    rows = await reporting.list_telecaller_options(db, business_line)
+    return [ReportTelecallerOption(**row) for row in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -581,4 +739,39 @@ async def export_agents_report_xlsx(
         header,
         truncated,
         _export_filename("agents", business_line, date_from, date_to, "xlsx"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Clients (bulk client-roster PII export)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/clients/export")
+async def export_clients(
+    current_user: CurrentUser = Depends(get_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """Admin-only CSV of every client account across BOTH business lines.
+
+    Unlike the aggregate exports above (counts per bucket, unaudited reads),
+    this streams row-level client contact data, so it is gated by
+    `require_platform_admin` (never role-only `require_admin`: a line-scoped
+    admin must get a real 403, not a silently line-filtered dump) and records
+    an audit entry. See `services/reporting.py::export_client_rows` for the
+    column contract -- id / name / phone / created_at / updated_at, with
+    password_hash deliberately never selected or emitted.
+
+    No date filter: the roster is a point-in-time snapshot of all clients, not
+    a windowed report. All DB work (fetch, audit flush, commit) completes
+    before the StreamingResponse is built, keeping the fetch-then-format
+    invariant this module's docstring describes.
+    """
+    await require_platform_admin(current_user)
+    rows, header, truncated = await reporting.export_client_rows(
+        db, actor_uuid=current_user.id, actor_role=current_user.role
+    )
+    await db.commit()  # persist the audit row recorded by export_client_rows
+    return _export_response(
+        rows, header, truncated, branded_filename(f"clients-{date.today().isoformat()}.csv")
     )

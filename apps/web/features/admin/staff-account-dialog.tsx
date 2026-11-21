@@ -15,7 +15,10 @@ import { formatDate } from "@/lib/format";
 import { formatMobile } from "@/lib/phone";
 import type { AdminUser } from "@/lib/admin-users-api";
 
+import { ContactHistoryButton } from "./contact-history-dialog";
 import { TempCredentialPanel } from "./temp-credential-panel";
+import { AccountRoleBadges, type RoleProfile } from "@/features/dashboard/role-badge";
+import { StaffSpecialtyEditor } from "./staff-specialty-editor";
 
 /** Roles that get a StaffProfile, and therefore a setup link. */
 const STAFF_ROLES: readonly string[] = ["admin", "sub_admin", "telecaller", "employee"];
@@ -60,6 +63,7 @@ export function StaffAccountDialog({
   statusActionLabel,
   statusActionDisabled,
   busy,
+  onSpecialtySaved,
 }: {
   user: AdminUser | null;
   open: boolean;
@@ -68,13 +72,15 @@ export function StaffAccountDialog({
   statusActionLabel: string;
   statusActionDisabled: boolean;
   busy: boolean;
+  onSpecialtySaved: (profiles: RoleProfile[]) => void;
 }) {
   const isStaff = user != null && user.roles.some((role) => STAFF_ROLES.includes(role));
   const name = user ? `${user.first_name} ${user.last_name}`.trim() : "";
+  const telecaller = user?.role_profiles?.find((profile) => profile.role === "telecaller" && (profile.business_line === "loans" || profile.business_line === "both"));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className={PANEL_DIALOG_CLASS}>
+      <DialogContent preventOutsideClose showCloseButton={false} className={PANEL_DIALOG_CLASS}>
         {user ? (
           <>
             <WorkspaceDialogHeader
@@ -110,6 +116,7 @@ export function StaffAccountDialog({
                 <div className="space-y-5 pb-2">
                   <section className="rounded-xl border border-border bg-card p-5">
                     <h2 className="font-semibold text-text-primary">Account</h2>
+                    <div className="mt-4"><AccountRoleBadges user={user} /></div>
                     <dl className="mt-4 grid gap-4 sm:grid-cols-2">
                       <Fact
                         label="Mobile"
@@ -124,7 +131,15 @@ export function StaffAccountDialog({
                         }
                       />
                     </dl>
+                    <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-text-secondary">
+                        Previous phone numbers and emails, kept for platform Admins only.
+                      </p>
+                      <ContactHistoryButton authUserUuid={user.id} name={name} />
+                    </div>
                   </section>
+
+                  {telecaller && user.status !== "soft_deleted" && <StaffSpecialtyEditor key={user.id} userId={user.id} profile={telecaller} onSaved={onSpecialtySaved} />}
 
                   {isStaff ? (
                     <TempCredentialPanel
