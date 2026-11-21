@@ -1,5 +1,11 @@
 # Feature implementation status
 
+**Implemented — Batch 6 attendance management web**
+
+Scoped roster, monthly attendance grid and review inbox are available to
+managers. Platform Admin handles approval overrides, policy configuration,
+holidays and CSV exports. The staff web slice is the parent branch.
+
 **Implemented — Batch 6 staff web:** Home clock, monthly calendar and totals,
 leave balance and requests, correction form, and request history. The API
 parent is [upstream #396](https://github.com/brollysolutions/client1/pull/396)

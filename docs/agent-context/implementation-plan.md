@@ -1,5 +1,17 @@
 # Living implementation plan
 
+**Implemented — Batch 6 attendance management web**
+
+- The manager roster and monthly grid show scoped attendance by date, team,
+  staff member and status. The inbox shows request details and review history.
+- Platform Admins configure policy and holidays, override reviewed requests
+  and download the audited CSV using existing dashboard controls.
+- The synthetic browser journey passed at phone and desktop widths. It
+  covered policy setup, versioned leave review and the monthly grid.
+- The Round 2 implementation stack is ready for draft review. Next priority
+  is collecting the complete hosted verification and reviewing the stack
+  from the oldest PR to the newest.
+
 **Implemented — Batch 6 staff web: personal attendance**
 
 - Telecallers and Employees can clock in or out from Home and Attendance.

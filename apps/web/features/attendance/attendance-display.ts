@@ -22,12 +22,6 @@ export const attendanceTime = (instant: string | null) => instant ? timeDisplay.
 export const leaveLabel = (key: string) => key.replace(/_/g, " ").replace(/^./, (value) => value.toUpperCase());
 export const duration = (minutes: number) => `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 
-export function nextDay(day: string) {
-  const value = new Date(`${day}T12:00:00+05:30`);
-  value.setUTCDate(value.getUTCDate() + 1);
-  return istDay(value);
-}
-
 export function monthDays(month: string) {
   const [year, number] = month.split("-").map(Number);
   return Array.from({ length: new Date(Date.UTC(year, number, 0)).getUTCDate() },

@@ -186,6 +186,7 @@ describe("role-aware dashboard navigation", () => {
       "sub-admin-listings",
       "sub-admin-listing-submit",
       "sub-admin-contests",
+      "attendance-management",
       "sub-admin-finance",
       "sub-admin-referral-rules",
       "commission-rates",
@@ -200,6 +201,7 @@ describe("role-aware dashboard navigation", () => {
       "sub-admin-listings",
       "sub-admin-listing-submit",
       "sub-admin-contests",
+      "attendance-management",
       "sub-admin-finance",
       "sub-admin-payouts",
       "sub-admin-referral-rules",
@@ -238,6 +240,7 @@ describe("role-aware dashboard navigation", () => {
       "admin-property-listings",
       "admin-property-review",
       "admin-document-verification",
+      "attendance-management",
       "admin-users",
       "admin-teams",
       "admin-contests",
@@ -257,6 +260,14 @@ describe("role-aware dashboard navigation", () => {
 });
 
 describe("dashboard direct-route UX access", () => {
+  it("opens attendance management only to Admin and Sub Admin", () => {
+    const route = "/dashboard/attendance-management";
+    expect(isDashboardPathAllowed(route, context("admin"))).toBe(true);
+    expect(isDashboardPathAllowed(route, context("sub_admin"))).toBe(true);
+    expect(isDashboardPathAllowed(route, context("employee", "loans"))).toBe(false);
+    expect(isDashboardPathAllowed(route, context("client", "loans"))).toBe(false);
+  });
+
   it("opens personal attendance only to Telecallers and Employees", () => {
     expect(isDashboardPathAllowed("/dashboard/attendance", context("employee", "loans"))).toBe(true);
     expect(isDashboardPathAllowed("/dashboard/attendance", context("telecaller", "both"))).toBe(true);
