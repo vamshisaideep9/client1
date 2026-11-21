@@ -41,7 +41,7 @@ export function ReopenTaskDialog({ taskId, onReopened }: { taskId: string; onReo
       if (!value) setReason("");
     }}>
       <DialogTrigger asChild><Button variant="outline"><RotateCcw aria-hidden="true" />Reopen task</Button></DialogTrigger>
-      <DialogContent>
+      <DialogContent preventOutsideClose>
         <DialogHeader className="pr-8">
           <DialogTitle>Reopen cancelled task</DialogTitle>
           <DialogDescription>

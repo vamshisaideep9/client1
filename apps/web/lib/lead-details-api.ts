@@ -6,6 +6,7 @@ import type { BusinessLine } from "@/lib/auth";
 type Schemas = components["schemas"];
 
 export type LeadDetails = Schemas["LeadDetailsRead"];
+export type AdminLeadDetails = Schemas["AdminLeadDetailsRead"];
 export type LeadDetailsPatch = Schemas["LeadDetailsPatch"];
 export type AdminLeadDetailsPatch = Schemas["AdminLeadDetailsPatch"];
 
@@ -25,8 +26,8 @@ export function updateClientLeadDetails(
   });
 }
 
-export function getAdminLeadDetails(leadId: string): Promise<ApiResponse<LeadDetails>> {
-  return apiRequest<LeadDetails>(`/api/v1/admin/leads/${leadId}/details`);
+export function getAdminLeadDetails(leadId: string): Promise<ApiResponse<AdminLeadDetails>> {
+  return apiRequest<AdminLeadDetails>(`/api/v1/admin/leads/${leadId}/details`);
 }
 
 export function updateAdminLeadDetails(

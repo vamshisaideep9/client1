@@ -80,7 +80,7 @@ for (const role of ["admin", "sub_admin", "agent", "telecaller", "employee"] as 
   });
 }
 
-test("footer branding stays white and closing CTA stays separate in both system themes", async ({ page }, testInfo) => {
+test("footer shows the original-colour logo and closing CTA stays separate in both system themes", async ({ page }, testInfo) => {
   for (const colorScheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme });
     for (const width of [320, 768, 1440]) {
@@ -90,7 +90,8 @@ test("footer branding stays white and closing CTA stays separate in both system 
       await footer.scrollIntoViewIfNeeded();
       const logo = footer.getByRole("link", { name: "Dhanadhara home" });
       await expect(logo).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-      await expect(logo.locator("img")).toHaveCSS("filter", "brightness(0) invert(1)");
+      // Original artwork on the light footer; dark themes lighten it for legibility.
+      await expect(logo.locator("img")).toHaveCSS("filter", colorScheme === "light" ? "none" : "brightness(0) invert(1)");
       const gap = await footer.evaluate((element) => element.getBoundingClientRect().top - document.querySelector("main")!.getBoundingClientRect().bottom);
       expect(Math.abs(gap)).toBeLessThanOrEqual(1);
       const cta = page.locator("main section").last();

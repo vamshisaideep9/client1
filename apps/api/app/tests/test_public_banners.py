@@ -467,6 +467,8 @@ async def test_response_omits_internal_fields(client: AsyncClient) -> None:
             "cta_label",
             "deep_link",
             "image_url",
+            "video_url",
+            "youtube_video_id",
             "rera_verified",
         }
         internal_fields = {
