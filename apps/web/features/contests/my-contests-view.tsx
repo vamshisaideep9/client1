@@ -20,7 +20,7 @@ import {
   formatContestDates,
   formatMetricValue,
   METRIC_LABEL,
-  PAYMENT_LABEL,
+  prizeStatus,
   progressRows,
   STATUS_LABEL,
   STATUS_TONE,
@@ -48,11 +48,15 @@ const GROUPS: { key: string; title: string; statuses: MyContestSummary["status"]
 function prizeText(contest: MyContestSummary): string {
   if (contest.audience === "team") {
     const parts = [];
+    if (contest.my_role === "team_manager" && contest.manager_item_prize)
+      parts.push(`${contest.manager_item_prize.label} for you as manager`);
+    if (contest.member_item_prize) parts.push(`${contest.member_item_prize.label} per member`);
     if (contest.my_role === "team_manager" && contest.manager_prize_paise)
       parts.push(`${formatPaise(contest.manager_prize_paise)} for you as manager`);
     if (contest.member_prize_paise) parts.push(`${formatPaise(contest.member_prize_paise)} per member`);
     return parts.join(" · ") || "Team prize";
   }
+  if (contest.item_prize) return `${contest.item_prize.label} per winner`;
   return contest.prize_paise ? `${formatPaise(contest.prize_paise)} per winner` : "";
 }
 
@@ -122,7 +126,7 @@ function ContestCard({ contest }: { contest: MyContestSummary }) {
           <StatusBadge tone={STATUS_TONE[contest.status]}>{STATUS_LABEL[contest.status]}</StatusBadge>
         </span>
         <span className="block text-sm text-text-secondary">
-          {formatContestDates(contest.starts_on, contest.ends_on)} · {prizeText(contest)}
+          {formatContestDates(contest.starts_on, contest.ends_on, contest.start_time, contest.end_time)} · {prizeText(contest)}
         </span>
         <span className="block text-sm text-text-primary">{standingText(contest)}</span>
       </span>
@@ -183,12 +187,12 @@ function ContestList() {
 function ResultBanner({ detail }: { detail: MyContestDetail }) {
   const me = detail.me;
   if (detail.status !== "finalized" || !me) return null;
-  if (me.won && (me.prize_paise ?? 0) > 0) {
+  if (me.won && ((me.prize_paise ?? 0) > 0 || me.item_prize)) {
     return (
       <p role="status" className="rounded-xl border border-success/40 bg-success/10 p-4 text-sm text-text-primary">
-        <span className="font-semibold">You won {formatPaise(me.prize_paise ?? 0)}.</span>{" "}
-        {PAYMENT_LABEL[me.payment_status ?? "unpaid"] ?? ""}
-        {detail.audience === "agent" ? " · paid to your saved payout details after a second Admin approves it." : ""}
+        <span className="font-semibold">You won {me.item_prize?.label ?? formatPaise(me.prize_paise ?? 0)}.</span>{" "}
+        {prizeStatus(me.payment_status ?? "unpaid", Boolean(me.item_prize))}
+        {detail.audience === "agent" && !me.item_prize ? " · paid to your saved payout details after a second Admin approves it." : ""}
       </p>
     );
   }
@@ -226,7 +230,7 @@ function ContestDetailView({ id }: { id: string }) {
       title={detail?.title ?? "Contest"}
       description={
         detail
-          ? `${STATUS_LABEL[detail.status]} · ${formatContestDates(detail.starts_on, detail.ends_on)} · ${prizeText(detail)}`
+          ? `${STATUS_LABEL[detail.status]} · ${formatContestDates(detail.starts_on, detail.ends_on, detail.start_time, detail.end_time)} · ${prizeText(detail)}`
           : "Loading the contest."
       }
       actions={<DashboardBackLink href="/dashboard/contests">All contests</DashboardBackLink>}
@@ -273,7 +277,9 @@ function ContestDetailView({ id }: { id: string }) {
           {detail.me ? (
             <ProgressBars criteria={detail.criteria} progress={detail.me.progress} />
           ) : (
-            <p className="text-sm text-text-secondary">Starts {formatContestDates(detail.starts_on, detail.starts_on)}.</p>
+            <p className="text-sm text-text-secondary">
+              Starts {formatContestDates(detail.starts_on, detail.starts_on)} at {detail.start_time?.slice(0, 5) ?? "00:00"} IST.
+            </p>
           )}
           {team && team.members.length > 0 ? (
             <div className="mt-5 space-y-2">
@@ -294,6 +300,11 @@ function ContestDetailView({ id }: { id: string }) {
                           {member.meets_member_minimum ? "Above the minimum" : "Below the minimum"}
                         </StatusBadge>
                       )}
+                      {member.item_prize && member.payment_status ? (
+                        <StatusBadge tone={member.payment_status === "paid" ? "success" : "warning"}>
+                          {member.item_prize.label} · {prizeStatus(member.payment_status, true)}
+                        </StatusBadge>
+                      ) : null}
                     </span>
                   </li>
                 ))}

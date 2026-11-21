@@ -79,7 +79,9 @@ export function createContest(body: ContestDefinition): Promise<ApiResponse<Cont
   return apiRequest<Contest>("/api/v1/contests", { method: "POST", body });
 }
 
-export function updateContest(id: string, body: ContestDefinition): Promise<ApiResponse<Contest>> {
+export function updateContest(
+  id: string, body: ContestDefinition | Schemas["ContestAdminUpdate"],
+): Promise<ApiResponse<Contest>> {
   return request<Contest>(idPath("/api/v1/contests", [id]), { method: "PUT", body });
 }
 

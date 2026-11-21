@@ -7,6 +7,10 @@ import type { components } from "@contracts/generated/schema";
 type Schemas = components["schemas"];
 type Definition = Schemas["ContestDefinition"];
 type Contest = Schemas["ContestRead"];
+type ItemPrize = Schemas["ContestItemPrize"];
+
+export type ItemPrizeForm = { label: string; details: string; estimate: string };
+export type ItemPrizeField = "itemPrize" | "managerItemPrize" | "memberItemPrize";
 
 export type ContestFormState = {
   title: string;
@@ -23,8 +27,14 @@ export type ContestFormState = {
   memberPrizeRupees: string;
   memberMinimum: string;
   budgetCapRupees: string;
+  prizeKind: Schemas["ContestPrizeKind"];
+  itemPrize: ItemPrizeForm;
+  managerItemPrize: ItemPrizeForm;
+  memberItemPrize: ItemPrizeForm;
   startsOn: string;
+  startTime: string;
   endsOn: string;
+  endTime: string;
   // Business conditions (the line decides which block is sent).
   loanTypeIds: string[];
   bankIds: string[];
@@ -76,8 +86,14 @@ export function emptyContestForm(today: string): ContestFormState {
     memberPrizeRupees: "",
     memberMinimum: "",
     budgetCapRupees: "",
+    prizeKind: "cash",
+    itemPrize: itemPrizeForm(),
+    managerItemPrize: itemPrizeForm(),
+    memberItemPrize: itemPrizeForm(),
     startsOn: today,
+    startTime: "00:00",
     endsOn: today,
+    endTime: "23:59",
     loanTypeIds: [],
     bankIds: [],
     loanStage: "disbursed",
@@ -137,6 +153,25 @@ const paiseToRupees = (paise: number | null | undefined): string =>
 const text = (value: number | null | undefined): string =>
   value === null || value === undefined ? "" : String(value);
 
+function itemPrizeForm(prize?: ItemPrize | null): ItemPrizeForm {
+  return {
+    label: prize?.label ?? "",
+    details: prize?.details ?? "",
+    estimate: paiseToRupees(prize?.estimated_value_paise),
+  };
+}
+
+function itemPrizeValue(form: ItemPrizeForm): ItemPrize | null {
+  const label = form.label.trim();
+  return label ? {
+    label,
+    details: form.details.trim() || null,
+    estimated_value_paise: rupeesToPaise(form.estimate),
+  } : null;
+}
+
+export const IST_MINUTE = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+
 export function usesBusiness(form: ContestFormState): boolean {
   return (
     scoredRole(form) === "agent" ||
@@ -163,14 +198,36 @@ export function validateContestForm(form: ContestFormState): Record<string, stri
   if (form.title.trim().length < 3) errors.title = "Give the contest a title of at least 3 characters.";
   if (!form.startsOn) errors.startsOn = "Choose a start date.";
   if (!form.endsOn) errors.endsOn = "Choose an end date.";
+  if (!IST_MINUTE.test(form.startTime)) errors.startTime = "Choose a start time.";
+  if (!IST_MINUTE.test(form.endTime)) errors.endTime = "Choose an end time.";
   if (form.startsOn && form.endsOn && form.endsOn < form.startsOn)
     errors.endsOn = "The end date is before the start date.";
+  if (!errors.startTime && !errors.endTime && form.startsOn === form.endsOn && form.endTime < form.startTime)
+    errors.endTime = "The end time is before the start time.";
 
   if (form.winMode === "top_n") {
     const n = whole(form.topN);
     if (n === null || Number.isNaN(n) || n < 1 || n > 100) errors.topN = "Choose between 1 and 100 winners.";
   }
-  if (form.audience === "team") {
+  if (form.prizeKind === "item") {
+    const fields: ItemPrizeField[] = form.audience === "team"
+      ? ["managerItemPrize", "memberItemPrize"] : ["itemPrize"];
+    if (fields.every((field) => !form[field].label.trim()))
+      errors[fields[0]] = form.audience === "team" ? "Set a manager or member item." : "Name the item.";
+    for (const field of fields) {
+      const prize = form[field];
+      const value = rupeesToPaise(prize.estimate);
+      if (!prize.label.trim() && (prize.details.trim() || prize.estimate.trim()))
+        errors[field] = "Name the item or clear its details.";
+      else if (value !== null && (!Number.isFinite(value) || value < 1 || value > 1_000_000_000))
+        errors[field] = "Enter a positive estimate of up to ₹1 crore.";
+    }
+    if (form.audience === "team" && form.memberItemPrize.label.trim()) {
+      const minimum = form.metric === "amount" ? rupeesToPaise(form.memberMinimum)
+        : whole(form.memberMinimum.replace(/,/g, ""));
+      if (!minimum || minimum < 1) errors.memberMinimum = "Set the minimum each member must contribute.";
+    }
+  } else if (form.audience === "team") {
     const manager = rupeesToPaise(form.managerPrizeRupees);
     const member = rupeesToPaise(form.memberPrizeRupees);
     if (manager === null || Number.isNaN(manager) || manager < 0)
@@ -189,7 +246,8 @@ export function validateContestForm(form: ContestFormState): Record<string, stri
     if (prize === null || Number.isNaN(prize) || prize < 1) errors.prizeRupees = "Enter the prize for each winner.";
   }
   const cap = rupeesToPaise(form.budgetCapRupees);
-  if (cap !== null && (Number.isNaN(cap) || cap < 1)) errors.budgetCapRupees = "Enter a positive budget cap or leave it empty.";
+  if (form.prizeKind === "cash" && cap !== null && (Number.isNaN(cap) || cap < 1))
+    errors.budgetCapRupees = "Enter a positive budget cap or leave it empty.";
 
   if (usesBusiness(form)) {
     const atLeast = whole(form.countAtLeast);
@@ -301,7 +359,9 @@ export function buildContestDefinition(form: ContestFormState): Definition {
     min_tenure_days: whole(form.minTenureDays) ?? 0,
     kyc_verified: scoredRole(form) === "agent" ? form.kycVerified : false,
   };
-  const memberPrize = team ? rupeesToPaise(form.memberPrizeRupees) ?? 0 : null;
+  const cash = form.prizeKind === "cash";
+  const memberPrize = cash && team ? rupeesToPaise(form.memberPrizeRupees) ?? 0 : null;
+  const memberItem = !cash && team ? itemPrizeValue(form.memberItemPrize) : null;
   return {
     title: form.title.trim(),
     description: form.description.trim() || null,
@@ -313,21 +373,24 @@ export function buildContestDefinition(form: ContestFormState): Definition {
     criteria,
     win_mode: form.winMode,
     top_n: form.winMode === "top_n" ? whole(form.topN) : null,
-    prize_paise: team ? null : rupeesToPaise(form.prizeRupees),
-    manager_prize_paise: team ? rupeesToPaise(form.managerPrizeRupees) ?? 0 : null,
+    prize_paise: cash && !team ? rupeesToPaise(form.prizeRupees) : null,
+    manager_prize_paise: cash && team ? rupeesToPaise(form.managerPrizeRupees) ?? 0 : null,
     member_prize_paise: memberPrize,
+    prize_kind: form.prizeKind,
+    item_prize: !cash && !team ? itemPrizeValue(form.itemPrize) : null,
+    manager_item_prize: !cash && team ? itemPrizeValue(form.managerItemPrize) : null,
+    member_item_prize: memberItem,
     member_min_contribution:
-      team && (memberPrize ?? 0) > 0
+      team && ((memberPrize ?? 0) > 0 || memberItem)
         ? form.metric === "amount"
           ? rupeesToPaise(form.memberMinimum)
           : whole(form.memberMinimum)
         : null,
-    budget_cap_paise: rupeesToPaise(form.budgetCapRupees),
+    budget_cap_paise: cash ? rupeesToPaise(form.budgetCapRupees) : null,
     starts_on: form.startsOn,
     ends_on: form.endsOn,
-    start_time: "00:00",
-    end_time: "23:59",
-    prize_kind: "cash",
+    start_time: form.startTime,
+    end_time: form.endTime,
   };
 }
 
@@ -355,8 +418,14 @@ export function formFromContest(contest: Contest): ContestFormState {
         ? paiseToRupees(contest.member_min_contribution)
         : text(contest.member_min_contribution),
     budgetCapRupees: paiseToRupees(contest.budget_cap_paise),
+    prizeKind: contest.prize_kind ?? "cash",
+    itemPrize: itemPrizeForm(contest.item_prize),
+    managerItemPrize: itemPrizeForm(contest.manager_item_prize),
+    memberItemPrize: itemPrizeForm(contest.member_item_prize),
     startsOn: contest.starts_on,
+    startTime: contest.start_time?.slice(0, 5) ?? "00:00",
     endsOn: contest.ends_on,
+    endTime: contest.end_time?.slice(0, 5) ?? "23:59",
     loanTypeIds: loans?.loan_type_ids ?? [],
     bankIds: loans?.bank_ids ?? [],
     loanStage: loans?.counted_stage ?? "disbursed",
