@@ -9,8 +9,10 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    SerializerFunctionWrapHandler,
     StringConstraints,
     field_validator,
+    model_serializer,
     model_validator,
 )
 
@@ -39,6 +41,13 @@ class AttendanceInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class AttendanceMonthlyLeaveRule(AttendanceInput):
+    accrual_units: Annotated[int, Field(gt=0, le=62)]
+    carry_units: LeaveUnits = 0
+    sandwich: bool = False
+    certificate_after_days: Annotated[int, Field(ge=0, lt=31)] | None = None
+
+
 class AttendancePolicyInput(AttendanceInput):
     shift_start_minute: Annotated[int, Field(ge=0, le=1439)]
     shift_minutes: Annotated[int, Field(ge=1, le=1440)]
@@ -48,9 +57,26 @@ class AttendancePolicyInput(AttendanceInput):
     weekly_off: Annotated[list[Weekday], Field(max_length=6)]
     leave_quotas: Annotated[dict[LeaveType, LeaveUnits], Field(max_length=12)]
     session_clock: bool = False
+    monthly_leave_rules: Annotated[
+        dict[LeaveType, AttendanceMonthlyLeaveRule], Field(max_length=12)
+    ] = Field(default_factory=dict)
+    certificate_retention_days: Annotated[int, Field(ge=1, le=3660)] | None = None
 
     @model_validator(mode="after")
     def check_thresholds(self):
+        if self.monthly_leave_rules and (
+            not self.session_clock
+            or not self.monthly_leave_rules.keys() <= self.leave_quotas.keys()
+        ):
+            raise ValueError("Configure monthly rules for leave types in the session clock.")
+        if (
+            any(
+                rule.certificate_after_days is not None
+                for rule in self.monthly_leave_rules.values()
+            )
+            and self.certificate_retention_days is None
+        ):
+            raise ValueError("Set certificate retention before requiring a certificate.")
         if not self.half_day_minutes <= self.full_day_minutes <= self.shift_minutes:
             raise ValueError("Half-day and full-day thresholds must fit the shift duration.")
         if self.grace_minutes > self.shift_minutes:
@@ -76,6 +102,7 @@ class AttendancePolicyRead(AttendancePolicyInput):
 class AttendancePolicyState(BaseModel):
     active: AttendancePolicyRead | None
     scheduled: AttendancePolicyRead | None
+    can_configure_leave_rules: bool = False
 
 
 class AttendanceHolidayInput(AttendanceInput):
@@ -214,12 +241,21 @@ class AttendanceRequestRead(BaseModel):
     two_stage: bool = False
     adjustment_type: AttendanceAdjustment | None = None
     leave_session: LeaveSession | None = None
+    certificate_required: bool = False
 
 
 class AttendanceBalance(BaseModel):
     leave_type: LeaveType
     allocated_units: int
     used_units: int
+    month: date | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_period(self, handler: SerializerFunctionWrapHandler):
+        result = handler(self)
+        if self.month is None:
+            result.pop("month", None)
+        return result
 
 
 class MyAttendanceRead(BaseModel):

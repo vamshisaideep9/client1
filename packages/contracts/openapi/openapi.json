@@ -6544,6 +6544,18 @@
             "title": "Leave Type",
             "type": "string"
           },
+          "month": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month"
+          },
           "used_units": {
             "title": "Used Units",
             "type": "integer"
@@ -7125,9 +7137,63 @@
         "title": "AttendanceLeaveInput",
         "type": "object"
       },
+      "AttendanceMonthlyLeaveRule": {
+        "additionalProperties": false,
+        "properties": {
+          "accrual_units": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 62.0,
+            "title": "Accrual Units",
+            "type": "integer"
+          },
+          "carry_units": {
+            "default": 0,
+            "maximum": 732.0,
+            "minimum": 0.0,
+            "title": "Carry Units",
+            "type": "integer"
+          },
+          "certificate_after_days": {
+            "anyOf": [
+              {
+                "exclusiveMaximum": 31.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certificate After Days"
+          },
+          "sandwich": {
+            "default": false,
+            "title": "Sandwich",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accrual_units"
+        ],
+        "title": "AttendanceMonthlyLeaveRule",
+        "type": "object"
+      },
       "AttendancePolicyInput": {
         "additionalProperties": false,
         "properties": {
+          "certificate_retention_days": {
+            "anyOf": [
+              {
+                "maximum": 3660.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certificate Retention Days"
+          },
           "full_day_minutes": {
             "maximum": 1440.0,
             "minimum": 1.0,
@@ -7156,6 +7222,16 @@
               }
             },
             "title": "Leave Quotas",
+            "type": "object"
+          },
+          "monthly_leave_rules": {
+            "maxProperties": 12,
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,31}$": {
+                "$ref": "#/components/schemas/AttendanceMonthlyLeaveRule"
+              }
+            },
+            "title": "Monthly Leave Rules",
             "type": "object"
           },
           "session_clock": {
@@ -7201,6 +7277,19 @@
       "AttendancePolicyRead": {
         "additionalProperties": false,
         "properties": {
+          "certificate_retention_days": {
+            "anyOf": [
+              {
+                "maximum": 3660.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certificate Retention Days"
+          },
           "effective_from": {
             "format": "date",
             "title": "Effective From",
@@ -7234,6 +7323,16 @@
               }
             },
             "title": "Leave Quotas",
+            "type": "object"
+          },
+          "monthly_leave_rules": {
+            "maxProperties": 12,
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,31}$": {
+                "$ref": "#/components/schemas/AttendanceMonthlyLeaveRule"
+              }
+            },
+            "title": "Monthly Leave Rules",
             "type": "object"
           },
           "session_clock": {
@@ -7294,6 +7393,11 @@
               }
             ]
           },
+          "can_configure_leave_rules": {
+            "default": false,
+            "title": "Can Configure Leave Rules",
+            "type": "boolean"
+          },
           "scheduled": {
             "anyOf": [
               {
@@ -7338,6 +7442,11 @@
             },
             "title": "Approved Units",
             "type": "object"
+          },
+          "certificate_required": {
+            "default": false,
+            "title": "Certificate Required",
+            "type": "boolean"
           },
           "created_at": {
             "format": "date-time",
@@ -9369,6 +9478,20 @@
           }
         },
         "title": "BannerUpdate",
+        "type": "object"
+      },
+      "Body_attach_certificate_api_v1_attendance_requests__request_id__certificate_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_attach_certificate_api_v1_attendance_requests__request_id__certificate_post",
         "type": "object"
       },
       "BookmarkCreate": {
@@ -41827,6 +41950,96 @@
           }
         ],
         "summary": "Cancel Request",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/requests/{request_id}/certificate": {
+      "get": {
+        "operationId": "download_certificate_api_v1_attendance_requests__request_id__certificate_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Download Certificate",
+        "tags": [
+          "attendance"
+        ]
+      },
+      "post": {
+        "operationId": "attach_certificate_api_v1_attendance_requests__request_id__certificate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_attach_certificate_api_v1_attendance_requests__request_id__certificate_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Attach Certificate",
         "tags": [
           "attendance"
         ]

@@ -11,9 +11,9 @@ import { FetchError } from "@/features/dashboard/fetch-error";
 import { ListLoadingState } from "@/features/dashboard/list-states";
 import {
   getAttendanceHolidays, getAttendancePolicy, saveAttendancePolicy, setAttendanceHoliday,
-  type AttendanceHoliday, type AttendanceLine, type AttendancePolicyState,
+  type AttendanceHoliday, type AttendanceLine, type AttendancePolicy, type AttendancePolicyState,
 } from "@/lib/attendance-api";
-import { attendanceDate, istDay, monthDays } from "./attendance-display";
+import { attendanceDate, istDay, leaveLabel, monthDays } from "./attendance-display";
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const NUMBERS = [
@@ -41,6 +41,7 @@ export function AttendancePolicyPanel() {
   const [policy, setPolicy] = useState<AttendancePolicyState | null>(null);
   const [holidays, setHolidays] = useState<AttendanceHoliday[]>([]);
   const [line, setLine] = useState<AttendanceLine | "">("");
+  const [quotaDraft, setQuotaDraft] = useState<string | null>(null);
   const [calendarLoading, setCalendarLoading] = useState(true);
   const [month, setMonth] = useState(() => istDay().slice(0, 7));
   const [error, setError] = useState<{ status: number; message: string } | null>(null);
@@ -82,6 +83,20 @@ export function AttendancePolicyPanel() {
       setMessage("Enter each leave type once, in the format annual=12.5. Use up to 12 types.");
       return;
     }
+    const monthlyRules: NonNullable<AttendancePolicy["monthly_leave_rules"]> = {};
+    const retention = String(form.get("certificate-retention") ?? "");
+    for (const kind of Object.keys(quotas)) {
+      if (!form.has(`monthly-${kind}`)) continue;
+      const accrual = Number(form.get(`accrual-${kind}`)) * 2;
+      const threshold = String(form.get(`certificate-${kind}`) ?? "");
+      if (accrual <= 0) { setMessage(`Enter monthly accrual for ${leaveLabel(kind)}.`); return; }
+      monthlyRules[kind] = {
+        accrual_units: accrual,
+        carry_units: Number(form.get(`carry-${kind}`)) * 2,
+        sandwich: form.has(`sandwich-${kind}`),
+        certificate_after_days: threshold ? Number(threshold) : null,
+      };
+    }
     setBusy(true);
     setMessage("");
     const response = await saveAttendancePolicy({
@@ -93,10 +108,15 @@ export function AttendancePolicyPanel() {
       weekly_off: sessionClock ? [6] : form.getAll("weekly").map(Number),
       leave_quotas: quotas,
       session_clock: sessionClock,
+      ...(policy?.can_configure_leave_rules ? {
+        monthly_leave_rules: monthlyRules,
+        certificate_retention_days: retention ? Number(retention) : null,
+      } : {}),
     });
     setBusy(false);
     if (!response.ok) { setMessage(response.error); return; }
     setPolicy(response.data);
+    setQuotaDraft(null);
     setMessage(response.data.scheduled
       ? `Policy revision applies from ${attendanceDate(response.data.scheduled.effective_from)}.`
       : "Attendance is now open.");
@@ -125,6 +145,8 @@ export function AttendancePolicyPanel() {
   if (error) return <FetchError status={error.status} message={error.message} onRetry={() => refresh((value) => value + 1)} />;
   if (!policy) return <ListLoadingState rows={3} />;
   const shown = policy.scheduled ?? policy.active;
+  const quotaText = Object.entries(shown?.leave_quotas ?? {}).map(([key, units]) => `${key}=${units / 2}`).join("\n");
+  const leaveTypes = Object.keys(parseQuotas(quotaDraft ?? quotaText) ?? {});
   return (
     <>
       <DashboardPanel title="Attendance policy"
@@ -155,9 +177,30 @@ export function AttendancePolicyPanel() {
           </fieldset>
           <div className="max-w-md space-y-2"><Label htmlFor="policy-quotas">Annual leave days by type</Label>
             <Textarea id="policy-quotas" name="quotas" rows={3} aria-describedby="policy-quotas-help"
-              defaultValue={Object.entries(shown?.leave_quotas ?? {}).map(([key, units]) => `${key}=${units / 2}`).join("\n")} />
+              value={quotaDraft ?? quotaText} onChange={(event) => setQuotaDraft(event.target.value)} />
             <p id="policy-quotas-help" className="text-xs text-text-secondary">Enter one type per line, such as annual=12.5. Leave this blank when staff should have no leave allowance.</p>
           </div>
+          {policy.can_configure_leave_rules ? <details className="rounded-md border border-border p-4">
+            <summary className="cursor-pointer text-sm font-medium">Monthly leave rules</summary>
+            <div className="mt-3 space-y-4">
+              <p className="text-sm text-text-secondary">Types with monthly rules earn leave in the session clock. Revisions begin on the first of a month.</p>
+              {leaveTypes.length ? leaveTypes.map((kind) => {
+                const rule = shown?.monthly_leave_rules?.[kind];
+                return <fieldset key={kind} className="space-y-2 rounded-md border border-border p-3">
+                  <legend className="px-1 text-sm font-medium">{leaveLabel(kind)}</legend>
+                  <label className="flex min-h-10 items-center gap-2 text-sm"><input type="checkbox" name={`monthly-${kind}`} defaultChecked={Boolean(rule)} />Use monthly accrual</label>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div><Label htmlFor={`accrual-${kind}`}>Days earned each month</Label><Input id={`accrual-${kind}`} name={`accrual-${kind}`} type="number" step="0.5" min="0.5" max="31" defaultValue={rule ? rule.accrual_units / 2 : undefined} /></div>
+                    <div><Label htmlFor={`carry-${kind}`}>Maximum days carried</Label><Input id={`carry-${kind}`} name={`carry-${kind}`} type="number" step="0.5" min="0" max="366" defaultValue={(rule?.carry_units ?? 0) / 2} /></div>
+                    <div><Label htmlFor={`certificate-${kind}`}>Require certificate after (calendar days)</Label><Input id={`certificate-${kind}`} name={`certificate-${kind}`} type="number" min="0" max="30" defaultValue={rule?.certificate_after_days ?? undefined} /></div>
+                  </div>
+                  <label className="flex min-h-10 items-center gap-2 text-sm"><input type="checkbox" name={`sandwich-${kind}`} defaultChecked={rule?.sandwich} />Charge days off between working days in the same leave request</label>
+                </fieldset>;
+              }) : <p className="text-sm text-text-secondary">Add a leave type above to configure monthly accrual.</p>}
+              <div className="max-w-xs"><Label htmlFor="certificate-retention">Certificate retention (days from upload)</Label>
+                <Input id="certificate-retention" name="certificate-retention" type="number" min="1" max="3660" defaultValue={shown?.certificate_retention_days ?? undefined} /></div>
+            </div>
+          </details> : null}
           <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save policy"}</Button>
           {message ? <p role="status" className="text-sm text-text-secondary">{message}</p> : null}
         </form>

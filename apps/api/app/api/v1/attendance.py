@@ -4,15 +4,17 @@ from datetime import date
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRoute
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.cache.redis_keys import RedisCache
 from app.core.brand import branded_filename
 from app.core.deps import (
     CurrentUser,
+    get_cache,
     get_personal_user,
     require_assignment,
     require_platform_admin,
@@ -20,7 +22,7 @@ from app.core.deps import (
 from app.db.session import get_db
 from app.models.attendance import AttendanceEmployment
 from app.models.audit_log import AuditAction
-from app.models.profile import StaffRole
+from app.models.profile import StaffProfile, StaffRole
 from app.models.staff_team import StaffTeam
 from app.schemas.attendance import (
     AttendanceAdjustmentInput,
@@ -43,7 +45,13 @@ from app.schemas.attendance import (
     MyAttendanceRead,
     RequestStatus,
 )
-from app.services import attendance, attendance_employment, attendance_requests, attendance_views
+from app.services import (
+    attendance,
+    attendance_certificates,
+    attendance_employment,
+    attendance_requests,
+    attendance_views,
+)
 from app.services.audit_log import record
 from app.services.csv_export import csv_chunks
 
@@ -126,6 +134,33 @@ async def cancel_request(request_id: UUID, user: Staff):
     return await attendance_requests.cancel(user, request_id)
 
 
+@router.post("/requests/{request_id}/certificate", status_code=204)
+async def attach_certificate(
+    request_id: UUID,
+    user: Staff,
+    file: Annotated[UploadFile, File()],
+    cache: Annotated[RedisCache, Depends(get_cache)],
+):
+    await attendance_certificates.upload(user, request_id, file, cache)
+    return Response(status_code=204, headers={"Cache-Control": "private, no-store"})
+
+
+@router.get("/requests/{request_id}/certificate", response_class=Response)
+async def download_certificate(
+    request_id: UUID, user: Annotated[CurrentUser, Depends(get_personal_user)], db: DB
+):
+    content, media_type, extension = await attendance_certificates.download(db, user, request_id)
+    return Response(
+        content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="medical-certificate.{extension}"',
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 async def _check_team_review(db: DB, user: CurrentUser, team_id: UUID | None) -> None:
     if user.role == StaffRole.SUB_ADMIN:
         await db.execute(text("SELECT set_config('app.team_review', 'true', true)"))
@@ -203,8 +238,14 @@ async def decide_request(request_id: UUID, payload: AttendanceDecisionInput, use
 
 
 @router.get("/policy", response_model=AttendancePolicyState)
-async def get_policy(_: Admin, db: DB):
-    return await attendance.policy_state(db)
+async def get_policy(user: Admin, db: DB):
+    primary = await db.scalar(
+        select(StaffProfile.is_primary_admin).where(
+            StaffProfile.id == user.staff_profile_uuid,
+            StaffProfile.auth_user_uuid == user.id,
+        )
+    )
+    return await attendance.policy_state(db, can_configure_leave_rules=bool(primary))
 
 
 @router.put("/policy", response_model=AttendancePolicyState)

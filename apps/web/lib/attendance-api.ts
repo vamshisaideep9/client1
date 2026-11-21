@@ -102,3 +102,20 @@ export function cancelAttendanceRequest(id: string) {
     `${ATTENDANCE_API}/requests/${encodeURIComponent(id)}/cancel`, { method: "POST" },
   );
 }
+
+function certificatePath(id: string) {
+  return `${ATTENDANCE_API}/requests/${encodeURIComponent(id)}/certificate`;
+}
+
+export function uploadAttendanceCertificate(id: string, file: File) {
+  const body = new FormData();
+  body.set("file", file);
+  return apiRequest(certificatePath(id), { method: "POST", body });
+}
+
+export function downloadAttendanceCertificate(id: string) {
+  return apiDownload(certificatePath(id), (type) => {
+    const extension = type === "image/jpeg" ? "jpg" : type === "image/png" ? "png" : "pdf";
+    return `medical-certificate.${extension}`;
+  });
+}

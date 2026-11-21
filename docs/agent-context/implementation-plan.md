@@ -1,6 +1,6 @@
 # Living implementation plan
 
-**Delivered for review — Attendance employment dates, line calendars, and direct reporting (slice 3)**
+**Delivered for review — Monthly leave rules and private medical certificates (slice 4)**
 
 - Officer labels reuse the existing role ID. The team slot now permits one
   Telecaller team and one Officer team per manager in each business line.
@@ -36,9 +36,20 @@
   employment dates, calendar precedence, version conflicts, denied writes,
   direct recommendations, and revocation. Browser checks cover setup and
   attendance management at 390px and 1440px and the staff attendance journey.
-  [Slice 3 changes](https://github.com/brollysolutions/client1/compare/main...feat/attendance-employment-calendars).
-- Next attendance priority is monthly leave rules and private certificates,
-  followed by monthly close, revisions, and Analytics.
+  [Upstream #401](https://github.com/brollysolutions/client1/pull/401).
+- Main Admin configures accrual, bounded carry-forward, sandwich rules, and
+  medical certificate thresholds by leave type. Certificates are accessible
+  to the requesting employee and platform Admin reviewers, with configured
+  retention.
+- Annual balances preserve their original response fields. The month field is
+  returned for monthly balances. Certificate replacements preserve access to
+  the new file and place the previous object in the cleanup queue.
+- Verified Main Admin configuration, half-day accrual arithmetic, off-day
+  charges, carry-forward, decision gating, exact certificate audience,
+  expiry, and storage cleanup in PostgreSQL with synthetic objects. The
+  additive migration completed its empty round trip, with one Alembic head.
+  [Slice 4 changes](https://github.com/brollysolutions/client1/compare/feat/attendance-employment-calendars...feat/attendance-leave-policy).
+- Next attendance priority is monthly close, revisions, and Analytics.
 
 **Implemented — Batch 6 attendance management web**
 

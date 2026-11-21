@@ -21,6 +21,7 @@ import { roleLabel } from "@/lib/role-label";
 import { ATTENDANCE_STATUS, attendanceCode, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays, previousMonth, requestLabel } from "./attendance-display";
 import { AttendancePolicyPanel } from "./attendance-policy-panel";
 import { AttendanceEmploymentDialog } from "./attendance-employment-dialog";
+import { AttendanceCertificateControl } from "./attendance-certificate-control";
 
 type Mode = "daily" | "month" | "requests" | "policy";
 type FilterOption = { id: string; name: string };
@@ -297,6 +298,7 @@ function ReviewDialog({ entry, name, admin, recommendationsOnly, close, saved }:
             : entry.kind === "correction" ? <p>{attendanceTime(entry.requested_check_in)} – {attendanceTime(entry.requested_check_out)} IST</p> : null}
           <p>Submitted {attendanceDate(istDay(new Date(entry.created_at)))} at {attendanceTime(entry.created_at)}</p>
           <p className="[overflow-wrap:anywhere]">{entry.reason}</p>
+          {admin && entry.certificate_required ? <AttendanceCertificateControl requestId={entry.id} /> : null}
           {entry.decisions.length ? <ol className="list-decimal space-y-1 pl-5" aria-label="Decision history">
             {entry.decisions.map((decision, index) => <li key={index} className="[overflow-wrap:anywhere]">
               {decision.stage === "recommendation" ? "Recommended " : ""}{leaveLabel(decision.status)} · {roleLabel(decision.actor_role)} · {attendanceDate(istDay(new Date(decision.at)))} at {attendanceTime(decision.at)} · {decision.note}
