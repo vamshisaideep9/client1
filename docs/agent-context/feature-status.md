@@ -1,5 +1,13 @@
 # Feature implementation status
 
+**Partially implemented — Officer roles and attendance policy:** Officer
+labels, two distinct team types per manager and line, and the session-clock
+workflow with midnight checkout, fractional LOP, scoped two-stage approvals,
+regularizations, and explicit half-day sessions. Legacy policy and request
+versions retain their original behavior. Access delegation and specialist
+roles, full monthly leave rules, certificate handling, and monthly reporting
+remain open.
+
 **Implemented — Batch 6 attendance management web**
 
 Scoped roster, monthly attendance grid and review inbox are available to

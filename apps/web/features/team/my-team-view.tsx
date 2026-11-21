@@ -215,7 +215,7 @@ export function MyTeamView() {
         <ListEmptyState
           icon={DASHBOARD_ICONS.team}
           title="You don't manage a team yet"
-          description="The Main Admin can make you the manager of a Telecaller or Employee team."
+          description="The Main Admin can make you the manager of a Telecaller or Officer team."
         />
       ) : (
         <div className="space-y-5">

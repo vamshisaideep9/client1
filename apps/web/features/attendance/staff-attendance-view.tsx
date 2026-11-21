@@ -16,12 +16,12 @@ import { FetchError } from "@/features/dashboard/fetch-error";
 import { ListLoadingState } from "@/features/dashboard/list-states";
 import { StatusBadge } from "@/features/dashboard/status-badge";
 import {
-  cancelAttendanceRequest, getMyAttendance, requestAttendanceCorrection,
-  requestAttendanceLeave, setAttendanceClock, type AttendanceMine,
+  cancelAttendanceRequest, getMyAttendance, requestAttendanceAdjustment, requestAttendanceCorrection,
+  requestAttendanceLeave, setAttendanceClock, type AttendanceAdjustment, type AttendanceLeave, type AttendanceMine,
 } from "@/lib/attendance-api";
-import { ATTENDANCE_STATUS, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays } from "./attendance-display";
+import { ADJUSTMENT_LABELS, ATTENDANCE_STATUS, attendanceCode, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays, previousMonth, requestLabel } from "./attendance-display";
 
-type RequestKind = "leave" | "correction";
+type RequestKind = "leave" | "correction" | AttendanceAdjustment["adjustment_type"];
 
 function useAttendance(month?: string) {
   const [payload, setPayload] = useState<AttendanceMine | null>(null);
@@ -83,7 +83,7 @@ function AttendanceClock({ payload, refresh }: { payload: AttendanceMine; refres
       </div>
       <dl className="grid gap-2 text-sm sm:grid-cols-3">
         <div><dt className="text-text-secondary">Check-in (IST)</dt><dd>{attendanceTime(row?.check_in ?? null)}</dd></div>
-        <div><dt className="text-text-secondary">Check-out (IST)</dt><dd>{attendanceTime(row?.check_out ?? null)}</dd></div>
+        <div><dt className="text-text-secondary">{row?.system_check_out && !row.original_check_out && row.system_check_out === row.check_out ? "System logout (IST)" : "Check-out (IST)"}</dt><dd>{attendanceTime(row?.check_out ?? null)}</dd></div>
         <div><dt className="text-text-secondary">{running ? "Elapsed (estimate)" : "Worked"}</dt><dd>{duration(running ? elapsed : row?.worked_minutes ?? 0)}</dd></div>
       </dl>
       {clockAvailable ? <Button disabled={busy} onClick={() => void punch()}>{running ? "Check out" : "Check in"}</Button> : null}
@@ -104,7 +104,7 @@ export function AttendanceTodayCard() {
 }
 
 export function StaffAttendanceView() {
-  const [month, setMonth] = useState(() => istDay().slice(0, 7));
+  const [month, setMonth] = useState(previousMonth);
   const { payload, error, refresh } = useAttendance(month);
   const [request, setRequest] = useState<RequestKind | null>(null);
   const [message, setMessage] = useState("");
@@ -139,6 +139,9 @@ export function StaffAttendanceView() {
                 {duration(payload.days.reduce((total, day) => total + day.worked_minutes, 0))} worked ·{" "}
                 {payload.days.filter((day) => day.late).length} late ·{" "}
                 {payload.days.reduce((total, day) => total + day.leave_units, 0) / 2} leave days
+                {payload.days.some((day) => day.lop_units != null)
+                  ? ` · ${payload.days.reduce((total, day) => total + (day.lop_units ?? 0), 0) / 4} LOP days`
+                  : ""}
               </p>
               <div className="grid grid-cols-7 gap-1 text-xs" role="group" aria-label="Attendance calendar">
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
@@ -148,8 +151,12 @@ export function StaffAttendanceView() {
                 {calendar.map((date) => {
                   const entry = dates.get(date);
                   const status = entry ? ATTENDANCE_STATUS[entry.status] : holidayDates.get(date) ?? "—";
+                  const badge = entry ? attendanceCode(entry) : null;
+                  const sunday = new Date(`${date}T12:00:00Z`).getUTCDay() === 0;
                   return <div key={date} className="min-w-0 rounded-lg border border-border p-1 text-center sm:p-2">
                     <time dateTime={date} className="block font-medium">{Number(date.slice(-2))}</time>
+                    {sunday && badge?.code !== "SUN" ? <span className="mr-1 rounded bg-slate-200 px-1 font-medium text-slate-900">SUN</span> : null}
+                    {badge ? <span className={`rounded px-1 font-medium ${badge.tone}`}>{badge.code}</span> : null}
                     <span className="block text-text-secondary [overflow-wrap:anywhere]">{status}</span>
                   </div>;
                 })}
@@ -158,7 +165,7 @@ export function StaffAttendanceView() {
                 <ul aria-label="Daily attendance history" className="mt-4 divide-y divide-border">
                   {payload.days.map((day) => (
                     <li key={day.day} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-                      <span>{attendanceDate(day.day)} · {ATTENDANCE_STATUS[day.status]}</span>
+                      <span>{attendanceDate(day.day)} · {ATTENDANCE_STATUS[day.status]}{day.lop_units ? ` · ${day.lop_units / 4} day LOP` : ""}</span>
                       <span className="text-text-secondary">{attendanceTime(day.check_in)} – {attendanceTime(day.check_out)} · {duration(day.worked_minutes)}</span>
                     </li>
                   ))}
@@ -170,6 +177,7 @@ export function StaffAttendanceView() {
                 <div className="flex flex-wrap gap-2">
                   <Button onClick={() => setRequest("leave")} disabled={!Object.keys(payload.policy.leave_quotas).length}>Request leave</Button>
                   <Button variant="outline" onClick={() => setRequest("correction")}>Request correction</Button>
+                  {payload.policy.session_clock ? <Button variant="outline" onClick={() => setRequest("late_waiver")}>Request regularization</Button> : null}
                 </div>
               ) : <p className="text-sm text-text-secondary">Leave and corrections open after Admin setup.</p>}
               {payload.balances.length ? (
@@ -185,10 +193,10 @@ export function StaffAttendanceView() {
                   {payload.requests.map((row) => (
                     <li key={row.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
                       <div className="min-w-0">
-                        <p className="font-medium">{row.kind === "leave" ? leaveLabel(row.leave_type ?? "leave") : "Correction"} · {attendanceDate(row.start_day)}{row.end_day !== row.start_day ? ` – ${attendanceDate(row.end_day)}` : ""}</p>
-                        <p className="text-text-secondary [overflow-wrap:anywhere]">{leaveLabel(row.status)}{row.decisions.at(-1)?.note ? ` · ${row.decisions.at(-1)?.note}` : ""}</p>
+                        <p className="font-medium">{requestLabel(row)} · {attendanceDate(row.start_day)}{row.end_day !== row.start_day ? ` – ${attendanceDate(row.end_day)}` : ""}</p>
+                        <p className="text-text-secondary [overflow-wrap:anywhere]">{leaveLabel(row.status)} · Submitted {attendanceDate(istDay(new Date(row.created_at)))} at {attendanceTime(row.created_at)}{row.decisions.at(-1)?.note ? ` · ${row.decisions.at(-1)?.note}` : ""}</p>
                       </div>
-                      {row.status === "pending" || (row.status === "approved" && row.kind === "leave" && row.start_day > istDay(new Date(payload.server_time))) ? (
+                      {row.status === "pending" || (!row.two_stage && row.status === "approved" && row.kind === "leave" && row.start_day > istDay(new Date(payload.server_time))) ? (
                         <Button variant="outline" size="sm" disabled={cancelling !== null} onClick={() => void cancel(row.id)}>Cancel request</Button>
                       ) : null}
                     </li>
@@ -196,7 +204,7 @@ export function StaffAttendanceView() {
                 </ul>
               ) : <p className="mt-3 text-sm text-text-secondary">No requests for this month.</p>}
             </DashboardPanel>
-            {request ? <AttendanceRequestDialog kind={request} payload={payload} close={() => setRequest(null)} saved={() => { setMessage("Request submitted."); refresh(); }} /> : null}
+            {request ? <AttendanceRequestDialog kind={request} payload={payload} close={() => setRequest(null)} saved={(day) => { setMonth(day.slice(0, 7)); setMessage("Request submitted."); refresh(); }} /> : null}
           </>}
       {confirmDialog}
     </DashboardPage>
@@ -207,37 +215,44 @@ function AttendanceRequestDialog({ kind, payload, close, saved }: {
   kind: RequestKind;
   payload: AttendanceMine;
   close: () => void;
-  saved: () => void;
+  saved: (day: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const leave = kind === "leave";
+  const adjustment = kind !== "leave" && kind !== "correction";
+  const [adjustmentType, setAdjustmentType] = useState<AttendanceAdjustment["adjustment_type"]>(
+    adjustment ? kind : "late_waiver",
+  );
   const today = istDay(new Date(payload.server_time));
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const field = (name: string) => String(form.get(name) ?? "");
     const reason = field("reason").trim();
+    const leaveSession = field("leave_session") as NonNullable<AttendanceLeave["leave_session"]> | "";
     if (reason.length < 3) { setError("Enter a reason of at least three characters."); return; }
     setBusy(true);
     setError("");
     const response = leave ? await requestAttendanceLeave({
-      start_day: field("start"), end_day: field("end"), half_day: form.has("half"),
-      leave_type: field("type"), reason,
+      start_day: field("start"), end_day: field("end"), half_day: form.has("half") || Boolean(leaveSession),
+      leave_type: field("type"), reason, leave_session: leaveSession || null,
+    }) : adjustment ? await requestAttendanceAdjustment({
+      day: field("day"), adjustment_type: adjustmentType, reason,
     }) : await requestAttendanceCorrection({
       day: field("day"), check_in: `${field("check_in")}:00+05:30`,
       check_out: `${field("check_out")}:00+05:30`, reason,
     });
     setBusy(false);
     if (!response.ok) { setError(response.error); return; }
-    saved();
+    saved(response.data.start_day);
     close();
   }
   return (
     <Dialog open onOpenChange={(open) => { if (!open && !busy) close(); }}>
       <DialogContent preventOutsideClose className="max-h-[92dvh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle>{leave ? "Request leave" : "Request an attendance correction"}</DialogTitle>
-          <DialogDescription>{leave ? "Choose the days and leave type to send for review." : "Enter the original work date and the correct times in IST."}</DialogDescription>
+        <DialogHeader><DialogTitle>{leave ? "Request leave" : adjustment ? "Request regularization" : "Request an attendance correction"}</DialogTitle>
+          <DialogDescription>{leave ? "Choose the days and leave type to send for review." : adjustment ? "Select the recorded work date and the exception you want reviewed." : "Enter the original work date and the correct times in IST."}</DialogDescription>
         </DialogHeader>
         <form onSubmit={(event) => void submit(event)} className="space-y-4">
           {leave ? <>
@@ -249,7 +264,21 @@ function AttendanceRequestDialog({ kind, payload, close, saved }: {
               <div><Label htmlFor="leave-start">First day</Label><Input id="leave-start" name="start" type="date" required min={today} defaultValue={today} /></div>
               <div><Label htmlFor="leave-end">Last day</Label><Input id="leave-end" name="end" type="date" required min={today} defaultValue={today} /></div>
             </div>
-            <div className="flex items-center gap-2"><input id="leave-half" name="half" type="checkbox" /><Label htmlFor="leave-half">Half day on one date</Label></div>
+            {payload.policy?.session_clock ? (
+              <div><Label htmlFor="leave-session">Leave duration</Label>
+                <select id="leave-session" name="leave_session" className="min-h-10 w-full rounded-md border border-input bg-background p-2">
+                  <option value="">Full day</option>
+                  <option value="morning">Morning half day</option>
+                  <option value="afternoon">Afternoon half day</option>
+                </select></div>
+            ) : <div className="flex items-center gap-2"><input id="leave-half" name="half" type="checkbox" /><Label htmlFor="leave-half">Half day on one date</Label></div>}
+          </> : adjustment ? <>
+            <div><Label htmlFor="regularization-type">Exception</Label>
+              <select id="regularization-type" className="min-h-10 w-full rounded-md border border-input bg-background p-2"
+                value={adjustmentType} onChange={(event) => setAdjustmentType(event.target.value as AttendanceAdjustment["adjustment_type"])}>
+                {Object.entries(ADJUSTMENT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select></div>
+            <div><Label htmlFor="regularization-day">Work date</Label><Input id="regularization-day" name="day" type="date" required max={adjustmentType === "on_duty" ? undefined : today} defaultValue={payload.work_day} /></div>
           </> : <>
             <div><Label htmlFor="correction-day">Work date</Label><Input id="correction-day" name="day" type="date" required max={today} defaultValue={payload.work_day} /></div>
             <div><Label htmlFor="correction-in">Correct check-in (IST)</Label><Input id="correction-in" name="check_in" type="datetime-local" required /></div>

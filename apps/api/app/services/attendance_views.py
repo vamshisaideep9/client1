@@ -33,7 +33,9 @@ async def holidays(db: AsyncSession, start: date, end: date) -> list[AttendanceH
     )
 
 
-async def personal(db: AsyncSession, staff_id: UUID, year: int | None, month: int | None):
+async def personal(
+    db: AsyncSession, staff_id: UUID, role: str, year: int | None, month: int | None
+):
     now = clock.utc_now()
     today = clock.work_date(now)
     year, month = year or today.year, month or today.month
@@ -47,7 +49,7 @@ async def personal(db: AsyncSession, staff_id: UUID, year: int | None, month: in
     if active is None:
         active = await db.get(AttendanceDay, (staff_id, today))
     return MyAttendanceRead(
-        policy=policy,
+        policy=policy if clock.allows_personal_attendance(role, policy) else None,
         server_time=now,
         work_day=active.day if active else today,
         today=active,
@@ -75,7 +77,9 @@ async def personal(db: AsyncSession, staff_id: UUID, year: int | None, month: in
             )
         ),
         balance_year=year,
-        balances=await balances(db, staff_id, min(end, today) if year == today.year else end),
+        balances=await balances(db, staff_id, min(end, today) if year == today.year else end)
+        if clock.allows_personal_attendance(role, policy)
+        else [],
     )
 
 

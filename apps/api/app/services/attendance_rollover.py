@@ -59,6 +59,7 @@ async def run_attendance_rollover(now: datetime | None = None) -> int:
                 if cursor is not None:
                     day = max(day, cursor.through_day + clock.DAY)
                 through = None
+                recalculate_months = set()
                 for _ in range(14):
                     if day >= today:
                         break
@@ -70,16 +71,45 @@ async def run_attendance_rollover(now: datetime | None = None) -> int:
                     )
                     if now < clock.shift_cutoff(day, policy):
                         break
-                    if row is None and profile.created_at <= clock.shift_start(day, policy):
+                    if (
+                        row is None
+                        and clock.allows_personal_attendance(profile.role, policy)
+                        and profile.created_at <= clock.shift_start(day, policy)
+                    ):
                         status = await clock.day_without_clock(db, day, policy)
-                        db.add(clock.new_day(staff_id, day, policy, status, "rollover"))
+                        row = clock.new_day(
+                            staff_id,
+                            day,
+                            policy,
+                            status,
+                            "rollover",
+                            calendar_status=status,
+                            business_line=profile.business_line
+                            if profile.business_line != "both"
+                            else None,
+                        )
+                        if policy.session_clock:
+                            row.uncovered_units = row.lop_units = 4 if status == "absent" else 0
+                        db.add(row)
                         updated += 1
                     elif row is not None and row.status == "checked_in":
-                        row.status = "missing_checkout"
+                        clock.close_expired_day(row, policy)
+                        if policy.session_clock:
+                            recalculate_months.add(day.replace(day=1))
+                        updated += 1
+                    elif (
+                        row is not None
+                        and policy.session_clock
+                        and row.status == "on_leave"
+                        and row.uncovered_units is None
+                    ):
+                        row.uncovered_units = row.lop_units = (2 - row.leave_units) * 2
                         updated += 1
                     through = day
                     day += clock.DAY
                 if through is not None:
+                    for month in sorted(recalculate_months):
+                        await clock.recalculate_late_penalties(db, staff_id, month)
                     if cursor is None:
                         db.add(
                             AttendanceRolloverState(staff_profile_id=staff_id, through_day=through)

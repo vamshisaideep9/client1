@@ -258,14 +258,14 @@ export function AdminVehicleArrangementsView() {
     <DashboardPage>
       <DashboardHeader
         title="Vehicle arrangements"
-        description="Confirm transport details; the platform assigns an eligible Employee automatically."
+        description="Confirm transport details; the platform assigns an eligible Officer automatically."
       />
 
       <FilterBar
         value={filters}
         onChange={setFilters}
         searchLabel="Search vehicle arrangements"
-        searchPlaceholder="Property, city, or Employee"
+        searchPlaceholder="Property, city, or Officer"
         statusOptions={STATUS_OPTIONS}
         showLine={false}
         dateFromLabel="Pickup from"
@@ -358,7 +358,7 @@ export function AdminVehicleArrangementsView() {
                   <div>
                     <h3 className="text-sm font-semibold text-text-primary">Transport details</h3>
                     <p className="mt-0.5 text-xs leading-5 text-text-secondary">
-                      Entering these marks the pickup arranged and hands it to an eligible Employee.
+                      Entering these marks the pickup arranged and hands it to an eligible Officer.
                     </p>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">

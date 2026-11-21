@@ -27,6 +27,7 @@ import {
   type AdminTransaction,
 } from "@/lib/admin-operations-api";
 import type { ApiResponse } from "@/lib/api/client";
+import { roleLabel } from "@/lib/role-label";
 
 import { filterOperationalRecords, type OperationalRecord } from "./operational-records-filter";
 
@@ -169,7 +170,7 @@ export function fieldVisibilityConfigRecord(
   return {
     id: row.id,
     title: `${humanize(row.entity)} ${humanize(row.field_key)}`,
-    subtitle: `${humanize(row.target_role)} / ${humanize(row.entity)} policy`,
+    subtitle: `${roleLabel(row.target_role)} / ${humanize(row.entity)} policy`,
     status: humanize(row.mode),
     fields: [
       { label: "Field key", value: row.field_key },

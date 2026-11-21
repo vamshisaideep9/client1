@@ -8,6 +8,7 @@ export type AttendanceRequest = Schema["AttendanceRequestRead"];
 export type AttendanceMine = Schema["MyAttendanceRead"];
 export type AttendanceLeave = Schema["AttendanceLeaveInput"];
 export type AttendanceCorrection = Schema["AttendanceCorrectionInput"];
+export type AttendanceAdjustment = Schema["AttendanceAdjustmentInput"];
 export type AttendanceDecision = Schema["AttendanceDecisionInput"];
 export type AttendanceRoster = Schema["AttendanceRosterRead"];
 export type AttendanceInbox = Schema["AttendanceInboxRead"];
@@ -72,6 +73,10 @@ export function requestAttendanceLeave(body: AttendanceLeave) {
 
 export function requestAttendanceCorrection(body: AttendanceCorrection) {
   return apiRequest<AttendanceRequest>(`${ATTENDANCE_API}/corrections`, { method: "POST", body });
+}
+
+export function requestAttendanceAdjustment(body: AttendanceAdjustment) {
+  return apiRequest<AttendanceRequest>(`${ATTENDANCE_API}/regularizations`, { method: "POST", body });
 }
 
 export function cancelAttendanceRequest(id: string) {

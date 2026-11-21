@@ -12,7 +12,7 @@ import { useLine } from "./line-provider";
 export type RoleProfile = components["schemas"]["RoleProfileRead"];
 const ROLE_LABEL: Record<UserRole, string> = {
   admin: "Admin", sub_admin: "Sub Admin", agent: "Agent", telecaller: "Telecaller",
-  employee: "Employee", client: "Client",
+  employee: "Officer", client: "Client",
 };
 const LINE_LABEL: Record<StaffBusinessLine, string> = {
   loans: "Loans", real_estate: "Real Estate", both: "Loans and Real Estate",

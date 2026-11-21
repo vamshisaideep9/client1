@@ -111,7 +111,7 @@ describe("role-aware dashboard navigation", () => {
     ]);
   });
 
-  it("shows only each Agent, Telecaller, and Employee work surface", () => {
+  it("shows only each Agent, Telecaller, and Officer work surface", () => {
     expect(navKeys(context("agent", "loans"))).toEqual([
       "home",
       "agent-leads",
@@ -154,7 +154,7 @@ describe("role-aware dashboard navigation", () => {
     ]);
   });
 
-  it("uses the selected line for dual-line Telecaller and Employee navigation", () => {
+  it("uses the selected line for dual-line Telecaller and Officer navigation", () => {
     expect(navKeys(context("telecaller", "both", "loans"))).toEqual([
       "home",
       "staff-attendance",
@@ -183,6 +183,7 @@ describe("role-aware dashboard navigation", () => {
   it("makes the supported Sub Admin surfaces reachable without Client items", () => {
     expect(navKeys(context("sub_admin"))).toEqual([
       "home",
+      "staff-attendance",
       "sub-admin-listings",
       "sub-admin-listing-submit",
       "sub-admin-contests",
@@ -198,6 +199,7 @@ describe("role-aware dashboard navigation", () => {
 
     expect(navKeys(context("sub_admin", null, "loans", undefined, ["payout_requests"]))).toEqual([
       "home",
+      "staff-attendance",
       "sub-admin-listings",
       "sub-admin-listing-submit",
       "sub-admin-contests",
@@ -268,9 +270,10 @@ describe("dashboard direct-route UX access", () => {
     expect(isDashboardPathAllowed(route, context("client", "loans"))).toBe(false);
   });
 
-  it("opens personal attendance only to Telecallers and Employees", () => {
+  it("opens personal attendance to Telecallers, Officers, and Sub Admins", () => {
     expect(isDashboardPathAllowed("/dashboard/attendance", context("employee", "loans"))).toBe(true);
     expect(isDashboardPathAllowed("/dashboard/attendance", context("telecaller", "both"))).toBe(true);
+    expect(isDashboardPathAllowed("/dashboard/attendance", context("sub_admin"))).toBe(true);
     expect(isDashboardPathAllowed("/dashboard/attendance", context("agent", "loans"))).toBe(false);
     expect(isDashboardPathAllowed("/dashboard/attendance", context("admin"))).toBe(false);
   });

@@ -46,7 +46,7 @@ export const TEAM_LINE_LABEL: Record<TeamLine, string> = {
 
 export const TEAM_ROLE_LABEL: Record<TeamMemberRole, string> = {
   telecaller: "Telecallers",
-  employee: "Employees",
+  employee: "Officers",
 };
 
 export function personName(person: Pick<TeamPerson, "first_name" | "last_name">): string {

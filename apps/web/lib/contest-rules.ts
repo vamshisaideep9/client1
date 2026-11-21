@@ -37,13 +37,13 @@ export const STATUS_TONE: Record<Status, "neutral" | "info" | "warning" | "succe
 export const AUDIENCE_LABEL: Record<Audience, string> = {
   agent: "Agents",
   telecaller: "Telecallers",
-  employee: "Employees",
+  employee: "Officers",
   team: "Teams",
 };
 
 export const TEAM_ROLE_LABEL: Record<Schemas["ContestTeamMemberRole"], string> = {
   telecaller: "Telecaller teams",
-  employee: "Employee teams",
+  employee: "Officer teams",
 };
 
 export const METRIC_LABEL: Record<Metric, string> = {

@@ -47,7 +47,7 @@ test("an Admin configures attendance and reviews a staff leave request", async (
   await page.goto("/dashboard/attendance-management", { waitUntil: "domcontentloaded" });
   await expect(page.getByText(/Admin setup is pending/)).toBeVisible({ timeout: 25_000 });
   await page.getByRole("tab", { name: "Policy & holidays" }).click();
-  await expect(page.getByLabel("Shift start (IST)")).toHaveValue("");
+  await expect(page.getByLabel("Shift start (IST)")).toHaveValue("09:30");
   await page.getByLabel("Shift start (IST)").fill("09:00");
   await page.getByLabel("Shift duration (minutes)").fill("480");
   await page.getByLabel("Grace period (minutes)").fill("10");
@@ -64,7 +64,7 @@ test("an Admin configures attendance and reviews a staff leave request", async (
   await dialog.getByLabel("Review note").fill("Shift coverage confirmed");
   await dialog.getByRole("button", { name: "Save decision" }).click();
   await expect(page.getByText("Attendance decision saved.")).toBeVisible();
-  expect(decision).toEqual({ status: "approved", note: "Shift coverage confirmed", expected_decisions: 0 });
+  expect(decision).toEqual({ status: "approved", note: "Shift coverage confirmed", expected_decisions: 0, stage: "decision" });
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 850 });
     await page.getByRole("tab", { name: "Monthly grid" }).click();

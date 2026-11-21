@@ -19,6 +19,7 @@ from app.core.deps import (
 from app.db.session import get_db
 from app.models.audit_log import AuditAction
 from app.schemas.attendance import (
+    AttendanceAdjustmentInput,
     AttendanceCorrectionInput,
     AttendanceDayRead,
     AttendanceDecisionInput,
@@ -58,7 +59,7 @@ router = APIRouter(route_class=AttendanceRoute)
 async def require_attendance_staff(user: CurrentUser = Depends(get_active_user)) -> CurrentUser:
     if user.role not in attendance.STAFF_ROLES or user.staff_profile_uuid is None:
         raise HTTPException(
-            403, detail="Only Telecallers and Employees can use the attendance clock."
+            403, detail="Only Telecallers, Officers, and Sub Admins can use the attendance clock."
         )
     return user
 
@@ -78,7 +79,7 @@ async def my_attendance(
     year: Annotated[int | None, Query(ge=2000, le=9998)] = None,
     month: Annotated[int | None, Query(ge=1, le=12)] = None,
 ):
-    return await attendance_views.personal(db, user.staff_profile_uuid, year, month)
+    return await attendance_views.personal(db, user.staff_profile_uuid, user.role, year, month)
 
 
 @router.post("/check-in", response_model=AttendanceDayRead)
@@ -98,6 +99,11 @@ async def request_correction(payload: AttendanceCorrectionInput, user: Staff):
 
 @router.post("/leave", response_model=AttendanceRequestRead, status_code=201)
 async def request_leave(payload: AttendanceLeaveInput, user: Staff):
+    return await attendance_requests.submit(user, payload)
+
+
+@router.post("/regularizations", response_model=AttendanceRequestRead, status_code=201)
+async def request_regularization(payload: AttendanceAdjustmentInput, user: Staff):
     return await attendance_requests.submit(user, payload)
 
 
@@ -222,6 +228,10 @@ async def export_attendance(
         "worked_minutes",
         "late",
         "leave_half_days",
+        "system_check_out_ist",
+        "leave_sessions",
+        "lop_days",
+        "regularizations",
     ]
     rows = [
         dict(
@@ -230,7 +240,9 @@ async def export_attendance(
                 [
                     members[row.staff_profile_id].staff_code,
                     members[row.staff_profile_id].name,
-                    members[row.staff_profile_id].role,
+                    "Officer"
+                    if members[row.staff_profile_id].role == "employee"
+                    else members[row.staff_profile_id].role.replace("_", " ").title(),
                     row.day,
                     row.status,
                     row.check_in.astimezone(attendance.IST).isoformat() if row.check_in else "",
@@ -238,6 +250,12 @@ async def export_attendance(
                     row.worked_minutes,
                     row.late,
                     row.leave_units,
+                    row.system_check_out.astimezone(attendance.IST).isoformat()
+                    if row.system_check_out
+                    else "",
+                    ", ".join(row.leave_sessions),
+                    row.lop_units / 4 if row.lop_units is not None else "",
+                    ", ".join(row.adjustments),
                 ],
                 strict=True,
             )

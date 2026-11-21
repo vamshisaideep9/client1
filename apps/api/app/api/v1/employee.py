@@ -345,7 +345,7 @@ async def create_contact_share_link(
     except ContactShareNotAllowed as exc:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            "Contact sharing is not enabled for Employees.",
+            "Contact sharing is not enabled for Officers.",
         ) from exc
     return ContactShareLinkRead(
         id=link.id,

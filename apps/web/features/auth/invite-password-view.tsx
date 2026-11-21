@@ -37,7 +37,7 @@ const ROLE_LABEL: Record<string, string> = {
   admin: "Admin",
   sub_admin: "Sub Admin",
   telecaller: "Telecaller",
-  employee: "Employee",
+  employee: "Officer",
 };
 
 function InvitePasswordView<Preview extends { first_name: string | null }>({

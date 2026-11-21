@@ -72,6 +72,7 @@ export function AttendancePolicyPanel() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const [hours, minutes] = String(form.get("start")).split(":").map(Number);
+    const sessionClock = form.has("session_clock");
     const quotas = parseQuotas(String(form.get("quotas") ?? ""));
     if (!quotas) {
       setMessage("Enter each leave type once, in the format annual=12.5. Use up to 12 types.");
@@ -80,10 +81,14 @@ export function AttendancePolicyPanel() {
     setBusy(true);
     setMessage("");
     const response = await saveAttendancePolicy({
-      shift_start_minute: hours * 60 + minutes,
-      shift_minutes: Number(form.get("shift_minutes")), grace_minutes: Number(form.get("grace_minutes")),
-      half_day_minutes: Number(form.get("half_day_minutes")), full_day_minutes: Number(form.get("full_day_minutes")),
-      weekly_off: form.getAll("weekly").map(Number), leave_quotas: quotas,
+      shift_start_minute: sessionClock ? 570 : hours * 60 + minutes,
+      shift_minutes: sessionClock ? 540 : Number(form.get("shift_minutes")),
+      grace_minutes: sessionClock ? 15 : Number(form.get("grace_minutes")),
+      half_day_minutes: sessionClock ? 240 : Number(form.get("half_day_minutes")),
+      full_day_minutes: sessionClock ? 480 : Number(form.get("full_day_minutes")),
+      weekly_off: sessionClock ? [6] : form.getAll("weekly").map(Number),
+      leave_quotas: quotas,
+      session_clock: sessionClock,
     });
     setBusy(false);
     if (!response.ok) { setMessage(response.error); return; }
@@ -121,18 +126,25 @@ export function AttendancePolicyPanel() {
         description={policy.active ? `Active from ${attendanceDate(policy.active.effective_from)}. Revisions apply to future work dates.`
           : "Set your shift, day thresholds, weekly offs and annual leave allowances to open attendance."}>
         <form key={shown?.version ?? "new"} onSubmit={(event) => void savePolicy(event)} className="space-y-4">
+          <div className="space-y-1">
+            <label className="flex min-h-10 items-center gap-2 text-sm font-medium">
+              <input type="checkbox" name="session_clock" defaultChecked={shown?.session_clock} />
+              Use the session clock
+            </label>
+            <p className="text-sm text-text-secondary">Applies the 9:30 a.m.–6:30 p.m. IST shift, a 1:30–2:30 p.m. lunch break, and Sundays off. The first change starts next month.</p>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <div><Label htmlFor="policy-start">Shift start (IST)</Label><Input id="policy-start" type="time" name="start" required defaultValue={shown ? asTime(shown.shift_start_minute) : ""} /></div>
+            <div><Label htmlFor="policy-start">Shift start (IST)</Label><Input id="policy-start" type="time" name="start" required defaultValue={shown ? asTime(shown.shift_start_minute) : "09:30"} /></div>
             {NUMBERS.map(([key, label, min]) => <div key={key}>
               <Label htmlFor={`policy-${key}`}>{label}</Label>
-              <Input id={`policy-${key}`} name={key} type="number" min={min} max={1440} required defaultValue={shown?.[key] ?? ""} />
+              <Input id={`policy-${key}`} name={key} type="number" min={min} max={1440} required defaultValue={shown?.[key] ?? {shift_minutes: 540, grace_minutes: 15, half_day_minutes: 240, full_day_minutes: 480}[key]} />
             </div>)}
           </div>
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">Weekly days off</legend>
             <div className="flex flex-wrap gap-3">
               {WEEKDAYS.map((day, index) => <label key={day} className="flex min-h-10 items-center gap-2 text-sm">
-                <input type="checkbox" name="weekly" value={index} defaultChecked={shown?.weekly_off.includes(index)} />{day}
+                <input type="checkbox" name="weekly" value={index} defaultChecked={shown?.weekly_off.includes(index) ?? index === 6} />{day}
               </label>)}
             </div>
           </fieldset>

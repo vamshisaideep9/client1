@@ -26,7 +26,7 @@ test("staff can clock in and request a half day after Admin setup", async ({ pag
     }
     if (path.endsWith("/leave")) {
       leave = route.request().postDataJSON();
-      return route.fulfill({ status: 201, json: { id: profile, status: "pending" } });
+      return route.fulfill({ status: 201, json: { id: profile, status: "pending", start_day: day } });
     }
     return route.fulfill({ json: {
       policy: configured ? {

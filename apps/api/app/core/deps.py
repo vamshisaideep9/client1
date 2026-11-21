@@ -378,7 +378,7 @@ async def require_employee(
     if current_user.role != "employee":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only employees may access this.",
+            detail="Only Officers may access this.",
         )
     return current_user
 

@@ -4,7 +4,15 @@ from datetime import date, datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 AttendanceStatus = Literal[
     "checked_in",
@@ -18,6 +26,8 @@ AttendanceStatus = Literal[
     "week_off",
 ]
 RequestStatus = Literal["pending", "approved", "rejected", "cancelled"]
+AttendanceAdjustment = Literal["late_waiver", "early_exit", "on_duty", "holiday_work", "comp_off"]
+LeaveSession = Literal["morning", "afternoon"]
 Reason = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=500)]
 LeaveType = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]{0,31}$")]
 LeaveUnits = Annotated[int, Field(ge=0, le=732)]
@@ -36,6 +46,7 @@ class AttendancePolicyInput(AttendanceInput):
     full_day_minutes: Annotated[int, Field(ge=1, le=1440)]
     weekly_off: Annotated[list[Weekday], Field(max_length=6)]
     leave_quotas: Annotated[dict[LeaveType, LeaveUnits], Field(max_length=12)]
+    session_clock: bool = False
 
     @model_validator(mode="after")
     def check_thresholds(self):
@@ -45,6 +56,13 @@ class AttendancePolicyInput(AttendanceInput):
             raise ValueError("Grace minutes must fit the shift duration.")
         if len(set(self.weekly_off)) != len(self.weekly_off):
             raise ValueError("Choose each weekly day off once.")
+        if self.session_clock and (
+            self.shift_start_minute != 570
+            or self.shift_minutes != 540
+            or self.grace_minutes != 15
+            or self.weekly_off != [6]
+        ):
+            raise ValueError("The session clock uses 9:30–18:30 IST and Sunday weekly off.")
         return self
 
 
@@ -82,6 +100,19 @@ class AttendanceDayRead(BaseModel):
     worked_minutes: int
     late: bool
     leave_units: int
+    system_check_out: datetime | None = None
+    calendar_status: Literal["absent", "holiday", "week_off"] | None = None
+    morning_covered: bool | None = None
+    afternoon_covered: bool | None = None
+    early_exit: bool = False
+    lop_units: int | None = None
+    adjustments: list[AttendanceAdjustment] = Field(default_factory=list)
+    leave_sessions: list[LeaveSession] = Field(default_factory=list)
+
+    @field_validator("adjustments", "leave_sessions", mode="before")
+    @classmethod
+    def adjustment_names(cls, value):
+        return sorted(value) if isinstance(value, dict) else value
 
 
 class AttendanceCorrectionInput(AttendanceInput):
@@ -103,6 +134,7 @@ class AttendanceLeaveInput(AttendanceInput):
     leave_type: LeaveType
     half_day: bool
     reason: Reason
+    leave_session: LeaveSession | None = None
 
     @model_validator(mode="after")
     def valid_period(self):
@@ -110,13 +142,22 @@ class AttendanceLeaveInput(AttendanceInput):
             raise ValueError("Choose a leave period of one to 31 days.")
         if self.half_day and self.end_day != self.start_day:
             raise ValueError("Half-day leave must be within one day.")
+        if self.leave_session and not self.half_day:
+            raise ValueError("Choose a session only for half-day leave.")
         return self
+
+
+class AttendanceAdjustmentInput(AttendanceInput):
+    day: date
+    adjustment_type: AttendanceAdjustment
+    reason: Reason
 
 
 class AttendanceDecisionInput(AttendanceInput):
     status: Literal["approved", "rejected", "cancelled"]
     note: Reason
     expected_decisions: Annotated[int, Field(ge=0)]
+    stage: Literal["recommendation", "decision"] = "decision"
 
 
 class AttendanceDecisionRead(BaseModel):
@@ -125,13 +166,14 @@ class AttendanceDecisionRead(BaseModel):
     actor_role: str
     at: datetime
     note: str
+    stage: Literal["recommendation", "decision"] | None = None
 
 
 class AttendanceRequestRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     staff_profile_id: UUID
-    kind: Literal["leave", "correction"]
+    kind: Literal["leave", "correction", "adjustment"]
     status: RequestStatus
     start_day: date
     end_day: date
@@ -143,6 +185,9 @@ class AttendanceRequestRead(BaseModel):
     approved_units: dict[str, int]
     decisions: list[AttendanceDecisionRead]
     created_at: datetime
+    two_stage: bool = False
+    adjustment_type: AttendanceAdjustment | None = None
+    leave_session: LeaveSession | None = None
 
 
 class AttendanceBalance(BaseModel):

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,10 +21,16 @@ from app.models.profile import ProfileScope, ProfileStatus, StaffProfile, StaffR
 from app.models.staff_team import StaffTeam, StaffTeamMember
 from app.models.user import User, UserStatus
 from app.schemas.attendance import AttendancePolicyInput, AttendancePolicyState
+from app.services.attendance_sessions import (
+    IST,
+    late_login,
+    late_penalty_units,
+    midnight_after,
+    session_coverage,
+)
 from app.services.audit_log import record
 
-IST = ZoneInfo("Asia/Kolkata")
-STAFF_ROLES = (StaffRole.TELECALLER, StaffRole.EMPLOYEE)
+STAFF_ROLES = (StaffRole.TELECALLER, StaffRole.EMPLOYEE, StaffRole.SUB_ADMIN)
 DAY = timedelta(days=1)
 
 
@@ -58,6 +63,8 @@ def shift_start(day: date, policy: AttendancePolicy) -> datetime:
 
 
 def shift_cutoff(day: date, policy: AttendancePolicy) -> datetime:
+    if policy.session_clock:
+        return midnight_after(day)
     # Leave room for a late check-out through the next daily shift start.
     return shift_start(day, policy) + DAY
 
@@ -76,6 +83,10 @@ async def require_policy(db: AsyncSession, day: date) -> AttendancePolicy:
     if policy is None:
         raise AttendanceError("An Admin must configure attendance before it opens.")
     return policy
+
+
+def allows_personal_attendance(role: str, policy: AttendancePolicy | None) -> bool:
+    return policy is not None and (role != StaffRole.SUB_ADMIN or policy.session_clock)
 
 
 async def policy_state(db: AsyncSession) -> AttendancePolicyState:
@@ -133,7 +144,11 @@ async def lock_staff(db: AsyncSession, profile_id: UUID) -> StaffProfile:
 
 
 async def managers_for(
-    db: AsyncSession, target: StaffProfile, manager_id: UUID | None = None
+    db: AsyncSession,
+    target: StaffProfile,
+    manager_id: UUID | None = None,
+    *,
+    business_line: str | None = None,
 ) -> set[UUID]:
     """Lock matching memberships and teams through the decision commit."""
     criteria = [
@@ -143,6 +158,8 @@ async def managers_for(
     ]
     if manager_id is not None:
         criteria.append(StaffTeam.manager_staff_profile_uuid == manager_id)
+    if business_line is not None:
+        criteria.append(StaffTeam.business_line == business_line)
     manager_rows = (
         await db.execute(
             select(StaffTeam.manager_staff_profile_uuid, StaffProfile.auth_user_uuid)
@@ -190,9 +207,16 @@ async def configure_policy(
             select(AttendancePolicy).order_by(AttendancePolicy.version.desc()).limit(1)
         )
         today = work_date(utc_now())
+        if latest and latest.session_clock and not values.session_clock:
+            raise AttendanceInvalid("The session clock cannot be replaced by the legacy clock.")
+        effective_from = today + DAY if latest else today
+        if values.session_clock and not (latest and latest.session_clock):
+            effective_from = (today.replace(day=28) + timedelta(days=4)).replace(day=1)
+        if latest:
+            effective_from = max(effective_from, latest.effective_from)
         new = AttendancePolicy(
             version=latest.version + 1 if latest else 1,
-            effective_from=today + DAY if latest else today,
+            effective_from=effective_from,
             updated_by=actor.id,
             **values.model_dump(),
         )
@@ -242,6 +266,30 @@ async def day_without_clock(db: AsyncSession, day: date, policy: AttendancePolic
 
 
 def apply_clock_result(row: AttendanceDay, policy: AttendancePolicy) -> None:
+    if policy.session_clock:
+        coverage = session_coverage(row.day, row.check_in, row.check_out)
+        row.worked_minutes = coverage.minutes_worked
+        row.morning_covered = coverage.morning
+        row.afternoon_covered = coverage.afternoon
+        row.late = (
+            coverage.late
+            and row.calendar_status == "absent"
+            and "morning" not in row.leave_sessions
+            and "on_duty" not in row.adjustments
+        )
+        row.early_exit = coverage.early_exit and row.calendar_status == "absent"
+        covered = int(coverage.morning or "morning" in row.leave_sessions) + int(
+            coverage.afternoon
+            or "afternoon" in row.leave_sessions
+            or (coverage.morning and "early_exit" in row.adjustments)
+        )
+        if "on_duty" in row.adjustments:
+            covered = 2
+        if not row.leave_sessions:
+            covered = min(2, covered + row.leave_units)
+        row.uncovered_units = (2 - covered) * 2 if row.calendar_status == "absent" else 0
+        row.status = ("short_day", "half_day", "present")[covered]
+        return
     row.worked_minutes = max(0, int((row.check_out - row.check_in).total_seconds() // 60))
     row.late = row.check_in > shift_start(row.day, policy) + timedelta(minutes=policy.grace_minutes)
     full = policy.full_day_minutes if not row.leave_units else policy.half_day_minutes
@@ -253,6 +301,42 @@ def apply_clock_result(row: AttendanceDay, policy: AttendancePolicy) -> None:
         row.status = "short_day"
 
 
+async def recalculate_late_penalties(db: AsyncSession, staff_id: UUID, day: date) -> None:
+    """Call while holding the same staff lock used for punches and approvals."""
+    start = day.replace(day=1)
+    end = (start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    await db.flush()
+    rows = await db.scalars(
+        select(AttendanceDay)
+        .join(AttendancePolicy, AttendanceDay.policy_version == AttendancePolicy.version)
+        .where(
+            AttendanceDay.staff_profile_id == staff_id,
+            AttendanceDay.day >= start,
+            AttendanceDay.day < end,
+            AttendancePolicy.session_clock.is_(True),
+        )
+        .order_by(AttendanceDay.day)
+    )
+    ordinal = 0
+    for row in rows:
+        penalty = 0
+        if row.late and "late_waiver" not in row.adjustments:
+            ordinal += 1
+            penalty = late_penalty_units(ordinal)
+        if row.uncovered_units is None:
+            row.lop_units = None
+        else:
+            row.lop_units = min(4 - 2 * row.leave_units, row.uncovered_units + penalty)
+
+
+def close_expired_day(row: AttendanceDay, policy: AttendancePolicy) -> None:
+    if policy.session_clock:
+        row.system_check_out = row.check_out = midnight_after(row.day)
+        apply_clock_result(row, policy)
+    else:
+        row.status = "missing_checkout"
+
+
 async def open_day(db: AsyncSession, staff_id: UUID) -> AttendanceDay | None:
     return await db.scalar(
         select(AttendanceDay).where(
@@ -262,7 +346,16 @@ async def open_day(db: AsyncSession, staff_id: UUID) -> AttendanceDay | None:
     )
 
 
-def new_day(staff_id: UUID, day: date, policy: AttendancePolicy, status: str, source: str):
+def new_day(
+    staff_id: UUID,
+    day: date,
+    policy: AttendancePolicy,
+    status: str,
+    source: str,
+    *,
+    calendar_status: str | None = None,
+    business_line: str | None = None,
+) -> AttendanceDay:
     return AttendanceDay(
         staff_profile_id=staff_id,
         day=day,
@@ -272,6 +365,10 @@ def new_day(staff_id: UUID, day: date, policy: AttendancePolicy, status: str, so
         worked_minutes=0,
         leave_units=0,
         late=False,
+        calendar_status=calendar_status if policy.session_clock else None,
+        business_line=business_line if policy.session_clock else None,
+        adjustments={},
+        leave_sessions={},
     )
 
 
@@ -281,6 +378,8 @@ async def check_clock(actor: CurrentUser, *, checking_in: bool) -> AttendanceDay
         now = utc_now()
         day = work_date(now)
         today_policy = await require_policy(db, day)
+        if not allows_personal_attendance(profile.role, today_policy):
+            raise AttendanceError("Attendance for Sub Admins opens with the session clock.")
         active = await open_day(db, profile.id)
         if active is not None:
             policy = await db.get(AttendancePolicy, active.policy_version)
@@ -289,18 +388,25 @@ async def check_clock(actor: CurrentUser, *, checking_in: bool) -> AttendanceDay
                     return active
                 active.original_check_out = active.check_out = now
                 apply_clock_result(active, policy)
+                if policy.session_clock:
+                    await recalculate_late_penalties(db, profile.id, active.day)
                 await audit(
                     db, actor, "check_out", entity_id=profile.id, detail={"day": str(active.day)}
                 )
                 await db.commit()
                 return active
-            active.status = "missing_checkout"
+            close_expired_day(active, policy)
+            if policy.session_clock:
+                await recalculate_late_penalties(db, profile.id, active.day)
             await db.flush()
 
         row = await db.get(AttendanceDay, (profile.id, day))
         if not checking_in:
             if row is None or row.check_out is None:
                 previous = await db.get(AttendanceDay, (profile.id, day - DAY))
+                if previous is not None and previous.system_check_out is not None:
+                    await db.commit()
+                    return previous
                 if previous is not None and previous.original_check_out is not None:
                     policy = await db.get(AttendancePolicy, previous.policy_version)
                     if now < shift_cutoff(previous.day, policy):
@@ -313,12 +419,33 @@ async def check_clock(actor: CurrentUser, *, checking_in: bool) -> AttendanceDay
             if row.leave_units == 2:
                 raise AttendanceError("This date has approved full-day leave.")
         else:
-            row = new_day(profile.id, day, today_policy, "checked_in", "clock")
+            row = new_day(
+                profile.id,
+                day,
+                today_policy,
+                "checked_in",
+                "clock",
+                calendar_status=await day_without_clock(db, day, today_policy)
+                if today_policy.session_clock
+                else None,
+                business_line=actor.business_line,
+            )
             db.add(row)
         policy = await db.get(AttendancePolicy, row.policy_version)
+        if policy.session_clock and row.business_line not in (None, actor.business_line):
+            raise AttendanceError("This date is recorded in another business line.")
+        if policy.session_clock and row.business_line is None:
+            row.business_line = actor.business_line
         row.original_check_in = row.check_in = now
         row.status, row.source = "checked_in", "clock"
-        row.late = now > shift_start(day, policy) + timedelta(minutes=policy.grace_minutes)
+        row.late = (
+            late_login(day, now)
+            and row.calendar_status == "absent"
+            and "morning" not in row.leave_sessions
+            and "on_duty" not in row.adjustments
+            if policy.session_clock
+            else now > shift_start(day, policy) + timedelta(minutes=policy.grace_minutes)
+        )
         await audit(db, actor, "check_in", entity_id=profile.id, detail={"day": str(day)})
         await db.commit()
         return row

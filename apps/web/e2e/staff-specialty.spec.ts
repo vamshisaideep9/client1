@@ -73,7 +73,7 @@ test("role and line changes clear a hidden specialty", async ({ page }) => {
   await choose(page, /^Business line/, "Loans");
   await expect(page.getByLabel("Loan specialty (optional)")).toContainText("No specialty");
   await choose(page, "Loan specialty (optional)", "Personal Loan");
-  await choose(page, /^Role/, "Employee");
+  await choose(page, /^Role/, "Officer");
   await choose(page, /^Business line/, "Loans");
   await expect(page.getByLabel("Loan specialty (optional)")).toHaveCount(0);
   await page.getByRole("button", { name: "Create account", exact: true }).click();
@@ -144,22 +144,22 @@ for (const role of ["admin", "sub_admin", "agent", "employee", "client"] as cons
 test("missing optional profile metadata keeps staff role and line useful", async ({ page }) => {
   await setup(page, "employee", false);
   await page.goto("/dashboard/settings", { waitUntil: "domcontentloaded" });
-  const badge = page.getByLabel("Employee profile");
-  await expect(badge).toContainText("Employee");
+  const badge = page.getByLabel("Officer profile");
+  await expect(badge).toContainText("Officer");
   await expect(badge).toContainText("Loans and Real Estate");
   await expect(page.getByLabel(/^First name/)).toHaveCount(0);
 });
 
-test("Telecaller field tasks show the assigned Employee name and code", async ({ page }) => {
+test("Telecaller field tasks show the assigned Officer name and code", async ({ page }) => {
   await setup(page, "telecaller");
-  const task = { ...schemaExample("TaskRead"), id: TASK_ID, lead_uuid: LEAD_ID, task_type: "document_collection", status: "assigned", notes: "Collect supporting documents", assigned_employee_profile_uuid: SECOND_PRODUCT, assigned_employee_name: "Synthetic Employee", assigned_employee_code: "EMP-0123" };
+  const task = { ...schemaExample("TaskRead"), id: TASK_ID, lead_uuid: LEAD_ID, task_type: "document_collection", status: "assigned", notes: "Collect supporting documents", assigned_employee_profile_uuid: SECOND_PRODUCT, assigned_employee_name: "Synthetic Officer", assigned_employee_code: "EMP-0123" };
   await page.route(`**/api/v1/telecaller/leads/${LEAD_ID}`, (route) => route.fulfill({ json: { ...schemaExample("TelecallerLeadDetailRead"), id: LEAD_ID, mobile: "+919812345678", name: "Synthetic Client", business_line: "loans", status: "assigned", tasks: [task] } }));
   await page.goto(`/dashboard/leads/${LEAD_ID}`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Synthetic Employee", { exact: true })).toBeVisible();
+  await expect(page.getByText("Synthetic Officer", { exact: true })).toBeVisible();
   await expect(page.getByText("EMP-0123", { exact: true })).toBeVisible();
 });
 
-test("Employee list, detail and home show the raising Telecaller", async ({ page }, info) => {
+test("Officer list, detail and home show the raising Telecaller", async ({ page }, info) => {
   await setup(page, "employee");
   const task = { ...schemaExample("EmployeeTaskRead"), id: TASK_ID, lead_uuid: LEAD_ID, lead_name: "Synthetic Client", lead_mobile: null, lead_contact_mode: "deny", business_line: "loans", task_type: "document_collection", status: "assigned", due_at: new Date().toISOString(), raised_by_telecaller_name: "Synthetic Telecaller", raised_by_telecaller_code: "TC-0123" };
   await page.route("**/api/v1/employee/tasks", (route) => route.fulfill({ json: [task] }));

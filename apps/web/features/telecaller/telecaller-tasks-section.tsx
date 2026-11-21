@@ -97,7 +97,7 @@ export function TelecallerTasksSection({
   return (
     <DashboardPanel
       title="Field tasks"
-      description="Raise a document-collection visit for automatic Employee assignment."
+      description="Raise a document-collection visit for automatic Officer assignment."
     >
       <form ref={formRef} className="space-y-4" noValidate onSubmit={(e) => void onSubmit(e)}>
         <div>
@@ -154,7 +154,7 @@ export function TelecallerTasksSection({
               >
                 <div>
                   <p className="text-sm text-text-primary">{task.notes || "Document collection"}</p>
-                  <StaffCounterpart label="Employee" name={task.assigned_employee_name} code={task.assigned_employee_code} fallback={task.assigned_employee_profile_uuid ? "Not available" : "Awaiting assignment"} />
+                  <StaffCounterpart label="Officer" name={task.assigned_employee_name} code={task.assigned_employee_code} fallback={task.assigned_employee_profile_uuid ? "Not available" : "Awaiting assignment"} />
                   {task.due_at ? (
                     <p className="mt-1 text-xs text-text-secondary">
                       Due: {formatDateTime(task.due_at)}

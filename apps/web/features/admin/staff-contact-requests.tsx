@@ -31,6 +31,7 @@ import {
   type FieldErrors,
 } from "@/lib/form-validation";
 import { formatMobile } from "@/lib/phone";
+import { roleLabel } from "@/lib/role-label";
 
 import { ContactHistoryButton } from "./contact-history-dialog";
 
@@ -144,7 +145,7 @@ export function StaffContactRequests() {
             >
               <div className="min-w-0">
                 <p className="font-medium text-text-primary">
-                  {row.requester_name} · {row.requester_role.replaceAll("_", " ")}
+                  {row.requester_name} · {roleLabel(row.requester_role)}
                 </p>
                 <p className="text-xs text-text-secondary">{CONTACT_FIELD_LABEL[row.field]}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-2 break-all text-sm text-text-secondary">

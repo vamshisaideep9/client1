@@ -16,7 +16,8 @@ import {
   type AttendanceDecision, type AttendanceInbox, type AttendanceRequest, type AttendanceRoster,
 } from "@/lib/attendance-api";
 import { getMyTeams, listTeams } from "@/lib/staff-teams-api";
-import { ATTENDANCE_STATUS, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays } from "./attendance-display";
+import { roleLabel } from "@/lib/role-label";
+import { ATTENDANCE_STATUS, attendanceCode, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays, previousMonth, requestLabel } from "./attendance-display";
 import { AttendancePolicyPanel } from "./attendance-policy-panel";
 
 type Mode = "daily" | "month" | "requests" | "policy";
@@ -30,7 +31,7 @@ export function AttendanceManagementView() {
   const admin = role === "admin";
   const [mode, setMode] = useState<Mode>("daily");
   const [date, setDate] = useState(() => istDay());
-  const [month, setMonth] = useState(() => istDay().slice(0, 7));
+  const [month, setMonth] = useState(previousMonth);
   const [team, setTeam] = useState("");
   const [staff, setStaff] = useState("");
   const [status, setStatus] = useState("");
@@ -173,8 +174,9 @@ export function AttendanceManagementView() {
                   {inbox.requests.map((entry) => (
                     <li key={entry.id} className="flex flex-wrap justify-between gap-3 py-3 text-sm">
                       <div className="min-w-0">
-                        <p className="font-medium">{entry.kind === "leave" ? leaveLabel(entry.leave_type ?? "leave") : "Correction"} · {members.get(entry.staff_profile_id)?.name ?? "Staff member"}</p>
+                        <p className="font-medium">{requestLabel(entry)} · {members.get(entry.staff_profile_id)?.name ?? "Staff member"}</p>
                         <p className="text-text-secondary">{attendanceDate(entry.start_day)}{entry.end_day !== entry.start_day ? ` – ${attendanceDate(entry.end_day)}` : ""} · {leaveLabel(entry.status)}</p>
+                        <p className="text-text-secondary">Submitted {attendanceDate(istDay(new Date(entry.created_at)))} at {attendanceTime(entry.created_at)}</p>
                       </div>
                       <Button variant="outline" size="sm" onClick={() => setReview(entry)}>{entry.status === "pending" ? "Review" : "Open request"}</Button>
                     </li>
@@ -207,24 +209,29 @@ function RosterTable({ roster, dates, daily }: { roster: AttendanceRoster; dates
       <table className="w-full min-w-max text-left text-sm">
         <thead className="bg-muted text-text-secondary">
           <tr><th scope="col" className="p-2">Staff member</th>
-            {daily ? ["Status", "Check-in (IST)", "Check-out (IST)", "Worked"].map((label) => <th scope="col" className="p-2" key={label}>{label}</th>)
-              : dates.map((day) => <th scope="col" className="p-2" key={day}>{Number(day.slice(-2))}</th>)}
+            {daily ? ["Status", "Check-in (IST)", "Check-out (IST)", "Worked", "LOP days"].map((label) => <th scope="col" className="p-2" key={label}>{label}</th>)
+              : <>{dates.map((day) => <th scope="col" className="p-2" key={day}>{Number(day.slice(-2))}</th>)}<th scope="col" className="p-2">LOP days</th></>}
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           {roster.members.map((member) => {
             const row = byDay.get(`${member.staff_profile_id}/${dates[0]}`);
+            const totalLop = dates.reduce((sum, day) => sum + (byDay.get(`${member.staff_profile_id}/${day}`)?.lop_units ?? 0), 0);
             return <tr key={member.staff_profile_id}>
-              <th scope="row" className="p-2 font-medium">{member.name}<span className="block text-xs text-text-secondary">{member.staff_code}</span></th>
+              <th scope="row" className="p-2 font-medium">{member.name}<span className="block text-xs text-text-secondary">{member.staff_code} · {roleLabel(member.role)}</span></th>
               {daily ? <>
                 <td className="p-2">{row ? ATTENDANCE_STATUS[row.status] : "Unrecorded"}{row?.late ? " · Late" : ""}</td>
                 <td className="p-2">{attendanceTime(row?.check_in ?? null)}</td>
-                <td className="p-2">{attendanceTime(row?.check_out ?? null)}</td>
+                <td className="p-2">{attendanceTime(row?.check_out ?? null)}{row?.system_check_out && row.system_check_out === row.check_out ? " (system)" : ""}</td>
                 <td className="p-2">{row ? duration(row.worked_minutes) : "—"}</td>
               </> : dates.map((day) => {
                 const entry = byDay.get(`${member.staff_profile_id}/${day}`);
-                return <td key={day} className="p-2 text-xs">{entry ? ATTENDANCE_STATUS[entry.status] : "—"}{entry?.late ? " · Late" : ""}</td>;
+                const badge = entry ? attendanceCode(entry) : null;
+                return <td key={day} className="p-2 text-xs">{badge
+                  ? <span className={`rounded px-1 ${badge.tone}`} title={ATTENDANCE_STATUS[entry!.status]}>{badge.code}</span>
+                  : entry ? ATTENDANCE_STATUS[entry.status] : "—"}</td>;
               })}
+              <td className="p-2">{totalLop / 4}</td>
             </tr>;
           })}
         </tbody>
@@ -236,7 +243,14 @@ function RosterTable({ roster, dates, daily }: { roster: AttendanceRoster; dates
 function ReviewDialog({ entry, name, admin, close, saved }: {
   entry: AttendanceRequest; name?: string; admin: boolean; close: () => void; saved: () => void;
 }) {
-  const canDecide = admin || entry.status === "pending";
+  const last = entry.decisions.at(-1);
+  const stage = entry.two_stage && (!admin || last?.stage !== "recommendation")
+    ? "recommendation"
+    : "decision";
+  const reversing = entry.two_stage && entry.status === "approved";
+  const canDecide = entry.two_stage
+    ? entry.status === "pending" || reversing
+    : admin || entry.status === "pending";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -248,7 +262,7 @@ function ReviewDialog({ entry, name, admin, close, saved }: {
     setBusy(true);
     setError("");
     const response = await decideAttendanceRequest(entry.id, {
-      note, status, expected_decisions: entry.decisions.length,
+      note, status, expected_decisions: entry.decisions.length, stage,
     });
     setBusy(false);
     if (!response.ok) { setError(response.error); return; }
@@ -258,31 +272,32 @@ function ReviewDialog({ entry, name, admin, close, saved }: {
   return (
     <Dialog open onOpenChange={(open) => { if (!open && !busy) close(); }}>
       <DialogContent preventOutsideClose className="max-h-[92dvh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{entry.kind === "leave" ? "Leave request" : "Correction request"}</DialogTitle>
+        <DialogHeader><DialogTitle>{entry.kind === "leave" ? "Leave request" : requestLabel(entry)}</DialogTitle>
           <DialogDescription>{name ?? "Staff member"} · {leaveLabel(entry.status)}</DialogDescription></DialogHeader>
         <div className="space-y-2 text-sm">
           <p>{attendanceDate(entry.start_day)}{entry.end_day !== entry.start_day ? ` – ${attendanceDate(entry.end_day)}` : ""}</p>
-          {entry.kind === "leave" ? <p>{leaveLabel(entry.leave_type ?? "leave")}{entry.half_day ? " · Half day" : ""}</p>
-            : <p>{attendanceTime(entry.requested_check_in)} – {attendanceTime(entry.requested_check_out)} IST</p>}
+          {entry.kind === "leave" ? <p>{leaveLabel(entry.leave_type ?? "leave")}{entry.leave_session ? ` · ${leaveLabel(entry.leave_session)} half day` : entry.half_day ? " · Half day" : ""}</p>
+            : entry.kind === "correction" ? <p>{attendanceTime(entry.requested_check_in)} – {attendanceTime(entry.requested_check_out)} IST</p> : null}
+          <p>Submitted {attendanceDate(istDay(new Date(entry.created_at)))} at {attendanceTime(entry.created_at)}</p>
           <p className="[overflow-wrap:anywhere]">{entry.reason}</p>
           {entry.decisions.length ? <ol className="list-decimal space-y-1 pl-5" aria-label="Decision history">
             {entry.decisions.map((decision, index) => <li key={index} className="[overflow-wrap:anywhere]">
-              {leaveLabel(decision.status)} · {leaveLabel(decision.actor_role)} · {attendanceDate(istDay(new Date(decision.at)))} · {decision.note}
+              {decision.stage === "recommendation" ? "Recommended " : ""}{leaveLabel(decision.status)} · {roleLabel(decision.actor_role)} · {attendanceDate(istDay(new Date(decision.at)))} at {attendanceTime(decision.at)} · {decision.note}
             </li>)}
           </ol> : null}
         </div>
         {canDecide ? <form onSubmit={(event) => void submit(event)} className="space-y-3">
-          <div><Label htmlFor="review-decision">Decision</Label>
+          <div><Label htmlFor="review-decision">{stage === "recommendation" ? "Recommendation" : "Decision"}</Label>
             <select id="review-decision" name="status" className={selectClass} required defaultValue="">
               <option value="" disabled>Select decision</option>
-              {entry.status !== "approved" ? <option value="approved">Approve</option> : null}
-              {entry.status !== "rejected" && entry.status !== "cancelled" ? <option value="rejected">Reject</option> : null}
-              {admin && entry.status !== "cancelled" ? <option value="cancelled">Cancel request</option> : null}
+              {!reversing && entry.status !== "approved" ? <option value="approved">Approve</option> : null}
+              {!reversing && entry.status !== "rejected" && entry.status !== "cancelled" ? <option value="rejected">Reject</option> : null}
+              {reversing || (!entry.two_stage && admin && entry.status !== "cancelled") ? <option value="cancelled">Cancel request</option> : null}
             </select></div>
           <div><Label htmlFor="review-note">Review note</Label><Textarea id="review-note" name="note" required maxLength={500} /></div>
           {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter><Button variant="outline" type="button" onClick={close} disabled={busy}>Close</Button>
-            <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save decision"}</Button></DialogFooter>
+            <Button type="submit" disabled={busy}>{busy ? "Saving…" : stage === "recommendation" ? "Save recommendation" : "Save decision"}</Button></DialogFooter>
         </form> : <DialogFooter><Button variant="outline" onClick={close}>Close</Button></DialogFooter>}
       </DialogContent>
     </Dialog>

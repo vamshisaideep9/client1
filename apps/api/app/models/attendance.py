@@ -3,7 +3,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, SmallInteger, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,6 +22,7 @@ class AttendancePolicy(Base):
     full_day_minutes: Mapped[int] = mapped_column(Integer)
     weekly_off: Mapped[list[int]] = mapped_column(JSONB)
     leave_quotas: Mapped[dict[str, int]] = mapped_column(JSONB)
+    session_clock: Mapped[bool] = mapped_column(Boolean, default=False)
     updated_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("auth_users.id", ondelete="SET NULL")
     )
@@ -57,6 +58,10 @@ class AttendanceRequest(Base):
     correction_before: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     decisions: Mapped[list[dict]] = mapped_column(JSONB, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    business_line: Mapped[str | None] = mapped_column(String(12))
+    two_stage: Mapped[bool] = mapped_column(Boolean, default=False)
+    adjustment_type: Mapped[str | None] = mapped_column(String(16))
+    leave_session: Mapped[str | None] = mapped_column(String(9))
 
 
 class AttendanceDay(Base):
@@ -82,6 +87,16 @@ class AttendanceDay(Base):
     correction_request_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("attendance_requests.id", ondelete="SET NULL")
     )
+    system_check_out: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    calendar_status: Mapped[str | None] = mapped_column(String(12))
+    morning_covered: Mapped[bool | None] = mapped_column(Boolean)
+    afternoon_covered: Mapped[bool | None] = mapped_column(Boolean)
+    early_exit: Mapped[bool] = mapped_column(Boolean, default=False)
+    uncovered_units: Mapped[int | None] = mapped_column(SmallInteger)
+    lop_units: Mapped[int | None] = mapped_column(SmallInteger)
+    adjustments: Mapped[dict[str, str]] = mapped_column(JSONB, default=dict)
+    leave_sessions: Mapped[dict[str, str]] = mapped_column(JSONB, default=dict)
+    business_line: Mapped[str | None] = mapped_column(String(12))
 
 
 class AttendanceRolloverState(Base):

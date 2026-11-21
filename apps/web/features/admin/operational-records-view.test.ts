@@ -65,7 +65,7 @@ describe("field visibility operational records", () => {
 
     expect(record.id).toBe("805ba7c0-d0f8-4461-8296-617fa19efbc7");
     expect(record.title).toBe("Lead Name");
-    expect(record.subtitle).toBe("Employee / Lead policy");
+    expect(record.subtitle).toBe("Officer / Lead policy");
     expect(record.status).toBe("Deny");
     expect(record.fields.map((field) => field.label)).toEqual([
       "Field key",

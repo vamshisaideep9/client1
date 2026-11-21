@@ -27,7 +27,7 @@ describe("role identifiers", () => {
 
   it("keeps role and line useful when optional metadata is missing", () => {
     const html = renderToStaticMarkup(<RoleBadge role="employee" businessLine="real_estate" />);
-    expect(html).toContain("Employee");
+    expect(html).toContain("Officer");
     expect(html).toContain("Real Estate");
     expect(html).not.toContain("Specialty:");
     expect(html).not.toContain("undefined");

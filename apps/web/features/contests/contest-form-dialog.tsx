@@ -439,7 +439,7 @@ export function ContestFormDialog({
                   ? "Cases on leads the Agent introduced."
                   : role === "telecaller"
                     ? "Cases on leads the Telecaller holds. Optional for staff."
-                    : "Cases on leads where the Employee completed a task before the counted stage. Optional for staff."
+                    : "Cases on leads where the Officer completed a task before the counted stage. Optional for staff."
               }
             >
               {loans ? (

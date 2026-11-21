@@ -2228,6 +2228,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance/regularizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Regularization */
+        post: operations["request_regularization_api_v1_attendance_regularizations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attendance/requests": {
         parameters: {
             query?: never;
@@ -8296,6 +8313,21 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** AttendanceAdjustmentInput */
+        AttendanceAdjustmentInput: {
+            /**
+             * Adjustment Type
+             * @enum {string}
+             */
+            adjustment_type: "late_waiver" | "early_exit" | "on_duty" | "holiday_work" | "comp_off";
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Reason */
+            reason: string;
+        };
         /** AttendanceBalance */
         AttendanceBalance: {
             /** Allocated Units */
@@ -8327,6 +8359,12 @@ export interface components {
         };
         /** AttendanceDayRead */
         AttendanceDayRead: {
+            /** Adjustments */
+            adjustments?: ("late_waiver" | "early_exit" | "on_duty" | "holiday_work" | "comp_off")[];
+            /** Afternoon Covered */
+            afternoon_covered?: boolean | null;
+            /** Calendar Status */
+            calendar_status?: ("absent" | "holiday" | "week_off") | null;
             /** Check In */
             check_in: string | null;
             /** Check Out */
@@ -8336,10 +8374,21 @@ export interface components {
              * Format: date
              */
             day: string;
+            /**
+             * Early Exit
+             * @default false
+             */
+            early_exit: boolean;
             /** Late */
             late: boolean;
+            /** Leave Sessions */
+            leave_sessions?: ("morning" | "afternoon")[];
             /** Leave Units */
             leave_units: number;
+            /** Lop Units */
+            lop_units?: number | null;
+            /** Morning Covered */
+            morning_covered?: boolean | null;
             /** Original Check In */
             original_check_in: string | null;
             /** Original Check Out */
@@ -8361,6 +8410,8 @@ export interface components {
              * @enum {string}
              */
             status: "checked_in" | "present" | "half_day" | "short_day" | "absent" | "missing_checkout" | "on_leave" | "holiday" | "week_off";
+            /** System Check Out */
+            system_check_out?: string | null;
             /** Worked Minutes */
             worked_minutes: number;
         };
@@ -8370,6 +8421,12 @@ export interface components {
             expected_decisions: number;
             /** Note */
             note: string;
+            /**
+             * Stage
+             * @default decision
+             * @enum {string}
+             */
+            stage: "recommendation" | "decision";
             /**
              * Status
              * @enum {string}
@@ -8392,6 +8449,8 @@ export interface components {
             at: string;
             /** Note */
             note: string;
+            /** Stage */
+            stage?: ("recommendation" | "decision") | null;
             /**
              * Status
              * @enum {string}
@@ -8429,6 +8488,8 @@ export interface components {
             end_day: string;
             /** Half Day */
             half_day: boolean;
+            /** Leave Session */
+            leave_session?: ("morning" | "afternoon") | null;
             /** Leave Type */
             leave_type: string;
             /** Reason */
@@ -8451,6 +8512,11 @@ export interface components {
             leave_quotas: {
                 [key: string]: number;
             };
+            /**
+             * Session Clock
+             * @default false
+             */
+            session_clock: boolean;
             /** Shift Minutes */
             shift_minutes: number;
             /** Shift Start Minute */
@@ -8475,6 +8541,11 @@ export interface components {
             leave_quotas: {
                 [key: string]: number;
             };
+            /**
+             * Session Clock
+             * @default false
+             */
+            session_clock: boolean;
             /** Shift Minutes */
             shift_minutes: number;
             /** Shift Start Minute */
@@ -8491,6 +8562,8 @@ export interface components {
         };
         /** AttendanceRequestRead */
         AttendanceRequestRead: {
+            /** Adjustment Type */
+            adjustment_type?: ("late_waiver" | "early_exit" | "on_duty" | "holiday_work" | "comp_off") | null;
             /** Approved Units */
             approved_units: {
                 [key: string]: number;
@@ -8518,7 +8591,9 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "leave" | "correction";
+            kind: "leave" | "correction" | "adjustment";
+            /** Leave Session */
+            leave_session?: ("morning" | "afternoon") | null;
             /** Leave Type */
             leave_type: string | null;
             /** Reason */
@@ -8542,6 +8617,11 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "approved" | "rejected" | "cancelled";
+            /**
+             * Two Stage
+             * @default false
+             */
+            two_stage: boolean;
         };
         /** AttendanceRosterMember */
         AttendanceRosterMember: {
@@ -20551,6 +20631,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AttendancePolicyState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_regularization_api_v1_attendance_regularizations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceAdjustmentInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRequestRead"];
                 };
             };
             /** @description Validation Error */

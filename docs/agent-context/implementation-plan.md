@@ -1,5 +1,18 @@
 # Living implementation plan
 
+**In progress — Officer roles, Sub Admin access, and attendance**
+
+- Officer labels reuse the existing role ID. The team slot now permits one
+  Telecaller team and one Officer team per manager in each business line.
+- The opt-in session clock adds scheduled lunch, midnight system checkout,
+  quarter-day LOP, and two-stage review for new requests. Regularization covers
+  late waivers, early exits, on-duty credit, holiday work, and Sunday comp-off.
+  New half-day requests identify their morning or afternoon session.
+- Remaining scope includes dashboard access administration and specialist
+  permissions, staff employment dates and line calendars, monthly leave
+  entitlement and sandwich calculations, private medical certificates, and
+  complete attendance reporting with closed revisions and Analytics.
+
 **Implemented — Batch 6 attendance management web**
 
 - The manager roster and monthly grid show scoped attendance by date, team,

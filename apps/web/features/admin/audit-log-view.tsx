@@ -69,7 +69,7 @@ import { useAuditLog } from "./use-audit-log";
 // key is a TypeScript error rather than a blank cell, because AuditAction comes
 // from the generated contract.
 const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: string }> = {
-  employee_task_reopened: { label: "Employee task reopened", icon: ShieldCheck, tone: "text-brand-link" },
+  employee_task_reopened: { label: "Officer task reopened", icon: ShieldCheck, tone: "text-brand-link" },
   agent_approved: {
     label: "Partner approved",
     icon: BadgeCheck,
@@ -262,7 +262,7 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
     tone: "bg-loans-soft text-brand-link",
   },
   employee_work_assigned: {
-    label: "Employee work assigned",
+    label: "Officer work assigned",
     icon: ClipboardList,
     tone: "bg-realestate-soft text-brand-link",
   },
@@ -448,7 +448,7 @@ const ROLE_LABEL: Record<string, string> = {
   sub_admin: "Sub Admin",
   agent: "Partner",
   telecaller: "Telecaller",
-  employee: "Employee",
+  employee: "Officer",
   client: "Client",
 };
 

@@ -4,7 +4,7 @@ from collections import Counter
 from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.db.session as db_session
@@ -19,12 +19,14 @@ from app.models.notification import Notification, NotificationType
 from app.models.profile import ProfileScope, ProfileStatus, StaffProfile, StaffRole
 from app.models.user import User, UserStatus
 from app.schemas.attendance import (
+    AttendanceAdjustmentInput,
     AttendanceBalance,
     AttendanceCorrectionInput,
     AttendanceDecisionInput,
     AttendanceLeaveInput,
 )
 from app.services import attendance as clock
+from app.services import attendance_adjustments
 
 
 def notify(db: AsyncSession, recipients: set[UUID], title: str, message: str, href: str) -> None:
@@ -40,10 +42,7 @@ def notify(db: AsyncSession, recipients: set[UUID], title: str, message: str, hr
     )
 
 
-async def _reviewers(db: AsyncSession, target: StaffProfile) -> set[UUID]:
-    managers = await clock.managers_for(db, target)
-    if managers:
-        return managers
+async def _admins(db: AsyncSession) -> set[UUID]:
     return set(
         await db.scalars(
             select(StaffProfile.auth_user_uuid)
@@ -56,6 +55,15 @@ async def _reviewers(db: AsyncSession, target: StaffProfile) -> set[UUID]:
             )
         )
     )
+
+
+async def _reviewers(
+    db: AsyncSession, target: StaffProfile, *, business_line: str | None = None
+) -> set[UUID]:
+    managers = await clock.managers_for(db, target, business_line=business_line)
+    if managers:
+        return managers
+    return await _admins(db)
 
 
 def _validate_times(
@@ -73,17 +81,25 @@ def _validate_times(
 
 
 async def submit(
-    actor: CurrentUser, values: AttendanceLeaveInput | AttendanceCorrectionInput
+    actor: CurrentUser,
+    values: AttendanceLeaveInput | AttendanceCorrectionInput | AttendanceAdjustmentInput,
 ) -> AttendanceRequest:
     async with db_session.AsyncSessionLocal() as db:
         profile = await clock.lock_actor(db, actor)
         now = clock.utc_now()
         today = clock.work_date(now)
-        await clock.require_policy(db, today)
+        active_policy = await clock.require_policy(db, today)
+        if not clock.allows_personal_attendance(profile.role, active_policy):
+            raise clock.AttendanceError("Attendance for Sub Admins opens with the session clock.")
         if isinstance(values, AttendanceLeaveInput):
             if values.start_day < today:
                 raise clock.AttendanceInvalid("Choose a current or future leave date.")
             policy = await clock.require_policy(db, values.start_day)
+            end_policy = await clock.require_policy(db, values.end_day)
+            if policy.session_clock != end_policy.session_clock:
+                raise clock.AttendanceInvalid("Submit separate requests across the policy change.")
+            if policy.session_clock and values.half_day and values.leave_session is None:
+                raise clock.AttendanceInvalid("Choose a morning or afternoon session.")
             if values.leave_type not in policy.leave_quotas:
                 raise clock.AttendanceInvalid(
                     "This leave type is unavailable for the requested dates."
@@ -95,6 +111,24 @@ async def submit(
                 reason=values.reason,
                 leave_type=values.leave_type,
                 half_day=values.half_day,
+                leave_session=values.leave_session,
+            )
+        elif isinstance(values, AttendanceAdjustmentInput):
+            if values.day < clock.work_date(profile.created_at) or (
+                values.day > today and values.adjustment_type != "on_duty"
+            ):
+                raise clock.AttendanceInvalid("Choose an eligible work date.")
+            policy = await clock.require_policy(db, values.day)
+            if not policy.session_clock:
+                raise clock.AttendanceError("Regularization opens with the session clock.")
+            request = AttendanceRequest(
+                kind="adjustment",
+                adjustment_type=values.adjustment_type,
+                start_day=values.day,
+                end_day=await attendance_adjustments.comp_off_date(db, values.day)
+                if values.adjustment_type == "comp_off"
+                else values.day,
+                reason=values.reason,
             )
         else:
             if values.day < clock.work_date(profile.created_at) or values.day > today:
@@ -114,21 +148,30 @@ async def submit(
                 requested_check_in=values.check_in,
                 requested_check_out=values.check_out,
             )
-        existing = await db.scalar(
-            select(AttendanceRequest.id)
-            .where(
-                AttendanceRequest.staff_profile_id == profile.id,
-                AttendanceRequest.kind == request.kind,
-                AttendanceRequest.status == "pending",
-                AttendanceRequest.start_day <= request.end_day,
-                AttendanceRequest.end_day >= request.start_day,
-            )
-            .limit(1)
+        if not clock.allows_personal_attendance(profile.role, policy):
+            raise clock.AttendanceError("This date predates attendance for Sub Admins.")
+        overlap = select(AttendanceRequest.id).where(
+            AttendanceRequest.staff_profile_id == profile.id,
+            AttendanceRequest.kind == request.kind,
+            AttendanceRequest.adjustment_type == request.adjustment_type,
+            AttendanceRequest.status == "pending",
+            AttendanceRequest.start_day <= request.end_day,
+            AttendanceRequest.end_day >= request.start_day,
         )
+        if request.leave_session:
+            overlap = overlap.where(
+                or_(
+                    AttendanceRequest.leave_session.is_(None),
+                    AttendanceRequest.leave_session == request.leave_session,
+                )
+            )
+        existing = await db.scalar(overlap.limit(1))
         if existing is not None:
             raise clock.AttendanceError("A pending request overlaps these dates.")
         request.staff_profile_id, request.requester_id = profile.id, actor.id
         request.created_at = now
+        request.two_stage = policy.session_clock
+        request.business_line = actor.business_line if policy.session_clock else None
         db.add(request)
         await db.flush()
         await clock.audit(
@@ -136,7 +179,7 @@ async def submit(
         )
         notify(
             db,
-            await _reviewers(db, profile),
+            await _reviewers(db, profile, business_line=request.business_line),
             "Attendance request submitted",
             "A staff request is ready for review.",
             "/dashboard/attendance-management",
@@ -188,15 +231,50 @@ async def _apply_leave(db: AsyncSession, request: AttendanceRequest) -> None:
         if await clock.day_without_clock(db, day, policy) == "absent":
             row = await db.get(AttendanceDay, (request.staff_profile_id, day))
             if row is None:
-                row = clock.new_day(request.staff_profile_id, day, policy, "on_leave", "leave")
+                row = clock.new_day(
+                    request.staff_profile_id,
+                    day,
+                    policy,
+                    "on_leave",
+                    "leave",
+                    calendar_status="absent",
+                    business_line=request.business_line,
+                )
                 db.add(row)
-            if row.leave_units or (units == 2 and row.check_in is not None):
+            if policy.session_clock and row.business_line not in (None, request.business_line):
+                raise clock.AttendanceError("This date is recorded in another business line.")
+            if policy.session_clock and row.business_line is None:
+                row.business_line = request.business_line
+            sessions = ("morning", "afternoon") if units == 2 else (request.leave_session,)
+            if row.adjustments.get("on_duty") or (
+                (row.leave_units + units == 2) and row.check_in is not None and row.leave_units
+            ):
                 raise clock.AttendanceError("These dates overlap approved leave or recorded work.")
-            row.leave_units, row.leave_request_id = units, request.id
+            if units == 2 and row.check_in is not None:
+                raise clock.AttendanceError("These dates overlap approved leave or recorded work.")
+            if policy.session_clock and all(sessions):
+                if (row.leave_units and not row.leave_sessions) or any(
+                    session in row.leave_sessions for session in sessions
+                ):
+                    raise clock.AttendanceError("These dates overlap approved leave.")
+                row.leave_sessions = {
+                    **row.leave_sessions,
+                    **dict.fromkeys(sessions, str(request.id)),
+                }
+                row.leave_units = len(row.leave_sessions)
+            else:
+                if row.leave_units:
+                    raise clock.AttendanceError("These dates overlap approved leave.")
+                row.leave_units = units
+            row.leave_request_id = request.id
             if row.check_in is None:
                 row.status, row.source = "on_leave", "leave"
+                if policy.session_clock and day < clock.work_date(clock.utc_now()):
+                    row.uncovered_units = row.lop_units = (2 - row.leave_units) * 2
             elif row.check_out is not None:
                 clock.apply_clock_result(row, await db.get(AttendancePolicy, row.policy_version))
+                if policy.session_clock:
+                    await clock.recalculate_late_penalties(db, request.staff_profile_id, day)
             applied[day.isoformat()] = units
             by_year[day.year] += units
             maximum = policy.leave_quotas[request.leave_type]
@@ -217,18 +295,37 @@ async def _undo_leave(db: AsyncSession, request: AttendanceRequest, today: date)
     for iso in request.approved_units:
         day = date.fromisoformat(iso)
         row = await db.get(AttendanceDay, (request.staff_profile_id, day))
-        if row is None or row.leave_request_id != request.id:
+        if row is None:
             continue
-        row.leave_units, row.leave_request_id = 0, None
+        if str(request.id) in row.leave_sessions.values():
+            row.leave_sessions = {
+                session: owner
+                for session, owner in row.leave_sessions.items()
+                if owner != str(request.id)
+            }
+            row.leave_units = len(row.leave_sessions)
+            row.leave_request_id = (
+                UUID(next(iter(row.leave_sessions.values()))) if row.leave_sessions else None
+            )
+        elif row.leave_request_id != request.id:
+            continue
+        else:
+            row.leave_units, row.leave_request_id = 0, None
         policy = await db.get(AttendancePolicy, row.policy_version)
-        if row.check_in is None and row.source == "leave":
+        if row.check_in is None and row.source == "leave" and not row.leave_units:
             if day >= today:
                 await db.delete(row)
             else:
                 row.status = await clock.day_without_clock(db, day, policy)
                 row.source = "rollover"
+                if policy.session_clock:
+                    row.uncovered_units = row.lop_units = 4 if row.status == "absent" else 0
         elif row.check_out is not None:
             clock.apply_clock_result(row, policy)
+            if policy.session_clock:
+                await clock.recalculate_late_penalties(db, request.staff_profile_id, day)
+        elif policy.session_clock and day < today:
+            row.uncovered_units = row.lop_units = (2 - row.leave_units) * 2
 
 
 async def _apply_correction(db: AsyncSession, request: AttendanceRequest, now: datetime) -> None:
@@ -243,10 +340,25 @@ async def _apply_correction(db: AsyncSession, request: AttendanceRequest, now: d
         request.start_day, request.requested_check_in, request.requested_check_out, policy, now
     )
     if row is None:
-        row = clock.new_day(*key, policy, "present", "correction")
+        row = clock.new_day(
+            *key,
+            policy,
+            "present",
+            "correction",
+            calendar_status=await clock.day_without_clock(db, request.start_day, policy)
+            if policy.session_clock
+            else None,
+            business_line=request.business_line,
+        )
         db.add(row)
         request.correction_before = None
     else:
+        if row.business_line not in (None, request.business_line):
+            raise clock.AttendanceError("This date is recorded in another business line.")
+        if set(row.adjustments) & {"early_exit", "late_waiver", "holiday_work"}:
+            raise clock.AttendanceError(
+                "Reverse the approved regularization before changing punches."
+            )
         if row.leave_units == 2:
             raise clock.AttendanceError("Cancel full-day leave before correcting this day.")
         if row.correction_request_id is not None:
@@ -260,14 +372,20 @@ async def _apply_correction(db: AsyncSession, request: AttendanceRequest, now: d
             "source": row.source,
         }
     row.check_in, row.check_out = request.requested_check_in, request.requested_check_out
+    if policy.session_clock and row.business_line is None:
+        row.business_line = request.business_line
     row.correction_request_id, row.source = request.id, "correction"
     clock.apply_clock_result(row, policy)
+    if policy.session_clock:
+        await clock.recalculate_late_penalties(db, request.staff_profile_id, row.day)
 
 
 async def _undo_correction(db: AsyncSession, request: AttendanceRequest, now: datetime) -> None:
     row = await db.get(AttendanceDay, (request.staff_profile_id, request.start_day))
     if row is None or row.correction_request_id != request.id:
         raise clock.AttendanceError("This correction no longer owns the attendance record.")
+    if set(row.adjustments) & {"early_exit", "late_waiver", "holiday_work"}:
+        raise clock.AttendanceError("Reverse the approved regularization before changing punches.")
     before = request.correction_before
     policy = await db.get(AttendancePolicy, row.policy_version)
     if not before:
@@ -276,6 +394,10 @@ async def _undo_correction(db: AsyncSession, request: AttendanceRequest, now: da
             "on_leave" if row.leave_units else await clock.day_without_clock(db, row.day, policy)
         )
         row.source = "leave" if row.leave_units else "rollover"
+        if policy.session_clock:
+            row.morning_covered = row.afternoon_covered = None
+            row.early_exit = False
+            row.uncovered_units = 4 if row.status == "absent" else 0
     else:
         row.check_in = datetime.fromisoformat(before["check_in"]) if before["check_in"] else None
         row.check_out = datetime.fromisoformat(before["check_out"]) if before["check_out"] else None
@@ -285,10 +407,81 @@ async def _undo_correction(db: AsyncSession, request: AttendanceRequest, now: da
             now >= clock.shift_cutoff(row.day, policy)
             or await clock.open_day(db, row.staff_profile_id)
         ):
-            row.status = "missing_checkout"
+            clock.close_expired_day(row, policy)
         if row.check_out is not None:
             clock.apply_clock_result(row, policy)
     row.correction_request_id = None
+    if policy.session_clock:
+        await clock.recalculate_late_penalties(db, request.staff_profile_id, row.day)
+
+
+def _decision_entry(actor: CurrentUser, status: str, note: str, now: datetime, *, stage: str):
+    return {
+        "status": status,
+        "actor_id": str(actor.id),
+        "actor_role": actor.role,
+        "at": now.isoformat(),
+        "note": note,
+        "stage": stage,
+    }
+
+
+async def _check_two_stage(
+    db: AsyncSession,
+    actor: CurrentUser,
+    target: StaffProfile,
+    request: AttendanceRequest,
+    values: AttendanceDecisionInput,
+    now: datetime,
+) -> bool:
+    """Return true for a recorded recommendation. The final decision is separate."""
+    eligible = await _reviewers(db, target, business_line=request.business_line)
+    last_final = max(
+        (index for index, step in enumerate(request.decisions) if step.get("stage") == "decision"),
+        default=-1,
+    )
+    recommendation = next(
+        (
+            step
+            for step in reversed(request.decisions[last_final + 1 :])
+            if step.get("stage") == "recommendation" and UUID(step["actor_id"]) in eligible
+        ),
+        None,
+    )
+    if values.stage == "recommendation":
+        if actor.id not in eligible:
+            raise clock.AttendanceNotFound("Attendance request not found.")
+        expected_stage = (
+            (request.status == "approved")
+            if values.status == "cancelled"
+            else (request.status == "pending")
+        )
+        if not expected_stage or recommendation:
+            raise clock.AttendanceError("This request is not awaiting a recommendation.")
+        request.decisions = [
+            *request.decisions,
+            _decision_entry(actor, values.status, values.note, now, stage="recommendation"),
+        ]
+        await clock.audit(db, actor, "recommend_request", entity_id=request.id)
+        notify(
+            db,
+            (await _admins(db)) - {actor.id},
+            "Attendance recommendation ready",
+            "An attendance request is ready for a final decision.",
+            "/dashboard/attendance-management",
+        )
+        return True
+    if actor.role != StaffRole.ADMIN:
+        raise clock.AttendanceForbidden("A platform Admin must give the final decision.")
+    if recommendation is None:
+        raise clock.AttendanceError("An eligible reviewer must recommend a decision first.")
+    if (request.status == "approved") != (values.status == "cancelled") or (
+        (recommendation["status"] == "cancelled") != (values.status == "cancelled")
+    ):
+        raise clock.AttendanceError("This decision does not match the request's current stage.")
+    if recommendation["actor_id"] == str(actor.id):
+        raise clock.AttendanceForbidden("A different Admin must give the final decision.")
+    return False
 
 
 async def _decision(
@@ -308,7 +501,7 @@ async def _decision(
         now = clock.utc_now()
         today = clock.work_date(now)
         await clock.require_policy(db, today)
-        if request.kind == "leave":
+        if request.kind in ("leave", "adjustment"):
             await db.execute(select(func.pg_advisory_xact_lock_shared(ATTENDANCE_POLICY_LOCK)))
         before = request.status
         if values is None:
@@ -317,14 +510,25 @@ async def _decision(
             if before == "cancelled":
                 return request
             if before != "pending" and not (
-                before == "approved" and request.kind == "leave" and request.start_day > today
+                not request.two_stage
+                and before == "approved"
+                and request.kind == "leave"
+                and request.start_day > today
             ):
                 raise clock.AttendanceError("This request can no longer be cancelled here.")
             status, note = "cancelled", "Cancelled by requester."
         else:
             if actor.id in (request.requester_id, target.auth_user_uuid):
                 raise clock.AttendanceForbidden("You cannot decide your own attendance request.")
-            if reviewer.role == StaffRole.SUB_ADMIN:
+            if request.two_stage:
+                if len(request.decisions) != values.expected_decisions:
+                    raise clock.AttendanceError("The request changed. Reload it and try again.")
+                if await _check_two_stage(db, actor, target, request, values, now):
+                    await db.commit()
+                    return request
+            elif values.stage == "recommendation":
+                raise clock.AttendanceError("This request follows the earlier approval policy.")
+            elif reviewer.role == StaffRole.SUB_ADMIN:
                 if not await clock.managers_for(db, target, reviewer.id):
                     raise clock.AttendanceNotFound("Attendance request not found.")
                 if before != "pending" or values.status == "cancelled":
@@ -341,23 +545,21 @@ async def _decision(
         if before == "approved" and status != "approved":
             if request.kind == "leave":
                 await _undo_leave(db, request, today)
+            elif request.kind == "adjustment":
+                await attendance_adjustments.undo(db, request, now)
             else:
                 await _undo_correction(db, request, now)
         if status == "approved":
             if request.kind == "leave":
                 await _apply_leave(db, request)
+            elif request.kind == "adjustment":
+                await attendance_adjustments.apply(db, request)
             else:
                 await _apply_correction(db, request, now)
         request.status = status
         request.decisions = [
             *request.decisions,
-            {
-                "status": status,
-                "actor_id": str(actor.id),
-                "actor_role": actor.role,
-                "at": now.isoformat(),
-                "note": note,
-            },
+            _decision_entry(actor, status, note, now, stage="decision"),
         ]
         await clock.audit(
             db,
@@ -366,7 +568,11 @@ async def _decision(
             entity_id=request.id,
             detail={"before": before, "after": status, "kind": request.kind},
         )
-        recipients = await _reviewers(db, target) if values is None else {target.auth_user_uuid}
+        recipients = (
+            await _reviewers(db, target, business_line=request.business_line)
+            if values is None
+            else {target.auth_user_uuid}
+        )
         notify(
             db,
             recipients,

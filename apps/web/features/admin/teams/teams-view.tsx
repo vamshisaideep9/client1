@@ -138,7 +138,7 @@ function TeamFormDialog({
             <DialogDescription>
               {editing
                 ? `${TEAM_LINE_LABEL[editing.business_line]} · ${TEAM_ROLE_LABEL[editing.member_role]}. The line and role of a team cannot change.`
-                : "A team is one business line and one role. Its manager sees the team's work and can move it between members."}
+                : "A manager can supervise one Telecaller team and one Officer team in each business line."}
             </DialogDescription>
           </DialogHeader>
 
@@ -178,7 +178,13 @@ function TeamFormDialog({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="team-role">Members</Label>
-                  <Select value={role} onValueChange={(value) => setRole(value as TeamMemberRole)}>
+                  <Select
+                    value={role}
+                    onValueChange={(value) => {
+                      setRole(value as TeamMemberRole);
+                      setManager(undefined);
+                    }}
+                  >
                     <SelectTrigger id="team-role">
                       <SelectValue />
                     </SelectTrigger>
@@ -277,7 +283,7 @@ function AddMemberDialog({
     onSaved(res.data);
   }
 
-  const roleWord = team?.member_role === "employee" ? "Employee" : "Telecaller";
+  const roleWord = team?.member_role === "employee" ? "Officer" : "Telecaller";
   return (
     <Dialog open={team !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
       <DialogContent preventOutsideClose className="max-w-md">
@@ -475,7 +481,7 @@ export function TeamsView() {
     <DashboardPage>
       <DashboardHeader
         title="Teams"
-        description="Sub Admins who manage Telecallers or Employees in one business line. A manager sees their team's work and can move it between members; new work is still shared across the whole line."
+        description="Assign Sub Admins to Telecaller and Officer teams. Managers can move open work between members of the assigned team."
         actions={
           canEdit ? (
             <Button type="button" onClick={() => setFormMode({ kind: "create" })}>

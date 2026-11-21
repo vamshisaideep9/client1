@@ -34,7 +34,7 @@ describe("assignment toast", () => {
     });
   });
 
-  it("counts task assignments for an Employee, singular wording", () => {
+  it("counts task assignments for an Officer, singular wording", () => {
     expect(pendingAssignmentToast("employee", items, new Set())).toEqual({
       ids: ["f"],
       message: "1 new task has been assigned to you",

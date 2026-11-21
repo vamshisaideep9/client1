@@ -33,7 +33,7 @@ const CAPABILITIES = {
   subAdmin: { roles: ["sub_admin"] },
   admin: { roles: ["admin"] },
   staffInsights: { roles: ["telecaller", "employee", "agent", "sub_admin"] },
-  staffAttendance: { roles: ["telecaller", "employee"] },
+  staffAttendance: { roles: ["telecaller", "employee", "sub_admin"] },
   attendanceManagement: { roles: ["sub_admin", "admin"] },
   // CS-027: the people contests can target (managers follow theirs in My team).
   contestParticipant: { roles: ["agent", "telecaller", "employee"] },

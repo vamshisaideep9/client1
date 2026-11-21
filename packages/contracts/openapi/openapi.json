@@ -6499,6 +6499,40 @@
         "title": "AnalyticsTrend",
         "type": "object"
       },
+      "AttendanceAdjustmentInput": {
+        "additionalProperties": false,
+        "properties": {
+          "adjustment_type": {
+            "enum": [
+              "late_waiver",
+              "early_exit",
+              "on_duty",
+              "holiday_work",
+              "comp_off"
+            ],
+            "title": "Adjustment Type",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "adjustment_type",
+          "reason"
+        ],
+        "title": "AttendanceAdjustmentInput",
+        "type": "object"
+      },
       "AttendanceBalance": {
         "properties": {
           "allocated_units": {
@@ -6559,6 +6593,47 @@
       },
       "AttendanceDayRead": {
         "properties": {
+          "adjustments": {
+            "items": {
+              "enum": [
+                "late_waiver",
+                "early_exit",
+                "on_duty",
+                "holiday_work",
+                "comp_off"
+              ],
+              "type": "string"
+            },
+            "title": "Adjustments",
+            "type": "array"
+          },
+          "afternoon_covered": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Afternoon Covered"
+          },
+          "calendar_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "absent",
+                  "holiday",
+                  "week_off"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calendar Status"
+          },
           "check_in": {
             "anyOf": [
               {
@@ -6588,13 +6663,51 @@
             "title": "Day",
             "type": "string"
           },
+          "early_exit": {
+            "default": false,
+            "title": "Early Exit",
+            "type": "boolean"
+          },
           "late": {
             "title": "Late",
             "type": "boolean"
           },
+          "leave_sessions": {
+            "items": {
+              "enum": [
+                "morning",
+                "afternoon"
+              ],
+              "type": "string"
+            },
+            "title": "Leave Sessions",
+            "type": "array"
+          },
           "leave_units": {
             "title": "Leave Units",
             "type": "integer"
+          },
+          "lop_units": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lop Units"
+          },
+          "morning_covered": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Morning Covered"
           },
           "original_check_in": {
             "anyOf": [
@@ -6654,6 +6767,18 @@
             "title": "Status",
             "type": "string"
           },
+          "system_check_out": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "System Check Out"
+          },
           "worked_minutes": {
             "title": "Worked Minutes",
             "type": "integer"
@@ -6688,6 +6813,15 @@
             "maxLength": 500,
             "minLength": 3,
             "title": "Note",
+            "type": "string"
+          },
+          "stage": {
+            "default": "decision",
+            "enum": [
+              "recommendation",
+              "decision"
+            ],
+            "title": "Stage",
             "type": "string"
           },
           "status": {
@@ -6727,6 +6861,21 @@
           "note": {
             "title": "Note",
             "type": "string"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "recommendation",
+                  "decision"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
           },
           "status": {
             "enum": [
@@ -6820,6 +6969,21 @@
             "title": "Half Day",
             "type": "boolean"
           },
+          "leave_session": {
+            "anyOf": [
+              {
+                "enum": [
+                  "morning",
+                  "afternoon"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leave Session"
+          },
           "leave_type": {
             "pattern": "^[a-z][a-z0-9_]{0,31}$",
             "title": "Leave Type",
@@ -6879,6 +7043,11 @@
             },
             "title": "Leave Quotas",
             "type": "object"
+          },
+          "session_clock": {
+            "default": false,
+            "title": "Session Clock",
+            "type": "boolean"
           },
           "shift_minutes": {
             "maximum": 1440.0,
@@ -6953,6 +7122,11 @@
             "title": "Leave Quotas",
             "type": "object"
           },
+          "session_clock": {
+            "default": false,
+            "title": "Session Clock",
+            "type": "boolean"
+          },
           "shift_minutes": {
             "maximum": 1440.0,
             "minimum": 1.0,
@@ -7026,6 +7200,24 @@
       },
       "AttendanceRequestRead": {
         "properties": {
+          "adjustment_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "late_waiver",
+                  "early_exit",
+                  "on_duty",
+                  "holiday_work",
+                  "comp_off"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustment Type"
+          },
           "approved_units": {
             "additionalProperties": {
               "type": "integer"
@@ -7062,10 +7254,26 @@
           "kind": {
             "enum": [
               "leave",
-              "correction"
+              "correction",
+              "adjustment"
             ],
             "title": "Kind",
             "type": "string"
+          },
+          "leave_session": {
+            "anyOf": [
+              {
+                "enum": [
+                  "morning",
+                  "afternoon"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leave Session"
           },
           "leave_type": {
             "anyOf": [
@@ -7126,6 +7334,11 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "two_stage": {
+            "default": false,
+            "title": "Two Stage",
+            "type": "boolean"
           }
         },
         "required": [
@@ -40433,6 +40646,52 @@
           }
         ],
         "summary": "Put Policy",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/regularizations": {
+      "post": {
+        "operationId": "request_regularization_api_v1_attendance_regularizations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceAdjustmentInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceRequestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Request Regularization",
         "tags": [
           "attendance"
         ]
