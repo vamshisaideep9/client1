@@ -30,6 +30,9 @@ staff; a missing direct reviewer leaves the existing decision routing in place.
 
 **Implemented — Batch 6 attendance management web**
 
+Shared image processing uses Pillow 13.0.0 for the attendance review stack,
+including the JPEG and PNG certificate flow in the next slice.
+
 Scoped roster, monthly attendance grid and review inbox are available to
 managers. Platform Admin handles approval overrides, policy configuration,
 holidays and CSV exports. The staff web slice is the parent branch.
