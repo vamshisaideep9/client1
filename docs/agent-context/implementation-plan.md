@@ -12,6 +12,9 @@
   permissions, staff employment dates and line calendars, monthly leave
   entitlement and sandwich calculations, private medical certificates, and
   complete attendance reporting with closed revisions and Analytics.
+- The seven focused PostgreSQL checks and 1,122 web unit tests cover the
+  delivered slice. The next implementation priority is scoped Sub Admin
+  permissions and provisioning.
 
 **Implemented — Batch 6 attendance management web**
 

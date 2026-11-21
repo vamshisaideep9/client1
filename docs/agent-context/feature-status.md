@@ -8,6 +8,11 @@ versions retain their original behavior. Access delegation and specialist
 roles, full monthly leave rules, certificate handling, and monthly reporting
 remain open.
 
+Verification on this slice includes the seven focused session-clock and
+regularization cases on migrated PostgreSQL, cross-line team visibility,
+one Alembic head, API and web lint, web typechecking, and all 1,122 web unit
+tests. The complete feature remains in progress.
+
 **Implemented — Batch 6 attendance management web**
 
 Scoped roster, monthly attendance grid and review inbox are available to

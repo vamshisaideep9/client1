@@ -1,7 +1,11 @@
 from datetime import date, datetime, time, timedelta
 
 import pytest
+import pytest_asyncio
+from sqlalchemy import delete
 
+import app.db.session as db_session
+from app.models.attendance import AttendanceDay, AttendancePolicy
 from app.models.profile import StaffRole
 from app.services import attendance
 from app.services.attendance_sessions import IST, late_penalty_units, session_coverage
@@ -25,6 +29,19 @@ SESSION_POLICY = {
     "leave_quotas": {},
     "session_clock": True,
 }
+
+
+@pytest_asyncio.fixture
+async def session_policies():
+    versions = []
+    yield versions
+    if versions:
+        async with db_session.AsyncSessionLocal() as db:
+            await db.execute(
+                delete(AttendanceDay).where(AttendanceDay.policy_version.in_(versions))
+            )
+            await db.execute(delete(AttendancePolicy).where(AttendancePolicy.version.in_(versions)))
+            await db.commit()
 
 
 @pytest.mark.parametrize(
@@ -56,13 +73,17 @@ def test_monthly_late_schedule_uses_quarter_days():
 
 
 @pytest.mark.asyncio
-async def test_session_clock_midnight_preserves_original_punch_and_monthly_lop(client, monkeypatch):
+async def test_session_clock_midnight_preserves_original_punch_and_monthly_lop(
+    client, monkeypatch, session_policies
+):
     now = datetime(2027, 1, 1, 9, tzinfo=IST)
     monkeypatch.setattr(attendance, "utc_now", lambda: now)
     admin, _ = await admin_token()
     response = await client.put(f"{BASE}/policy", headers=headers(admin), json=SESSION_POLICY)
     assert response.status_code == 200, response.text
-    first = date.fromisoformat(response.json()["scheduled"]["effective_from"])
+    scheduled = response.json()["scheduled"]
+    session_policies.append(scheduled["version"])
+    first = date.fromisoformat(scheduled["effective_from"])
     assert first == date(2027, 2, 1)
     user, staff = await seed_staff(StaffRole.EMPLOYEE, created_at=now)
     employee = headers(token_for(user, "employee", business_line="loans", staff_profile=staff))
