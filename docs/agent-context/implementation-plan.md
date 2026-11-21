@@ -50,6 +50,9 @@
 
 **Implemented — Batch 6 attendance management web**
 
+- The attendance stack requires Pillow 13.0.0 for shared image processing.
+  The dependency floor and lockfile move together before the certificate slice
+  adds JPEG and PNG uploads. [Pillow security release](https://pillow.readthedocs.io/en/stable/releasenotes/13.0.0.html#security).
 - The manager roster and monthly grid show scoped attendance by date, team,
   staff member and status. The inbox shows request details and review history.
 - Platform Admins configure policy and holidays, override reviewed requests
