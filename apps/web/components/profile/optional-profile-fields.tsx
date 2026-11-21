@@ -12,7 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PincodeField } from "@/components/profile/pincode-field";
 import type { Gender, IncomePeriod, IncomeSource } from "@/lib/auth";
+import { isValidPincode, type PincodePlace } from "@/lib/pincodes";
 
 const NOT_SUPPLIED = "not_supplied";
 const LOCATION_MAX_LENGTH = 500;
@@ -25,6 +27,7 @@ export type OptionalProfileDraft = {
   incomePeriod: IncomePeriod | "";
   occupation: string;
   location: string;
+  pincode: string;
 };
 
 export const EMPTY_OPTIONAL_PROFILE: OptionalProfileDraft = {
@@ -35,6 +38,7 @@ export const EMPTY_OPTIONAL_PROFILE: OptionalProfileDraft = {
   incomePeriod: "",
   occupation: "",
   location: "",
+  pincode: "",
 };
 
 export function OptionalProfileFields({
@@ -43,12 +47,15 @@ export function OptionalProfileFields({
   disabled = false,
   idPrefix,
   errors = {},
+  initialPlace = null,
 }: {
   value: OptionalProfileDraft;
   onChange: (value: OptionalProfileDraft) => void;
   disabled?: boolean;
   idPrefix: string;
   errors?: Partial<Record<keyof OptionalProfileDraft, string>>;
+  // The saved pincode's place name (from /auth/me), so it shows without a lookup.
+  initialPlace?: PincodePlace | null;
 }) {
   function set<K extends keyof OptionalProfileDraft>(key: K, next: OptionalProfileDraft[K]) {
     onChange({ ...value, [key]: next });
@@ -216,6 +223,17 @@ export function OptionalProfileFields({
         </p>
         <FieldError id={`${idPrefix}-location-error`}>{errors.location}</FieldError>
       </div>
+
+      <div className="sm:col-span-2">
+        <PincodeField
+          id={`${idPrefix}-pincode`}
+          value={value.pincode}
+          onChange={(next) => set("pincode", next)}
+          disabled={disabled}
+          error={errors.pincode}
+          initialPlace={initialPlace}
+        />
+      </div>
     </div>
   );
 }
@@ -231,6 +249,7 @@ export function optionalProfilePayload(value: OptionalProfileDraft):
         incomePeriod: IncomePeriod | null;
         occupation: string | null;
         location: string | null;
+        pincode: string | null;
       };
     }
   | { ok: false; error: string; field: keyof OptionalProfileDraft } {
@@ -257,6 +276,7 @@ export function optionalProfilePayload(value: OptionalProfileDraft):
       incomePeriod: value.incomeSource ? value.incomePeriod || null : null,
       occupation: value.occupation.trim() || null,
       location: value.location.trim() || null,
+      pincode: value.pincode.trim() || null,
     },
   };
 }
@@ -286,6 +306,9 @@ export function validateOptionalProfile(
   }
   if (value.location.trim().length > LOCATION_MAX_LENGTH) {
     errors.location = `Location must be ${LOCATION_MAX_LENGTH} characters or fewer.`;
+  }
+  if (value.pincode.trim() && !isValidPincode(value.pincode)) {
+    errors.pincode = "Enter a 6-digit pincode that doesn't start with 0.";
   }
   return errors;
 }

@@ -7,6 +7,8 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.core.security import REFERRAL_CODE_RE, normalize_referral_code
+from app.schemas.pincodes import PincodePlaceRead, PincodeValue
+from app.schemas.profile_metadata import RoleProfileRead
 
 # Channel an OTP was actually delivered through. "none" = all channels mocked/failed
 # (dev only — the response then carries otp_hint in non-production).
@@ -65,6 +67,9 @@ class RegisterVerifyOtpRequest(BaseModel):
 
 class RegistrationTokenResponse(BaseModel):
     registration_token: str
+    # CS-025: when true, set-password refuses until the email step has upgraded
+    # this token (POST /auth/register/email/initiate + /verify).
+    email_required: bool = False
 
 
 class SetPasswordRequest(BaseModel):
@@ -97,6 +102,9 @@ class AuthTokensResponse(BaseModel):
     expires_in: int  # seconds
     phone_verified: bool = False
     email_verified: bool = False  # drives the post-login "verify your email" banner
+    # CS-025: enforcement is on and the account must add a verified email
+    # before any business endpoint answers (the web routes to /add-email).
+    email_required: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -211,11 +219,15 @@ class ClientProfileSummary(BaseModel):
 
 
 class MeResponse(BaseModel):
+    role_profiles: list[RoleProfileRead] = Field(default_factory=list)
     first_name: str
     last_name: str
     mobile: str
     email: str | None
     email_verified: bool
+    # CS-025: true while enforcement is on and no verified email exists; every
+    # endpoint except the add-email step answers 403 until it is cleared.
+    email_required: bool = False
     gender: Literal["female", "male", "non_binary", "self_described", "prefer_not_to_say"] | None
     gender_self_description: str | None
     income_source: Literal["salaried", "business_income"] | None
@@ -223,6 +235,10 @@ class MeResponse(BaseModel):
     income_period: Literal["monthly", "annual"] | None
     occupation: str | None
     location: str | None
+    # CS-026: optional profile pincode and its place name from the reference
+    # list (None when no pincode is saved or the list does not know it).
+    pincode: str | None
+    place: PincodePlaceRead | None
     # One summary per business line the client holds (both, for self-registered
     # clients). The dashboard switches between these.
     profiles: list[ClientProfileSummary]
@@ -233,7 +249,9 @@ class MeUpdateRequest(BaseModel):
 
     first_name: Annotated[str, Field(min_length=1, max_length=100)]
     last_name: Annotated[str, Field(min_length=1, max_length=100)]
-    # Omit to leave unchanged; send null to clear. A change resets verification.
+    # CS-025: email is no longer edited here. Omit it (or send the address
+    # already on file). Adding one uses POST /auth/email/add, changing a
+    # verified one uses the contact-change flow, and it can never be cleared.
     email: EmailStr | None = None
     gender: (
         Literal["female", "male", "non_binary", "self_described", "prefer_not_to_say"] | None
@@ -244,6 +262,8 @@ class MeUpdateRequest(BaseModel):
     income_period: Literal["monthly", "annual"] | None = None
     occupation: Annotated[str | None, Field(min_length=1, max_length=120)] = None
     location: Annotated[str | None, Field(min_length=1, max_length=500)] = None
+    # CS-026: six digits, first digit 1-9. Omit to keep, null to clear.
+    pincode: PincodeValue | None = None
 
     @field_validator("first_name", "last_name")
     @classmethod

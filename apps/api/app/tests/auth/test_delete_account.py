@@ -42,8 +42,8 @@ async def _get_user_row(uid: str) -> dict:
                 text(
                     "SELECT id, mobile, email, status, password_hash, "
                     "phone_verified_at, email_verified_at, gender, gender_self_description, "
-                    "income_source, income_amount_minor, income_period, occupation, location "
-                    "FROM auth_users WHERE id = :id"
+                    "income_source, income_amount_minor, income_period, occupation, location, "
+                    "pincode FROM auth_users WHERE id = :id"
                 ),
                 {"id": uid},
             )
@@ -347,6 +347,7 @@ async def test_delete_correct_password_returns_200_and_tombstones(client: AsyncC
             "income_period": "monthly",
             "occupation": "Engineer",
             "location": "17.39° N, 78.49° E",
+            "pincode": "500001",
         },
     )
     assert profile.status_code == 200, profile.text
@@ -370,6 +371,7 @@ async def test_delete_correct_password_returns_200_and_tombstones(client: AsyncC
         "income_period",
         "occupation",
         "location",
+        "pincode",
     ):
         assert row[field] is None
     redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
@@ -483,6 +485,45 @@ async def test_delete_flips_staff_profile_inactive(client: AsyncClient) -> None:
     await _delete_me(client, access_token)
 
     assert await _staff_profile_status(uid) == "inactive"
+
+
+@pytest.mark.parametrize("role", ["telecaller", "employee", "sub_admin"])
+async def test_admin_managed_staff_cannot_delete_themselves(client: AsyncClient, role: str) -> None:
+    """CS-021: staff self-deletion is removed; an Admin removes the account.
+    The 403 comes before the password check, so nothing changes."""
+    from app.core.security import create_access_token
+
+    access_token, mobile = await full_registration(client)
+    uid = await _auth_user_uuid(mobile)
+    await _seed_staff_profile(uid)
+    staff_token = create_access_token(
+        {"sub": uid, "role": role, "business_line": "loans", "platform_scope": "false"}
+    )
+
+    resp = await _delete_me(client, staff_token)
+    assert resp.status_code == 403, resp.text
+    wrong_password = await _delete_me(client, staff_token, "WrongPass@1")
+    assert wrong_password.status_code == 403
+
+    assert await _staff_profile_status(uid) == "active"
+    me = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {access_token}"})
+    assert me.status_code == 200
+    assert me.json()["mobile"] == mobile
+
+
+async def test_agent_can_still_delete_their_account(client: AsyncClient) -> None:
+    from app.core.security import create_access_token
+
+    _, mobile = await full_registration(client)
+    uid = await _auth_user_uuid(mobile)
+    await _seed_agent_profile(uid)
+    agent_token = create_access_token(
+        {"sub": uid, "role": "agent", "business_line": "loans", "platform_scope": "false"}
+    )
+
+    resp = await _delete_me(client, agent_token)
+    assert resp.status_code == 200, resp.text
+    assert await _agent_profile_status(uid) == "inactive"
 
 
 async def test_delete_flips_agent_profile_inactive(client: AsyncClient) -> None:

@@ -92,3 +92,49 @@ async def test_other_client_cannot_see_transaction(client: AsyncClient) -> None:
     )
     assert resp.status_code == 200
     assert resp.json() == {"transactions": []}
+
+
+@pytest.mark.asyncio
+async def test_search_metrics_and_detail_stay_owner_scoped(client: AsyncClient) -> None:
+    token, mobile = await full_registration(client, lines=["loans"])
+    owner = await _auth_user_uuid(mobile)
+    ids = {await _seed_transaction(owner), await _seed_transaction(owner)}
+    other_token, other_mobile = await full_registration(client, lines=["loans"])
+    other_id = await _seed_transaction(await _auth_user_uuid(other_mobile))
+    headers = {"Authorization": f"Bearer {token}"}
+    query = {
+        "type": "referral_bonus",
+        "q": "Referral payout",
+        "min_amount_paise": 150_000,
+        "limit": 1,
+    }
+    first = await client.get("/api/v1/transactions/search", headers=headers, params=query)
+    second = await client.get(
+        "/api/v1/transactions/search", headers=headers, params={**query, "offset": 1}
+    )
+    assert first.status_code == second.status_code == 200
+    assert {first.json()["transactions"][0]["id"], second.json()["transactions"][0]["id"]} == ids
+    assert first.json()["total"] == second.json()["total"] == 2
+    assert first.json()["paid_amount_paise"] == 300_000
+    assert first.json()["referral_count"] == 2
+    own_id = next(iter(ids))
+    own = await client.get(f"/api/v1/transactions/{own_id}", headers=headers)
+    assert own.status_code == 200
+    assert own.headers["cache-control"] == "private, no-store"
+    assert own.json()["display_id"] == f"TXN-{own_id}"
+    assert own.json()["payment"] is None
+    exact = await client.get(
+        "/api/v1/transactions/search", headers=headers, params={"q": own.json()["display_id"]}
+    )
+    assert [row["id"] for row in exact.json()["transactions"]] == [own_id]
+    for viewer, target in ((token, other_id), (other_token, own_id)):
+        denied = await client.get(
+            f"/api/v1/transactions/{target}", headers={"Authorization": f"Bearer {viewer}"}
+        )
+        assert denied.status_code == 404
+    invalid = await client.get(
+        "/api/v1/transactions/search",
+        headers=headers,
+        params={"date_from": "2026-11-20", "date_to": "2026-11-19"},
+    )
+    assert invalid.status_code == 422

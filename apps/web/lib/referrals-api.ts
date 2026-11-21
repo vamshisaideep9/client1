@@ -20,3 +20,16 @@ export async function listReferrals(): Promise<ApiResponse<Referral[]>> {
   if (!res.ok) return res;
   return { ok: true, status: res.status, data: res.data.referrals };
 }
+
+export type ReferralEligibilitySummary = Schemas["EligibilitySummary"];
+export type ReferralAttemptList = Schemas["IntakeAttemptListResponse"];
+
+/** Eligible / Not eligible / Duplicate counts for the caller's referrals (CS-024). */
+export async function getReferralEligibility(): Promise<ApiResponse<ReferralEligibilitySummary>> {
+  return apiRequest<ReferralEligibilitySummary>(`/api/v1/referrals/eligibility`);
+}
+
+/** Sign-ups with the caller's code that were not accepted, newest first. */
+export async function listReferralAttempts(): Promise<ApiResponse<ReferralAttemptList>> {
+  return apiRequest<ReferralAttemptList>(`/api/v1/referrals/attempts?limit=500`);
+}

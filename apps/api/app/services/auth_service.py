@@ -21,9 +21,11 @@ from app.cache.redis_keys import (
     jwt_blacklist_key,
     otp_email_verify_key,
     otp_email_verify_target_key,
+    otp_register_email_target_key,
     reg_data_key,
 )
 from app.core.config import settings
+from app.core.deps import email_required_for
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -35,6 +37,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.auth import AuthEvent, RefreshToken
+from app.models.pincode import Pincode
 from app.models.profile import (
     AgentProfile,
     ClientProfile,
@@ -64,7 +67,13 @@ from app.schemas.auth import (
     ResetTokenResponse,
     SetPasswordRequest,
 )
-from app.services import account_deletion, referrals
+from app.schemas.contact_change import (
+    RegisterEmailInitiateRequest,
+    RegisterEmailInitiateResponse,
+    RegisterEmailVerifyRequest,
+)
+from app.schemas.pincodes import PincodePlaceRead
+from app.services import account_deletion, contact_change, referrals
 from app.services.leads import (
     bind_registered_client_leads,
     capture_lead,
@@ -127,6 +136,7 @@ def _build_tokens_response(access_token: str, user: User | None = None) -> AuthT
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         phone_verified=bool(user and user.phone_verified_at),
         email_verified=bool(user and user.email_verified_at),
+        email_required=bool(user is not None and email_required_for(user)),
     )
 
 
@@ -369,7 +379,108 @@ async def register_verify_otp(
             "service_lines": reg_data.get("service_lines", ["loans"]),
         }
     )
-    return RegistrationTokenResponse(registration_token=reg_token)
+    return RegistrationTokenResponse(
+        registration_token=reg_token,
+        email_required=settings.EMAIL_REQUIRED_ENFORCED,
+    )
+
+
+_REGISTRATION_TOKEN_CLAIMS = (
+    "purpose",
+    "mobile",
+    "first_name",
+    "last_name",
+    "referral_code",
+    "service_lines",
+)
+
+
+def _decode_registration_token(token: str) -> dict:
+    try:
+        claims = decode_access_token(token)
+    except JWTError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired registration token.",
+        ) from exc
+    if claims.get("purpose") != "register" or not isinstance(claims.get("mobile"), str):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid registration token.",
+        )
+    return claims
+
+
+async def register_email_initiate(
+    db: AsyncSession,
+    cache: RedisCache,
+    req: RegisterEmailInitiateRequest,
+    ip: str | None = None,
+    user_agent: str | None = None,
+) -> RegisterEmailInitiateResponse:
+    """CS-025: send a code to the registering person's email.
+
+    Reachable only with a registration token, i.e. after the mobile code. The
+    code is keyed to that mobile and bound to the address's fingerprint, so it
+    verifies only this address for this registration. Whether the address is
+    already registered is never answered here (no lookup), so this endpoint is
+    not an email-existence oracle.
+    """
+    claims = _decode_registration_token(req.registration_token)
+    mobile: str = claims["mobile"]
+    await check_otp_rate_ip(cache, ip)
+    try:
+        await contact_change.check_target_budget(cache, "email", req.email)
+    except contact_change.ContactRateLimited as exc:
+        raise contact_change.http_error(exc) from exc
+    otp = await generate_and_store_otp(cache, mobile, "register_email")
+    await cache.set(
+        otp_register_email_target_key(mobile),
+        contact_change.contact_fingerprint("email", req.email),
+        TTL_OTP,
+    )
+    channel = await deliver_otp(mobile, req.email, otp, via_email=True)
+    await _log_event(
+        db,
+        auth_user_uuid=None,
+        event_type="otp_sent",
+        mobile=mobile,
+        ip=ip,
+        user_agent=user_agent,
+        success=True,
+        detail={"purpose": "register_email", "channel": channel},
+    )
+    return RegisterEmailInitiateResponse(
+        message="We sent a code to your email.",
+        delivery_channel=channel,
+        otp_hint=otp if (channel == "none" and _is_mock_env()) else None,
+    )
+
+
+async def register_email_verify(
+    cache: RedisCache,
+    req: RegisterEmailVerifyRequest,
+) -> RegistrationTokenResponse:
+    """Verify the email code and return a token that carries the verified address."""
+    claims = _decode_registration_token(req.registration_token)
+    mobile: str = claims["mobile"]
+    target_key = otp_register_email_target_key(mobile)
+    stored = await cache.get(target_key)
+    expected = contact_change.contact_fingerprint("email", req.email)
+    if stored is None or not hmac.compare_digest(stored, expected):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="That code is no longer valid. Request a new code.",
+        )
+    await verify_otp(cache, mobile, "register_email", req.otp)
+    await cache.delete(target_key)
+    upgraded = {key: claims.get(key) for key in _REGISTRATION_TOKEN_CLAIMS}
+    upgraded["email"] = req.email
+    upgraded["email_verified"] = True
+    return RegistrationTokenResponse(
+        registration_token=create_access_token(upgraded),
+        email_required=settings.EMAIL_REQUIRED_ENFORCED,
+    )
 
 
 async def register_set_password(
@@ -395,6 +506,16 @@ async def register_set_password(
         )
 
     mobile: str = claims["mobile"]
+    # CS-025: only the email step can put an address in the token, and only
+    # after its code was verified.
+    verified_email = claims.get("email") if claims.get("email_verified") is True else None
+    if not isinstance(verified_email, str):
+        verified_email = None
+    if settings.EMAIL_REQUIRED_ENFORCED and verified_email is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verify your email address to finish creating your account.",
+        )
     try:
         validate_password_policy(req.password, mobile)
     except ValueError as exc:
@@ -414,23 +535,39 @@ async def register_set_password(
     # docs/specs/dual-line-clients.md.
     lines: list[str] = ["loans", "real_estate"]
 
+    now = datetime.now(UTC)
     user = User(
         first_name=claims.get("first_name", ""),
         last_name=claims.get("last_name", ""),
         mobile=mobile,
-        email=None,
+        email=verified_email,
         password_hash=await hash_password(req.password),
         status=UserStatus.ACTIVE,
-        phone_verified_at=datetime.now(UTC),  # mobile proven by the registration OTP
-        # email_verified_at stays NULL — verified later via the post-login banner flow.
+        phone_verified_at=now,  # mobile proven by the registration OTP
+        # Proven by the email code (CS-025); otherwise added later.
+        email_verified_at=now if verified_email else None,
     )
+    if verified_email is not None:
+        try:
+            # A verified holder is a conflict; an unverified copy elsewhere
+            # was never proven and is released to the proven owner.
+            await contact_change.claim_email(db, user=user, email=verified_email)
+        except contact_change.ValueUnavailable as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This email is already used by another account.",
+            ) from exc
     db.add(user)
     try:
         await db.flush()  # get user.id before creating profiles
-    except IntegrityError as exc:  # mobile UNIQUE race between check and insert
+    except IntegrityError as exc:  # mobile/email UNIQUE race between check and insert
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Mobile number already registered.",
+            detail=(
+                "Mobile number or email already registered."
+                if verified_email
+                else "Mobile number already registered."
+            ),
         ) from exc
 
     profiles_by_line: dict[str, UUID] = {}
@@ -512,7 +649,9 @@ async def register_set_password(
 
 async def get_me(db: AsyncSession, current_user_id: UUID) -> MeResponse:
     """Return the logged-in user's basic info + one summary per business line."""
-    user = await db.get(User, current_user_id)
+    # populate_existing: a contact change may have committed on another session
+    # after get_current_user cached this row on the request session.
+    user = await db.get(User, current_user_id, populate_existing=True)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized.")
 
@@ -531,12 +670,30 @@ async def get_me(db: AsyncSession, current_user_id: UUID) -> MeResponse:
         for p in rows.all()
         if p.business_line in ("loans", "real_estate")
     ]
+    # CS-026: the place name is derived from the reference list on read, never
+    # stored as free text alongside the pincode.
+    place_row = await db.get(Pincode, user.pincode) if user.pincode else None
+    place = (
+        PincodePlaceRead(
+            pincode=place_row.pincode,
+            area=place_row.area,
+            district=place_row.district,
+            state=place_row.state,
+        )
+        if place_row is not None
+        else None
+    )
+    from app.services.profile_metadata import role_profiles_for_users
+
+    role_profiles = await role_profiles_for_users(db, [current_user_id], own=True)
     return MeResponse(
+        role_profiles=role_profiles.get(current_user_id, []),
         first_name=user.first_name,
         last_name=user.last_name,
         mobile=user.mobile,
         email=user.email,
         email_verified=user.email_verified_at is not None,
+        email_required=email_required_for(user),
         gender=user.gender,
         gender_self_description=user.gender_self_description,
         income_source=user.income_source,
@@ -544,8 +701,26 @@ async def get_me(db: AsyncSession, current_user_id: UUID) -> MeResponse:
         income_period=user.income_period,
         occupation=user.occupation,
         location=user.location,
+        pincode=user.pincode,
+        place=place,
         profiles=profiles,
     )
+
+
+# CS-021 (2026-11-16): Telecaller, Employee and Sub Admin accounts (team
+# managers are Sub Admins) see their profile read-only and cannot delete
+# themselves; name/contact changes and account removal go through an Admin.
+# Clients, Agents and Admins keep self-service.
+SELF_SERVICE_LOCKED_ROLES = frozenset({"telecaller", "employee", "sub_admin"})
+
+
+def ensure_self_service_allowed(role: str | None, action: str) -> None:
+    """403 for a staff role whose own profile and account are Admin-managed."""
+    if role in SELF_SERVICE_LOCKED_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Your Admin manages your account. Ask an Admin to {action}.",
+        )
 
 
 async def update_me(
@@ -554,27 +729,41 @@ async def update_me(
     req: MeUpdateRequest,
     ip: str | None = None,
     user_agent: str | None = None,
+    *,
+    actor_role: str | None = None,
 ) -> MeResponse:
     """Update the logged-in user's own identity-wide profile fields.
 
-    Reachable by any authenticated, non-force-reset account; RLS confines every
+    Clients, Agents and Admins only (CS-021): a Telecaller, Employee or Sub
+    Admin gets 403 before anything is read. RLS confines every
     caller to their own auth_users row. mobile is immutable (account identity).
-    Changing or clearing email resets email_verified_at. Same
-    get->mutate->commit pattern as change_password.
+
+    CS-025: email is no longer edited here. An address can be added only with
+    a code (POST /auth/email/add), a verified one changes only through the
+    contact-change flow (codes to the old and the new address), and it can
+    never be cleared. Sending the address already on file is accepted as a
+    no-op so older clients that echo it keep working.
     """
+    ensure_self_service_allowed(actor_role, "change your name or contact details")
     user = await db.get(User, current_user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized.")
 
     supplied_fields = req.model_fields_set
-    email_changed = "email" in supplied_fields and req.email != user.email
+    if "email" in supplied_fields:
+        on_file = user.email.lower() if user.email else None
+        if req.email != on_file:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=(
+                    "Your email can't be removed."
+                    if req.email is None
+                    else "Use Add email or Change email in Settings to change your email."
+                ),
+            )
 
     user.first_name = req.first_name
     user.last_name = req.last_name
-    if "email" in supplied_fields:
-        user.email = req.email
-        if email_changed:
-            user.email_verified_at = None  # a new or cleared address is unverified
 
     for field in (
         "gender",
@@ -584,6 +773,7 @@ async def update_me(
         "income_period",
         "occupation",
         "location",
+        "pincode",
     ):
         if field in supplied_fields:
             setattr(user, field, getattr(req, field))
@@ -594,20 +784,7 @@ async def update_me(
     ):
         user.gender_self_description = None
 
-    # No pre-check for an email collision: under this caller's RLS context
-    # (auth_users_rls restricts a client to their own row) a "SELECT another user
-    # with this email" always returns nothing, so a pre-check would be dead code.
-    # The auth_users.email UNIQUE constraint is the real backstop; on a clash the
-    # commit raises IntegrityError, converted to one generic message that never
-    # reveals which field collided.
-    try:
-        await db.commit()
-    except IntegrityError as exc:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="That email is already in use.",
-        ) from exc
+    await db.commit()
 
     await _log_event(
         db,
@@ -617,7 +794,7 @@ async def update_me(
         ip=ip,
         user_agent=user_agent,
         success=True,
-        detail={"email_changed": email_changed},
+        detail={"email_changed": False},
     )
     return await get_me(db, user.id)
 
@@ -1121,7 +1298,12 @@ async def delete_own_account(
     Password re-entry is this product's existing bar for a security-sensitive
     action taken from within a live session (see change_password) — the SRS
     only mandates a warning/confirmation step, not a new OTP purpose.
+
+    Telecaller, Employee and Sub Admin accounts get 403 before the password
+    is checked (CS-021); an Admin removes them through the account-removal
+    action instead.
     """
+    ensure_self_service_allowed(actor_role, "remove your account")
     user = await db.get(User, current_user_id)
     if not user or not user.password_hash:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized.")

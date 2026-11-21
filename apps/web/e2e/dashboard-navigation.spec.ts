@@ -43,7 +43,7 @@ const scenarios: readonly RoleScenario[] = [
     deniedPath: "/dashboard/leads/new",
   },
   {
-    name: "Employee",
+    name: "Officer",
     promote: ["employee", "real_estate"],
     expected: ["Tasks", "Vehicle arrangements"],
     excluded: ["Financial products", "Leads", "Earnings"],
@@ -311,8 +311,16 @@ test.describe("role-aware dashboard navigation", () => {
           await expect(page.getByText("Loans workspace")).toHaveCount(0);
           await expect(page.getByText("Needs attention")).toHaveCount(0);
         } else {
-          await expect(expandSidebar).toHaveCount(0);
-          await expect(page.getByRole("button", { name: "Collapse sidebar" })).toHaveCount(0);
+          // Operational roles start expanded, may collapse, and keep the
+          // choice on this device across reloads.
+          const collapseSidebar = page.getByRole("button", { name: "Collapse sidebar" });
+          await expect(collapseSidebar).toBeVisible();
+          await collapseSidebar.click();
+          await expect(expandSidebar).toBeVisible();
+          await page.reload();
+          await expect(expandSidebar).toBeVisible();
+          await expandSidebar.click();
+          await expect(collapseSidebar).toBeVisible();
         }
         const navigation = page.locator('nav[aria-label="Workspace"]:visible');
         await expect(navigation).toBeVisible();
@@ -328,7 +336,7 @@ test.describe("role-aware dashboard navigation", () => {
         }
         await expect(navigation.getByRole("link", { name: "Operational records" })).toHaveCount(0);
 
-        if (scenario.name === "Employee") {
+        if (scenario.name === "Officer") {
           await expect(
             page
               .locator('main a[href="/dashboard/vehicle-arrangements"]')
@@ -833,7 +841,7 @@ test.describe("role-aware dashboard navigation", () => {
       await expect(homeMain.getByRole("link", { name: /Commercial/ })).toBeVisible();
       // Home no longer fetches the property catalog at all, so none of its
       // former catalog-browsing UI should appear here.
-      await expect(page.getByPlaceholder(/Search by locality, city, PIN code/)).toHaveCount(0);
+      await expect(page.getByPlaceholder(/Search by property, developer, locality/)).toHaveCount(0);
       await expect(page.getByRole("button", { name: /^Filters/ })).toHaveCount(0);
       await expect(page.getByText("No listings yet")).toHaveCount(0);
 

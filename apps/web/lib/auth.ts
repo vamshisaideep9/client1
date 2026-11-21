@@ -71,11 +71,15 @@ export type ClientLineProfile = {
 };
 
 export type Me = {
+  roleProfiles?: Schemas["RoleProfileRead"][];
   firstName: string;
   lastName: string;
   mobile: string;
   email: string | null;
   emailVerified: boolean;
+  // CS-025: the server requires a verified email before anything else works;
+  // the dashboard routes to /add-email while this is true.
+  emailRequired: boolean;
   gender: Gender | null;
   genderSelfDescription: string | null;
   incomeSource: IncomeSource | null;
@@ -83,6 +87,10 @@ export type Me = {
   incomePeriod: IncomePeriod | null;
   occupation: string | null;
   location: string | null;
+  // CS-026: optional profile pincode; its place name comes from the server's
+  // built-in list (null when no pincode is saved or the list doesn't know it).
+  pincode: string | null;
+  place: { pincode: string; area: string; district: string; state: string } | null;
   profiles: ClientLineProfile[];
 };
 
@@ -108,6 +116,8 @@ export type AuthTokens = {
   expiresIn: number;
   phoneVerified: boolean;
   emailVerified: boolean;
+  // CS-025 routing hint: the account must add a verified email first.
+  emailRequired: boolean;
   // Decoded from the access token's `role` claim. Routing hint only (which
   // surface to show); the DB (RLS) is the real access boundary.
   role: UserRole;
@@ -179,6 +189,7 @@ function toAuthTokens(data: Schemas["AuthTokensResponse"]): AuthTokens {
     expiresIn: data.expires_in,
     phoneVerified: data.phone_verified,
     emailVerified: data.email_verified,
+    emailRequired: data.email_required === true,
     role: ROLES.has(role) ? role : "client",
     forceReset: claims.force_reset === true,
     businessLine:
@@ -221,11 +232,24 @@ export async function registerInitiate(
   return toResult(res, toOtpDelivery);
 }
 
+export type RegistrationToken = {
+  registrationToken: string;
+  // CS-025: the server needs an email proven by a code before set-password.
+  emailRequired: boolean;
+};
+
+function toRegistrationToken(data: Schemas["RegistrationTokenResponse"]): RegistrationToken {
+  return {
+    registrationToken: data.registration_token,
+    emailRequired: data.email_required === true,
+  };
+}
+
 // POST /auth/register/verify-otp → returns a short-lived registration token.
 export async function registerVerifyOtp(
   mobile: string,
   otp: string,
-): Promise<AuthResult<{ registrationToken: string }>> {
+): Promise<AuthResult<RegistrationToken>> {
   const res = await apiRequest<Schemas["RegistrationTokenResponse"]>(
     "/api/v1/auth/register/verify-otp",
     {
@@ -233,7 +257,50 @@ export async function registerVerifyOtp(
       body: { mobile, otp } satisfies Schemas["RegisterVerifyOtpRequest"],
     },
   );
-  return toResult(res, (data) => ({ registrationToken: data.registration_token }));
+  return toResult(res, toRegistrationToken);
+}
+
+// POST /auth/register/email/initiate → sends a code to the registering email.
+export async function registerEmailInitiate(
+  registrationToken: string,
+  email: string,
+): Promise<AuthResult<OtpDelivery>> {
+  const res = await apiRequest<Schemas["RegisterEmailInitiateResponse"]>(
+    "/api/v1/auth/register/email/initiate",
+    {
+      method: "POST",
+      body: {
+        registration_token: registrationToken,
+        email,
+      } satisfies Schemas["RegisterEmailInitiateRequest"],
+    },
+  );
+  return toResult(res, (data) => ({
+    message: data.message,
+    deliveryChannel: data.delivery_channel,
+    otpHint: data.otp_hint ?? undefined,
+  }));
+}
+
+// POST /auth/register/email/verify → a registration token that carries the
+// verified address (set-password then stores it verified).
+export async function registerEmailVerify(
+  registrationToken: string,
+  email: string,
+  otp: string,
+): Promise<AuthResult<RegistrationToken>> {
+  const res = await apiRequest<Schemas["RegistrationTokenResponse"]>(
+    "/api/v1/auth/register/email/verify",
+    {
+      method: "POST",
+      body: {
+        registration_token: registrationToken,
+        email,
+        otp,
+      } satisfies Schemas["RegisterEmailVerifyRequest"],
+    },
+  );
+  return toResult(res, toRegistrationToken);
 }
 
 // POST /auth/register/set-password → finalizes the account.
@@ -277,11 +344,13 @@ export async function login(
 
 function mapMe(d: Schemas["MeResponse"]): Me {
   return {
+    roleProfiles: d.role_profiles ?? [],
     firstName: d.first_name,
     lastName: d.last_name,
     mobile: d.mobile,
     email: d.email,
     emailVerified: d.email_verified,
+    emailRequired: d.email_required === true,
     gender: d.gender ?? null,
     genderSelfDescription: d.gender_self_description ?? null,
     incomeSource: d.income_source ?? null,
@@ -289,6 +358,8 @@ function mapMe(d: Schemas["MeResponse"]): Me {
     incomePeriod: d.income_period ?? null,
     occupation: d.occupation ?? null,
     location: d.location ?? null,
+    pincode: d.pincode ?? null,
+    place: d.place ?? null,
     profiles: d.profiles.map((p) => ({
       businessLine: p.business_line,
       customerCode: p.customer_code,
@@ -304,14 +375,13 @@ export async function getMe(): Promise<AuthResult<Me>> {
   return toResult(res, mapMe);
 }
 
-// PATCH /auth/me → update the client's own name (and optionally email). mobile is
-// immutable. Changing the email resets verification server-side, so the returned
-// Me carries emailVerified:false and the verify banner reappears. Returns the
-// fresh Me so the shell (me-provider) can update in place.
+// PATCH /auth/me → update the user's own name and optional profile details.
+// CS-025: phone and email are never edited here — adding an email, changing
+// either, or a staff request each has its own coded flow (lib/contact-change).
+// Returns the fresh Me so the shell (me-provider) can update in place.
 export async function updateProfile(input: {
   firstName: string;
   lastName: string;
-  email?: string | null;
   gender?: Gender | null;
   genderSelfDescription?: string | null;
   incomeSource?: IncomeSource | null;
@@ -319,13 +389,13 @@ export async function updateProfile(input: {
   incomePeriod?: IncomePeriod | null;
   occupation?: string | null;
   location?: string | null;
+  pincode?: string | null;
 }): Promise<AuthResult<Me>> {
   const res = await apiRequest<Schemas["MeResponse"]>("/api/v1/auth/me", {
     method: "PATCH",
     body: {
       first_name: input.firstName,
       last_name: input.lastName,
-      ...(input.email !== undefined ? { email: input.email } : {}),
       ...(input.gender !== undefined ? { gender: input.gender } : {}),
       ...(input.genderSelfDescription !== undefined
         ? { gender_self_description: input.genderSelfDescription }
@@ -337,6 +407,7 @@ export async function updateProfile(input: {
       ...(input.incomePeriod !== undefined ? { income_period: input.incomePeriod } : {}),
       ...(input.occupation !== undefined ? { occupation: input.occupation } : {}),
       ...(input.location !== undefined ? { location: input.location } : {}),
+      ...(input.pincode !== undefined ? { pincode: input.pincode } : {}),
     } satisfies Schemas["MeUpdateRequest"],
   });
   return toResult(res, mapMe);
@@ -369,6 +440,16 @@ async function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
     result = await fn();
   });
   return result;
+}
+
+// True only when /auth/refresh definitively refused the session (the API
+// answers 401 for a missing, expired, reused or revoked refresh token, or a
+// suspended account; 403 is treated the same). A network failure or timeout
+// (0), a rate limit (429) or a server fault (5xx) says nothing about the
+// session, so the caller must not sign the user out over one: doing so
+// unmounted the whole dashboard, and every open form with it.
+export function isRefreshRejected(status: number): boolean {
+  return status === 401 || status === 403;
 }
 
 // POST /auth/refresh → rotates the refresh cookie, returns a fresh access token.

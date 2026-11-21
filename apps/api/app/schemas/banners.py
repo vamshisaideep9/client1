@@ -12,6 +12,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.core.urls import is_safe_link_destination
+from app.core.youtube import extract_youtube_id
 from app.models.banner import BannerPlacement, BannerStatus, BannerType
 from app.schemas.personalization import AudienceRules, audience_rules_valid_for_banner
 
@@ -35,6 +37,28 @@ _IMAGE_KEY_PATTERN = (
 BannerImageContentTypeLiteral = Literal["image/jpeg", "image/png", "image/webp"]
 
 
+def youtube_id_or_none(youtube_url: str | None) -> str | None:
+    """Parse an optional pasted link; blank clears the video."""
+    if youtube_url is None or not youtube_url.strip():
+        return None
+    return extract_youtube_id(youtube_url)
+
+
+def _validate_deep_link(value: str | None) -> str | None:
+    """CTA destination: a same-site path or an external https link.
+
+    The value becomes an anchor href on public pages and dashboards, so
+    ``http:``, ``javascript:``, ``data:``, protocol-relative and
+    credential-bearing links are rejected here, not only in the browser.
+    Blank means "no button".
+    """
+    if value is None or not value.strip():
+        return None
+    if not is_safe_link_destination(value):
+        raise ValueError("Use a page path like /loans or a full https:// link.")
+    return value
+
+
 class BannerCreate(BaseModel):
     business_line: str = Field(pattern="^(loans|real_estate|both)$")
     placement: BannerPlacement = BannerPlacement.HOMEPAGE
@@ -47,11 +71,17 @@ class BannerCreate(BaseModel):
     cta_label: str | None = Field(default=None, max_length=40)
     image_key: str | None = Field(default=None, max_length=500, pattern=_IMAGE_KEY_PATTERN)
     media_asset_id: UUID | None = None
+    # Optional video. Paste any YouTube video link (only its id is stored), or
+    # pick a processed `banner_video` Media Library asset. At most one.
+    youtube_url: str | None = Field(default=None, max_length=300)
+    video_media_asset_id: UUID | None = None
     deep_link: str | None = Field(default=None, max_length=1000)
     audience_rules: AudienceRules = Field(default_factory=AudienceRules)
     priority: int = Field(default=0, ge=0)
     starts_at: datetime | None = None
     ends_at: datetime | None = None
+
+    _deep_link_is_safe = field_validator("deep_link")(_validate_deep_link)
 
     @model_validator(mode="after")
     def audience_matches_banner_type(self) -> BannerCreate:
@@ -72,6 +102,13 @@ class BannerCreate(BaseModel):
             raise ValueError("Dashboard banners cannot promote public properties.")
         if self.offer_id is not None and self.property_id is not None:
             raise ValueError("A banner cannot link both an Offer and a property.")
+        youtube_id = youtube_id_or_none(self.youtube_url)
+        if youtube_id is not None and self.video_media_asset_id is not None:
+            raise ValueError("Choose either a YouTube video or an uploaded video, not both.")
+        if self.placement == BannerPlacement.DASHBOARD and (
+            youtube_id is not None or self.video_media_asset_id is not None
+        ):
+            raise ValueError("Dashboard banners cannot carry a video.")
         # A public campaign needs artwork from exactly one source: a governed
         # category template, or a Media Library asset chosen for this campaign
         # alone. The router rejects supplying both; this rejects supplying
@@ -101,6 +138,19 @@ class BannerUpdate(BaseModel):
     template_id: UUID | None = None
     offer_id: UUID | None = None
     property_id: UUID | None = None
+    # Video edits: send youtube_url ("" clears it) and/or video_media_asset_id
+    # (null clears it). Omitted fields leave the current video unchanged.
+    youtube_url: str | None = Field(default=None, max_length=300)
+    video_media_asset_id: UUID | None = None
+
+    _deep_link_is_safe = field_validator("deep_link")(_validate_deep_link)
+
+    @model_validator(mode="after")
+    def _valid_video_link(self) -> BannerUpdate:
+        youtube_id = youtube_id_or_none(self.youtube_url)
+        if youtube_id is not None and self.video_media_asset_id is not None:
+            raise ValueError("Choose either a YouTube video or an uploaded video, not both.")
+        return self
 
 
 class BannerTemplateCreate(BaseModel):
@@ -157,6 +207,9 @@ class BannerRead(BaseModel):
     image_key: str | None
     image_url: str | None = None
     media_asset_id: UUID | None
+    youtube_video_id: str | None = None
+    video_media_asset_id: UUID | None = None
+    video_url: str | None = None
     deep_link: str | None
     audience_rules: AudienceRules
     priority: int
@@ -229,9 +282,11 @@ class PublicBannerRead(BaseModel):
       allowlist decision (see services/public_catalog.py's banner_type filter).
 
     deep_link IS included -- it is the CTA href, author-supplied, and the hero
-    cannot function without it. The frontend (lib/public-banners.ts) applies
-    a same-origin guard before building a CTA from it; this schema stores
-    exactly what the author typed.
+    cannot function without it. Writes accept only a same-site path or a
+    strict https link (BannerCreate/BannerUpdate), and the frontend
+    (lib/banner-cta.ts) re-checks it before building a CTA, opening external
+    links in a new tab. Rows written before that validation are still
+    re-checked there.
 
     image_url IS included -- the direct, unsigned URL for a `public/`-prefixed
     image_key (None if the banner has no image, or -- should never happen
@@ -247,6 +302,10 @@ class PublicBannerRead(BaseModel):
     deep_link: str | None
     image_url: str | None
     rera_verified: bool = False
+    # Video: an 11-character YouTube id (the web app builds the privacy-
+    # enhanced embed itself) or the direct URL of a processed public MP4.
+    youtube_video_id: str | None = None
+    video_url: str | None = None
 
 
 class PublicBannerListResponse(BaseModel):
