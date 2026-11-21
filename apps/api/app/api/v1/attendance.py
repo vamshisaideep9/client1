@@ -18,26 +18,32 @@ from app.core.deps import (
     require_platform_admin,
 )
 from app.db.session import get_db
+from app.models.attendance import AttendanceEmployment
 from app.models.audit_log import AuditAction
+from app.models.profile import StaffRole
 from app.models.staff_team import StaffTeam
 from app.schemas.attendance import (
     AttendanceAdjustmentInput,
     AttendanceCorrectionInput,
     AttendanceDayRead,
     AttendanceDecisionInput,
+    AttendanceEmploymentInput,
+    AttendanceEmploymentRead,
     AttendanceHolidayInput,
     AttendanceHolidayRead,
     AttendanceInboxRead,
     AttendanceLeaveInput,
+    AttendanceLine,
     AttendancePolicyInput,
     AttendancePolicyState,
     AttendanceRequestRead,
+    AttendanceRosterMember,
     AttendanceRosterRead,
     AttendanceStatus,
     MyAttendanceRead,
     RequestStatus,
 )
-from app.services import attendance, attendance_requests, attendance_views
+from app.services import attendance, attendance_employment, attendance_requests, attendance_views
 from app.services.audit_log import record
 from app.services.csv_export import csv_chunks
 
@@ -85,7 +91,9 @@ async def my_attendance(
     year: Annotated[int | None, Query(ge=2000, le=9998)] = None,
     month: Annotated[int | None, Query(ge=1, le=12)] = None,
 ):
-    return await attendance_views.personal(db, user.staff_profile_uuid, user.role, year, month)
+    return await attendance_views.personal(
+        db, user.staff_profile_uuid, user.role, year, month, user.business_line
+    )
 
 
 @router.post("/check-in", response_model=AttendanceDayRead)
@@ -119,9 +127,10 @@ async def cancel_request(request_id: UUID, user: Staff):
 
 
 async def _check_team_review(db: DB, user: CurrentUser, team_id: UUID | None) -> None:
+    if user.role == StaffRole.SUB_ADMIN:
+        await db.execute(text("SELECT set_config('app.team_review', 'true', true)"))
     if user.sub_admin_access is None:
         return
-    await db.execute(text("SELECT set_config('app.team_review', 'true', true)"))
     if team_id is None:
         return
     line = await db.scalar(
@@ -204,21 +213,43 @@ async def put_policy(payload: AttendancePolicyInput, user: Admin):
 
 
 @router.get("/holidays", response_model=list[AttendanceHolidayRead])
-async def get_holidays(_: Admin, db: DB, start: date, end: date):
+async def get_holidays(
+    _: Admin, db: DB, start: date, end: date, business_line: AttendanceLine | None = None
+):
     attendance_views.validate_period(start, end)
-    return await attendance_views.holidays(db, start, end)
+    return await attendance_views.holidays(db, start, end, business_line)
 
 
 @router.put("/holidays/{day}", status_code=204)
-async def put_holiday(day: date, payload: AttendanceHolidayInput, user: Admin):
-    await attendance.configure_holiday(user, day, payload.name)
+async def put_holiday(
+    day: date,
+    payload: AttendanceHolidayInput,
+    user: Admin,
+    business_line: AttendanceLine | None = None,
+):
+    await attendance.configure_holiday(user, day, payload.name, business_line)
     return Response(status_code=204)
 
 
 @router.delete("/holidays/{day}", status_code=204)
-async def delete_holiday(day: date, user: Admin):
-    await attendance.configure_holiday(user, day, None)
+async def delete_holiday(day: date, user: Admin, business_line: AttendanceLine | None = None):
+    await attendance.configure_holiday(user, day, None, business_line)
     return Response(status_code=204)
+
+
+@router.get("/employment/reviewers", response_model=list[AttendanceRosterMember])
+async def get_employment_reviewers(_: Admin, business_line: AttendanceLine):
+    return await attendance_employment.reviewers(business_line)
+
+
+@router.get("/employment/{staff_id}", response_model=AttendanceEmploymentRead | None)
+async def get_employment(staff_id: UUID, _: Admin, db: DB):
+    return await db.get(AttendanceEmployment, staff_id)
+
+
+@router.put("/employment/{staff_id}", response_model=AttendanceEmploymentRead)
+async def put_employment(staff_id: UUID, payload: AttendanceEmploymentInput, user: Admin):
+    return await attendance_employment.save(user, staff_id, payload)
 
 
 @router.get("/export", response_class=StreamingResponse)

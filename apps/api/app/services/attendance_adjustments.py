@@ -9,13 +9,13 @@ from app.models.attendance import AttendanceDay, AttendancePolicy, AttendanceReq
 from app.services import attendance as clock
 
 
-async def comp_off_date(db: AsyncSession, sunday: date) -> date:
+async def comp_off_date(db: AsyncSession, sunday: date, business_line: str | None = None) -> date:
     if sunday.weekday() != 6:
         raise clock.AttendanceInvalid("Choose a Sunday worked for compensation off.")
     for offset in range(1, 31):
         day = sunday + timedelta(days=offset)
         policy = await clock.require_policy(db, day)
-        if await clock.day_without_clock(db, day, policy) == "absent":
+        if await clock.day_without_clock(db, day, policy, business_line) == "absent":
             return day
     raise clock.AttendanceError("No scheduled working day is available after this Sunday.")
 
@@ -59,7 +59,7 @@ async def apply(db: AsyncSession, request: AttendanceRequest) -> None:
     )
     category = request.adjustment_type
     if category == "on_duty" and row is None:
-        calendar = await clock.day_without_clock(db, day, policy)
+        calendar = await clock.day_without_clock(db, day, policy, request.business_line)
         row = clock.new_day(
             *key,
             policy,
@@ -110,7 +110,7 @@ async def apply(db: AsyncSession, request: AttendanceRequest) -> None:
 
 
 async def _apply_comp_off(db: AsyncSession, request: AttendanceRequest) -> None:
-    target = await comp_off_date(db, request.start_day)
+    target = await comp_off_date(db, request.start_day, request.business_line)
     if target != request.end_day:
         raise clock.AttendanceError("The next working day changed. Submit a new request.")
     key = (request.staff_profile_id, target)

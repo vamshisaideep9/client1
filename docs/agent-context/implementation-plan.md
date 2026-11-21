@@ -1,6 +1,6 @@
 # Living implementation plan
 
-**In progress — Officer roles, Sub Admin access, and attendance**
+**Delivered for review — Attendance employment dates, line calendars, and direct reporting (slice 3)**
 
 - Officer labels reuse the existing role ID. The team slot now permits one
   Telecaller team and one Officer team per manager in each business line.
@@ -23,12 +23,22 @@
   Agents and recorded follow-ups. Account Managers can prepare scoped payout
   requests for Admin approval. Media Sub Admins submit scoped campaigns for
   Admin review. Team Managers use their assigned teams and supported actions.
-- Next attendance priority is employment dates and line calendars, including
-  direct reporting assignments outside the existing teams.
 - Slice 2 verification includes the migration round trip, PostgreSQL API
   coverage for session revocation and independent grants, all 1,122 web unit
   tests, and desktop provisioning and mobile scoped-access browser checks.
-  [Slice 2 changes](https://github.com/brollysolutions/client1/compare/main...feat/scoped-sub-admin-access)
+  [Upstream #400](https://github.com/brollysolutions/client1/pull/400).
+- Slice 3 adds attendance-specific employment dates, a configured calendar
+  line, and an optional direct reviewer. Existing clock and global calendar
+  behavior remain the fallback for unconfigured staff. Direct reporting
+  applies only to attendance within the assigned line. Final session-clock
+  decisions still require a distinct platform Admin.
+- Verified against scratch PostgreSQL and Redis. The focused scenario covers
+  employment dates, calendar precedence, version conflicts, denied writes,
+  direct recommendations, and revocation. Browser checks cover setup and
+  attendance management at 390px and 1440px and the staff attendance journey.
+  [Slice 3 changes](https://github.com/brollysolutions/client1/compare/main...feat/attendance-employment-calendars).
+- Next attendance priority is monthly leave rules and private certificates,
+  followed by monthly close, revisions, and Analytics.
 
 **Implemented — Batch 6 attendance management web**
 

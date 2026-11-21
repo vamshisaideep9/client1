@@ -20,6 +20,7 @@ import { getMyTeams, listTeams } from "@/lib/staff-teams-api";
 import { roleLabel } from "@/lib/role-label";
 import { ATTENDANCE_STATUS, attendanceCode, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays, previousMonth, requestLabel } from "./attendance-display";
 import { AttendancePolicyPanel } from "./attendance-policy-panel";
+import { AttendanceEmploymentDialog } from "./attendance-employment-dialog";
 
 type Mode = "daily" | "month" | "requests" | "policy";
 type FilterOption = { id: string; name: string };
@@ -48,6 +49,7 @@ export function AttendanceManagementView() {
   const [notice, setNotice] = useState("");
   const [exporting, setExporting] = useState(false);
   const [review, setReview] = useState<AttendanceRequest | null>(null);
+  const [assignment, setAssignment] = useState<{ member: AttendanceRoster["members"][number]; trigger: HTMLButtonElement } | null>(null);
   const [revision, refresh] = useState(0);
   const dates = useMemo(() => mode === "month" ? monthDays(month) : [date], [mode, date, month]);
   const range = useMemo(() => {
@@ -171,7 +173,7 @@ export function AttendanceManagementView() {
           <DashboardPanel title={mode === "requests" ? "Review requests" : mode === "month" ? "Monthly attendance" : "Daily attendance"}>
             {error ? <FetchError status={error.status} message={error.message} onRetry={() => refresh((value) => value + 1)} />
               : !roster || (mode === "requests" && !inbox) ? <ListLoadingState rows={3} />
-              : !roster.configured ? <p className="text-sm text-text-secondary">Admin setup is pending. Attendance will appear after the policy is configured.</p>
+              : !roster.configured && !(admin && mode === "daily") ? <p className="text-sm text-text-secondary">Admin setup is pending. Attendance will appear after the policy is configured.</p>
               : mode === "requests" && inbox ? (
                 inbox.requests.length ? <ul className="divide-y divide-border">
                   {inbox.requests.map((entry) => (
@@ -185,7 +187,10 @@ export function AttendanceManagementView() {
                     </li>
                   ))}
                 </ul> : <p className="text-sm text-text-secondary">No requests match these filters.</p>
-              ) : <RosterTable roster={roster} dates={dates} daily={mode === "daily"} />}
+              ) : <>
+                {!roster.configured ? <p className="mb-3 text-sm text-text-secondary">Admin setup is pending. Attendance will appear after the policy is configured.</p> : null}
+                <RosterTable roster={roster} dates={dates} daily={mode === "daily"} edit={admin && mode === "daily" ? (member, trigger) => setAssignment({ member, trigger }) : undefined} />
+              </>}
             {total > PAGE_SIZE ? (
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" disabled={!offset} onClick={() => setOffset((value) => value - PAGE_SIZE)}>Previous</Button>
@@ -201,11 +206,16 @@ export function AttendanceManagementView() {
       {review ? <ReviewDialog entry={review} name={members.get(review.staff_profile_id)?.name}
         admin={admin} recommendationsOnly={recommendationsOnly} close={() => setReview(null)}
         saved={() => { setNotice(recommendationsOnly ? "Attendance recommendation saved." : "Attendance decision saved."); refresh((value) => value + 1); }} /> : null}
+      {assignment ? <AttendanceEmploymentDialog {...assignment} close={() => setAssignment(null)}
+        saved={() => { setNotice("Attendance assignment saved."); refresh((value) => value + 1); }} /> : null}
     </DashboardPage>
   );
 }
 
-function RosterTable({ roster, dates, daily }: { roster: AttendanceRoster; dates: string[]; daily: boolean }) {
+function RosterTable({ roster, dates, daily, edit }: {
+  roster: AttendanceRoster; dates: string[]; daily: boolean;
+  edit?: (member: AttendanceRoster["members"][number], trigger: HTMLButtonElement) => void;
+}) {
   if (!roster.members.length) return <p className="text-sm text-text-secondary">No staff members match these filters.</p>;
   const byDay = new Map(roster.days.map((row) => [`${row.staff_profile_id}/${row.day}`, row]));
   return (
@@ -222,7 +232,9 @@ function RosterTable({ roster, dates, daily }: { roster: AttendanceRoster; dates
             const row = byDay.get(`${member.staff_profile_id}/${dates[0]}`);
             const totalLop = dates.reduce((sum, day) => sum + (byDay.get(`${member.staff_profile_id}/${day}`)?.lop_units ?? 0), 0);
             return <tr key={member.staff_profile_id}>
-              <th scope="row" className="p-2 font-medium">{member.name}<span className="block text-xs text-text-secondary">{member.staff_code} · {roleLabel(member.role)}</span></th>
+              <th scope="row" className="p-2 font-medium">{member.name}<span className="block text-xs text-text-secondary">{member.staff_code} · {roleLabel(member.role)}</span>
+                {edit ? <Button variant="link" size="sm" className="h-9 px-0" aria-label={`Edit attendance assignment for ${member.name}`} onClick={(event) => edit(member, event.currentTarget)}>Edit assignment</Button> : null}
+              </th>
               {daily ? <>
                 <td className="p-2">{row ? ATTENDANCE_STATUS[row.status] : "Unrecorded"}{row?.late ? " · Late" : ""}</td>
                 <td className="p-2">{attendanceTime(row?.check_in ?? null)}</td>

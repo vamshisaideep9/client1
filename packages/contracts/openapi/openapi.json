@@ -6898,6 +6898,120 @@
         "title": "AttendanceDecisionRead",
         "type": "object"
       },
+      "AttendanceEmploymentInput": {
+        "additionalProperties": false,
+        "properties": {
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "end_day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Day"
+          },
+          "expected_version": {
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "reviewer_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Id"
+          },
+          "start_day": {
+            "format": "date",
+            "title": "Start Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start_day",
+          "business_line",
+          "expected_version"
+        ],
+        "title": "AttendanceEmploymentInput",
+        "type": "object"
+      },
+      "AttendanceEmploymentRead": {
+        "properties": {
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "end_day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Day"
+          },
+          "reviewer_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Id"
+          },
+          "staff_profile_id": {
+            "format": "uuid",
+            "title": "Staff Profile Id",
+            "type": "string"
+          },
+          "start_day": {
+            "format": "date",
+            "title": "Start Day",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "staff_profile_id",
+          "start_day",
+          "end_day",
+          "business_line",
+          "reviewer_id",
+          "version"
+        ],
+        "title": "AttendanceEmploymentRead",
+        "type": "object"
+      },
       "AttendanceHolidayInput": {
         "additionalProperties": false,
         "properties": {
@@ -7369,7 +7483,8 @@
           "role": {
             "enum": [
               "telecaller",
-              "employee"
+              "employee",
+              "sub_admin"
             ],
             "title": "Role",
             "type": "string"
@@ -17765,6 +17880,30 @@
             },
             "title": "Days",
             "type": "array"
+          },
+          "employment_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment End"
+          },
+          "employment_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment Start"
           },
           "holidays": {
             "items": {
@@ -40766,6 +40905,173 @@
         ]
       }
     },
+    "/api/v1/attendance/employment/reviewers": {
+      "get": {
+        "operationId": "get_employment_reviewers_api_v1_attendance_employment_reviewers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "business_line",
+            "required": true,
+            "schema": {
+              "enum": [
+                "loans",
+                "real_estate"
+              ],
+              "title": "Business Line",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AttendanceRosterMember"
+                  },
+                  "title": "Response Get Employment Reviewers Api V1 Attendance Employment Reviewers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Employment Reviewers",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/employment/{staff_id}": {
+      "get": {
+        "operationId": "get_employment_api_v1_attendance_employment__staff_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "staff_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Staff Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AttendanceEmploymentRead"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Employment Api V1 Attendance Employment  Staff Id  Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Employment",
+        "tags": [
+          "attendance"
+        ]
+      },
+      "put": {
+        "operationId": "put_employment_api_v1_attendance_employment__staff_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "staff_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Staff Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceEmploymentInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceEmploymentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Put Employment",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
     "/api/v1/attendance/export": {
       "get": {
         "operationId": "export_attendance_api_v1_attendance_export_get",
@@ -40901,6 +41207,26 @@
               "title": "End",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "business_line",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "loans",
+                    "real_estate"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Business Line"
+            }
           }
         ],
         "responses": {
@@ -40953,6 +41279,26 @@
               "title": "Day",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "business_line",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "loans",
+                    "real_estate"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Business Line"
+            }
           }
         ],
         "responses": {
@@ -40991,6 +41337,26 @@
               "format": "date",
               "title": "Day",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "business_line",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "loans",
+                    "real_estate"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Business Line"
             }
           }
         ],

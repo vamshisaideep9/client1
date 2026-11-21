@@ -15,6 +15,9 @@ export type AttendanceInbox = Schema["AttendanceInboxRead"];
 export type AttendancePolicy = Schema["AttendancePolicyInput"];
 export type AttendancePolicyState = Schema["AttendancePolicyState"];
 export type AttendanceHoliday = Schema["AttendanceHolidayRead"];
+export type AttendanceEmployment = Schema["AttendanceEmploymentRead"];
+export type AttendanceEmploymentInput = Schema["AttendanceEmploymentInput"];
+export type AttendanceLine = AttendanceEmploymentInput["business_line"];
 
 export function getAttendanceRoster(params: URLSearchParams) {
   return apiRequest<AttendanceRoster>(`${ATTENDANCE_API}/roster?${params}`);
@@ -38,14 +41,29 @@ export function saveAttendancePolicy(body: AttendancePolicy) {
   return apiRequest<AttendancePolicyState>(`${ATTENDANCE_API}/policy`, { method: "PUT", body });
 }
 
-export function getAttendanceHolidays(start: string, end: string) {
+export function getAttendanceHolidays(start: string, end: string, line?: AttendanceLine) {
   const params = new URLSearchParams({ start, end });
+  if (line) params.set("business_line", line);
   return apiRequest<AttendanceHoliday[]>(`${ATTENDANCE_API}/holidays?${params}`);
 }
 
-export function setAttendanceHoliday(day: string, name: string | null) {
-  return apiRequest<null>(`${ATTENDANCE_API}/holidays/${encodeURIComponent(day)}`,
+export function setAttendanceHoliday(day: string, name: string | null, line?: AttendanceLine) {
+  const scope = line ? `?${new URLSearchParams({ business_line: line })}` : "";
+  return apiRequest<null>(`${ATTENDANCE_API}/holidays/${encodeURIComponent(day)}${scope}`,
     name === null ? { method: "DELETE" } : { method: "PUT", body: { name } });
+}
+
+export function getAttendanceEmployment(id: string) {
+  return apiRequest<AttendanceEmployment | null>(`${ATTENDANCE_API}/employment/${encodeURIComponent(id)}`);
+}
+
+export function saveAttendanceEmployment(id: string, body: AttendanceEmploymentInput) {
+  return apiRequest<AttendanceEmployment>(`${ATTENDANCE_API}/employment/${encodeURIComponent(id)}`, { method: "PUT", body });
+}
+
+export function getAttendanceReviewers(line: AttendanceLine) {
+  const params = new URLSearchParams({ business_line: line });
+  return apiRequest<AttendanceRoster["members"]>(`${ATTENDANCE_API}/employment/reviewers?${params}`);
 }
 
 export function exportAttendance(params: URLSearchParams) {

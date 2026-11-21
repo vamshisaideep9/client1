@@ -73,7 +73,10 @@ function AttendanceClock({ payload, refresh }: { payload: AttendanceMine; refres
   }
 
   if (!payload.policy) return <p className="text-sm text-text-secondary">Admin setup is pending. Attendance will open after the policy is configured.</p>;
-  const clockAvailable = running || (!row?.check_in && row?.leave_units !== 2);
+  const workDay = payload.work_day;
+  const outsideEmployment = Boolean((payload.employment_start && workDay < payload.employment_start)
+    || (payload.employment_end && workDay > payload.employment_end));
+  const clockAvailable = running || (!outsideEmployment && !row?.check_in && row?.leave_units !== 2);
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
@@ -87,6 +90,7 @@ function AttendanceClock({ payload, refresh }: { payload: AttendanceMine; refres
         <div><dt className="text-text-secondary">{running ? "Elapsed (estimate)" : "Worked"}</dt><dd>{duration(running ? elapsed : row?.worked_minutes ?? 0)}</dd></div>
       </dl>
       {clockAvailable ? <Button disabled={busy} onClick={() => void punch()}>{running ? "Check out" : "Check in"}</Button> : null}
+      {outsideEmployment && !running ? <p className="text-sm text-text-secondary">This work date is outside your recorded employment period.</p> : null}
       {message ? <p role="status" className="text-sm text-text-secondary">{message}</p> : null}
     </div>
   );

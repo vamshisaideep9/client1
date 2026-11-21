@@ -32,6 +32,7 @@ Reason = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, m
 LeaveType = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]{0,31}$")]
 LeaveUnits = Annotated[int, Field(ge=0, le=732)]
 Weekday = Annotated[int, Field(ge=0, le=6)]
+AttendanceLine = Literal["loans", "real_estate"]
 
 
 class AttendanceInput(BaseModel):
@@ -84,6 +85,31 @@ class AttendanceHolidayInput(AttendanceInput):
 class AttendanceHolidayRead(AttendanceHolidayInput):
     model_config = ConfigDict(from_attributes=True)
     day: date
+
+
+class AttendanceEmploymentInput(AttendanceInput):
+    start_day: Annotated[date, Field(ge=date(2000, 1, 1), le=date(9998, 12, 31))]
+    end_day: Annotated[date, Field(le=date(9998, 12, 31))] | None = None
+    business_line: AttendanceLine
+    reviewer_id: UUID | None = None
+    expected_version: Annotated[int, Field(ge=0)]
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if self.end_day is not None and self.end_day < self.start_day:
+            raise ValueError("The end date must be on or after the start date.")
+        return self
+
+
+class AttendanceEmploymentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    staff_profile_id: UUID
+    start_day: date
+    end_day: date | None
+    business_line: AttendanceLine
+    reviewer_id: UUID | None
+    version: int
 
 
 class AttendanceDayRead(BaseModel):
@@ -197,6 +223,8 @@ class AttendanceBalance(BaseModel):
 
 
 class MyAttendanceRead(BaseModel):
+    employment_start: date | None = None
+    employment_end: date | None = None
     policy: AttendancePolicyRead | None
     server_time: datetime
     work_day: date
@@ -212,7 +240,7 @@ class AttendanceRosterMember(BaseModel):
     staff_profile_id: UUID
     name: str
     staff_code: str
-    role: Literal["telecaller", "employee"]
+    role: Literal["telecaller", "employee", "sub_admin"]
 
 
 class AttendanceRosterRead(BaseModel):

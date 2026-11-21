@@ -13,7 +13,9 @@ from app.core.deps import CurrentUser
 from app.models.attendance import (
     ATTENDANCE_POLICY_LOCK,
     AttendanceDay,
+    AttendanceEmployment,
     AttendanceHoliday,
+    AttendanceLineHoliday,
     AttendancePolicy,
 )
 from app.models.audit_log import AuditAction
@@ -156,6 +158,7 @@ async def managers_for(
     manager_id: UUID | None = None,
     *,
     business_line: str | None = None,
+    include_direct: bool = True,
 ) -> set[UUID]:
     """Lock matching memberships and teams through the decision commit."""
     criteria = [
@@ -185,11 +188,40 @@ async def managers_for(
             .with_for_update(read=True, of=(StaffTeam, StaffTeamMember))
         )
     ).all()
-    return {
+    managers = {
         auth_user_uuid
         for auth_user_uuid, line, access_row in manager_rows
         if access_row is None or line in read_access(access_row).lines_for("team_manager", "review")
     }
+    # A direct assignment grants attendance reach only for records with a recorded line.
+    if include_direct and business_line is not None:
+        direct = (
+            await db.execute(
+                select(StaffProfile.auth_user_uuid, SubAdminAccessProfile)
+                .join(AttendanceEmployment, AttendanceEmployment.reviewer_id == StaffProfile.id)
+                .join(User, User.id == StaffProfile.auth_user_uuid)
+                .outerjoin(
+                    SubAdminAccessProfile,
+                    SubAdminAccessProfile.staff_profile_uuid == StaffProfile.id,
+                )
+                .where(
+                    AttendanceEmployment.staff_profile_id == target.id,
+                    AttendanceEmployment.business_line == business_line,
+                    StaffProfile.id == manager_id if manager_id else True,
+                    StaffProfile.role == StaffRole.SUB_ADMIN,
+                    StaffProfile.scope == ProfileScope.PLATFORM,
+                    StaffProfile.status == ProfileStatus.ACTIVE,
+                    User.status == UserStatus.ACTIVE,
+                )
+                .with_for_update(read=True, of=AttendanceEmployment)
+            )
+        ).one_or_none()
+        if direct is not None and (
+            direct[1] is None
+            or business_line in read_access(direct[1]).lines_for("team_manager", "review")
+        ):
+            managers.add(direct[0])
+    return managers
 
 
 async def audit(
@@ -240,7 +272,9 @@ async def configure_policy(
         return await policy_state(db)
 
 
-async def configure_holiday(actor: CurrentUser, day: date, name: str | None) -> None:
+async def configure_holiday(
+    actor: CurrentUser, day: date, name: str | None, business_line: str | None = None
+) -> None:
     async with db_session.AsyncSessionLocal() as db:
         await lock_actor(db, actor)
         await db.execute(select(func.pg_advisory_xact_lock(ATTENDANCE_POLICY_LOCK)))
@@ -248,35 +282,57 @@ async def configure_holiday(actor: CurrentUser, day: date, name: str | None) -> 
         if day < today:
             raise AttendanceInvalid("Holiday changes cannot alter past work dates.")
         await require_policy(db, today)
-        used = await db.scalar(
-            select(AttendanceDay.staff_profile_id)
-            .where(AttendanceDay.day == day, AttendanceDay.leave_units > 0)
-            .limit(1)
-        )
+        recorded = select(AttendanceDay.staff_profile_id).where(AttendanceDay.day == day)
+        if business_line is None:
+            recorded = recorded.where(AttendanceDay.leave_units > 0)
+        else:
+            recorded = recorded.where(AttendanceDay.business_line == business_line)
+        used = await db.scalar(recorded.limit(1))
         if used is not None:
-            raise AttendanceError("An approved leave already uses this work date.")
-        holiday = await db.get(AttendanceHoliday, day)
+            raise AttendanceError("This calendar date already has attendance or approved leave.")
+        holiday = (
+            await db.get(AttendanceLineHoliday, (business_line, day))
+            if business_line is not None
+            else await db.get(AttendanceHoliday, day)
+        )
         if name is None:
             if holiday is None:
                 raise AttendanceNotFound("Holiday not found.")
             await db.delete(holiday)
         elif holiday is None:
-            db.add(AttendanceHoliday(day=day, name=name))
+            db.add(
+                AttendanceLineHoliday(business_line=business_line, day=day, name=name)
+                if business_line is not None
+                else AttendanceHoliday(day=day, name=name)
+            )
         else:
             holiday.name = name
         await audit(
             db,
             actor,
             "remove_holiday" if name is None else "set_holiday",
-            detail={"day": day.isoformat()},
+            detail={"day": day.isoformat(), "business_line": business_line},
         )
         await db.commit()
 
 
-async def day_without_clock(db: AsyncSession, day: date, policy: AttendancePolicy) -> str:
+async def day_without_clock(
+    db: AsyncSession, day: date, policy: AttendancePolicy, business_line: str | None = None
+) -> str:
+    if business_line is not None and await db.get(AttendanceLineHoliday, (business_line, day)):
+        return "holiday"
     if await db.get(AttendanceHoliday, day) is not None:
         return "holiday"
     return "week_off" if day.weekday() in policy.weekly_off else "absent"
+
+
+def require_employment_days(
+    employment: AttendanceEmployment | None, start: date, end: date
+) -> None:
+    if employment and (
+        start < employment.start_day or (employment.end_day and end > employment.end_day)
+    ):
+        raise AttendanceInvalid("Choose dates within your recorded employment period.")
 
 
 def apply_clock_result(row: AttendanceDay, policy: AttendancePolicy) -> None:
@@ -380,7 +436,7 @@ def new_day(
         leave_units=0,
         late=False,
         calendar_status=calendar_status if policy.session_clock else None,
-        business_line=business_line if policy.session_clock else None,
+        business_line=business_line,
         adjustments={},
         leave_sessions={},
     )
@@ -427,6 +483,14 @@ async def check_clock(actor: CurrentUser, *, checking_in: bool) -> AttendanceDay
                         return previous
                 raise AttendanceError("No open shift is available. Submit a correction if needed.")
             return row
+        employment = await db.get(AttendanceEmployment, profile.id)
+        require_employment_days(employment, day, day)
+        business_line = (
+            employment.business_line
+            if employment
+            else (actor.business_line if today_policy.session_clock else None)
+        )
+        await db.execute(select(func.pg_advisory_xact_lock_shared(ATTENDANCE_POLICY_LOCK)))
         if row is not None:
             if row.check_in is not None:
                 return row
@@ -439,17 +503,17 @@ async def check_clock(actor: CurrentUser, *, checking_in: bool) -> AttendanceDay
                 today_policy,
                 "checked_in",
                 "clock",
-                calendar_status=await day_without_clock(db, day, today_policy)
+                calendar_status=await day_without_clock(db, day, today_policy, business_line)
                 if today_policy.session_clock
                 else None,
-                business_line=actor.business_line,
+                business_line=business_line,
             )
             db.add(row)
         policy = await db.get(AttendancePolicy, row.policy_version)
-        if policy.session_clock and row.business_line not in (None, actor.business_line):
+        if policy.session_clock and row.business_line not in (None, business_line):
             raise AttendanceError("This date is recorded in another business line.")
         if policy.session_clock and row.business_line is None:
-            row.business_line = actor.business_line
+            row.business_line = business_line
         row.original_check_in = row.check_in = now
         row.status, row.source = "checked_in", "clock"
         row.late = (

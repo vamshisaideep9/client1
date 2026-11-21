@@ -35,6 +35,29 @@ class AttendanceHoliday(Base):
     name: Mapped[str] = mapped_column(String(120))
 
 
+class AttendanceLineHoliday(Base):
+    __tablename__ = "attendance_line_holidays"
+
+    business_line: Mapped[str] = mapped_column(String(12), primary_key=True)
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+
+
+class AttendanceEmployment(Base):
+    __tablename__ = "attendance_employment"
+
+    staff_profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("staff_profiles.id", ondelete="CASCADE"), primary_key=True
+    )
+    start_day: Mapped[date] = mapped_column(Date)
+    end_day: Mapped[date | None] = mapped_column(Date)
+    business_line: Mapped[str] = mapped_column(String(12))
+    reviewer_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("staff_profiles.id", ondelete="SET NULL")
+    )
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+
 class AttendanceRequest(Base):
     __tablename__ = "attendance_requests"
 
