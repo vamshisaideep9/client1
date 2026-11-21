@@ -73,7 +73,8 @@ export function TeamContestsPanel({ teamName }: { teamName: string }) {
                     <StatusBadge tone={STATUS_TONE[contest.status]}>{STATUS_LABEL[contest.status]}</StatusBadge>
                   </p>
                   <p className="text-sm text-text-secondary">
-                    {formatContestDates(contest.starts_on, contest.ends_on)}
+                    {formatContestDates(contest.starts_on, contest.ends_on, contest.start_time, contest.end_time)}
+                    {contest.manager_item_prize ? ` · ${contest.manager_item_prize.label} manager prize` : ""}
                     {contest.manager_prize_paise ? ` · ${formatPaise(contest.manager_prize_paise)} manager prize` : ""}
                   </p>
                   <p className="text-sm text-text-primary">

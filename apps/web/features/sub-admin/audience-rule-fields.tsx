@@ -40,7 +40,7 @@ const AGENT_SIGNALS: { value: AgentSignal; label: string }[] = [
 const USER_TYPE_LABEL: Record<UserType, string> = {
   client: "Clients",
   agent: "Agents",
-  employee: "Employees",
+  employee: "Officers",
   telecaller: "Telecallers",
 };
 

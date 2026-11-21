@@ -192,11 +192,17 @@ async def _active_manager(db: AsyncSession, staff_profile_uuid: UUID) -> StaffPr
 
 
 async def _manager_has_live_team(
-    db: AsyncSession, manager_uuid: UUID, business_line: str, *, excluding: UUID | None = None
+    db: AsyncSession,
+    manager_uuid: UUID,
+    business_line: str,
+    member_role: str,
+    *,
+    excluding: UUID | None = None,
 ) -> bool:
     stmt = select(StaffTeam.id).where(
         StaffTeam.manager_staff_profile_uuid == manager_uuid,
         StaffTeam.business_line == business_line,
+        StaffTeam.member_role == member_role,
         StaffTeam.archived_at.is_(None),
     )
     if excluding is not None:
@@ -221,7 +227,9 @@ async def create_team(
     db: AsyncSession, payload: StaffTeamCreate, *, actor_uuid: UUID, actor_role: str
 ) -> StaffTeamRead:
     await _active_manager(db, payload.manager_staff_profile_uuid)
-    if await _manager_has_live_team(db, payload.manager_staff_profile_uuid, payload.business_line):
+    if await _manager_has_live_team(
+        db, payload.manager_staff_profile_uuid, payload.business_line, payload.member_role
+    ):
         raise ManagerAlreadyHasTeam
     team = StaffTeam(
         name=payload.name,
@@ -272,7 +280,9 @@ async def update_team(
     new_manager = payload.manager_staff_profile_uuid
     if new_manager is not None and new_manager != team.manager_staff_profile_uuid:
         await _active_manager(db, new_manager)
-        if await _manager_has_live_team(db, new_manager, team.business_line, excluding=team.id):
+        if await _manager_has_live_team(
+            db, new_manager, team.business_line, team.member_role, excluding=team.id
+        ):
             raise ManagerAlreadyHasTeam
         changes["previous_manager_staff_profile_uuid"] = str(team.manager_staff_profile_uuid)
         changes["manager_staff_profile_uuid"] = str(new_manager)
@@ -416,7 +426,9 @@ async def eligible_people(
     db: AsyncSession, *, business_line: str, member_role: str
 ) -> TeamEligibleResponse:
     busy_managers = select(StaffTeam.manager_staff_profile_uuid).where(
-        StaffTeam.business_line == business_line, StaffTeam.archived_at.is_(None)
+        StaffTeam.business_line == business_line,
+        StaffTeam.member_role == member_role,
+        StaffTeam.archived_at.is_(None),
     )
     managers = await db.execute(
         select(StaffProfile, User.first_name, User.last_name)

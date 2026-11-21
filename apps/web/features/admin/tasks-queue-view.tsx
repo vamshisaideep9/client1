@@ -172,7 +172,7 @@ export function TasksQueueView() {
     },
     {
       key: "employee",
-      header: "Employee",
+      header: "Officer",
       sortable: true,
       render: (task) =>
         task.assigned_employee_name ? (
@@ -206,14 +206,14 @@ export function TasksQueueView() {
     <DashboardPage>
       <DashboardHeader
         title="Task assignments"
-        description="Every field task with its raising Telecaller and assigned Employee. Open a row for the full record."
+        description="Every field task with its raising Telecaller and assigned Officer. Open a row for the full record."
       />
 
       <FilterBar
         value={filters}
         onChange={setFilters}
         searchLabel="Search task assignments"
-        searchPlaceholder="Lead, Telecaller, or Employee"
+        searchPlaceholder="Lead, Telecaller, or Officer"
         statusOptions={STATUS_OPTIONS}
         kindOptions={TYPE_OPTIONS}
         kindLabel="Task type"
@@ -343,7 +343,7 @@ export function TasksQueueView() {
                       <section className="rounded-xl border border-border bg-card p-5">
                         <h2 className="font-semibold text-text-primary">Visit feedback</h2>
                         <p className="mt-1 text-sm leading-6 text-text-secondary">
-                          Private attachments from the assigned Employee, retained for 90 days
+                          Private attachments from the assigned Officer, retained for 90 days
                           after closure.
                         </p>
                         {feedbackLoading ? (

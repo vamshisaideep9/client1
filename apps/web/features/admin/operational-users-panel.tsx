@@ -59,7 +59,7 @@ const ROLE_OPTIONS = [
   { value: "admin", label: "Admin" },
   { value: "sub_admin", label: "Sub Admin" },
   { value: "telecaller", label: "Telecaller" },
-  { value: "employee", label: "Employee" },
+  { value: "employee", label: "Officer" },
   { value: "agent", label: "Agent" },
   { value: "client", label: "Client" },
 ];

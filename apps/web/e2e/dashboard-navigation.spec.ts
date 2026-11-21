@@ -43,7 +43,7 @@ const scenarios: readonly RoleScenario[] = [
     deniedPath: "/dashboard/leads/new",
   },
   {
-    name: "Employee",
+    name: "Officer",
     promote: ["employee", "real_estate"],
     expected: ["Tasks", "Vehicle arrangements"],
     excluded: ["Financial products", "Leads", "Earnings"],
@@ -336,7 +336,7 @@ test.describe("role-aware dashboard navigation", () => {
         }
         await expect(navigation.getByRole("link", { name: "Operational records" })).toHaveCount(0);
 
-        if (scenario.name === "Employee") {
+        if (scenario.name === "Officer") {
           await expect(
             page
               .locator('main a[href="/dashboard/vehicle-arrangements"]')

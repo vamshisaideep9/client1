@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { roleLabel } from "@/lib/role-label";
 import {
   apiIssuesToFieldErrors,
   focusFirstInvalidField,
@@ -243,7 +244,7 @@ export function MobileChangeQueue() {
               >
                 <div>
                   <p className="font-medium text-text-primary">
-                    {request.requester_name} · {request.requester_role.replace("_", " ")}
+                    {request.requester_name} · {roleLabel(request.requester_role)}
                   </p>
                   <div className="mt-1 flex items-center gap-2 text-sm text-text-secondary">
                     <span>{request.current_mobile}</span>

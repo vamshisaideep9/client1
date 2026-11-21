@@ -2,7 +2,7 @@
 
 Covers: Main Admin create / staff / rename / re-manage / archive; every
 platform Admin may read but only the Main Admin may write; Sub Admins and line
-staff are refused; one live team per manager per line; one team per member
+staff are refused; one live team per manager, line and role; one team per member
 per line (dual-line staff may join one team in each line); member role, line
 and status validation; archive frees members; audit rows for every write.
 
@@ -190,13 +190,27 @@ async def test_only_the_main_admin_may_write_and_staff_may_not_read(client: Asyn
 
 
 @pytest.mark.asyncio
-async def test_one_live_team_per_manager_per_line(client: AsyncClient) -> None:
+async def test_one_live_team_per_manager_line_and_role(client: AsyncClient) -> None:
     main_token, _, _ = await _primary_admin(client)
     _, _, manager, _ = await _sub_admin(client)
 
     assert (await _create(client, main_token, manager)).status_code == 201
+
+    async def available_managers(role: str) -> set[str]:
+        res = await client.get(
+            "/api/v1/admin/teams/eligible",
+            params={"business_line": "loans", "member_role": role},
+            headers=_headers(main_token),
+        )
+        assert res.status_code == 200, res.text
+        return {person["staff_profile_uuid"] for person in res.json()["managers"]}
+
+    assert str(manager) not in await available_managers("telecaller")
+    assert str(manager) in await available_managers("employee")
+    assert (await _create(client, main_token, manager, member_role="employee")).status_code == 201
     duplicate = await _create(client, main_token, manager, member_role="employee")
     assert duplicate.status_code == 409
+    assert str(manager) not in await available_managers("employee")
     other_line = await _create(client, main_token, manager, business_line="real_estate")
     assert other_line.status_code == 201
 

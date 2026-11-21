@@ -27,11 +27,12 @@ import { StatusBadge } from "@/features/dashboard/status-badge";
 import { buildCommissionPayoutPayload } from "@/lib/commission-payout-form";
 import {
   AUDIENCE_LABEL,
+  contestEditMode,
   EXCLUSION_LABEL,
   formatContestDates,
   formatMetricValue,
   LINE_LABEL,
-  PAYMENT_LABEL,
+  prizeStatus,
   STATUS_LABEL,
   STATUS_TONE,
 } from "@/lib/contest-rules";
@@ -53,6 +54,7 @@ import {
 import { formatPaise } from "@/lib/format";
 
 import { ContestRulesPanel } from "./contest-rules-panel";
+import { ContestFormDialog } from "./contest-form-dialog";
 import { audienceText, filterContests, ReasonDialog } from "./sub-admin-contests-view";
 
 type Tab = "review" | "winners" | "running" | "done";
@@ -125,7 +127,7 @@ export function AdminContestsView() {
       key: "dates",
       header: "Dates",
       cellClassName: "whitespace-nowrap",
-      render: (row) => formatContestDates(row.starts_on, row.ends_on),
+      render: (row) => formatContestDates(row.starts_on, row.ends_on, row.start_time, row.end_time),
     },
     { key: "maker", header: "Created by", render: (row) => row.created_by_name ?? "Sub Admin" },
     {
@@ -240,6 +242,7 @@ function ContestReviewDialog({
   const [cancelling, setCancelling] = React.useState<Contest | null>(null);
   const [paying, setPaying] = React.useState<StandingRow | null>(null);
   const [marking, setMarking] = React.useState<StandingRow | null>(null);
+  const [editing, setEditing] = React.useState<{ contest: Contest; mode: "full" | "live" } | null>(null);
   const [busy, setBusy] = React.useState(false);
   const { confirm, confirmDialog } = useConfirm();
   const showsStandings = contest ? ["live", "ended", "finalized"].includes(contest.status) : false;
@@ -273,11 +276,12 @@ function ContestReviewDialog({
 
   if (!contest) return null;
   const finalized = contest.status === "finalized";
+  const editMode = contestEditMode(contest);
 
   return (
     <>
       <Dialog open onOpenChange={(next) => (next ? undefined : onClose())}>
-        <DialogContent className="max-h-[92dvh] w-[calc(100vw-2rem)] max-w-4xl overflow-y-auto sm:max-w-4xl">
+        <DialogContent preventOutsideClose className="max-h-[92dvh] w-[calc(100vw-2rem)] max-w-4xl overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2">
               {contest.title}
@@ -299,9 +303,9 @@ function ContestReviewDialog({
                 {standings ? (
                   <p className="text-xs text-text-secondary">
                     {standings.source === "snapshot" ? "Snapshot at the end date" : "Updated just now"}
-                    {finalized
-                      ? ` · ${standings.winners} ${standings.winners === 1 ? "winner" : "winners"} · ${formatPaise(standings.prize_total_paise)} owed · ${formatPaise(standings.paid_total_paise)} paid`
-                      : ""}
+                    {finalized ? ` · ${standings.winners} ${standings.winners === 1 ? "winner" : "winners"}` : ""}
+                    {finalized && contest.prize_kind !== "item"
+                      ? ` · ${formatPaise(standings.prize_total_paise)} owed · ${formatPaise(standings.paid_total_paise)} paid` : ""}
                   </p>
                 ) : null}
               </div>
@@ -327,6 +331,11 @@ function ContestReviewDialog({
               ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
+              {editMode ? (
+                <Button variant="outline" onClick={() => setEditing({ contest, mode: editMode })} disabled={busy}>
+                  Edit contest
+                </Button>
+              ) : null}
               {contest.status === "pending_approval" ? (
                 <>
                   <Button variant="outline" onClick={() => setRejecting(contest)} disabled={busy}>
@@ -366,6 +375,12 @@ function ContestReviewDialog({
         </DialogContent>
       </Dialog>
 
+      {editing ? (
+        <ContestFormDialog open contest={editing.contest} adminMode={editing.mode}
+          onOpenChange={(next) => { if (!next) setEditing(null); }}
+          onSaved={() => { void onChanged(); }} />
+      ) : null}
+
       <ReasonDialog
         contest={rejecting}
         title="Request changes?"
@@ -404,15 +419,18 @@ function ContestReviewDialog({
       />
       <ReasonDialog
         contest={marking ? contest : null}
-        title="Record this prize as paid?"
-        description={marking ? `${marking.name} · ${formatPaise(marking.prize_paise)}. Staff prizes are paid outside Payouts, for example with payroll.` : ""}
-        label="How it was paid (no bank or personal details)"
-        confirmLabel="Mark paid"
+        title={marking?.item_prize ? "Record this item as awarded?" : "Record this prize as paid?"}
+        description={marking?.item_prize
+          ? `${marking.name} · ${marking.item_prize.label}`
+          : marking ? `${marking.name} · ${formatPaise(marking.prize_paise)}. Staff prizes are paid outside Payouts, for example with payroll.` : ""}
+        label={marking?.item_prize ? "Award reference (no personal details)" : "How it was paid (no bank or personal details)"}
+        confirmLabel={marking?.item_prize ? "Mark as awarded" : "Mark paid"}
         onOpenChange={(next) => (next ? undefined : setMarking(null))}
         onConfirm={async (reference) => {
           const row = marking;
           setMarking(null);
-          if (row?.result_id) await act(() => markPrizePaid(contest.id, row.result_id!, reference), "Prize recorded as paid");
+          if (row?.result_id) await act(() => markPrizePaid(contest.id, row.result_id!, reference),
+            row.item_prize ? "Item recorded as awarded" : "Prize recorded as paid");
         }}
       />
       {confirmDialog}
@@ -494,7 +512,7 @@ function PrizeCell({
   onMarkPaid: (row: StandingRow) => void;
 }) {
   if (row.kind === "team") return <span className="text-xs text-text-secondary">{row.won ? "Won" : "—"}</span>;
-  if (row.prize_paise <= 0) {
+  if (row.prize_paise <= 0 && !row.item_prize) {
     return (
       <span className="text-xs text-text-secondary">
         {row.excluded_reason ? EXCLUSION_LABEL[row.excluded_reason] ?? "No prize" : "No prize"}
@@ -503,18 +521,20 @@ function PrizeCell({
   }
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="font-medium tabular-nums">{formatPaise(row.prize_paise)}</span>
+      <span className="font-medium tabular-nums [overflow-wrap:anywhere]">
+        {row.item_prize?.label ?? formatPaise(row.prize_paise)}
+      </span>
       <StatusBadge tone={row.payment_status === "paid" ? "success" : row.payment_status === "payout_pending" ? "info" : "warning"}>
-        {PAYMENT_LABEL[row.payment_status] ?? row.payment_status}
+        {prizeStatus(row.payment_status, Boolean(row.item_prize))}
       </StatusBadge>
-      {row.payment_status === "unpaid" && row.participant_type === "agent" ? (
+      {row.payment_status === "unpaid" && row.participant_type === "agent" && !row.item_prize ? (
         <Button size="sm" variant="outline" onClick={() => onPay(row)}>
           Pay prize
         </Button>
       ) : null}
-      {row.payment_status === "unpaid" && row.participant_type === "staff" ? (
+      {row.payment_status === "unpaid" && (row.participant_type === "staff" || row.item_prize) ? (
         <Button size="sm" variant="outline" onClick={() => onMarkPaid(row)}>
-          Mark paid
+          {row.item_prize ? "Mark as awarded" : "Mark paid"}
         </Button>
       ) : null}
     </div>

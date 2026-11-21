@@ -2073,6 +2073,246 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance/check-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check In */
+        post: operations["check_in_api_v1_attendance_check_in_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/check-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check Out */
+        post: operations["check_out_api_v1_attendance_check_out_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Correction */
+        post: operations["request_correction_api_v1_attendance_corrections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Attendance */
+        get: operations["export_attendance_api_v1_attendance_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/holidays": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Holidays */
+        get: operations["get_holidays_api_v1_attendance_holidays_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/holidays/{day}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Holiday */
+        put: operations["put_holiday_api_v1_attendance_holidays__day__put"];
+        post?: never;
+        /** Delete Holiday */
+        delete: operations["delete_holiday_api_v1_attendance_holidays__day__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Leave */
+        post: operations["request_leave_api_v1_attendance_leave_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Attendance */
+        get: operations["my_attendance_api_v1_attendance_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Policy */
+        get: operations["get_policy_api_v1_attendance_policy_get"];
+        /** Put Policy */
+        put: operations["put_policy_api_v1_attendance_policy_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/regularizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Regularization */
+        post: operations["request_regularization_api_v1_attendance_regularizations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Requests */
+        get: operations["get_requests_api_v1_attendance_requests_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/requests/{request_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Request */
+        post: operations["cancel_request_api_v1_attendance_requests__request_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/requests/{request_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Request */
+        post: operations["decide_request_api_v1_attendance_requests__request_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/roster": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Roster */
+        get: operations["get_roster_api_v1_attendance_roster_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/change-password": {
         parameters: {
             query?: never;
@@ -8073,6 +8313,344 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** AttendanceAdjustmentInput */
+        AttendanceAdjustmentInput: {
+            /**
+             * Adjustment Type
+             * @enum {string}
+             */
+            adjustment_type: "late_waiver" | "early_exit" | "on_duty" | "holiday_work" | "comp_off";
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Reason */
+            reason: string;
+        };
+        /** AttendanceBalance */
+        AttendanceBalance: {
+            /** Allocated Units */
+            allocated_units: number;
+            /** Leave Type */
+            leave_type: string;
+            /** Used Units */
+            used_units: number;
+        };
+        /** AttendanceCorrectionInput */
+        AttendanceCorrectionInput: {
+            /**
+             * Check In
+             * Format: date-time
+             */
+            check_in: string;
+            /**
+             * Check Out
+             * Format: date-time
+             */
+            check_out: string;
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Reason */
+            reason: string;
+        };
+        /** AttendanceDayRead */
+        AttendanceDayRead: {
+            /** Adjustments */
+            adjustments?: ("late_waiver" | "early_exit" | "on_duty" | "holiday_work" | "comp_off")[];
+            /** Afternoon Covered */
+            afternoon_covered?: boolean | null;
+            /** Calendar Status */
+            calendar_status?: ("absent" | "holiday" | "week_off") | null;
+            /** Check In */
+            check_in: string | null;
+            /** Check Out */
+            check_out: string | null;
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /**
+             * Early Exit
+             * @default false
+             */
+            early_exit: boolean;
+            /** Late */
+            late: boolean;
+            /** Leave Sessions */
+            leave_sessions?: ("morning" | "afternoon")[];
+            /** Leave Units */
+            leave_units: number;
+            /** Lop Units */
+            lop_units?: number | null;
+            /** Morning Covered */
+            morning_covered?: boolean | null;
+            /** Original Check In */
+            original_check_in: string | null;
+            /** Original Check Out */
+            original_check_out: string | null;
+            /** Policy Version */
+            policy_version: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "clock" | "rollover" | "leave" | "correction";
+            /**
+             * Staff Profile Id
+             * Format: uuid
+             */
+            staff_profile_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "checked_in" | "present" | "half_day" | "short_day" | "absent" | "missing_checkout" | "on_leave" | "holiday" | "week_off";
+            /** System Check Out */
+            system_check_out?: string | null;
+            /** Worked Minutes */
+            worked_minutes: number;
+        };
+        /** AttendanceDecisionInput */
+        AttendanceDecisionInput: {
+            /** Expected Decisions */
+            expected_decisions: number;
+            /** Note */
+            note: string;
+            /**
+             * Stage
+             * @default decision
+             * @enum {string}
+             */
+            stage: "recommendation" | "decision";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "approved" | "rejected" | "cancelled";
+        };
+        /** AttendanceDecisionRead */
+        AttendanceDecisionRead: {
+            /**
+             * Actor Id
+             * Format: uuid
+             */
+            actor_id: string;
+            /** Actor Role */
+            actor_role: string;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Note */
+            note: string;
+            /** Stage */
+            stage?: ("recommendation" | "decision") | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected" | "cancelled";
+        };
+        /** AttendanceHolidayInput */
+        AttendanceHolidayInput: {
+            /** Name */
+            name: string;
+        };
+        /** AttendanceHolidayRead */
+        AttendanceHolidayRead: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Name */
+            name: string;
+        };
+        /** AttendanceInboxRead */
+        AttendanceInboxRead: {
+            /** Requests */
+            requests: components["schemas"]["AttendanceRequestRead"][];
+            /** Total */
+            total: number;
+        };
+        /** AttendanceLeaveInput */
+        AttendanceLeaveInput: {
+            /**
+             * End Day
+             * Format: date
+             */
+            end_day: string;
+            /** Half Day */
+            half_day: boolean;
+            /** Leave Session */
+            leave_session?: ("morning" | "afternoon") | null;
+            /** Leave Type */
+            leave_type: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Start Day
+             * Format: date
+             */
+            start_day: string;
+        };
+        /** AttendancePolicyInput */
+        AttendancePolicyInput: {
+            /** Full Day Minutes */
+            full_day_minutes: number;
+            /** Grace Minutes */
+            grace_minutes: number;
+            /** Half Day Minutes */
+            half_day_minutes: number;
+            /** Leave Quotas */
+            leave_quotas: {
+                [key: string]: number;
+            };
+            /**
+             * Session Clock
+             * @default false
+             */
+            session_clock: boolean;
+            /** Shift Minutes */
+            shift_minutes: number;
+            /** Shift Start Minute */
+            shift_start_minute: number;
+            /** Weekly Off */
+            weekly_off: number[];
+        };
+        /** AttendancePolicyRead */
+        AttendancePolicyRead: {
+            /**
+             * Effective From
+             * Format: date
+             */
+            effective_from: string;
+            /** Full Day Minutes */
+            full_day_minutes: number;
+            /** Grace Minutes */
+            grace_minutes: number;
+            /** Half Day Minutes */
+            half_day_minutes: number;
+            /** Leave Quotas */
+            leave_quotas: {
+                [key: string]: number;
+            };
+            /**
+             * Session Clock
+             * @default false
+             */
+            session_clock: boolean;
+            /** Shift Minutes */
+            shift_minutes: number;
+            /** Shift Start Minute */
+            shift_start_minute: number;
+            /** Version */
+            version: number;
+            /** Weekly Off */
+            weekly_off: number[];
+        };
+        /** AttendancePolicyState */
+        AttendancePolicyState: {
+            active: components["schemas"]["AttendancePolicyRead"] | null;
+            scheduled: components["schemas"]["AttendancePolicyRead"] | null;
+        };
+        /** AttendanceRequestRead */
+        AttendanceRequestRead: {
+            /** Adjustment Type */
+            adjustment_type?: ("late_waiver" | "early_exit" | "on_duty" | "holiday_work" | "comp_off") | null;
+            /** Approved Units */
+            approved_units: {
+                [key: string]: number;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decisions */
+            decisions: components["schemas"]["AttendanceDecisionRead"][];
+            /**
+             * End Day
+             * Format: date
+             */
+            end_day: string;
+            /** Half Day */
+            half_day: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "leave" | "correction" | "adjustment";
+            /** Leave Session */
+            leave_session?: ("morning" | "afternoon") | null;
+            /** Leave Type */
+            leave_type: string | null;
+            /** Reason */
+            reason: string;
+            /** Requested Check In */
+            requested_check_in: string | null;
+            /** Requested Check Out */
+            requested_check_out: string | null;
+            /**
+             * Staff Profile Id
+             * Format: uuid
+             */
+            staff_profile_id: string;
+            /**
+             * Start Day
+             * Format: date
+             */
+            start_day: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected" | "cancelled";
+            /**
+             * Two Stage
+             * @default false
+             */
+            two_stage: boolean;
+        };
+        /** AttendanceRosterMember */
+        AttendanceRosterMember: {
+            /** Name */
+            name: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "telecaller" | "employee";
+            /** Staff Code */
+            staff_code: string;
+            /**
+             * Staff Profile Id
+             * Format: uuid
+             */
+            staff_profile_id: string;
+        };
+        /** AttendanceRosterRead */
+        AttendanceRosterRead: {
+            /** Configured */
+            configured: boolean;
+            /** Days */
+            days: components["schemas"]["AttendanceDayRead"][];
+            /** Members */
+            members: components["schemas"]["AttendanceRosterMember"][];
+            /** Total */
+            total: number;
+        };
         /**
          * AudienceCity
          * @description A city target: a district and its state from the pincode reference list.
@@ -8136,7 +8714,7 @@ export interface components {
          *     `services/fee_cashbacks.py` (FR-6.6 processing-fee cashback).
          * @enum {string}
          */
-        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_specialty_updated" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "contact_history_viewed" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded" | "contest_created" | "contest_updated" | "contest_submitted" | "contest_deleted" | "contest_approved" | "contest_rejected" | "contest_cancelled" | "contest_went_live" | "contest_ended" | "contest_recalculated" | "contest_finalized" | "contest_prize_payout_requested" | "contest_prize_marked_paid" | "agent_leads_bulk_submitted" | "commission_rate_proposed" | "commission_rate_set" | "commission_rate_approved" | "commission_rate_rejected" | "commission_rate_withdrawn";
+        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_specialty_updated" | "staff_feature_granted" | "staff_feature_revoked" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "contact_history_viewed" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded" | "contest_created" | "contest_updated" | "attendance_updated" | "attendance_exported" | "contest_submitted" | "contest_deleted" | "contest_approved" | "contest_rejected" | "contest_cancelled" | "contest_went_live" | "contest_ended" | "contest_recalculated" | "contest_finalized" | "contest_prize_payout_requested" | "contest_prize_marked_paid" | "agent_leads_bulk_submitted" | "commission_rate_proposed" | "commission_rate_set" | "commission_rate_approved" | "commission_rate_rejected" | "commission_rate_withdrawn";
         /** AuditLogListResponse */
         AuditLogListResponse: {
             /** Entries */
@@ -11510,6 +12088,31 @@ export interface components {
             /** Otp */
             otp: string;
         };
+        /** MyAttendanceRead */
+        MyAttendanceRead: {
+            /** Balance Year */
+            balance_year: number;
+            /** Balances */
+            balances: components["schemas"]["AttendanceBalance"][];
+            /** Days */
+            days: components["schemas"]["AttendanceDayRead"][];
+            /** Holidays */
+            holidays: components["schemas"]["AttendanceHolidayRead"][];
+            policy: components["schemas"]["AttendancePolicyRead"] | null;
+            /** Requests */
+            requests: components["schemas"]["AttendanceRequestRead"][];
+            /**
+             * Server Time
+             * Format: date-time
+             */
+            server_time: string;
+            today: components["schemas"]["AttendanceDayRead"] | null;
+            /**
+             * Work Day
+             * Format: date
+             */
+            work_day: string;
+        };
         /** MyContestDetail */
         MyContestDetail: {
             audience: components["schemas"]["ContestAudience"];
@@ -11734,7 +12337,7 @@ export interface components {
          * NotificationType
          * @enum {string}
          */
-        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "agent_lead_expiry_reminder" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed" | "contest_submitted" | "contest_reviewed" | "contest_live" | "contest_updated" | "contest_won" | "commission_rate_submitted" | "commission_rate_reviewed";
+        NotificationType: "site_visit_requested" | "site_visit_cancelled" | "support_ticket_received" | "lead_assigned" | "lead_released" | "agent_lead_expired" | "agent_lead_expiry_reminder" | "task_assigned" | "loan_status_updated" | "property_deal_status_updated" | "referral_converted" | "support_ticket_resolved" | "document_review_updated" | "admin_payout_reviewed" | "admin_account_action" | "admin_retention_purged" | "admin_broadcast" | "mobile_change_requested" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "vehicle_arrangement_updated" | "campaign_approved" | "campaign_changes_requested" | "campaign_removed" | "contest_submitted" | "contest_reviewed" | "contest_live" | "contest_updated" | "attendance_request_updated" | "contest_won" | "commission_rate_submitted" | "commission_rate_reviewed";
         /** OfferCreate */
         OfferCreate: {
             audience_rules?: components["schemas"]["AudienceRules"];
@@ -19710,6 +20313,497 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentTransactionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_in_api_v1_attendance_check_in_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceDayRead"];
+                };
+            };
+        };
+    };
+    check_out_api_v1_attendance_check_out_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceDayRead"];
+                };
+            };
+        };
+    };
+    request_correction_api_v1_attendance_corrections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceCorrectionInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRequestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_attendance_api_v1_attendance_export_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+                team_id?: string | null;
+                staff_id?: string | null;
+                status?: ("checked_in" | "present" | "half_day" | "short_day" | "absent" | "missing_checkout" | "on_leave" | "holiday" | "week_off") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_holidays_api_v1_attendance_holidays_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceHolidayRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_holiday_api_v1_attendance_holidays__day__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                day: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceHolidayInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_holiday_api_v1_attendance_holidays__day__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                day: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_leave_api_v1_attendance_leave_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceLeaveInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRequestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_attendance_api_v1_attendance_me_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+                month?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyAttendanceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_policy_api_v1_attendance_policy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendancePolicyState"];
+                };
+            };
+        };
+    };
+    put_policy_api_v1_attendance_policy_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendancePolicyInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendancePolicyState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_regularization_api_v1_attendance_regularizations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceAdjustmentInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRequestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_requests_api_v1_attendance_requests_get: {
+        parameters: {
+            query?: {
+                status?: ("pending" | "approved" | "rejected" | "cancelled") | null;
+                team_id?: string | null;
+                staff_id?: string | null;
+                start?: string | null;
+                end?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceInboxRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_request_api_v1_attendance_requests__request_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRequestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_request_api_v1_attendance_requests__request_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRequestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_roster_api_v1_attendance_roster_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+                team_id?: string | null;
+                staff_id?: string | null;
+                status?: ("checked_in" | "present" | "half_day" | "short_day" | "absent" | "missing_checkout" | "on_leave" | "holiday" | "week_off") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRosterRead"];
                 };
             };
             /** @description Validation Error */

@@ -242,3 +242,72 @@ test("the Admin approves, confirms winners and pays or records prizes", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await expectNoHorizontalOverflow(page);
 });
+
+test("an Admin can update live copy and award an Agent item", async ({ page, baseURL }) => {
+  await page.clock.setFixedTime(new Date(NOW));
+  await page.context().addCookies([{ name: "session_hint", value: "1", url: baseURL! }]);
+  await mockMobileApi(page, "admin");
+  const item = { label: "Headphones", details: "Office collection", estimated_value_paise: 400000 };
+  let edited = contest(PENDING, "live", {
+    is_mine: false, title: "Live November sprint", starts_on: "2026-11-16",
+    ends_on: "2026-11-18", start_time: "12:30:00", end_time: "17:30:00",
+  });
+  const final = contest(FINAL, "finalized", {
+    is_mine: false, title: "Autumn item sprint", prize_kind: "item",
+    prize_paise: null, item_prize: item,
+  });
+  let edit: Record<string, unknown> | undefined;
+  let reference: string | undefined;
+  await page.route("**/api/v1/contests**", async (route) => {
+    const { pathname } = new URL(route.request().url());
+    if (pathname.endsWith("/standings")) {
+      return route.fulfill({
+        json: {
+          contest: pathname.includes(FINAL) ? final : edited,
+          source: "snapshot", computed_at: NOW, team_people: [],
+          rows: pathname.includes(FINAL) ? [standingRow({
+            item_prize: item, prize_paise: 0, payment_status: reference ? "paid" : "unpaid",
+          })] : [],
+          winners: 1, prize_total_paise: 0, paid_total_paise: 0,
+        },
+      });
+    }
+    if (pathname.endsWith("/mark-paid")) {
+      reference = route.request().postDataJSON().reference;
+      return route.fulfill({ json: { result_id: AGENT_RESULT, payment_status: "paid" } });
+    }
+    if (route.request().method() === "PUT") {
+      edit = route.request().postDataJSON();
+      edited = { ...edited, ...edit, version: 2 };
+      return route.fulfill({ json: edited });
+    }
+    return route.fulfill({ json: { contests: [edited, final], total: 2 } });
+  });
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 850 });
+    await page.goto("/dashboard/contest-approvals", { waitUntil: "domcontentloaded" });
+    await page.getByRole("tab", { name: /Upcoming & live/ }).click();
+    await page.getByText(edited.title, { exact: true }).click();
+    await page.getByRole("button", { name: "Edit contest" }).click();
+    const dialog = page.getByRole("dialog", { name: "Edit contest" });
+    await expect(dialog.getByLabel("Start time (IST)")).toBeDisabled();
+    await expect(dialog.getByLabel("End time (IST)")).toBeEnabled();
+    await dialog.getByLabel("End time (IST)").fill("18:30");
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await expect(dialog).toBeHidden();
+    expect(edit).toMatchObject({ end_time: "18:30", expected_version: width === 390 ? 1 : 2 });
+    await page.keyboard.press("Escape");
+    await expectNoHorizontalOverflow(page);
+  }
+  await page.getByRole("tab", { name: /Closed/ }).click();
+  await page.getByText("Autumn item sprint", { exact: true }).click();
+  const winners = page.getByRole("dialog", { name: /Autumn item sprint/ });
+  await expect(winners.getByText("Awaiting award")).toBeVisible();
+  await expect(winners.getByRole("button", { name: "Pay prize" })).toHaveCount(0);
+  await winners.getByRole("button", { name: "Mark as awarded" }).click();
+  const award = page.getByRole("dialog", { name: /Record this item/ });
+  await award.getByLabel(/Award reference/).fill("Office collection");
+  await award.getByRole("button", { name: "Mark as awarded" }).click();
+  await expect.poll(() => reference).toBe("Office collection");
+  await expect(winners.getByText("Awarded", { exact: true })).toBeVisible();
+});

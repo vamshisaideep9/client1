@@ -111,7 +111,7 @@ describe("role-aware dashboard navigation", () => {
     ]);
   });
 
-  it("shows only each Agent, Telecaller, and Employee work surface", () => {
+  it("shows only each Agent, Telecaller, and Officer work surface", () => {
     expect(navKeys(context("agent", "loans"))).toEqual([
       "home",
       "agent-leads",
@@ -131,6 +131,7 @@ describe("role-aware dashboard navigation", () => {
     ]);
     expect(navKeys(context("telecaller", "loans"))).toEqual([
       "home",
+      "staff-attendance",
       "telecaller-leads",
       "telecaller-calculators",
       "my-contests",
@@ -138,12 +139,14 @@ describe("role-aware dashboard navigation", () => {
     ]);
     expect(navKeys(context("employee", "loans"))).toEqual([
       "home",
+      "staff-attendance",
       "employee-tasks",
       "my-contests",
       "my-analytics",
     ]);
     expect(navKeys(context("employee", "real_estate"))).toEqual([
       "home",
+      "staff-attendance",
       "employee-tasks",
       "employee-vehicle-arrangements",
       "my-contests",
@@ -151,9 +154,10 @@ describe("role-aware dashboard navigation", () => {
     ]);
   });
 
-  it("uses the selected line for dual-line Telecaller and Employee navigation", () => {
+  it("uses the selected line for dual-line Telecaller and Officer navigation", () => {
     expect(navKeys(context("telecaller", "both", "loans"))).toEqual([
       "home",
+      "staff-attendance",
       "telecaller-leads",
       "telecaller-calculators",
       "my-contests",
@@ -161,12 +165,14 @@ describe("role-aware dashboard navigation", () => {
     ]);
     expect(navKeys(context("employee", "both", "loans"))).toEqual([
       "home",
+      "staff-attendance",
       "employee-tasks",
       "my-contests",
       "my-analytics",
     ]);
     expect(navKeys(context("employee", "both", "real_estate"))).toEqual([
       "home",
+      "staff-attendance",
       "employee-tasks",
       "employee-vehicle-arrangements",
       "my-contests",
@@ -177,9 +183,11 @@ describe("role-aware dashboard navigation", () => {
   it("makes the supported Sub Admin surfaces reachable without Client items", () => {
     expect(navKeys(context("sub_admin"))).toEqual([
       "home",
+      "staff-attendance",
       "sub-admin-listings",
       "sub-admin-listing-submit",
       "sub-admin-contests",
+      "attendance-management",
       "sub-admin-finance",
       "sub-admin-referral-rules",
       "commission-rates",
@@ -191,9 +199,11 @@ describe("role-aware dashboard navigation", () => {
 
     expect(navKeys(context("sub_admin", null, "loans", undefined, ["payout_requests"]))).toEqual([
       "home",
+      "staff-attendance",
       "sub-admin-listings",
       "sub-admin-listing-submit",
       "sub-admin-contests",
+      "attendance-management",
       "sub-admin-finance",
       "sub-admin-payouts",
       "sub-admin-referral-rules",
@@ -232,6 +242,7 @@ describe("role-aware dashboard navigation", () => {
       "admin-property-listings",
       "admin-property-review",
       "admin-document-verification",
+      "attendance-management",
       "admin-users",
       "admin-teams",
       "admin-contests",
@@ -251,6 +262,22 @@ describe("role-aware dashboard navigation", () => {
 });
 
 describe("dashboard direct-route UX access", () => {
+  it("opens attendance management only to Admin and Sub Admin", () => {
+    const route = "/dashboard/attendance-management";
+    expect(isDashboardPathAllowed(route, context("admin"))).toBe(true);
+    expect(isDashboardPathAllowed(route, context("sub_admin"))).toBe(true);
+    expect(isDashboardPathAllowed(route, context("employee", "loans"))).toBe(false);
+    expect(isDashboardPathAllowed(route, context("client", "loans"))).toBe(false);
+  });
+
+  it("opens personal attendance to Telecallers, Officers, and Sub Admins", () => {
+    expect(isDashboardPathAllowed("/dashboard/attendance", context("employee", "loans"))).toBe(true);
+    expect(isDashboardPathAllowed("/dashboard/attendance", context("telecaller", "both"))).toBe(true);
+    expect(isDashboardPathAllowed("/dashboard/attendance", context("sub_admin"))).toBe(true);
+    expect(isDashboardPathAllowed("/dashboard/attendance", context("agent", "loans"))).toBe(false);
+    expect(isDashboardPathAllowed("/dashboard/attendance", context("admin"))).toBe(false);
+  });
+
   it("covers every checked-in dashboard page with an explicit route rule", () => {
     const dashboardRoot = fileURLToPath(
       new URL("../../app/(app)/dashboard", import.meta.url),

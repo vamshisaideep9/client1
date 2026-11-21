@@ -296,7 +296,7 @@ function EditDialog({
               {target?.label}.{" "}
               {isLead
                 ? "Client details stay with whoever entered them."
-                : "Completing a task stays with the Employee, who records the outcome."}
+                : "Completing a task stays with the Officer, who records the outcome."}
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 space-y-4">
@@ -360,7 +360,7 @@ function EditDialog({
                       onChange={(event) => setReason(event.target.value)}
                     />
                     <p className="text-xs text-text-secondary">
-                      Saved as a note the Employee can read.
+                      Saved as a note the Officer can read.
                     </p>
                   </div>
                 )}
@@ -530,8 +530,8 @@ function DetailDialog({
                 </section>
               ) : null}
               {task?.task.notes ? (
-                <section aria-label="Employee notes">
-                  <h3 className="text-sm font-medium text-text-primary">Employee notes</h3>
+                <section aria-label="Officer notes">
+                  <h3 className="text-sm font-medium text-text-primary">Officer notes</h3>
                   <p className="mt-1 whitespace-pre-line text-sm text-text-primary">{task.task.notes}</p>
                 </section>
               ) : null}

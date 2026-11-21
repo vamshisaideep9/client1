@@ -1,5 +1,64 @@
 # Living implementation plan
 
+**In progress — Officer roles, Sub Admin access, and attendance**
+
+- Officer labels reuse the existing role ID. The team slot now permits one
+  Telecaller team and one Officer team per manager in each business line.
+- The opt-in session clock adds scheduled lunch, midnight system checkout,
+  quarter-day LOP, and two-stage review for new requests. Regularization covers
+  late waivers, early exits, on-duty credit, holiday work, and Sunday comp-off.
+  New half-day requests identify their morning or afternoon session.
+- Remaining scope includes dashboard access administration and specialist
+  permissions, staff employment dates and line calendars, monthly leave
+  entitlement and sandwich calculations, private medical certificates, and
+  complete attendance reporting with closed revisions and Analytics.
+- The seven focused PostgreSQL checks and 1,122 web unit tests cover the
+  delivered slice. The next implementation priority is scoped Sub Admin
+  permissions and provisioning.
+
+**Implemented — Batch 6 attendance management web**
+
+- The manager roster and monthly grid show scoped attendance by date, team,
+  staff member and status. The inbox shows request details and review history.
+- Platform Admins configure policy and holidays, override reviewed requests
+  and download the audited CSV using existing dashboard controls.
+- The synthetic browser journey passed at phone and desktop widths. It
+  covered policy setup, versioned leave review and the monthly grid.
+- The Round 2 implementation stack is ready for draft review. Next priority
+  is collecting the complete hosted verification and reviewing the stack
+  from the oldest PR to the newest.
+
+**Implemented — Batch 6 staff web: personal attendance**
+
+- Telecallers and Employees can clock in or out from Home and Attendance.
+- The IST month view shows worked hours, status, leave balances, and request
+  history. Staff can request leave or corrections and cancel eligible requests.
+- Mobile Playwright passed the setup-pending, check-in and half-day leave flow.
+  Next priority is the manager and Admin attendance workspace.
+- Role navigation covers the two staff roles on both business lines.
+
+**Implemented — Batch 6 API: attendance, regularisation and leave**
+
+- Require effective-dated Admin policy before opening the clock or leave.
+- Keep each staff member's attendance on their IST work date, including
+  overnight check-out. Preserve original punches through reviewed corrections.
+- Limit staff and manager access to their current scope, enforce quota and
+  overlap checks under a staff lock, and audit decisions and CSV exports.
+- Seven focused PostgreSQL checks, including schema-wide RLS, passed.
+  The migration has one head and passed scratch upgrade/downgrade/upgrade.
+  Next priority is the personal attendance dashboard.
+- The platform-scope inventory covers the shared, read-only attendance
+  policy and holiday metadata. Person-level records retain live reach checks.
+
+**Implemented — Batch 5 web: contest schedules, prizes and Admin editing**
+
+- Staff author minute-level IST windows and cash or item prizes. Participant
+  views show exact schedules and how item awards are progressing.
+- Admin edits use the displayed contest version. Live rules remain locked,
+  with title, description, terms, item text and later end dates editable.
+- Full web unit suite passed with 1,120 tests. The next slice is the
+  attendance API.
+
 **Implemented — Batch 5 API: contest windows, item prizes and Admin edits**
 
 - Preserve historical all-day windows and pay cash through the existing controls.

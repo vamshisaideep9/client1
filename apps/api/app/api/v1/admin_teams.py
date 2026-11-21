@@ -52,7 +52,7 @@ _ERRORS: dict[type[Exception], tuple[int, str]] = {
     ),
     ManagerAlreadyHasTeam: (
         status.HTTP_409_CONFLICT,
-        "This Sub Admin already manages a team in this business line.",
+        "This Sub Admin already manages a team for this role and business line.",
     ),
     InvalidTeamMember: (
         status.HTTP_422_UNPROCESSABLE_CONTENT,

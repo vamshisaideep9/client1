@@ -28,7 +28,7 @@ def _require_participant(user: CurrentUser) -> None:
     if user.role not in _PARTICIPANT_ROLES:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Contests are for Agents, Telecallers, Employees and team managers.",
+            detail="Contests are for Agents, Telecallers, Officers and team managers.",
         )
 
 

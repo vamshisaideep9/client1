@@ -37,13 +37,13 @@ export const STATUS_TONE: Record<Status, "neutral" | "info" | "warning" | "succe
 export const AUDIENCE_LABEL: Record<Audience, string> = {
   agent: "Agents",
   telecaller: "Telecallers",
-  employee: "Employees",
+  employee: "Officers",
   team: "Teams",
 };
 
 export const TEAM_ROLE_LABEL: Record<Schemas["ContestTeamMemberRole"], string> = {
   telecaller: "Telecaller teams",
-  employee: "Employee teams",
+  employee: "Officer teams",
 };
 
 export const METRIC_LABEL: Record<Metric, string> = {
@@ -124,7 +124,7 @@ export function formatMetricValue(metric: Metric, value: number | null | undefin
   return metric === "amount" ? formatPaise(value) : value.toLocaleString("en-IN");
 }
 
-export function formatContestDates(startsOn: string, endsOn: string): string {
+export function formatContestDates(startsOn: string, endsOn: string, startsAt = "00:00", endsAt = "23:59"): string {
   const format = (iso: string) =>
     new Intl.DateTimeFormat("en-IN", {
       day: "numeric",
@@ -132,7 +132,35 @@ export function formatContestDates(startsOn: string, endsOn: string): string {
       year: "numeric",
       timeZone: "UTC",
     }).format(new Date(`${iso}T00:00:00Z`));
-  return startsOn === endsOn ? format(startsOn) : `${format(startsOn)} – ${format(endsOn)}`;
+  const start = startsAt.slice(0, 5);
+  const end = endsAt.slice(0, 5);
+  if (start === "00:00" && end === "23:59")
+    return startsOn === endsOn ? format(startsOn) : `${format(startsOn)} – ${format(endsOn)}`;
+  return startsOn === endsOn
+    ? `${format(startsOn)}, ${start}–${end} IST`
+    : `${format(startsOn)}, ${start} – ${format(endsOn)}, ${end} IST`;
+}
+
+export function contestEditMode(contest: Schemas["ContestRead"], now = Date.now()) {
+  if (contest.is_mine || !["pending_approval", "approved", "live"].includes(contest.status)) return null;
+  const start = Date.parse(`${contest.starts_on}T${(contest.start_time ?? "00:00").slice(0, 5)}:00+05:30`);
+  const end = Date.parse(`${contest.ends_on}T${(contest.end_time ?? "23:59").slice(0, 5)}:00+05:30`) + 60_000;
+  if (now >= end) return null;
+  return contest.status === "live" || now >= start ? "live" : "full";
+}
+
+export function prizeStatus(status: string, isItem = false): string {
+  if (isItem && status === "unpaid") return "Awaiting award";
+  if (isItem && status === "paid") return "Awarded";
+  return PAYMENT_LABEL[status] ?? status;
+}
+
+export function describeItemPrize(item: Schemas["ContestItemPrize"]): string {
+  return [
+    item.label,
+    item.details,
+    item.estimated_value_paise ? `Estimated value ${formatPaise(item.estimated_value_paise)}` : null,
+  ].filter(Boolean).join(" · ");
 }
 
 function list(values: readonly string[], labels?: Record<string, string>): string {
@@ -237,6 +265,9 @@ export function describeWinning(contest: {
   prize_paise?: number | null;
   manager_prize_paise?: number | null;
   member_prize_paise?: number | null;
+  item_prize?: Schemas["ContestItemPrize"] | null;
+  manager_item_prize?: Schemas["ContestItemPrize"] | null;
+  member_item_prize?: Schemas["ContestItemPrize"] | null;
   member_min_contribution?: number | null;
   metric: Metric;
   budget_cap_paise?: number | null;
@@ -248,6 +279,13 @@ export function describeWinning(contest: {
       ? `The top ${contest.top_n} ${who}s who meet every target win, ranked by ${METRIC_LABEL[contest.metric].toLowerCase()}. A tie at the last place is kept whole.`
       : `Every ${who} who meets every target wins.`,
   );
+  if (contest.item_prize) lines.push(`Each winner gets ${describeItemPrize(contest.item_prize)}.`);
+  if (contest.manager_item_prize)
+    lines.push(`The team's manager gets ${describeItemPrize(contest.manager_item_prize)}.`);
+  if (contest.member_item_prize)
+    lines.push(
+      `Each member who contributed at least ${formatMetricValue(contest.metric, contest.member_min_contribution ?? 0)} gets ${describeItemPrize(contest.member_item_prize)}.`,
+    );
   if (contest.audience === "team") {
     if (contest.manager_prize_paise)
       lines.push(`The team's manager gets ${formatPaise(contest.manager_prize_paise)}.`);

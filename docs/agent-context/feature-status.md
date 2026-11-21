@@ -1,5 +1,42 @@
 # Feature implementation status
 
+**Partially implemented — Officer roles and attendance policy:** Officer
+labels, two distinct team types per manager and line, and the session-clock
+workflow with midnight checkout, fractional LOP, scoped two-stage approvals,
+regularizations, and explicit half-day sessions. Legacy policy and request
+versions retain their original behavior. Access delegation and specialist
+roles, full monthly leave rules, certificate handling, and monthly reporting
+remain open.
+
+Verification on this slice includes the seven focused session-clock and
+regularization cases on migrated PostgreSQL, cross-line team visibility,
+one Alembic head, API and web lint, web typechecking, and all 1,122 web unit
+tests. The complete feature remains in progress.
+
+**Implemented — Batch 6 attendance management web**
+
+Scoped roster, monthly attendance grid and review inbox are available to
+managers. Platform Admin handles approval overrides, policy configuration,
+holidays and CSV exports. The staff web slice is the parent branch.
+
+**Implemented — Batch 6 staff web:** Home clock, monthly calendar and totals,
+leave balance and requests, correction form, and request history. The API
+parent is [upstream #396](https://github.com/brollysolutions/client1/pull/396)
+and [mirror #97](https://github.com/vamshisaideep9/client1/pull/97).
+Navigation and direct-route tests cover staff access for both business lines.
+
+**Implemented — Batch 6 API:** attendance clock, effective-dated policy,
+reviewed leave and corrections, rollover, roster and audited CSV. Focused
+checks cover no-policy gating, concurrent check-in, overnight checkout,
+current manager reach, preserved original punches and override history.
+The platform-scope inventory explicitly covers the policy and holiday
+metadata roles.
+
+**Implemented — Batch 5 web:** minute-level contest controls and across-role
+schedule display, versioned Admin editing, and Admin item award recording.
+The API parent is [upstream #394](https://github.com/brollysolutions/client1/pull/394)
+and [mirror #95](https://github.com/vamshisaideep9/client1/pull/95).
+
 **Implemented — Batch 5 API:** minute-level IST contest windows, item awards and
 versioned Admin edits. Covered by targeted contest and payout tests against
 PostgreSQL with Redis and a migration round-trip. Participant and Admin UI

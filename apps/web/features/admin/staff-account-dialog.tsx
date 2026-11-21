@@ -13,6 +13,7 @@ import {
 import { StatusBadge, type StatusTone } from "@/features/dashboard/status-badge";
 import { formatDate } from "@/lib/format";
 import { formatMobile } from "@/lib/phone";
+import { roleLabel } from "@/lib/role-label";
 import type { AdminUser } from "@/lib/admin-users-api";
 
 import { ContactHistoryButton } from "./contact-history-dialog";
@@ -87,7 +88,7 @@ export function StaffAccountDialog({
               title={name || "Unnamed account"}
               description={
                 user.roles.length > 0
-                  ? user.roles.map((role) => role.replaceAll("_", " ")).join(", ")
+                  ? user.roles.map(roleLabel).join(", ")
                   : "No role assigned"
               }
               closeLabel="Close account"

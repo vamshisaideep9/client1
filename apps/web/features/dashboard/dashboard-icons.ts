@@ -78,4 +78,5 @@ export const DASHBOARD_ICONS = {
   auditLog: ScrollText,
   operationalRecords: Database,
   contests: Trophy,
+  attendance: CalendarCheck,
 } as const;

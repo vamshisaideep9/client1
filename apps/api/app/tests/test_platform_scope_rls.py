@@ -63,6 +63,10 @@ _DOCUMENTED_SUB_ADMIN_EXCEPTIONS = {
     # approved/own-workflow reads; eligible loans-line staff and Agents read
     # approved rates without the platform bypass.
     ("product_commission_rates", "product_commission_rates_select"),
+    # Attendance configuration metadata is shared with staff and Sub Admins
+    # through a separate role disjunct. Staff records use scoped policies.
+    ("attendance_policies", "attendance_policies_read"),
+    ("attendance_holidays", "attendance_holidays_read"),
 }
 
 # Every current policy carrying a platform_scope branch. The original
@@ -166,6 +170,8 @@ _ALL_PLATFORM_SCOPE_POLICIES = {
     ("contest_results", "contest_results_select"),
     # e4a6c8d0f2b3 (CS-028): requires role 'admin' with the scope.
     ("product_commission_rates", "product_commission_rates_select"),
+    ("attendance_policies", "attendance_policies_read"),
+    ("attendance_holidays", "attendance_holidays_read"),
 }
 
 

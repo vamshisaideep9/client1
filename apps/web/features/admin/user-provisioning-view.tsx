@@ -61,7 +61,7 @@ const ROLE_OPTIONS: { value: StaffRole; label: string }[] = [
   { value: "admin", label: "Admin" },
   { value: "sub_admin", label: "Sub Admin" },
   { value: "telecaller", label: "Telecaller" },
-  { value: "employee", label: "Employee" },
+  { value: "employee", label: "Officer" },
 ];
 
 const LINE_OPTIONS: { value: "loans" | "real_estate" | "both"; label: string }[] = [
@@ -213,13 +213,13 @@ export function UserProvisioningView() {
         <MetricCard
           label="Provisionable roles"
           value={visibleRoleOptions.length}
-          hint={access ? "Includes additional Admins" : "Sub Admin, Telecaller, Employee"}
+          hint={access ? "Includes additional Admins" : "Sub Admin, Telecaller, Officer"}
           icon={DASHBOARD_ICONS.usersAndStaff}
         />
         <MetricCard
           label="Line-scoped roles"
           value="2"
-          hint="Telecaller and Employee"
+          hint="Telecaller and Officer"
           icon={DASHBOARD_ICONS.accessControl}
         />
         <MetricCard
@@ -600,7 +600,7 @@ function StaffAccessContent({
         <div>
           <p className="font-medium text-text-primary">Main Admin controls</p>
           <p className="mt-1 text-sm leading-6 text-text-secondary">
-            You can provision Sub Admin, Telecaller, and Employee accounts. Only the Main Admin
+            You can provision Sub Admin, Telecaller, and Officer accounts. Only the Main Admin
             can create additional Admins or manage payout-request delegation.
           </p>
         </div>

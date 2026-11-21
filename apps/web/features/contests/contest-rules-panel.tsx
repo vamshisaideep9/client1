@@ -21,11 +21,16 @@ type RulesSource = Pick<
   | "business_line"
   | "starts_on"
   | "ends_on"
+  | "start_time"
+  | "end_time"
   | "win_mode"
   | "top_n"
   | "prize_paise"
   | "manager_prize_paise"
   | "member_prize_paise"
+  | "item_prize"
+  | "manager_item_prize"
+  | "member_item_prize"
   | "member_min_contribution"
   | "metric"
   | "budget_cap_paise"
@@ -55,7 +60,8 @@ export function ContestRulesPanel({ contest }: { contest: RulesSource }) {
         <div className="sm:col-span-2">
           <dt className="text-xs text-text-secondary">When</dt>
           <dd className="font-medium text-text-primary">
-            {formatContestDates(contest.starts_on, contest.ends_on)} (India time, both days included)
+            {formatContestDates(contest.starts_on, contest.ends_on, contest.start_time, contest.end_time)}
+            {" · End minute included"}
           </dd>
         </div>
       </dl>

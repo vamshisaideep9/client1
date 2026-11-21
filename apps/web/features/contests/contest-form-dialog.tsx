@@ -36,6 +36,7 @@ import {
   usesBusiness,
   validateContestForm,
   type ContestFormState,
+  type ItemPrizeForm,
 } from "@/lib/contest-form";
 import {
   AUDIENCE_LABEL,
@@ -203,12 +204,14 @@ const AUDIENCE_OPTIONS = (Object.keys(AUDIENCE_LABEL) as (keyof typeof AUDIENCE_
 export function ContestFormDialog({
   open,
   contest,
+  adminMode,
   onOpenChange,
   onSaved,
 }: {
   open: boolean;
   /** Editing an existing draft or rejected contest; null creates one. */
   contest: Contest | null;
+  adminMode?: "full" | "live";
   onOpenChange: (open: boolean) => void;
   onSaved: (contest: Contest) => void;
 }) {
@@ -219,7 +222,8 @@ export function ContestFormDialog({
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [busy, setBusy] = React.useState(false);
   const contentRef = React.useRef<HTMLDivElement>(null);
-  const catalogue = useProductCatalogue(open && form.businessLine === "loans");
+  const liveEdit = adminMode === "live";
+  const catalogue = useProductCatalogue(open && !liveEdit && form.businessLine === "loans");
 
   React.useEffect(() => {
     if (open) {
@@ -260,11 +264,17 @@ export function ContestFormDialog({
     if (Object.keys(next).length > 0) return;
     setBusy(true);
     const body = buildContestDefinition(form);
-    const response = contest ? await updateContest(contest.id, body) : await createContest(body);
+    const response = contest
+      ? await updateContest(contest.id, adminMode ? {
+          ...body,
+          criteria: liveEdit ? contest.criteria : body.criteria,
+          expected_version: contest.version,
+        } : body)
+      : await createContest(body);
     setBusy(false);
     if (response.ok) {
       toast.success(contest ? "Contest saved" : "Draft created", {
-        description: "Submit it for approval when it is ready.",
+        description: adminMode ? undefined : "Submit it for approval when it is ready.",
       });
       onSaved(response.data);
       onOpenChange(false);
@@ -274,6 +284,8 @@ export function ContestFormDialog({
       title: "title",
       starts_on: "startsOn",
       ends_on: "endsOn",
+      start_time: "startTime",
+      end_time: "endTime",
       prize_paise: "prizeRupees",
       budget_cap_paise: "budgetCapRupees",
     });
@@ -286,6 +298,7 @@ export function ContestFormDialog({
   const isTeam = form.audience === "team";
   const loans = form.businessLine === "loans";
   const amountMetric = form.metric === "amount";
+  const itemPrize = form.prizeKind === "item";
   const subtypeOptions = Object.entries(SUBTYPE_LABEL)
     .filter(([value]) => form.categories.length === 0 || form.categories.includes(SUBTYPE_CATEGORY[value]))
     .map(([value, label]) => ({ value, label }));
@@ -300,7 +313,11 @@ export function ContestFormDialog({
         <DialogHeader>
           <DialogTitle>{contest ? "Edit contest" : "New contest"}</DialogTitle>
           <DialogDescription>
-            Saved as a draft. A platform Admin approves it before anyone sees it.
+            {liveEdit
+              ? "You can edit the title, description, terms and item prize text, or extend the end. The other rules are locked."
+              : adminMode
+                ? "Changes keep the current approval status."
+                : "Saved as a draft. A platform Admin approves it before anyone sees it."}
           </DialogDescription>
         </DialogHeader>
 
@@ -334,7 +351,7 @@ export function ContestFormDialog({
                 onChange={(event) => set("terms", event.target.value)}
               />
             </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <fieldset disabled={liveEdit} className="grid min-w-0 gap-4 sm:grid-cols-2">
               <Field id="contest-line" label="Business line" required>
                 <Choice
                   id="contest-line"
@@ -371,34 +388,49 @@ export function ContestFormDialog({
                   />
                 </Field>
               ) : null}
+            </fieldset>
+            <div className="grid gap-4 sm:grid-cols-2">
               <Field id="contest-starts" label="Starts on" error={errors.startsOn} required>
                 <Input
                   id="contest-starts"
                   type="date"
                   value={form.startsOn}
                   min={todayIst()}
+                  disabled={liveEdit}
                   onChange={(event) => set("startsOn", event.target.value)}
                 />
+              </Field>
+              <Field id="contest-start-time" label="Start time (IST)" error={errors.startTime} required>
+                <Input id="contest-start-time" type="time" step={60} value={form.startTime} disabled={liveEdit}
+                  aria-invalid={Boolean(errors.startTime)}
+                  onChange={(event) => set("startTime", event.target.value)} />
               </Field>
               <Field
                 id="contest-ends"
                 label="Ends on"
                 error={errors.endsOn}
-                hint="Both dates are included (India time)."
                 required
               >
                 <Input
                   id="contest-ends"
                   type="date"
                   value={form.endsOn}
-                  min={form.startsOn}
+                  min={liveEdit ? contest?.ends_on : form.startsOn}
                   aria-invalid={errors.endsOn ? true : undefined}
                   onChange={(event) => set("endsOn", event.target.value)}
                 />
               </Field>
+              <Field id="contest-end-time" label="End time (IST)" error={errors.endTime}
+                hint="Activity during the selected end minute still counts." required>
+                <Input id="contest-end-time" type="time" step={60} value={form.endTime}
+                  aria-invalid={Boolean(errors.endTime)}
+                  onChange={(event) => set("endTime", event.target.value)} />
+              </Field>
             </div>
           </DashboardFormSection>
 
+          {!liveEdit ? (
+          <>
           {business || role !== "agent" ? (
             <DashboardFormSection
               title={loans ? "Loan cases that count" : "Property deals that count"}
@@ -407,7 +439,7 @@ export function ContestFormDialog({
                   ? "Cases on leads the Agent introduced."
                   : role === "telecaller"
                     ? "Cases on leads the Telecaller holds. Optional for staff."
-                    : "Cases on leads where the Employee completed a task before the counted stage. Optional for staff."
+                    : "Cases on leads where the Officer completed a task before the counted stage. Optional for staff."
               }
             >
               {loans ? (
@@ -621,8 +653,11 @@ export function ContestFormDialog({
             </div>
           </DashboardFormSection>
 
+          </>
+          ) : null}
+
           <DashboardFormSection title="Winning and prizes">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <fieldset disabled={liveEdit} className="grid min-w-0 gap-4 sm:grid-cols-2">
               <Field id="contest-metric" label="Rank by">
                 <Choice
                   id="contest-metric"
@@ -647,6 +682,32 @@ export function ContestFormDialog({
                   <NumberInput id="contest-top-n" value={form.topN} error={errors.topN} onChange={(value) => set("topN", value)} />
                 </Field>
               ) : null}
+              <Field id="contest-prize-kind" label="Prize type">
+                <Choice id="contest-prize-kind" value={form.prizeKind}
+                  options={[{ value: "cash", label: "Cash" }, { value: "item", label: "Item" }]}
+                  onChange={(value) => set("prizeKind", value)} />
+              </Field>
+            </fieldset>
+            {itemPrize ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {isTeam ? (
+                  <>
+                    {(!liveEdit || contest?.manager_item_prize) && (
+                      <ItemPrizeFields id="contest-manager-item" label="Manager item" value={form.managerItemPrize}
+                        error={errors.managerItemPrize} liveEdit={liveEdit} change={(value) => set("managerItemPrize", value)} />
+                    )}
+                    {(!liveEdit || contest?.member_item_prize) && (
+                      <ItemPrizeFields id="contest-member-item" label="Item per member" value={form.memberItemPrize}
+                        error={errors.memberItemPrize} liveEdit={liveEdit} change={(value) => set("memberItemPrize", value)} />
+                    )}
+                  </>
+                ) : (
+                  <ItemPrizeFields id="contest-item" label="Item per winner" value={form.itemPrize}
+                    error={errors.itemPrize} liveEdit={liveEdit} change={(value) => set("itemPrize", value)} />
+                )}
+              </div>
+            ) : (
+              <fieldset disabled={liveEdit} className="grid min-w-0 gap-4 sm:grid-cols-2">
               {isTeam ? (
                 <>
                   <Field id="contest-manager-prize" label="Manager prize" error={errors.managerPrizeRupees} required>
@@ -654,14 +715,6 @@ export function ContestFormDialog({
                   </Field>
                   <Field id="contest-member-prize" label="Prize per member" error={errors.memberPrizeRupees} required>
                     <NumberInput id="contest-member-prize" money value={form.memberPrizeRupees} error={errors.memberPrizeRupees} onChange={(value) => set("memberPrizeRupees", value)} />
-                  </Field>
-                  <Field
-                    id="contest-member-min"
-                    label={`Member minimum (${METRIC_LABEL[form.metric].toLowerCase()})`}
-                    error={errors.memberMinimum}
-                    hint="Members below it get no member prize."
-                  >
-                    <NumberInput id="contest-member-min" money={amountMetric} value={form.memberMinimum} error={errors.memberMinimum} onChange={(value) => set("memberMinimum", value)} />
                   </Field>
                 </>
               ) : (
@@ -677,7 +730,17 @@ export function ContestFormDialog({
               >
                 <NumberInput id="contest-cap" money value={form.budgetCapRupees} error={errors.budgetCapRupees} onChange={(value) => set("budgetCapRupees", value)} />
               </Field>
-            </div>
+              </fieldset>
+            )}
+            {isTeam && (!itemPrize || form.memberItemPrize.label.trim()) ? (
+              <fieldset disabled={liveEdit} className="min-w-0">
+                <Field id="contest-member-min" label={`Member minimum (${METRIC_LABEL[form.metric].toLowerCase()})`}
+                  error={errors.memberMinimum} hint="Members below it get no member prize.">
+                  <NumberInput id="contest-member-min" money={amountMetric} value={form.memberMinimum}
+                    error={errors.memberMinimum} onChange={(value) => set("memberMinimum", value)} />
+                </Field>
+              </fieldset>
+            ) : null}
           </DashboardFormSection>
         </div>
 
@@ -692,5 +755,33 @@ export function ContestFormDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ItemPrizeFields({ id, label, value, change, liveEdit, error }: {
+  id: string;
+  label: string;
+  value: ItemPrizeForm;
+  change: (value: ItemPrizeForm) => void;
+  liveEdit: boolean;
+  error?: string;
+}) {
+  return (
+    <div className="space-y-3">
+      <Field id={id} label={label} error={error}>
+        <Input id={id} maxLength={120} value={value.label} aria-invalid={Boolean(error)}
+          onChange={(event) => change({ ...value, label: event.target.value })} />
+      </Field>
+      <Field id={`${id}-details`} label={`${label} details (optional)`}>
+        <Textarea id={`${id}-details`} value={value.details} maxLength={500} rows={2}
+          onChange={(event) => change({ ...value, details: event.target.value })} />
+      </Field>
+      <fieldset disabled={liveEdit} className="min-w-0">
+        <Field id={`${id}-estimate`} label={`${label} estimated value (optional)`}>
+          <NumberInput id={`${id}-estimate`} money value={value.estimate}
+            onChange={(estimate) => change({ ...value, estimate })} />
+        </Field>
+      </fieldset>
+    </div>
   );
 }
