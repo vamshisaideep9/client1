@@ -1,6 +1,19 @@
 # Living implementation plan
 
-**Delivered for review — Attendance employment dates, line calendars, and direct reporting (slice 3)**
+**Attendance leave codes, midnight absence and punch chimes**
+
+- Show CL and SL from approved leave in both attendance calendars.
+- At midnight IST, close an open punch and record an absence on the workday
+  when no approved leave or on-duty credit applies.
+- Play distinct confirmation chimes for successful check-in and check-out.
+- Keep previously finalized records and the audited correction workflow.
+- Verified 12 PostgreSQL attendance checks, four Playwright journeys, 1,122
+  web unit tests, and byte-stable API contract generation.
+- Next priority is reviewing the attendance stack and collecting hosted checks.
+  [Upstream review branch](https://github.com/brollysolutions/client1/compare/main...feat/attendance-month-close)
+  · [Mirror #104](https://github.com/vamshisaideep9/client1/pull/104)
+
+**Delivered for review — Monthly attendance close, revisions, and Analytics (slice 5)**
 
 - Officer labels reuse the existing role ID. The team slot now permits one
   Telecaller team and one Officer team per manager in each business line.
@@ -36,9 +49,29 @@
   employment dates, calendar precedence, version conflicts, denied writes,
   direct recommendations, and revocation. Browser checks cover setup and
   attendance management at 390px and 1440px and the staff attendance journey.
-  [Slice 3 changes](https://github.com/brollysolutions/client1/compare/main...feat/attendance-employment-calendars).
-- Next attendance priority is monthly leave rules and private certificates,
-  followed by monthly close, revisions, and Analytics.
+  [Upstream #401](https://github.com/brollysolutions/client1/pull/401).
+- Main Admin configures accrual, bounded carry-forward, sandwich rules, and
+  medical certificate thresholds by leave type. Certificates are accessible
+  to the requesting employee and platform Admin reviewers, with configured
+  retention.
+- Annual balances preserve their original response fields. The month field is
+  returned for monthly balances. Certificate replacements preserve access to
+  the new file and place the previous object in the cleanup queue.
+- Verified Main Admin configuration, half-day accrual arithmetic, off-day
+  charges, carry-forward, decision gating, exact certificate audience,
+  expiry, and storage cleanup in PostgreSQL with synthetic objects. The
+  additive migration completed its empty round trip, with one Alembic head.
+  [Upstream #402](https://github.com/brollysolutions/client1/pull/402).
+- Slice 5 adds a platform Admin close/reopen workflow for completed IST
+  months. The API blocks edits to closed dates, saves aggregate revisions,
+  records a reason for each transition, and provides Analytics and CSV views.
+- PostgreSQL verification covers readiness, a pending request, rejected edits
+  to a closed month, a distinct two-stage correction after reopening, and
+  immutable historical CSV. The additive migration completed its empty round
+  trip and retains one Alembic head.
+  [Slice 5 changes](https://github.com/brollysolutions/client1/compare/feat/attendance-leave-policy...feat/attendance-month-close).
+- Next priority is reviewing the three drafts in stack order and collecting
+  full repository, browser-suite, and production-artifact evidence.
 
 **Implemented — Batch 6 attendance management web**
 

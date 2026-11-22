@@ -1,6 +1,17 @@
 # Feature implementation status
 
-**Partially implemented — Officer roles and attendance policy:** Officer
+**Attendance follow-up.** The staff and management calendars show `CL` for
+approved casual leave and `SL` for approved sick leave. A scheduled workday
+with a missed check-out rolls to `A` at midnight IST. The system records the
+closure time and credits zero worked minutes. Approved leave and on-duty
+credit still apply. Successful punches play distinct check-in and check-out
+chimes on Home and Attendance. The API adds an optional `leave_codes` field.
+Twelve PostgreSQL attendance checks, four Playwright journeys and 1,122 web
+unit tests passed. Contract regeneration was byte-stable.
+[Upstream review branch](https://github.com/brollysolutions/client1/compare/main...feat/attendance-month-close)
+· [Mirror #104](https://github.com/vamshisaideep9/client1/pull/104)
+
+**Delivered for review — Officer roles and attendance policy:** Officer
 labels, two distinct team types per manager and line, and the session-clock
 workflow with midnight checkout, fractional LOP, scoped two-stage approvals,
 regularizations, and explicit half-day sessions. Legacy policy and request
@@ -12,21 +23,40 @@ transitioned. Existing team assignments drive attendance recommendations.
 Slice 3 adds employment dates, line holiday calendars, and direct attendance
 review outside work teams. The attendance calendar remains shared for dates
 with a global holiday. A direct reviewer can reach only records in the assigned
-line and uses the existing decision workflow. Monthly leave rules, certificate
-handling, and closed reporting remain open.
+line and uses the existing decision workflow. Slice 4 adds Main Admin
+configuration for monthly accrual, carry-forward caps, days off inside a
+leave request, and certificate thresholds per leave type. Slice 5 adds monthly
+close and revision history in Staff attendance and Analytics.
 
 Slice 1 was merged in [upstream #399](https://github.com/brollysolutions/client1/pull/399).
 Slice 2 adds PostgreSQL coverage for pending activation, stale sessions,
 cross-line payout and campaign restrictions, and assigned Agent activity.
 The migration round trip and single-head check passed. All 1,122 web unit tests
 and the desktop activation and mobile delegated-access browser journeys
-passed. The complete attendance feature remains in progress.
+passed. The remaining implementation is in the draft PR stack.
 [Upstream #400](https://github.com/brollysolutions/client1/pull/400) ·
-[Slice 3 changes](https://github.com/brollysolutions/client1/compare/main...feat/attendance-employment-calendars)
+[Upstream #401](https://github.com/brollysolutions/client1/pull/401)
 
 Slice 3's PostgreSQL authorization and calendar scenario and both attendance
 browser journeys passed. Employment configuration is opt-in for existing
 staff; a missing direct reviewer leaves the existing decision routing in place.
+
+The monthly rules take effect on the first of a month. A qualifying
+employment month earns the configured amount. Existing annual leave types
+keep their annual balances and response shape. Certificate files are private
+to the requesting employee and platform Admin reviewers. Approval fails while the certificate
+is missing or expired. Scheduled cleanup retries storage deletion after
+the configured retention window. PostgreSQL scenario, policy inventory,
+single-head migration round trip, and generated contracts passed.
+[Upstream #402](https://github.com/brollysolutions/client1/pull/402)
+
+Slice 5 lets platform Admin close a completed IST month after pending
+requests, open shifts, and scheduled rollover are resolved. Reopening requires
+a reason and preserves the prior revision. Analytics and audited CSV show
+recorded work, leave, sandwich charges, loss of pay, late days and absences by
+business line. Focused PostgreSQL verification passed readiness, denied access,
+closed-date protection, reopened corrections, and historical export.
+[Slice 5 changes](https://github.com/brollysolutions/client1/compare/feat/attendance-leave-policy...feat/attendance-month-close)
 
 **Implemented — Batch 6 attendance management web**
 

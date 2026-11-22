@@ -4,15 +4,17 @@ from datetime import date
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRoute
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.cache.redis_keys import RedisCache
 from app.core.brand import branded_filename
 from app.core.deps import (
     CurrentUser,
+    get_cache,
     get_personal_user,
     require_assignment,
     require_platform_admin,
@@ -20,7 +22,7 @@ from app.core.deps import (
 from app.db.session import get_db
 from app.models.attendance import AttendanceEmployment
 from app.models.audit_log import AuditAction
-from app.models.profile import StaffRole
+from app.models.profile import StaffProfile, StaffRole
 from app.models.staff_team import StaffTeam
 from app.schemas.attendance import (
     AttendanceAdjustmentInput,
@@ -34,6 +36,8 @@ from app.schemas.attendance import (
     AttendanceInboxRead,
     AttendanceLeaveInput,
     AttendanceLine,
+    AttendanceMonthAction,
+    AttendanceMonthRead,
     AttendancePolicyInput,
     AttendancePolicyState,
     AttendanceRequestRead,
@@ -43,7 +47,14 @@ from app.schemas.attendance import (
     MyAttendanceRead,
     RequestStatus,
 )
-from app.services import attendance, attendance_employment, attendance_requests, attendance_views
+from app.services import (
+    attendance,
+    attendance_certificates,
+    attendance_employment,
+    attendance_month_close,
+    attendance_requests,
+    attendance_views,
+)
 from app.services.audit_log import record
 from app.services.csv_export import csv_chunks
 
@@ -126,6 +137,33 @@ async def cancel_request(request_id: UUID, user: Staff):
     return await attendance_requests.cancel(user, request_id)
 
 
+@router.post("/requests/{request_id}/certificate", status_code=204)
+async def attach_certificate(
+    request_id: UUID,
+    user: Staff,
+    file: Annotated[UploadFile, File()],
+    cache: Annotated[RedisCache, Depends(get_cache)],
+):
+    await attendance_certificates.upload(user, request_id, file, cache)
+    return Response(status_code=204, headers={"Cache-Control": "private, no-store"})
+
+
+@router.get("/requests/{request_id}/certificate", response_class=Response)
+async def download_certificate(
+    request_id: UUID, user: Annotated[CurrentUser, Depends(get_personal_user)], db: DB
+):
+    content, media_type, extension = await attendance_certificates.download(db, user, request_id)
+    return Response(
+        content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="medical-certificate.{extension}"',
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 async def _check_team_review(db: DB, user: CurrentUser, team_id: UUID | None) -> None:
     if user.role == StaffRole.SUB_ADMIN:
         await db.execute(text("SELECT set_config('app.team_review', 'true', true)"))
@@ -203,8 +241,14 @@ async def decide_request(request_id: UUID, payload: AttendanceDecisionInput, use
 
 
 @router.get("/policy", response_model=AttendancePolicyState)
-async def get_policy(_: Admin, db: DB):
-    return await attendance.policy_state(db)
+async def get_policy(user: Admin, db: DB):
+    primary = await db.scalar(
+        select(StaffProfile.is_primary_admin).where(
+            StaffProfile.id == user.staff_profile_uuid,
+            StaffProfile.auth_user_uuid == user.id,
+        )
+    )
+    return await attendance.policy_state(db, can_configure_leave_rules=bool(primary))
 
 
 @router.put("/policy", response_model=AttendancePolicyState)
@@ -250,6 +294,70 @@ async def get_employment(staff_id: UUID, _: Admin, db: DB):
 @router.put("/employment/{staff_id}", response_model=AttendanceEmploymentRead)
 async def put_employment(staff_id: UUID, payload: AttendanceEmploymentInput, user: Admin):
     return await attendance_employment.save(user, staff_id, payload)
+
+
+@router.get("/months/{month}", response_model=AttendanceMonthRead)
+async def get_month_report(month: date, _: Admin, db: DB, response: Response):
+    response.headers["Cache-Control"] = "private, no-store"
+    return await attendance_month_close.report(db, month)
+
+
+@router.post("/months/{month}/close", response_model=AttendanceMonthRead)
+async def close_month(month: date, payload: AttendanceMonthAction, user: Admin):
+    return await attendance_month_close.change(user, month, payload, reopening=False)
+
+
+@router.post("/months/{month}/reopen", response_model=AttendanceMonthRead)
+async def reopen_month(month: date, payload: AttendanceMonthAction, user: Admin):
+    return await attendance_month_close.change(user, month, payload, reopening=True)
+
+
+@router.get("/months/{month}/export", response_class=StreamingResponse)
+async def export_month(
+    month: date, user: Admin, db: DB, version: Annotated[int | None, Query(ge=1)] = None
+):
+    summary = await attendance_month_close.report(db, month)
+    latest = summary.revisions[0] if summary.revisions else None
+    if version is not None:
+        latest = next(
+            (revision for revision in summary.revisions if revision.version == version), None
+        )
+        if latest is None:
+            raise attendance.AttendanceNotFound("Attendance report revision not found.")
+    closed_snapshot = latest is not None and (version is not None or latest.reopened_at is None)
+    totals = latest.totals if closed_snapshot else summary.totals
+    label = f"revision-{latest.version}" if closed_snapshot else "preview"
+    keys = {
+        "business_line": "business_line",
+        "recorded_days": "recorded_days",
+        "worked_minutes": "worked_minutes",
+        "leave_units": "leave_half_days",
+        "sandwich_units": "sandwich_half_days",
+        "lop_units": "lop_quarter_days",
+        "late_days": "late_days",
+        "absences": "absences",
+    }
+    fields = list(keys.values())
+    rows = [{keys[key]: value for key, value in total.model_dump().items()} for total in totals]
+    await record(
+        db,
+        action=AuditAction.ATTENDANCE_EXPORTED,
+        entity_type="staff_attendance",
+        entity_uuid=None,
+        actor_uuid=user.id,
+        actor_role=user.role,
+        detail={"month": month.isoformat(), "report": label},
+    )
+    await db.commit()
+    filename = branded_filename(f"attendance-{month:%Y-%m}-{label}.csv")
+    return StreamingResponse(
+        csv_chunks(rows, fields),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 @router.get("/export", response_class=StreamingResponse)

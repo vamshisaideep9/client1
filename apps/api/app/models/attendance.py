@@ -23,6 +23,8 @@ class AttendancePolicy(Base):
     weekly_off: Mapped[list[int]] = mapped_column(JSONB)
     leave_quotas: Mapped[dict[str, int]] = mapped_column(JSONB)
     session_clock: Mapped[bool] = mapped_column(Boolean, default=False)
+    monthly_leave_rules: Mapped[dict[str, dict]] = mapped_column(JSONB, default=dict)
+    certificate_retention_days: Mapped[int | None] = mapped_column(SmallInteger)
     updated_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("auth_users.id", ondelete="SET NULL")
     )
@@ -85,6 +87,12 @@ class AttendanceRequest(Base):
     two_stage: Mapped[bool] = mapped_column(Boolean, default=False)
     adjustment_type: Mapped[str | None] = mapped_column(String(16))
     leave_session: Mapped[str | None] = mapped_column(String(9))
+    monthly_charges: Mapped[dict[str, int]] = mapped_column(JSONB, default=dict)
+    certificate_retention_days: Mapped[int | None] = mapped_column(SmallInteger)
+
+    @property
+    def certificate_required(self) -> bool:
+        return self.certificate_retention_days is not None
 
 
 class AttendanceDay(Base):
@@ -129,6 +137,28 @@ class AttendanceRolloverState(Base):
         ForeignKey("staff_profiles.id", ondelete="CASCADE"), primary_key=True
     )
     through_day: Mapped[date] = mapped_column(Date)
+
+
+class AttendanceCertificate(Base):
+    __tablename__ = "attendance_certificates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    request_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("attendance_requests.id", ondelete="SET NULL"), unique=True
+    )
+    object_key: Mapped[str] = mapped_column(String(144))
+    content_type: Mapped[str] = mapped_column(String(20))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AttendanceMonthRevision(Base):
+    __tablename__ = "attendance_month_revisions"
+
+    month: Mapped[date] = mapped_column(Date, primary_key=True)
+    version: Mapped[int] = mapped_column(Integer, primary_key=True)
+    closed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    reopened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    totals: Mapped[list[dict]] = mapped_column(JSONB)
 
 
 ATTENDANCE_ROLLOVER_LOCK = 1_885_206_137

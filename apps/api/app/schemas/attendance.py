@@ -9,8 +9,10 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    SerializerFunctionWrapHandler,
     StringConstraints,
     field_validator,
+    model_serializer,
     model_validator,
 )
 
@@ -28,6 +30,7 @@ AttendanceStatus = Literal[
 RequestStatus = Literal["pending", "approved", "rejected", "cancelled"]
 AttendanceAdjustment = Literal["late_waiver", "early_exit", "on_duty", "holiday_work", "comp_off"]
 LeaveSession = Literal["morning", "afternoon"]
+AttendanceLeaveCode = Literal["CL", "SL"]
 Reason = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=500)]
 LeaveType = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]{0,31}$")]
 LeaveUnits = Annotated[int, Field(ge=0, le=732)]
@@ -39,6 +42,13 @@ class AttendanceInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class AttendanceMonthlyLeaveRule(AttendanceInput):
+    accrual_units: Annotated[int, Field(gt=0, le=62)]
+    carry_units: LeaveUnits = 0
+    sandwich: bool = False
+    certificate_after_days: Annotated[int, Field(ge=0, lt=31)] | None = None
+
+
 class AttendancePolicyInput(AttendanceInput):
     shift_start_minute: Annotated[int, Field(ge=0, le=1439)]
     shift_minutes: Annotated[int, Field(ge=1, le=1440)]
@@ -48,9 +58,26 @@ class AttendancePolicyInput(AttendanceInput):
     weekly_off: Annotated[list[Weekday], Field(max_length=6)]
     leave_quotas: Annotated[dict[LeaveType, LeaveUnits], Field(max_length=12)]
     session_clock: bool = False
+    monthly_leave_rules: Annotated[
+        dict[LeaveType, AttendanceMonthlyLeaveRule], Field(max_length=12)
+    ] = Field(default_factory=dict)
+    certificate_retention_days: Annotated[int, Field(ge=1, le=3660)] | None = None
 
     @model_validator(mode="after")
     def check_thresholds(self):
+        if self.monthly_leave_rules and (
+            not self.session_clock
+            or not self.monthly_leave_rules.keys() <= self.leave_quotas.keys()
+        ):
+            raise ValueError("Configure monthly rules for leave types in the session clock.")
+        if (
+            any(
+                rule.certificate_after_days is not None
+                for rule in self.monthly_leave_rules.values()
+            )
+            and self.certificate_retention_days is None
+        ):
+            raise ValueError("Set certificate retention before requiring a certificate.")
         if not self.half_day_minutes <= self.full_day_minutes <= self.shift_minutes:
             raise ValueError("Half-day and full-day thresholds must fit the shift duration.")
         if self.grace_minutes > self.shift_minutes:
@@ -76,6 +103,7 @@ class AttendancePolicyRead(AttendancePolicyInput):
 class AttendancePolicyState(BaseModel):
     active: AttendancePolicyRead | None
     scheduled: AttendancePolicyRead | None
+    can_configure_leave_rules: bool = False
 
 
 class AttendanceHolidayInput(AttendanceInput):
@@ -134,6 +162,7 @@ class AttendanceDayRead(BaseModel):
     lop_units: int | None = None
     adjustments: list[AttendanceAdjustment] = Field(default_factory=list)
     leave_sessions: list[LeaveSession] = Field(default_factory=list)
+    leave_codes: list[AttendanceLeaveCode] = Field(default_factory=list)
 
     @field_validator("adjustments", "leave_sessions", mode="before")
     @classmethod
@@ -214,12 +243,21 @@ class AttendanceRequestRead(BaseModel):
     two_stage: bool = False
     adjustment_type: AttendanceAdjustment | None = None
     leave_session: LeaveSession | None = None
+    certificate_required: bool = False
 
 
 class AttendanceBalance(BaseModel):
     leave_type: LeaveType
     allocated_units: int
     used_units: int
+    month: date | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_period(self, handler: SerializerFunctionWrapHandler):
+        result = handler(self)
+        if self.month is None:
+            result.pop("month", None)
+        return result
 
 
 class MyAttendanceRead(BaseModel):
@@ -253,3 +291,35 @@ class AttendanceRosterRead(BaseModel):
 class AttendanceInboxRead(BaseModel):
     requests: list[AttendanceRequestRead]
     total: int
+
+
+class AttendanceMonthAction(AttendanceInput):
+    expected_version: Annotated[int, Field(ge=0)]
+    note: Reason
+
+
+class AttendanceMonthTotal(BaseModel):
+    business_line: AttendanceLine | None
+    recorded_days: int
+    worked_minutes: int
+    leave_units: int
+    sandwich_units: int = 0
+    lop_units: int
+    late_days: int
+    absences: int
+
+
+class AttendanceMonthRevisionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    version: int
+    closed_at: datetime
+    reopened_at: datetime | None
+    totals: list[AttendanceMonthTotal]
+
+
+class AttendanceMonthRead(BaseModel):
+    month: date
+    can_close: bool
+    close_blocker: str | None = None
+    totals: list[AttendanceMonthTotal]
+    revisions: list[AttendanceMonthRevisionRead]

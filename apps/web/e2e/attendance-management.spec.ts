@@ -31,6 +31,7 @@ test("an Admin configures attendance and reviews a staff leave request", async (
       }
       return route.fulfill({ json: {
         active: configured ? { ...policy, version: 1, effective_from: DAY } : null, scheduled: null,
+        can_configure_leave_rules: true,
       } });
     }
     if (pathname.endsWith("/holidays")) {
@@ -81,6 +82,18 @@ test("an Admin configures attendance and reviews a staff leave request", async (
   await page.getByRole("button", { name: "Save policy" }).click();
   await expect(page.getByText("Attendance is now open.")).toBeVisible();
   expect(policy).toMatchObject({ shift_start_minute: 540, leave_quotas: { annual: 25 } });
+  await page.getByText("Monthly leave rules", { exact: true }).click();
+  await page.getByLabel("Use the session clock").check();
+  await page.getByLabel("Use monthly accrual").check();
+  await page.getByLabel("Days earned each month").fill("1.5");
+  await page.getByLabel("Maximum days carried").fill("2");
+  await page.getByLabel("Require certificate after (calendar days)").fill("3");
+  await page.getByLabel("Certificate retention (days from upload)").fill("30");
+  await page.getByRole("button", { name: "Save policy" }).click();
+  await expect(page.getByText("Attendance is now open.")).toBeVisible();
+  expect(policy).toMatchObject({ session_clock: true, certificate_retention_days: 30,
+    monthly_leave_rules: { annual: { accrual_units: 3, carry_units: 4, certificate_after_days: 3 } },
+  });
   await page.getByRole("tab", { name: "Requests" }).click();
   await page.getByRole("button", { name: "Review", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Leave request" });

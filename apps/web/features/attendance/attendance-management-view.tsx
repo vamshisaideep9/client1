@@ -18,11 +18,13 @@ import {
 } from "@/lib/attendance-api";
 import { getMyTeams, listTeams } from "@/lib/staff-teams-api";
 import { roleLabel } from "@/lib/role-label";
-import { ATTENDANCE_STATUS, attendanceCode, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays, previousMonth, requestLabel } from "./attendance-display";
+import { ATTENDANCE_STATUS, attendanceBadges, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays, previousMonth, requestLabel } from "./attendance-display";
 import { AttendancePolicyPanel } from "./attendance-policy-panel";
 import { AttendanceEmploymentDialog } from "./attendance-employment-dialog";
+import { AttendanceCertificateControl } from "./attendance-certificate-control";
+import { AttendanceMonthPanel } from "./attendance-month-panel";
 
-type Mode = "daily" | "month" | "requests" | "policy";
+type Mode = "daily" | "month" | "requests" | "policy" | "close";
 type FilterOption = { id: string; name: string };
 const PAGE_SIZE = 50;
 const selectClass = "min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -73,7 +75,7 @@ export function AttendanceManagementView() {
   }, [admin, revision, role]);
 
   useEffect(() => {
-    if (!role || mode === "policy") return;
+    if (!role || mode === "policy" || mode === "close") return;
     let current = true;
     const query = new URLSearchParams(range);
     if (mode !== "requests") query.set("offset", String(offset));
@@ -121,9 +123,10 @@ export function AttendanceManagementView() {
           <TabsTrigger value="month">Monthly grid</TabsTrigger>
           <TabsTrigger value="requests">Requests</TabsTrigger>
           {admin ? <TabsTrigger value="policy">Policy & holidays</TabsTrigger> : null}
+          {admin ? <TabsTrigger value="close">Monthly close</TabsTrigger> : null}
         </TabsList>
         <TabsContent value={mode} className="space-y-4">
-      {mode === "policy" && admin ? <AttendancePolicyPanel /> : (
+      {mode === "close" && admin ? <AttendanceMonthPanel manageable /> : mode === "policy" && admin ? <AttendancePolicyPanel /> : (
         <>
           <DashboardPanel title="Filters" action={admin && mode !== "requests" && roster?.configured ? (
             <Button variant="outline" disabled={exporting} onClick={() => void download()}>Export CSV</Button>
@@ -238,13 +241,15 @@ function RosterTable({ roster, dates, daily, edit }: {
               {daily ? <>
                 <td className="p-2">{row ? ATTENDANCE_STATUS[row.status] : "Unrecorded"}{row?.late ? " · Late" : ""}</td>
                 <td className="p-2">{attendanceTime(row?.check_in ?? null)}</td>
-                <td className="p-2">{attendanceTime(row?.check_out ?? null)}{row?.system_check_out && row.system_check_out === row.check_out ? " (system)" : ""}</td>
+                <td className="p-2">{attendanceTime(row?.check_out ?? row?.system_check_out ?? null)}{row?.system_check_out && (!row.check_out || row.system_check_out === row.check_out) ? " (system)" : ""}</td>
                 <td className="p-2">{row ? duration(row.worked_minutes) : "—"}</td>
               </> : dates.map((day) => {
                 const entry = byDay.get(`${member.staff_profile_id}/${day}`);
-                const badge = entry ? attendanceCode(entry) : null;
-                return <td key={day} className="p-2 text-xs">{badge
-                  ? <span className={`rounded px-1 ${badge.tone}`} title={ATTENDANCE_STATUS[entry!.status]}>{badge.code}</span>
+                const badges = entry ? attendanceBadges(entry) : [];
+                return <td key={day} className="p-2 text-xs">{badges.length
+                  ? <div className="flex gap-0.5">{badges.map(({ code, label, tone }) => <span key={code} className={`rounded px-1 ${tone}`} title={label}>
+                    <span aria-hidden="true">{code}</span><span className="sr-only">{label}</span>
+                  </span>)}</div>
                   : entry ? ATTENDANCE_STATUS[entry.status] : "—"}</td>;
               })}
               <td className="p-2">{totalLop / 4}</td>
@@ -297,6 +302,7 @@ function ReviewDialog({ entry, name, admin, recommendationsOnly, close, saved }:
             : entry.kind === "correction" ? <p>{attendanceTime(entry.requested_check_in)} – {attendanceTime(entry.requested_check_out)} IST</p> : null}
           <p>Submitted {attendanceDate(istDay(new Date(entry.created_at)))} at {attendanceTime(entry.created_at)}</p>
           <p className="[overflow-wrap:anywhere]">{entry.reason}</p>
+          {admin && entry.certificate_required ? <AttendanceCertificateControl requestId={entry.id} /> : null}
           {entry.decisions.length ? <ol className="list-decimal space-y-1 pl-5" aria-label="Decision history">
             {entry.decisions.map((decision, index) => <li key={index} className="[overflow-wrap:anywhere]">
               {decision.stage === "recommendation" ? "Recommended " : ""}{leaveLabel(decision.status)} · {roleLabel(decision.actor_role)} · {attendanceDate(istDay(new Date(decision.at)))} at {attendanceTime(decision.at)} · {decision.note}

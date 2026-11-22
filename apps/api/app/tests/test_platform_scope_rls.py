@@ -183,6 +183,8 @@ _ALL_PLATFORM_SCOPE_POLICIES = {
     ("relationship_activity", "relationship_activity_select"),
     ("attendance_employment", "attendance_employment_read"),
     ("attendance_line_holidays", "attendance_line_holidays_read"),
+    ("attendance_month_revisions", "attendance_month_admin_read"),
+    ("attendance_certificates", "attendance_certificate_read"),
     # The session clock policies have an explicit platform Admin branch next
     # to self and team access. The scoped grants narrow team reach separately.
     ("attendance_days", "attendance_days_read"),

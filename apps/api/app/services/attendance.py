@@ -16,7 +16,9 @@ from app.models.attendance import (
     AttendanceEmployment,
     AttendanceHoliday,
     AttendanceLineHoliday,
+    AttendanceMonthRevision,
     AttendancePolicy,
+    AttendanceRequest,
 )
 from app.models.audit_log import AuditAction
 from app.models.profile import (
@@ -94,13 +96,34 @@ async def require_policy(db: AsyncSession, day: date) -> AttendancePolicy:
     return policy
 
 
+async def closed_months(db: AsyncSession, start: date, end: date) -> set[date]:
+    return set(
+        await db.scalars(
+            select(AttendanceMonthRevision.month).where(
+                AttendanceMonthRevision.month.between(start.replace(day=1), end.replace(day=1)),
+                AttendanceMonthRevision.reopened_at.is_(None),
+            )
+        )
+    )
+
+
+async def ensure_period_open(db: AsyncSession, start: date, end: date) -> None:
+    if await closed_months(db, start, end):
+        raise AttendanceError(
+            "An Admin must reopen the closed attendance month before editing these dates."
+        )
+
+
 def allows_personal_attendance(role: str, policy: AttendancePolicy | None) -> bool:
     return policy is not None and (role != StaffRole.SUB_ADMIN or policy.session_clock)
 
 
-async def policy_state(db: AsyncSession) -> AttendancePolicyState:
+async def policy_state(
+    db: AsyncSession, *, can_configure_leave_rules: bool = False
+) -> AttendancePolicyState:
     today = work_date(utc_now())
     return AttendancePolicyState(
+        can_configure_leave_rules=can_configure_leave_rules,
         active=await policy_for(db, today),
         scheduled=await db.scalar(
             select(AttendancePolicy)
@@ -247,7 +270,7 @@ async def configure_policy(
     actor: CurrentUser, values: AttendancePolicyInput
 ) -> AttendancePolicyState:
     async with db_session.AsyncSessionLocal() as db:
-        await lock_actor(db, actor)
+        admin = await lock_actor(db, actor)
         await db.execute(select(func.pg_advisory_xact_lock(ATTENDANCE_POLICY_LOCK)))
         latest = await db.scalar(
             select(AttendancePolicy).order_by(AttendancePolicy.version.desc()).limit(1)
@@ -260,16 +283,56 @@ async def configure_policy(
             effective_from = (today.replace(day=28) + timedelta(days=4)).replace(day=1)
         if latest:
             effective_from = max(effective_from, latest.effective_from)
+        values_dict = values.model_dump()
+        previous_rules = latest.monthly_leave_rules if latest else {}
+        previous_retention = latest.certificate_retention_days if latest else None
+        if "monthly_leave_rules" not in values.model_fields_set:
+            values_dict["monthly_leave_rules"] = previous_rules
+        if "certificate_retention_days" not in values.model_fields_set:
+            values_dict["certificate_retention_days"] = previous_retention
+        rules = values_dict["monthly_leave_rules"]
+        retention = values_dict["certificate_retention_days"]
+        if (
+            any(rule["certificate_after_days"] is not None for rule in rules.values())
+            and retention is None
+        ):
+            raise AttendanceInvalid("Set certificate retention before requiring a certificate.")
+        if not rules.keys() <= values.leave_quotas.keys():
+            raise AttendanceInvalid("Keep leave types with monthly rules in the policy.")
+        if rules != previous_rules or retention != previous_retention:
+            if not admin.is_primary_admin:
+                raise AttendanceForbidden("Only Main Admin may configure monthly leave rules.")
+            revised_month = (today.replace(day=28) + timedelta(days=4)).replace(day=1)
+            effective_from = max(effective_from, revised_month)
+            if effective_from.day != 1:
+                effective_from = (effective_from.replace(day=28) + timedelta(days=4)).replace(day=1)
+            affected_types = {
+                kind
+                for kind in previous_rules.keys() | rules.keys()
+                if previous_rules.get(kind) != rules.get(kind) or retention != previous_retention
+            }
+            if affected_types and await db.scalar(
+                select(AttendanceRequest.id)
+                .where(
+                    AttendanceRequest.status.in_(("pending", "approved")),
+                    AttendanceRequest.leave_type.in_(affected_types),
+                    AttendanceRequest.end_day >= effective_from,
+                )
+                .limit(1)
+            ):
+                raise AttendanceError(
+                    "Resolve existing future leave before changing its monthly rules."
+                )
         new = AttendancePolicy(
             version=latest.version + 1 if latest else 1,
             effective_from=effective_from,
             updated_by=actor.id,
-            **values.model_dump(),
+            **values_dict,
         )
         db.add(new)
         await audit(db, actor, "configure_policy", detail={"version": new.version})
         await db.commit()
-        return await policy_state(db)
+        return await policy_state(db, can_configure_leave_rules=admin.is_primary_admin)
 
 
 async def configure_holiday(
@@ -336,6 +399,20 @@ def require_employment_days(
 
 
 def apply_clock_result(row: AttendanceDay, policy: AttendancePolicy) -> None:
+    if row.check_out is None:
+        row.worked_minutes = 0
+        row.late = False
+        on_duty = "on_duty" in row.adjustments
+        calendar = row.calendar_status
+        if calendar is None:
+            calendar = row.status if row.status in ("holiday", "week_off") else "absent"
+        row.status = "present" if on_duty else "on_leave" if row.leave_units else calendar
+        if policy.session_clock:
+            row.morning_covered = row.afternoon_covered = row.early_exit = False
+            row.uncovered_units = (
+                (2 - row.leave_units) * 2 if calendar == "absent" and not on_duty else 0
+            )
+        return
     if policy.session_clock:
         coverage = session_coverage(row.day, row.check_in, row.check_out)
         row.worked_minutes = coverage.minutes_worked
@@ -399,12 +476,11 @@ async def recalculate_late_penalties(db: AsyncSession, staff_id: UUID, day: date
             row.lop_units = min(4 - 2 * row.leave_units, row.uncovered_units + penalty)
 
 
-def close_expired_day(row: AttendanceDay, policy: AttendancePolicy) -> None:
-    if policy.session_clock:
-        row.system_check_out = row.check_out = midnight_after(row.day)
-        apply_clock_result(row, policy)
-    else:
-        row.status = "missing_checkout"
+async def close_expired_day(db: AsyncSession, row: AttendanceDay, policy: AttendancePolicy) -> None:
+    if row.calendar_status is None:
+        row.status = await day_without_clock(db, row.day, policy, row.business_line)
+    row.system_check_out = midnight_after(row.day)
+    apply_clock_result(row, policy)
 
 
 async def open_day(db: AsyncSession, staff_id: UUID) -> AttendanceDay | None:
@@ -453,7 +529,7 @@ async def check_clock(actor: CurrentUser, *, checking_in: bool) -> AttendanceDay
         active = await open_day(db, profile.id)
         if active is not None:
             policy = await db.get(AttendancePolicy, active.policy_version)
-            if now < shift_cutoff(active.day, policy):
+            if now < midnight_after(active.day):
                 if checking_in:
                     return active
                 active.original_check_out = active.check_out = now
@@ -465,7 +541,7 @@ async def check_clock(actor: CurrentUser, *, checking_in: bool) -> AttendanceDay
                 )
                 await db.commit()
                 return active
-            close_expired_day(active, policy)
+            await close_expired_day(db, active, policy)
             if policy.session_clock:
                 await recalculate_late_penalties(db, profile.id, active.day)
             await db.flush()

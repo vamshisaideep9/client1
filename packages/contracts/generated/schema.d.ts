@@ -2296,6 +2296,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance/months/{month}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Month Report */
+        get: operations["get_month_report_api_v1_attendance_months__month__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/months/{month}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close Month */
+        post: operations["close_month_api_v1_attendance_months__month__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/months/{month}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Month */
+        get: operations["export_month_api_v1_attendance_months__month__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/months/{month}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reopen Month */
+        post: operations["reopen_month_api_v1_attendance_months__month__reopen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attendance/policy": {
         parameters: {
             query?: never;
@@ -2359,6 +2427,24 @@ export interface paths {
         put?: never;
         /** Cancel Request */
         post: operations["cancel_request_api_v1_attendance_requests__request_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/requests/{request_id}/certificate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Certificate */
+        get: operations["download_certificate_api_v1_attendance_requests__request_id__certificate_get"];
+        put?: never;
+        /** Attach Certificate */
+        post: operations["attach_certificate_api_v1_attendance_requests__request_id__certificate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8472,6 +8558,8 @@ export interface components {
             allocated_units: number;
             /** Leave Type */
             leave_type: string;
+            /** Month */
+            month?: string | null;
             /** Used Units */
             used_units: number;
         };
@@ -8519,6 +8607,8 @@ export interface components {
             early_exit: boolean;
             /** Late */
             late: boolean;
+            /** Leave Codes */
+            leave_codes?: ("CL" | "SL")[];
             /** Leave Sessions */
             leave_sessions?: ("morning" | "afternoon")[];
             /** Leave Units */
@@ -8681,8 +8771,86 @@ export interface components {
              */
             start_day: string;
         };
+        /** AttendanceMonthAction */
+        AttendanceMonthAction: {
+            /** Expected Version */
+            expected_version: number;
+            /** Note */
+            note: string;
+        };
+        /** AttendanceMonthRead */
+        AttendanceMonthRead: {
+            /** Can Close */
+            can_close: boolean;
+            /** Close Blocker */
+            close_blocker?: string | null;
+            /**
+             * Month
+             * Format: date
+             */
+            month: string;
+            /** Revisions */
+            revisions: components["schemas"]["AttendanceMonthRevisionRead"][];
+            /** Totals */
+            totals: components["schemas"]["AttendanceMonthTotal"][];
+        };
+        /** AttendanceMonthRevisionRead */
+        AttendanceMonthRevisionRead: {
+            /**
+             * Closed At
+             * Format: date-time
+             */
+            closed_at: string;
+            /** Reopened At */
+            reopened_at: string | null;
+            /** Totals */
+            totals: components["schemas"]["AttendanceMonthTotal"][];
+            /** Version */
+            version: number;
+        };
+        /** AttendanceMonthTotal */
+        AttendanceMonthTotal: {
+            /** Absences */
+            absences: number;
+            /** Business Line */
+            business_line: ("loans" | "real_estate") | null;
+            /** Late Days */
+            late_days: number;
+            /** Leave Units */
+            leave_units: number;
+            /** Lop Units */
+            lop_units: number;
+            /** Recorded Days */
+            recorded_days: number;
+            /**
+             * Sandwich Units
+             * @default 0
+             */
+            sandwich_units: number;
+            /** Worked Minutes */
+            worked_minutes: number;
+        };
+        /** AttendanceMonthlyLeaveRule */
+        AttendanceMonthlyLeaveRule: {
+            /** Accrual Units */
+            accrual_units: number;
+            /**
+             * Carry Units
+             * @default 0
+             */
+            carry_units: number;
+            /** Certificate After Days */
+            certificate_after_days?: number | null;
+            /**
+             * Sandwich
+             * @default false
+             */
+            sandwich: boolean;
+        };
         /** AttendancePolicyInput */
         AttendancePolicyInput: {
+            /** Certificate Retention Days */
+            certificate_retention_days?: number | null;
             /** Full Day Minutes */
             full_day_minutes: number;
             /** Grace Minutes */
@@ -8692,6 +8860,10 @@ export interface components {
             /** Leave Quotas */
             leave_quotas: {
                 [key: string]: number;
+            };
+            /** Monthly Leave Rules */
+            monthly_leave_rules?: {
+                [key: string]: components["schemas"]["AttendanceMonthlyLeaveRule"];
             };
             /**
              * Session Clock
@@ -8707,6 +8879,8 @@ export interface components {
         };
         /** AttendancePolicyRead */
         AttendancePolicyRead: {
+            /** Certificate Retention Days */
+            certificate_retention_days?: number | null;
             /**
              * Effective From
              * Format: date
@@ -8721,6 +8895,10 @@ export interface components {
             /** Leave Quotas */
             leave_quotas: {
                 [key: string]: number;
+            };
+            /** Monthly Leave Rules */
+            monthly_leave_rules?: {
+                [key: string]: components["schemas"]["AttendanceMonthlyLeaveRule"];
             };
             /**
              * Session Clock
@@ -8739,6 +8917,11 @@ export interface components {
         /** AttendancePolicyState */
         AttendancePolicyState: {
             active: components["schemas"]["AttendancePolicyRead"] | null;
+            /**
+             * Can Configure Leave Rules
+             * @default false
+             */
+            can_configure_leave_rules: boolean;
             scheduled: components["schemas"]["AttendancePolicyRead"] | null;
         };
         /** AttendanceRequestRead */
@@ -8749,6 +8932,11 @@ export interface components {
             approved_units: {
                 [key: string]: number;
             };
+            /**
+             * Certificate Required
+             * @default false
+             */
+            certificate_required: boolean;
             /**
              * Created At
              * Format: date-time
@@ -9371,6 +9559,11 @@ export interface components {
             video_media_asset_id?: string | null;
             /** Youtube Url */
             youtube_url?: string | null;
+        };
+        /** Body_attach_certificate_api_v1_attendance_requests__request_id__certificate_post */
+        Body_attach_certificate_api_v1_attendance_requests__request_id__certificate_post: {
+            /** File */
+            file: string;
         };
         /** BookmarkCreate */
         BookmarkCreate: {
@@ -21134,6 +21327,138 @@ export interface operations {
             };
         };
     };
+    get_month_report_api_v1_attendance_months__month__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceMonthRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_month_api_v1_attendance_months__month__close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceMonthAction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceMonthRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_month_api_v1_attendance_months__month__export_get: {
+        parameters: {
+            query?: {
+                version?: number | null;
+            };
+            header?: never;
+            path: {
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reopen_month_api_v1_attendance_months__month__reopen_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceMonthAction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceMonthRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_policy_api_v1_attendance_policy_get: {
         parameters: {
             query?: never;
@@ -21276,6 +21601,68 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AttendanceRequestRead"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_certificate_api_v1_attendance_requests__request_id__certificate_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attach_certificate_api_v1_attendance_requests__request_id__certificate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_attach_certificate_api_v1_attendance_requests__request_id__certificate_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

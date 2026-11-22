@@ -34,7 +34,7 @@ def _remove(row: AttendanceDay, category: str, request: AttendanceRequest) -> No
 
 def _refresh(row: AttendanceDay, policy: AttendancePolicy) -> None:
     if row.check_in is not None:
-        if row.check_out is not None:
+        if row.check_out is not None or row.system_check_out is not None:
             clock.apply_clock_result(row, policy)
         return
     if "on_duty" in row.adjustments:

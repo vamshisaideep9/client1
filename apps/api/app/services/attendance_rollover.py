@@ -82,17 +82,20 @@ async def run_attendance_rollover(now: datetime | None = None) -> int:
                     day = max(day, cursor.through_day + clock.DAY)
                 through = None
                 recalculate_months = set()
+                frozen_months = await clock.closed_months(db, day, end)
                 for _ in range(14):
                     if day > end:
                         break
+                    if day.replace(day=1) in frozen_months:
+                        through = day
+                        day += clock.DAY
+                        continue
                     row = await db.get(AttendanceDay, (staff_id, day))
                     policy = (
                         await db.get(AttendancePolicy, row.policy_version)
                         if row is not None
                         else await clock.require_policy(db, day)
                     )
-                    if now < clock.shift_cutoff(day, policy):
-                        break
                     if (
                         row is None
                         and clock.allows_personal_attendance(profile.role, policy)
@@ -121,7 +124,7 @@ async def run_attendance_rollover(now: datetime | None = None) -> int:
                         db.add(row)
                         updated += 1
                     elif row is not None and row.status == "checked_in":
-                        clock.close_expired_day(row, policy)
+                        await clock.close_expired_day(db, row, policy)
                         if policy.session_clock:
                             recalculate_months.add(day.replace(day=1))
                         updated += 1

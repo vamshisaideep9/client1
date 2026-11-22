@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AttendanceMonthPanel } from "@/features/attendance/attendance-month-panel";
 import {
   DashboardHeader,
   DashboardPage,
@@ -347,7 +348,7 @@ export function AnalyticsView() {
     <DashboardPage>
       <DashboardHeader
         title="Analytics & reports"
-        description="Lead, loan, and deal activity across both business lines, with per-agent performance."
+        description="Lead, loan, and deal activity, per-agent performance, and attendance across both business lines."
       />
 
       <Tabs defaultValue="leads">
@@ -357,12 +358,14 @@ export function AnalyticsView() {
               {k.label}
             </TabsTrigger>
           ))}
+          <TabsTrigger value="attendance">Attendance</TabsTrigger>
         </TabsList>
         {REPORT_KINDS.map((k) => (
           <TabsContent key={k.value} value={k.value} className="mt-4">
             <ReportPanel kind={k.value} />
           </TabsContent>
         ))}
+        <TabsContent value="attendance" className="mt-4"><AttendanceMonthPanel /></TabsContent>
       </Tabs>
     </DashboardPage>
   );

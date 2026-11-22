@@ -27,7 +27,7 @@ from app.schemas.attendance import (
     AttendanceLeaveInput,
 )
 from app.services import attendance as clock
-from app.services import attendance_adjustments
+from app.services import attendance_adjustments, attendance_certificates, attendance_leave_policy
 
 
 def notify(db: AsyncSession, recipients: set[UUID], title: str, message: str, href: str) -> None:
@@ -101,6 +101,7 @@ async def submit(
         active_policy = await clock.require_policy(db, today)
         if not clock.allows_personal_attendance(profile.role, active_policy):
             raise clock.AttendanceError("Attendance for Sub Admins opens with the session clock.")
+        await db.execute(select(func.pg_advisory_xact_lock_shared(ATTENDANCE_POLICY_LOCK)))
         if isinstance(values, AttendanceLeaveInput):
             if values.start_day < today:
                 raise clock.AttendanceInvalid("Choose a current or future leave date.")
@@ -114,6 +115,21 @@ async def submit(
                 raise clock.AttendanceInvalid(
                     "This leave type is unavailable for the requested dates."
                 )
+            rule = attendance_leave_policy.rule_for(policy, values.leave_type)
+            end_rule = attendance_leave_policy.rule_for(end_policy, values.leave_type)
+            if rule != end_rule or (
+                rule and policy.certificate_retention_days != end_policy.certificate_retention_days
+            ):
+                raise clock.AttendanceInvalid(
+                    "Submit separate requests across the leave policy change."
+                )
+            if rule and values.end_day.year > 9998:
+                raise clock.AttendanceInvalid("Choose leave dates before the year 9999.")
+            required = (
+                rule is not None
+                and rule.certificate_after_days is not None
+                and (values.end_day - values.start_day).days + 1 > rule.certificate_after_days
+            )
             request = AttendanceRequest(
                 kind="leave",
                 start_day=values.start_day,
@@ -122,6 +138,7 @@ async def submit(
                 leave_type=values.leave_type,
                 half_day=values.half_day,
                 leave_session=values.leave_session,
+                certificate_retention_days=policy.certificate_retention_days if required else None,
             )
         elif isinstance(values, AttendanceAdjustmentInput):
             if values.day < first_day or (
@@ -159,6 +176,7 @@ async def submit(
                 requested_check_out=values.check_out,
             )
         clock.require_employment_days(employment, request.start_day, request.end_day)
+        await clock.ensure_period_open(db, request.start_day, request.end_day)
         if not clock.allows_personal_attendance(profile.role, policy):
             raise clock.AttendanceError("This date predates attendance for Sub Admins.")
         overlap = select(AttendanceRequest.id).where(
@@ -204,7 +222,11 @@ async def submit(
 async def usages(db: AsyncSession, staff_id: UUID, year: int) -> Counter:
     start, end = date(year, 1, 1), date(year, 12, 31)
     data = await db.execute(
-        select(AttendanceRequest.leave_type, AttendanceRequest.approved_units).where(
+        select(
+            AttendanceRequest.leave_type,
+            AttendanceRequest.approved_units,
+            AttendanceRequest.monthly_charges,
+        ).where(
             AttendanceRequest.staff_profile_id == staff_id,
             AttendanceRequest.kind == "leave",
             AttendanceRequest.status == "approved",
@@ -213,8 +235,10 @@ async def usages(db: AsyncSession, staff_id: UUID, year: int) -> Counter:
         )
     )
     used: Counter = Counter()
-    for leave_type, per_day in data:
-        used[leave_type] += sum(value for day, value in per_day.items() if day[:4] == str(year))
+    for leave_type, per_day, monthly in data:
+        used[leave_type] += sum(
+            value for day, value in per_day.items() if day[:4] == str(year) and day not in monthly
+        )
     return used
 
 
@@ -223,16 +247,23 @@ async def balances(db: AsyncSession, staff_id: UUID, day: date) -> list[Attendan
     if policy is None:
         return []
     used = await usages(db, staff_id, day.year)
-    return [
+    annual = [
         AttendanceBalance(leave_type=kind, allocated_units=count, used_units=used[kind])
         for kind, count in sorted(policy.leave_quotas.items())
+        if kind not in policy.monthly_leave_rules
     ]
+    if not policy.monthly_leave_rules:
+        return annual
+    monthly = await attendance_leave_policy.month_balances(db, staff_id, day.replace(day=1))
+    return sorted([*annual, *monthly], key=lambda balance: balance.leave_type)
 
 
 async def _apply_leave(db: AsyncSession, request: AttendanceRequest) -> None:
     by_year: Counter = Counter()
     quota: dict[int, int] = {}
     applied: dict[str, int] = {}
+    monthly: dict[str, int] = {}
+    sandwich_days: list[date] = []
     units = 1 if request.half_day else 2
     day = request.start_day
     while day <= request.end_day:
@@ -241,6 +272,7 @@ async def _apply_leave(db: AsyncSession, request: AttendanceRequest) -> None:
             raise clock.AttendanceError(
                 "This leave type is unavailable for part of the requested period."
             )
+        rule = attendance_leave_policy.rule_for(policy, request.leave_type)
         if await clock.day_without_clock(db, day, policy, request.business_line) == "absent":
             row = await db.get(AttendanceDay, (request.staff_profile_id, day))
             if row is None:
@@ -284,14 +316,19 @@ async def _apply_leave(db: AsyncSession, request: AttendanceRequest) -> None:
                 row.status, row.source = "on_leave", "leave"
                 if policy.session_clock and day < clock.work_date(clock.utc_now()):
                     row.uncovered_units = row.lop_units = (2 - row.leave_units) * 2
-            elif row.check_out is not None:
+            elif row.check_out is not None or row.system_check_out is not None:
                 clock.apply_clock_result(row, await db.get(AttendancePolicy, row.policy_version))
                 if policy.session_clock:
                     await clock.recalculate_late_penalties(db, request.staff_profile_id, day)
             applied[day.isoformat()] = units
-            by_year[day.year] += units
-            maximum = policy.leave_quotas[request.leave_type]
-            quota[day.year] = min(quota.get(day.year, maximum), maximum)
+            if rule is not None:
+                monthly[day.isoformat()] = units
+            else:
+                by_year[day.year] += units
+                maximum = policy.leave_quotas[request.leave_type]
+                quota[day.year] = min(quota.get(day.year, maximum), maximum)
+        elif rule is not None and rule.sandwich:
+            sandwich_days.append(day)
         day += clock.DAY
     if not applied:
         raise clock.AttendanceError("The request contains no scheduled work days.")
@@ -301,7 +338,21 @@ async def _apply_leave(db: AsyncSession, request: AttendanceRequest) -> None:
             raise clock.AttendanceError(
                 f"This request exceeds the available leave balance for {year}."
             )
+    if monthly:
+        first, last = min(applied), max(applied)
+        for off_day in sandwich_days:
+            iso = off_day.isoformat()
+            if first < iso < last:
+                monthly[iso] = 2
+        await attendance_leave_policy.month_balances(
+            db,
+            request.staff_profile_id,
+            request.end_day.replace(day=1),
+            kind=request.leave_type,
+            additional=monthly,
+        )
     request.approved_units = applied
+    request.monthly_charges = monthly
 
 
 async def _undo_leave(db: AsyncSession, request: AttendanceRequest, today: date) -> None:
@@ -335,7 +386,7 @@ async def _undo_leave(db: AsyncSession, request: AttendanceRequest, today: date)
                 row.source = "rollover"
                 if policy.session_clock:
                     row.uncovered_units = row.lop_units = 4 if row.status == "absent" else 0
-        elif row.check_out is not None:
+        elif row.check_out is not None or row.system_check_out is not None:
             clock.apply_clock_result(row, policy)
             if policy.session_clock:
                 await clock.recalculate_late_penalties(db, request.staff_profile_id, day)
@@ -424,11 +475,10 @@ async def _undo_correction(db: AsyncSession, request: AttendanceRequest, now: da
         row.status, row.source = before["status"], before["source"]
         row.worked_minutes, row.late = before["worked_minutes"], before["late"]
         if row.status == "checked_in" and (
-            now >= clock.shift_cutoff(row.day, policy)
-            or await clock.open_day(db, row.staff_profile_id)
+            now >= clock.midnight_after(row.day) or await clock.open_day(db, row.staff_profile_id)
         ):
-            clock.close_expired_day(row, policy)
-        if row.check_out is not None:
+            await clock.close_expired_day(db, row, policy)
+        if row.check_out is not None or row.system_check_out is not None:
             clock.apply_clock_result(row, policy)
     row.correction_request_id = None
     if policy.session_clock:
@@ -522,6 +572,7 @@ async def _decision(
         today = clock.work_date(now)
         await clock.require_policy(db, today)
         await db.execute(select(func.pg_advisory_xact_lock_shared(ATTENDANCE_POLICY_LOCK)))
+        await clock.ensure_period_open(db, request.start_day, request.end_day)
         before = request.status
         if values is None:
             if request.requester_id != actor.id:
@@ -575,6 +626,12 @@ async def _decision(
             else:
                 await _undo_correction(db, request, now)
         if status == "approved":
+            if request.certificate_required and not await attendance_certificates.has_certificate(
+                db, request.id, now
+            ):
+                raise clock.AttendanceError(
+                    "A current medical certificate is required before approving this leave."
+                )
             clock.require_employment_days(
                 await db.get(AttendanceEmployment, target.id), request.start_day, request.end_day
             )
