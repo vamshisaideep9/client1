@@ -1,20 +1,19 @@
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import delete, update
+from sqlalchemy import delete
 
 import app.db.session as db_session
-from app.models.profile import StaffProfile, StaffRole
+from app.models.profile import StaffRole
 from app.models.website_content import WebsiteDocument, WebsiteEditorGrant, WebsiteRevision
-from app.tests.contest_support import headers, seed_staff, token_for
+from app.tests.contest_support import headers, main_admin_token, seed_staff, token_for
 
 
 @pytest.mark.asyncio
 async def test_delegated_draft_publication_and_restore(client):
-    main_user, main_staff = await seed_staff(StaffRole.ADMIN)
     other_user, other_staff = await seed_staff(StaffRole.ADMIN)
     editor_user, editor_staff = await seed_staff(StaffRole.SUB_ADMIN)
-    main = headers(token_for(main_user, "admin", platform_scope="true", staff_profile=main_staff))
+    main = headers(await main_admin_token())
     other = headers(
         token_for(other_user, "admin", platform_scope="true", staff_profile=other_staff)
     )
@@ -28,13 +27,6 @@ async def test_delegated_draft_publication_and_restore(client):
     public = f"/api/v1/public/website-content/{key}"
     grant = f"{api}/editors/{editor_staff.id}"
     first = {"expected_version": 0, "content": {"title": "First", "body": "Test article."}}
-    async with db_session.AsyncSessionLocal() as db:
-        await db.execute(
-            update(StaffProfile)
-            .where(StaffProfile.id == main_staff.id)
-            .values(is_primary_admin=True)
-        )
-        await db.commit()
     try:
         assert (await client.get(document, headers=editor)).status_code == 403
         assert (await client.put(grant, headers=other, json={"enabled": True})).status_code == 403
@@ -87,9 +79,4 @@ async def test_delegated_draft_publication_and_restore(client):
             )
             await db.execute(delete(WebsiteRevision).where(WebsiteRevision.key == key))
             await db.execute(delete(WebsiteDocument).where(WebsiteDocument.key == key))
-            await db.execute(
-                update(StaffProfile)
-                .where(StaffProfile.id == main_staff.id)
-                .values(is_primary_admin=False)
-            )
             await db.commit()

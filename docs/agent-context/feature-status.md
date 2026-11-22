@@ -14,13 +14,16 @@ Public property search combines sale, resale, or rent and lease with location,
 budget, type, BHK, and area. Existing records and reviewed listing forms are
 retained when a property type is retired.
 
-The PostgreSQL migration round trip retained one head. Initial focused database
+The PostgreSQL migration round trip retained one head. Focused database
 verification covered grant, revoke, draft privacy, revision restore, and public
-property search. All 1,123 web unit tests passed and changed submission and
-financial-page cases passed focused web verification. See the review checks for
-the final candidate.
-[Upstream comparison](https://github.com/brollysolutions/client1/compare/main...feat/website-content-catalog)
-· [Mirror comparison](https://github.com/vamshisaideep9/client1/compare/main...feat/website-content-catalog)
+property search. Property type edits are audited, and the catalogue and CMS
+tables have entries in the access and business-line inventories. All 1,123 web
+unit tests, four Playwright journeys, and the Linux production build passed.
+The follow-up passed 37 API checks. Two exhaustive inventory checks reproduce
+the same existing omissions on the base branch. The draft PRs track hosted
+checks and the existing dependency audit failures.
+[Upstream #405](https://github.com/brollysolutions/client1/pull/405)
+· [Mirror #105](https://github.com/vamshisaideep9/client1/pull/105)
 
 **Attendance follow-up.** The staff and management calendars show `CL` for
 approved casual leave and `SL` for approved sick leave. A scheduled workday

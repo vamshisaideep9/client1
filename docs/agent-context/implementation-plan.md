@@ -13,8 +13,15 @@
   location, type, budget, bedrooms, and area before pagination.
 - Roll out the two additive migrations with the API and web app. Success
   stories, milestones, and articles can be populated with approved material.
-  [Upstream comparison](https://github.com/brollysolutions/client1/compare/main...feat/website-content-catalog)
-  · [Mirror comparison](https://github.com/vamshisaideep9/client1/compare/main...feat/website-content-catalog)
+- The Linux production build passed. The follow-up records each new entity in
+  the operational inventories, audits property type changes, and reuses the
+  Main Admin fixture so these tests can run alongside the hierarchy suite. The
+  follow-up passed 37 checks. Two inventory checks still report the same
+  attendance and Sub Admin tables missing on the base branch.
+- Next priority is completing hosted review before applying the migrations and
+  publishing approved content.
+  [Upstream #405](https://github.com/brollysolutions/client1/pull/405)
+  · [Mirror #105](https://github.com/vamshisaideep9/client1/pull/105)
 
 **Attendance leave codes, midnight absence and punch chimes**
 

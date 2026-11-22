@@ -92,6 +92,7 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     "payouts": ClassificationMode.OPERATIONAL,
     "personalization_preferences": ClassificationMode.IDENTITY,
     "properties": ClassificationMode.FIXED_REAL_ESTATE,
+    "property_catalog_types": ClassificationMode.PLATFORM_CONFIG,
     "property_deals": ClassificationMode.FIXED_REAL_ESTATE,
     "property_media": ClassificationMode.FIXED_REAL_ESTATE,
     "property_submission_media": ClassificationMode.FIXED_REAL_ESTATE,
@@ -116,6 +117,10 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     "tasks": ClassificationMode.OPERATIONAL,
     "transactions": ClassificationMode.OPERATIONAL,
     "vehicle_arrangements": ClassificationMode.FIXED_REAL_ESTATE,
+    # Website drafts and permissions hold platform editorial configuration.
+    "website_documents": ClassificationMode.PLATFORM_CONFIG,
+    "website_editor_grants": ClassificationMode.PLATFORM_CONFIG,
+    "website_revisions": ClassificationMode.DERIVED,
 }
 
 
