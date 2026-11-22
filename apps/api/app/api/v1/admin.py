@@ -137,6 +137,7 @@ from app.services.admin import (
 from app.services.admin_home import get_admin_home
 from app.services.audit_log import AuditEntryView
 from app.services.audit_log import list_for_admin as list_audit_log
+from app.services.chat_inquiries import list_chat_inquiries
 from app.services.financial_catalog import (
     PROVIDER_LOGO_MAX_BYTES,
     ProductOrProviderNotFound,
@@ -979,7 +980,11 @@ async def get_lead_details(
     # What the client applied for and when (loan applications, enquiries,
     # site visits, deals), newest first.
     requests = (await request_summaries_for_leads(db, [lead.id]))[lead.id]
-    return AdminLeadDetailsRead(**to_lead_details_read(lead, actor).model_dump(), requests=requests)
+    return AdminLeadDetailsRead(
+        **to_lead_details_read(lead, actor).model_dump(),
+        requests=requests,
+        chat_inquiries=await list_chat_inquiries(db, lead.id),
+    )
 
 
 @router.patch("/leads/{lead_id}/details", response_model=LeadDetailsRead)

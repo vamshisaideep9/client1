@@ -1,5 +1,24 @@
 # Feature implementation status
 
+**Public-site chatbot.** Visitors can open a floating assistant, answer guided
+questions, browse published services or properties, and submit a callback
+request. PostgreSQL assigns each saved inquiry a reference. Admin and the
+assigned Telecaller can view its preferences through the linked lead. Insurance
+choices follow catalogue publication. WhatsApp remains a human contact option.
+
+The migration round trip, 52 focused API tests, two Playwright journeys,
+and deterministic contract generation passed. Browser verification also covered
+the narrow property contact bar and deferred loading of chat options.
+
+The release follow-up patched the production Python lock and recorded the
+existing attendance and scoped Sub Admin access rules in both inventories. The
+frozen Python audit reported no vulnerabilities, and the focused API run
+passed all 37 checks. The follow-up also records the two public chat routes
+and the Admin-only platform policy branch in the security coverage tests.
+The rollout target is `dev.dhanadhara.com`.
+[Upstream #406](https://github.com/brollysolutions/client1/pull/406)
+· [Mirror #106](https://github.com/vamshisaideep9/client1/pull/106)
+
 **Website Content and public catalog.** Main Admin manages publishing and
 revision restoration. Assigned Admins and Sub Admins can save and preview
 website drafts. Public pages read published copy and FAQs, and the Knowledge

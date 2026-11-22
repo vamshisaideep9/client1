@@ -4042,6 +4042,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/leads/chat-inquiries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Chat Inquiry */
+        post: operations["submit_chat_inquiry_api_v1_leads_chat_inquiries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leads/chat-inquiries/flows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chat Flows */
+        get: operations["chat_flows_api_v1_leads_chat_inquiries_flows_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/leads/invitations/{token}": {
         parameters: {
             query?: never;
@@ -6903,16 +6937,15 @@ export interface components {
             /** Reason */
             reason: string;
         };
-        /**
-         * AdminLeadDetailsRead
-         * @description Admin view: also what the client applied for and when.
-         */
+        /** AdminLeadDetailsRead */
         AdminLeadDetailsRead: {
             /**
              * Business Line
              * @enum {string}
              */
             business_line: "loans" | "real_estate";
+            /** Chat Inquiries */
+            chat_inquiries?: components["schemas"]["ChatInquiryRead"][];
             /** Editable Fields */
             editable_fields: ("name" | "requirement.notes")[];
             /** Field Owners */
@@ -10037,6 +10070,93 @@ export interface components {
             current_password: string;
             /** New Password */
             new_password: string;
+        };
+        /** ChatAction */
+        ChatAction: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+        };
+        /** ChatFlow */
+        ChatFlow: {
+            /** Actions */
+            actions: components["schemas"]["ChatAction"][];
+            /** Browse Href */
+            browse_href?: string | null;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Questions */
+            questions: components["schemas"]["ChatQuestion"][];
+            /**
+             * Section
+             * @enum {string}
+             */
+            section: "loans" | "credit_cards" | "insurance" | "real_estate";
+        };
+        /** ChatInquiryCreate */
+        ChatInquiryCreate: {
+            /** Action */
+            action: string;
+            /** Answers */
+            answers: string[];
+            /** Company */
+            company?: string | null;
+            /** Flow */
+            flow: string;
+            /**
+             * Idempotency Key
+             * Format: uuid4
+             */
+            idempotency_key: string;
+            /** Location */
+            location: string;
+            /** Mobile */
+            mobile: string;
+            /** Name */
+            name: string;
+        };
+        /** ChatInquiryRead */
+        ChatInquiryRead: {
+            /** Action */
+            action: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Location */
+            location: string;
+            /** Name */
+            name?: string | null;
+            /** Preferences */
+            preferences: {
+                [key: string]: string;
+            };
+            /**
+             * Reference
+             * Format: uuid
+             */
+            reference: string;
+            /** Service */
+            service: string;
+        };
+        /** ChatInquiryReceipt */
+        ChatInquiryReceipt: {
+            /**
+             * Reference
+             * Format: uuid
+             */
+            reference: string;
+        };
+        /** ChatQuestion */
+        ChatQuestion: {
+            /** Options */
+            options: string[];
+            /** Prompt */
+            prompt: string;
         };
         /**
          * ClientHistoryLead
@@ -16383,6 +16503,8 @@ export interface components {
              * @enum {string}
              */
             business_line: "loans" | "real_estate";
+            /** Chat Inquiries */
+            chat_inquiries?: components["schemas"]["ChatInquiryRead"][];
             /**
              * Created At
              * Format: date-time
@@ -25517,6 +25639,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_chat_inquiry_api_v1_leads_chat_inquiries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatInquiryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatInquiryReceipt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chat_flows_api_v1_leads_chat_inquiries_flows_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatFlow"][];
                 };
             };
         };

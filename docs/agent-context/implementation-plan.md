@@ -1,5 +1,16 @@
 # Living implementation plan
 
+**Public-site chatbot release verification**
+
+- Add a navy-and-sky assistant to the public layout with guided financial and real-estate enquiries. Publish financial choices through the existing catalogue gate.
+- Record each callback request and its reference in PostgreSQL, linked to the existing lead and assignment. Restrict inquiry details to the assigned Telecaller and platform Admin.
+- The PostgreSQL migration round trip, 52 focused API tests, two Playwright journeys, and contract regeneration passed. The review PRs track the remaining full-suite and rollout gates.
+- Patched the Python production lock and completed the existing attendance and Sub Admin inventory entries. The frozen Python audit reported no vulnerabilities. All 37 focused inventory, public lead, and RLS checks passed.
+- Register the two public chat routes and the Admin-only platform policy branch in the security coverage tests. The route, inventory, and policy checks passed.
+- The rollout target is `dev.dhanadhara.com`. Apply the additive inquiry migration before serving the new development API, then verify the hosted candidate for merge.
+  [Upstream #406](https://github.com/brollysolutions/client1/pull/406)
+  · [Mirror #106](https://github.com/vamshisaideep9/client1/pull/106)
+
 **Website Content and public catalog**
 
 - Add Main Admin publishing and restoration, revocable staff draft access,

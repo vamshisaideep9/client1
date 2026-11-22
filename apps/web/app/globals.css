@@ -519,6 +519,13 @@
   .public-site { --site-header-h: 6.75rem; }
 }
 
+@media (width < 64rem) {
+  .public-site:has([data-property-contact-bar]) [data-public-chat-launcher] {
+    /* Allow for both contact rows, their gap, padding and the launcher's own inset. */
+    bottom: calc(8.625rem + env(safe-area-inset-bottom));
+  }
+}
+
 /* Announcement ticker: single-line right-to-left scroll, used only when the
    page shows more than one trust line (a single line renders statically). The
    message is duplicated in the markup; moving from 0 to -50% advances exactly

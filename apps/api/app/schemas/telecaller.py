@@ -9,6 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from app.schemas.chat_inquiries import ChatInquiryRead
 from app.schemas.financial_products import FormAnswers, ProductFormDefinition
 from app.schemas.profile_metadata import TaskStaffRead
 
@@ -392,6 +393,7 @@ class ManagerNoteRead(BaseModel):
 
 
 class TelecallerLeadDetailRead(TelecallerLeadRead):
+    chat_inquiries: list[ChatInquiryRead] = Field(default_factory=list)
     activities: list[LeadActivityRead]
     loan_applications: list[TelecallerLoanApplicationRead] = []
     financial_enquiries: list[TelecallerFinancialEnquiryRead] = []

@@ -92,6 +92,11 @@ PUBLIC_ROUTES = frozenset(
         "GET /api/v1/public/financial-products/{slug}/providers",
         # Anonymous lead capture from the public site.
         "POST /api/v1/leads",
+        # The chat menu exposes only published catalog entries and fixed prompts.
+        "GET /api/v1/leads/chat-inquiries/flows",
+        # The same public rate limits protect chat intake. The server checks the
+        # published flow and derives the lead line. The response is a receipt only.
+        "POST /api/v1/leads/chat-inquiries",
         # Bearer-token-in-URL invitation lookup; the token is the authorization.
         "GET /api/v1/leads/invitations/{token}",
         # VAPID public key is public by construction.
