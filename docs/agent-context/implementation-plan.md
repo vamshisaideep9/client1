@@ -6,7 +6,8 @@
 - Record each callback request and its reference in PostgreSQL, linked to the existing lead and assignment. Restrict inquiry details to the assigned Telecaller and platform Admin.
 - The PostgreSQL migration round trip, 52 focused API tests, two Playwright journeys, and contract regeneration passed. The review PRs track the remaining full-suite and rollout gates.
 - Patched the Python production lock and completed the existing attendance and Sub Admin inventory entries. The frozen Python audit reported no vulnerabilities. All 37 focused inventory, public lead, and RLS checks passed.
-- Next priority is hosted verification and confirming the production release scope and target. Apply the additive inquiry migration before deploying the API that uses it.
+- Register the two public chat routes and the Admin-only platform policy branch in the security coverage tests. The route, inventory, and policy checks passed.
+- The rollout target is `dev.dhanadhara.com`. Apply the additive inquiry migration before serving the new development API, then verify the hosted candidate for merge.
   [Upstream #406](https://github.com/brollysolutions/client1/pull/406)
   · [Mirror #106](https://github.com/vamshisaideep9/client1/pull/106)
 

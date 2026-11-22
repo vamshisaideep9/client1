@@ -13,8 +13,9 @@ the narrow property contact bar and deferred loading of chat options.
 The release follow-up patched the production Python lock and recorded the
 existing attendance and scoped Sub Admin access rules in both inventories. The
 frozen Python audit reported no vulnerabilities, and the focused API run
-passed all 37 checks. Production deployment awaits hosted verification and
-confirmation of the release scope and target.
+passed all 37 checks. The follow-up also records the two public chat routes
+and the Admin-only platform policy branch in the security coverage tests.
+The rollout target is `dev.dhanadhara.com`.
 [Upstream #406](https://github.com/brollysolutions/client1/pull/406)
 · [Mirror #106](https://github.com/vamshisaideep9/client1/pull/106)
 
