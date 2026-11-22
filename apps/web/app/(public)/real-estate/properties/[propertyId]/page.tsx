@@ -7,8 +7,10 @@ import { PropertyDetailView } from "@/components/property-detail-view";
 import { ShareActions } from "@/components/share-actions";
 import type { SimilarPropertyCardData } from "@/components/similar-properties-panel";
 import { Button } from "@/components/ui/button";
+import { WebsiteFaq } from "@/components/website-content";
 import { contactHref } from "@/lib/leads";
 import { getPublicListings, getPublicProperty } from "@/lib/public-properties";
+import { getWebsiteContent } from "@/lib/public-website-content";
 import { propertySubtypeHref, propertySubtypeOption } from "@/lib/property-taxonomy";
 import { rankSimilarProperties } from "@/lib/similar-properties";
 import { SITE_URL } from "@/lib/site";
@@ -46,9 +48,10 @@ export default async function PublicPropertyPage({ params }: PageProps) {
   // page, app/(public)/real-estate/page.tsx). getPublicListings() never
   // throws and collapses every failure to [] (lib/public-properties.ts), so a
   // catalogue outage cannot break or delay the detail render below.
-  const [result, catalogue] = await Promise.all([
+  const [result, catalogue, itemContent] = await Promise.all([
     getPublicProperty(propertyId),
     getPublicListings(),
+    /^[0-9a-f-]{36}$/i.test(propertyId) ? getWebsiteContent(`property/${propertyId.toLowerCase()}`) : null,
   ]);
   if (!result.ok) {
     if (result.status === 404 || result.status === 422) notFound();
@@ -70,6 +73,17 @@ export default async function PublicPropertyPage({ params }: PageProps) {
   }
 
   const property = result.data;
+  const propertyType = (property.catalogTypeCode || property.propertySubtype)?.replaceAll("_", "-");
+  const typeContent = propertyType && itemContent?.content.faq == null
+    ? await getWebsiteContent(`property-type/${propertyType}`) : null;
+  const defaultFaq = [
+    { q: "Where is this property?", a: property.location },
+    {
+      q: property.listingIntent === "rent" ? "What is the advertised monthly rent?" : "What is the advertised price?",
+      a: property.price,
+    },
+    { q: "How do I ask about this property?", a: "Use Contact team on this page to send an enquiry about this listing." },
+  ];
   const propertyJsonLd = {
     "@context": "https://schema.org",
     "@type": "Residence",
@@ -138,6 +152,8 @@ export default async function PublicPropertyPage({ params }: PageProps) {
           </>
         }
       />
+      <WebsiteFaq items={itemContent?.content.faq ?? typeContent?.content.faq}
+        defaults={defaultFaq} heading="Questions about this property" />
     </>
   );
 }

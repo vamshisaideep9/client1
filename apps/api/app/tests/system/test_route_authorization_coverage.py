@@ -77,6 +77,14 @@ PUBLIC_ROUTES = frozenset(
         "GET /api/v1/public/banners",
         "GET /api/v1/public/properties",
         "GET /api/v1/public/properties/{property_id}",
+        # Search requires active listings and returns the public property projection.
+        "GET /api/v1/public/properties/search",
+        # Public type labels are limited to active configuration.
+        "GET /api/v1/public/property-types",
+        # A publication pointer selects one immutable revision per key. Drafts,
+        # editor grants and revision actors are absent from the public projection.
+        "GET /api/v1/public/website-content/articles",
+        "GET /api/v1/public/website-content/{key:path}",
         "GET /api/v1/public/content-blocks",
         "GET /api/v1/public/content-blocks/{slug}",
         "GET /api/v1/public/financial-products",

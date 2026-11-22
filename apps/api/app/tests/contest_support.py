@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -75,6 +75,37 @@ async def seed_staff(
         db.add(profile)
         await db.commit()
         return user, profile
+
+
+async def main_admin_token() -> str:
+    """Authenticate the single Main Admin already provisioned in the test database."""
+    async with db_session.AsyncSessionLocal() as db:
+        existing = (
+            await db.execute(
+                select(User, StaffProfile)
+                .join(StaffProfile, StaffProfile.auth_user_uuid == User.id)
+                .where(StaffProfile.is_primary_admin.is_(True))
+            )
+        ).one_or_none()
+    if existing is None:
+        user, profile = await seed_staff(StaffRole.ADMIN)
+        async with db_session.AsyncSessionLocal() as db:
+            stored = await db.get(StaffProfile, profile.id)
+            assert stored is not None
+            stored.is_primary_admin = True
+            await db.commit()
+    else:
+        user, profile = existing
+    return create_access_token(
+        {
+            "sub": str(user.id),
+            "role": "admin",
+            "staff_profile_uuid": str(profile.id),
+            "platform_scope": "true",
+            "business_line": "both",
+            "session_version": user.session_version,
+        }
+    )
 
 
 async def seed_agent(

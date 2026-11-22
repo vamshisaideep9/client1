@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { WebsiteBody, WebsiteFaq } from "@/components/website-content";
+import { getWebsiteContent } from "@/lib/public-website-content";
 import Image from "next/image";
 
 import { AgentApplicationForm } from "@/components/apply-as-agent/agent-application-form";
@@ -64,7 +66,7 @@ export default async function ApplyAsAgentPage({
 }: {
   searchParams: Promise<{ line?: string | string[] }>;
 }) {
-  const { line } = await searchParams;
+  const [{ line }, website] = await Promise.all([searchParams, getWebsiteContent("page/apply-as-agent")]);
   const defaultLine = normalizeLine(line);
 
   return (
@@ -80,13 +82,11 @@ export default async function ApplyAsAgentPage({
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
             <div>
               <h1 className="max-w-2xl font-heading text-4xl font-semibold text-[var(--nav-text)] sm:text-5xl lg:text-6xl">
-                <span className="block">Apply to become</span>
-                <span className="block">a Dhanadhara partner</span>
+                {website?.content.title || <><span className="block">Apply to become</span>
+                  <span className="block">a Dhanadhara partner</span></>}
               </h1>
               <p className="mt-5 max-w-2xl text-lg text-[var(--nav-text)] sm:text-xl">
-                Earn commission on the deals you bring. Applying is free, every
-                partner account works one line, and we verify your KYC after you
-                apply.
+                {website?.content.summary || "Earn commission on the deals you bring. Applying is free, every partner account works one line, and we verify your KYC after you apply."}
               </p>
             </div>
             <div
@@ -118,19 +118,20 @@ export default async function ApplyAsAgentPage({
           <div className="relative mx-auto max-w-3xl">
             <div className="text-center">
               <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-3xl">
-                Send us your application
+                {website?.content.form_copy?.heading || "Send us your application"}
               </h2>
               <p className="mx-auto mt-2 max-w-xl text-text-secondary">
-                Pick a line, share your details, and upload your KYC documents.
-                Our team will call you back.
+                {website?.content.form_copy?.help || "Pick a line, share your details, and upload your KYC documents. Our team will call you back."}
               </p>
             </div>
             <div className="mt-8">
-              <AgentApplicationForm defaultLine={defaultLine} />
+              <AgentApplicationForm defaultLine={defaultLine} copy={website?.content.form_copy} />
             </div>
           </div>
         </div>
       </section>
+      <WebsiteBody content={website && { body: website.content.body, sections: website.content.sections }} />
+      <WebsiteFaq items={website?.content.faq} />
     </>
   );
 }

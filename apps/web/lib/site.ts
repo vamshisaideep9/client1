@@ -193,4 +193,5 @@ const siteConfig = resolveSiteConfig({
 
 export const SITE_URL = siteConfig.siteUrl;
 export const SITE_CONTACT = siteConfig.contact;
+export const SITE_WHATSAPP_HREF = `https://wa.me/${SITE_CONTACT.phoneHref.replace(/\D/g, "")}`;
 export { SITE_NAME, TRUST_LINES };

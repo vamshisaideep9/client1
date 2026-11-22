@@ -33,6 +33,7 @@ from app.schemas.property_details import (
     PlotDetails,
     ProjectResidenceDetails,
     PropertyStructuredDetails,
+    SaleType,
 )
 
 PropertyImageContentType = Literal["image/jpeg", "image/png", "image/webp", "image/avif"]
@@ -74,6 +75,8 @@ class SubmissionFacts(BaseModel):
     meta: str | None = Field(default=None, max_length=120)
     category: PropertyCategory
     property_subtype: PropertySubtype
+    catalog_type_code: str | None = Field(default=None, max_length=40, pattern=r"^[a-z0-9_]+$")
+    sale_classification: SaleType | None = None
     city: str = Field(min_length=1, max_length=120)
     locality: str = Field(min_length=1, max_length=120)
     state: str = Field(min_length=1, max_length=120)
@@ -199,7 +202,7 @@ class SubmissionFacts(BaseModel):
                 raise ValueError("Rental listings require a security deposit.")
             if self.minimum_lease_months is None:
                 raise ValueError("Rental listings require a minimum lease duration.")
-            if sale_type is not None:
+            if sale_type is not None or self.sale_classification is not None:
                 raise ValueError("Rental listings do not accept a sale type.")
         else:
             if self.security_deposit_paise is not None:
@@ -210,6 +213,12 @@ class SubmissionFacts(BaseModel):
                 raise ValueError("Only rental listings accept an availability date.")
             if has_sale_type_field and sale_type is None:
                 raise ValueError("Sale listings require a sale type.")
+            if (
+                self.sale_classification is not None
+                and sale_type is not None
+                and self.sale_classification != sale_type
+            ):
+                raise ValueError("Sale classifications must agree.")
 
         self.listing_links = normalize_listing_links(self.listing_links)
         return self
@@ -278,6 +287,8 @@ class SubmissionRead(BaseModel):
     image: str | None
     category: PropertyCategory
     property_subtype: PropertySubtype | None
+    catalog_type_code: str | None = None
+    sale_classification: SaleType | None = None
     city: str
     locality: str
     state: str | None

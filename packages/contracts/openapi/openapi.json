@@ -1842,6 +1842,19 @@
             "title": "Bhk",
             "type": "integer"
           },
+          "catalog_type_code": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9_]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Type Code"
+          },
           "category": {
             "$ref": "#/components/schemas/PropertyCategory"
           },
@@ -1971,6 +1984,16 @@
               }
             ],
             "title": "Rera Number"
+          },
+          "sale_classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SaleType"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "security_deposit_paise": {
             "anyOf": [
@@ -8066,6 +8089,7 @@
           "content_block_updated",
           "content_block_published",
           "content_block_archived",
+          "website_content_changed",
           "loan_application_updated",
           "property_deal_updated",
           "agent_lead_resubmitted",
@@ -21043,6 +21067,77 @@
         "title": "ProjectResidenceDetails",
         "type": "object"
       },
+      "PropertyCatalogTypeRead": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "form_subtype": {
+            "$ref": "#/components/schemas/PropertySubtype"
+          },
+          "label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "pattern": "^\\S(?:.*\\S)?$",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "form_subtype",
+          "code",
+          "active"
+        ],
+        "title": "PropertyCatalogTypeRead",
+        "type": "object"
+      },
+      "PropertyCatalogTypeUpdate": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "pattern": "^\\S(?:.*\\S)?$",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "active"
+        ],
+        "title": "PropertyCatalogTypeUpdate",
+        "type": "object"
+      },
+      "PropertyCatalogTypeWrite": {
+        "properties": {
+          "form_subtype": {
+            "$ref": "#/components/schemas/PropertySubtype"
+          },
+          "label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "pattern": "^\\S(?:.*\\S)?$",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "form_subtype"
+        ],
+        "title": "PropertyCatalogTypeWrite",
+        "type": "object"
+      },
       "PropertyCategory": {
         "enum": [
           "houses",
@@ -22634,6 +22729,17 @@
             "title": "Bhk",
             "type": "integer"
           },
+          "catalog_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Type Code"
+          },
           "category": {
             "$ref": "#/components/schemas/PropertyCategory"
           },
@@ -22784,6 +22890,16 @@
           "rera_verification_status": {
             "$ref": "#/components/schemas/ReraVerificationStatus"
           },
+          "sale_classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SaleType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "security_deposit_display": {
             "anyOf": [
               {
@@ -22903,6 +23019,17 @@
       "PublicPropertyRead": {
         "description": "Anonymous-read shape (docs/specs/public-property-catalog.md).\n\nDeliberately NOT PropertyRead: a separate schema means a future sensitive\ncolumn added to the authenticated read can never silently surface here.\nExcludes the dashboard's entire filter-facet vocabulary (price_paise, bhk,\narea_sqft, furnishing, construction_status, amenities, age_years, pincode,\ncity, locality) and internal metadata (active, created_at). `rera_number`\nis included only after Admin verification; exemption-verified listings have\nno public registration number.\n\n``listing_intent`` is included because the Rent/Sale badge is card-level\ninformation; the rent terms behind it stay on the detail shape.",
         "properties": {
+          "catalog_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Type Code"
+          },
           "category": {
             "$ref": "#/components/schemas/PropertyCategory"
           },
@@ -22993,6 +23120,16 @@
           "rera_verification_status": {
             "$ref": "#/components/schemas/ReraVerificationStatus"
           },
+          "sale_classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SaleType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "structured_details": {
             "anyOf": [
               {
@@ -23055,6 +23192,37 @@
           "structured_details"
         ],
         "title": "PublicPropertyRead",
+        "type": "object"
+      },
+      "PublicPropertySearchResponse": {
+        "properties": {
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "properties": {
+            "items": {
+              "$ref": "#/components/schemas/PublicPropertyRead"
+            },
+            "title": "Properties",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "properties",
+          "page",
+          "total",
+          "page_size"
+        ],
+        "title": "PublicPropertySearchResponse",
         "type": "object"
       },
       "PublicProviderOfferListResponse": {
@@ -23281,6 +23449,31 @@
           "logo_url"
         ],
         "title": "PublicProviderRead",
+        "type": "object"
+      },
+      "PublicWebsiteContent": {
+        "properties": {
+          "content": {
+            "$ref": "#/components/schemas/WebsiteContent"
+          },
+          "key": {
+            "maxLength": 160,
+            "pattern": "^[a-z0-9]+(?:[-/][a-z0-9]+)*$",
+            "title": "Key",
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "content",
+          "published_at"
+        ],
+        "title": "PublicWebsiteContent",
         "type": "object"
       },
       "PushSubscribeRequest": {
@@ -26121,6 +26314,19 @@
             "title": "Bhk",
             "type": "integer"
           },
+          "catalog_type_code": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9_]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Type Code"
+          },
           "category": {
             "$ref": "#/components/schemas/PropertyCategory"
           },
@@ -26253,6 +26459,16 @@
               }
             ],
             "title": "Rera Number"
+          },
+          "sale_classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SaleType"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "security_deposit_paise": {
             "anyOf": [
@@ -26521,6 +26737,17 @@
             "title": "Bhk",
             "type": "integer"
           },
+          "catalog_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Type Code"
+          },
           "category": {
             "$ref": "#/components/schemas/PropertyCategory"
           },
@@ -26732,6 +26959,16 @@
             ],
             "title": "Reviewed By Uuid"
           },
+          "sale_classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SaleType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "security_deposit_paise": {
             "anyOf": [
               {
@@ -26908,6 +27145,19 @@
             "title": "Bhk",
             "type": "integer"
           },
+          "catalog_type_code": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9_]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Type Code"
+          },
           "category": {
             "$ref": "#/components/schemas/PropertyCategory"
           },
@@ -27031,6 +27281,16 @@
               }
             ],
             "title": "Rera Number"
+          },
+          "sale_classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SaleType"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "security_deposit_paise": {
             "anyOf": [
@@ -30853,6 +31113,290 @@
         "title": "WebhookAck",
         "type": "object"
       },
+      "WebsiteAccess": {
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "can_publish": {
+            "title": "Can Publish",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "can_edit",
+          "can_publish"
+        ],
+        "title": "WebsiteAccess",
+        "type": "object"
+      },
+      "WebsiteContent": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "default": "",
+            "maxLength": 40000,
+            "title": "Body",
+            "type": "string"
+          },
+          "faq": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WebsiteFAQ"
+                },
+                "maxItems": 30,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Faq"
+          },
+          "form_copy": {
+            "additionalProperties": {
+              "maxLength": 180,
+              "type": "string"
+            },
+            "propertyNames": {
+              "enum": [
+                "heading",
+                "name",
+                "mobile",
+                "email",
+                "message",
+                "topic",
+                "location",
+                "submit",
+                "help",
+                "product",
+                "property"
+              ]
+            },
+            "title": "Form Copy",
+            "type": "object"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/WebsiteEntry"
+            },
+            "maxItems": 30,
+            "title": "Sections",
+            "type": "array"
+          },
+          "summary": {
+            "default": "",
+            "maxLength": 180,
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "default": "",
+            "maxLength": 180,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "title": "WebsiteContent",
+        "type": "object"
+      },
+      "WebsiteDocumentRead": {
+        "properties": {
+          "draft": {
+            "$ref": "#/components/schemas/WebsiteContent"
+          },
+          "key": {
+            "maxLength": 160,
+            "pattern": "^[a-z0-9]+(?:[-/][a-z0-9]+)*$",
+            "title": "Key",
+            "type": "string"
+          },
+          "published_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published Revision"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "draft",
+          "version",
+          "published_revision"
+        ],
+        "title": "WebsiteDocumentRead",
+        "type": "object"
+      },
+      "WebsiteDraftWrite": {
+        "properties": {
+          "content": {
+            "$ref": "#/components/schemas/WebsiteContent"
+          },
+          "expected_version": {
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_version",
+          "content"
+        ],
+        "title": "WebsiteDraftWrite",
+        "type": "object"
+      },
+      "WebsiteEditor": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "profile_id": {
+            "format": "uuid",
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "admin",
+              "sub_admin"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "staff_code": {
+            "title": "Staff Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile_id",
+          "staff_code",
+          "role",
+          "enabled"
+        ],
+        "title": "WebsiteEditor",
+        "type": "object"
+      },
+      "WebsiteEntry": {
+        "properties": {
+          "body": {
+            "maxLength": 6000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 180,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "body"
+        ],
+        "title": "WebsiteEntry",
+        "type": "object"
+      },
+      "WebsiteFAQ": {
+        "properties": {
+          "answer": {
+            "maxLength": 3000,
+            "minLength": 1,
+            "title": "Answer",
+            "type": "string"
+          },
+          "question": {
+            "maxLength": 180,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question",
+          "answer"
+        ],
+        "title": "WebsiteFAQ",
+        "type": "object"
+      },
+      "WebsiteGrantWrite": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "WebsiteGrantWrite",
+        "type": "object"
+      },
+      "WebsitePublishWrite": {
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "restore_revision": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restore Revision"
+          }
+        },
+        "required": [
+          "expected_version"
+        ],
+        "title": "WebsitePublishWrite",
+        "type": "object"
+      },
+      "WebsiteRevisionRead": {
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "published_at",
+          "actor_id"
+        ],
+        "title": "WebsiteRevisionRead",
+        "type": "object"
+      },
       "YesNoUnknown": {
         "enum": [
           "yes",
@@ -34514,6 +35058,137 @@
         "summary": "Update Property Deal Progress",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/property-types": {
+      "get": {
+        "operationId": "managed_types_api_v1_admin_property_types_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PropertyCatalogTypeRead"
+                  },
+                  "title": "Response Managed Types Api V1 Admin Property Types Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Managed Types",
+        "tags": [
+          "properties"
+        ]
+      },
+      "post": {
+        "operationId": "add_type_api_v1_admin_property_types_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyCatalogTypeWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyCatalogTypeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Add Type",
+        "tags": [
+          "properties"
+        ]
+      }
+    },
+    "/api/v1/admin/property-types/{code}": {
+      "patch": {
+        "operationId": "update_type_api_v1_admin_property_types__code__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyCatalogTypeUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyCatalogTypeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Type",
+        "tags": [
+          "properties"
         ]
       }
     },
@@ -54048,6 +54723,204 @@
         ]
       }
     },
+    "/api/v1/public/properties/search": {
+      "get": {
+        "operationId": "search_properties_public_api_v1_public_properties_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "sale",
+                    "resale",
+                    "rent"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mode"
+            }
+          },
+          {
+            "in": "query",
+            "name": "location",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Location"
+            }
+          },
+          {
+            "in": "query",
+            "name": "property_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "pattern": "^[a-z0-9_]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "budget_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Budget Min"
+            }
+          },
+          {
+            "in": "query",
+            "name": "budget_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Budget Max"
+            }
+          },
+          {
+            "in": "query",
+            "name": "area_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Area Min"
+            }
+          },
+          {
+            "in": "query",
+            "name": "area_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Area Max"
+            }
+          },
+          {
+            "in": "query",
+            "name": "bhk",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "1",
+                    "2",
+                    "2.5",
+                    "3",
+                    "3.5",
+                    "4",
+                    "5+"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Bhk"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicPropertySearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search Properties Public",
+        "tags": [
+          "public"
+        ]
+      }
+    },
     "/api/v1/public/properties/{property_id}": {
       "get": {
         "operationId": "get_property_public_api_v1_public_properties__property_id__get",
@@ -54088,6 +54961,98 @@
         "summary": "Get Property Public",
         "tags": [
           "public"
+        ]
+      }
+    },
+    "/api/v1/public/property-types": {
+      "get": {
+        "operationId": "public_types_api_v1_public_property_types_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PropertyCatalogTypeRead"
+                  },
+                  "title": "Response Public Types Api V1 Public Property Types Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Public Types",
+        "tags": [
+          "public-catalog"
+        ]
+      }
+    },
+    "/api/v1/public/website-content/articles": {
+      "get": {
+        "operationId": "public_articles_api_v1_public_website_content_articles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicWebsiteContent"
+                  },
+                  "title": "Response Public Articles Api V1 Public Website Content Articles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Public Articles",
+        "tags": [
+          "public-content"
+        ]
+      }
+    },
+    "/api/v1/public/website-content/{key}": {
+      "get": {
+        "operationId": "public_document_api_v1_public_website_content__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicWebsiteContent"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Public Document",
+        "tags": [
+          "public-content"
         ]
       }
     },
@@ -56086,6 +57051,353 @@
         "summary": "Transaction Detail",
         "tags": [
           "transactions"
+        ]
+      }
+    },
+    "/api/v1/website-content/access": {
+      "get": {
+        "operationId": "access_api_v1_website_content_access_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteAccess"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Access",
+        "tags": [
+          "website-content"
+        ]
+      }
+    },
+    "/api/v1/website-content/documents": {
+      "get": {
+        "operationId": "documents_api_v1_website_content_documents_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Documents Api V1 Website Content Documents Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Documents",
+        "tags": [
+          "website-content"
+        ]
+      }
+    },
+    "/api/v1/website-content/documents/{key}": {
+      "get": {
+        "operationId": "document_api_v1_website_content_documents__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteDocumentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Document",
+        "tags": [
+          "website-content"
+        ]
+      },
+      "put": {
+        "operationId": "update_document_api_v1_website_content_documents__key__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebsiteDraftWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteDocumentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Document",
+        "tags": [
+          "website-content"
+        ]
+      }
+    },
+    "/api/v1/website-content/editors": {
+      "get": {
+        "operationId": "editors_api_v1_website_content_editors_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WebsiteEditor"
+                  },
+                  "title": "Response Editors Api V1 Website Content Editors Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Editors",
+        "tags": [
+          "website-content"
+        ]
+      }
+    },
+    "/api/v1/website-content/editors/{profile_id}": {
+      "put": {
+        "operationId": "update_editor_api_v1_website_content_editors__profile_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Profile Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebsiteGrantWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Editor",
+        "tags": [
+          "website-content"
+        ]
+      }
+    },
+    "/api/v1/website-content/publish/{key}": {
+      "post": {
+        "operationId": "publish_api_v1_website_content_publish__key__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebsitePublishWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteDocumentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Publish",
+        "tags": [
+          "website-content"
+        ]
+      }
+    },
+    "/api/v1/website-content/revisions/{key}": {
+      "get": {
+        "operationId": "revisions_api_v1_website_content_revisions__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WebsiteRevisionRead"
+                  },
+                  "title": "Response Revisions Api V1 Website Content Revisions  Key  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Revisions",
+        "tags": [
+          "website-content"
         ]
       }
     },

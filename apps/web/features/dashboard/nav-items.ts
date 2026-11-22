@@ -45,6 +45,7 @@ const CAPABILITIES = {
   // Shown only once /api/v1/manager/teams says the Sub Admin runs a team.
   teamManager: { roles: ["sub_admin"], teamManager: true },
   cms: { roles: ["sub_admin", "admin"] },
+  websiteContent: { roles: ["sub_admin", "admin"] },
   referralRules: { roles: ["sub_admin", "admin"] },
   commissionRates: { roles: ["sub_admin", "admin"] },
 } as const satisfies Record<
@@ -76,6 +77,7 @@ export type DashboardAccessContext = {
   managesTeam?: boolean;
   subAdminAccess?: SubAdminAccess | null;
   subAdminAccessLoading?: boolean;
+  websiteDraftAccess?: boolean;
 };
 
 export type NavItem = {
@@ -109,6 +111,14 @@ const SECTION_META: readonly {
 // role and line eligibility; the sidebar only renders the result. API
 // dependencies and PostgreSQL RLS remain the authorization boundary.
 export const NAV_ITEMS: readonly NavItem[] = [
+  {
+    key: "website-content",
+    label: "Website Content",
+    href: "/dashboard/website-content",
+    icon: DASHBOARD_ICONS.websiteContent,
+    capability: "websiteContent",
+    section: "content",
+  },
   {
     key: "home",
     label: "Home",
@@ -622,6 +632,7 @@ export const DASHBOARD_ROUTE_RULES: readonly DashboardRouteRule[] = [
   // /dashboard/campaigns is now a redirect that resolves pre-split notification
   // links; both roles must be able to reach it to be forwarded on.
   { path: "/dashboard/campaigns", exact: true, capabilities: ["cms"] },
+  { path: "/dashboard/website-content", exact: true, capabilities: ["websiteContent"] },
   { path: "/dashboard/campaign-approvals", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/media-library", exact: true, capabilities: ["subAdmin"] },
   { path: "/dashboard/bookmarks", exact: true, capabilities: ["clientRealEstate"] },
@@ -737,6 +748,7 @@ function hasCapability(
 
 function scopedPathAllowed(pathname: string, context: DashboardAccessContext): boolean | undefined {
   if (context.role !== "sub_admin") return;
+  if (pathname === "/dashboard/website-content") return true;
   const access = context.subAdminAccess;
   if (!access && !context.subAdminAccessLoading) return pathname === "/dashboard/relationships" ? false : undefined;
   if (["/dashboard", "/dashboard/settings", "/dashboard/notifications", "/dashboard/support", "/dashboard/get-started", "/dashboard/help-center", "/dashboard/terms", "/dashboard/privacy", "/dashboard/cookies"].includes(pathname)) return true;
@@ -764,6 +776,7 @@ function scopedPathAllowed(pathname: string, context: DashboardAccessContext): b
 export function getNavigationSections(context: DashboardAccessContext): NavSection[] {
   const visible = NAV_ITEMS.filter((item) =>
     (CAPABILITIES[item.capability].roles as readonly UserRole[]).includes(context.role) &&
+    (item.capability !== "websiteContent" || context.websiteDraftAccess === true) &&
     (scopedPathAllowed(item.href, context) ?? hasCapability(item.capability, context, false)),
   );
 

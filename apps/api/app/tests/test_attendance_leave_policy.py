@@ -3,16 +3,17 @@ from io import BytesIO
 
 import pytest
 from PIL import Image
-from sqlalchemy import delete, update
+from sqlalchemy import delete
 
 import app.db.session as db_session
 from app.models.attendance import AttendanceDay, AttendancePolicy, AttendanceRequest
-from app.models.profile import StaffProfile, StaffRole
+from app.models.profile import StaffRole
 from app.services import attendance as clock
 from app.services import attendance_certificates, media_processing, storage
 from app.tests.contest_support import (
     admin_token,
     headers,
+    main_admin_token,
     seed_staff,
     seed_team,
     sub_admin_token,
@@ -36,10 +37,7 @@ async def test_monthly_accrual_and_certificate_access(client, monkeypatch):
     )
     monkeypatch.setattr(storage, "read_object_bytes", lambda key, **_: objects.get(key))
     monkeypatch.setattr(storage, "delete_object", lambda key: objects.pop(key, None))
-    primary_user, primary_staff = await seed_staff(StaffRole.ADMIN)
-    primary = headers(
-        token_for(primary_user, "admin", platform_scope="true", staff_profile=primary_staff)
-    )
+    primary = headers(await main_admin_token())
     checker, _ = await admin_token()
     manager, _, manager_profile = await sub_admin_token()
     user, profile = await seed_staff(StaffRole.EMPLOYEE, business_line="loans", created_at=now)
@@ -64,13 +62,6 @@ async def test_monthly_accrual_and_certificate_access(client, monkeypatch):
     assert (
         await client.put(f"{BASE}/policy", headers=headers(checker), json=policy)
     ).status_code == 403
-    async with db_session.AsyncSessionLocal() as db:
-        await db.execute(
-            update(StaffProfile)
-            .where(StaffProfile.id == primary_staff.id)
-            .values(is_primary_admin=True)
-        )
-        await db.commit()
     version = None
     try:
         configured = await client.put(f"{BASE}/policy", headers=primary, json=policy)
@@ -169,11 +160,6 @@ async def test_monthly_accrual_and_certificate_access(client, monkeypatch):
         assert objects == {}
     finally:
         async with db_session.AsyncSessionLocal() as db:
-            await db.execute(
-                update(StaffProfile)
-                .where(StaffProfile.id == primary_staff.id)
-                .values(is_primary_admin=False)
-            )
             await db.execute(
                 delete(AttendanceDay).where(AttendanceDay.staff_profile_id == profile.id)
             )

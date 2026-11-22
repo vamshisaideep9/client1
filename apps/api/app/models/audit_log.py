@@ -141,6 +141,7 @@ class AuditAction(enum.StrEnum):
     CONTENT_BLOCK_UPDATED = "content_block_updated"
     CONTENT_BLOCK_PUBLISHED = "content_block_published"
     CONTENT_BLOCK_ARCHIVED = "content_block_archived"
+    WEBSITE_CONTENT_CHANGED = "website_content_changed"
     LOAN_APPLICATION_UPDATED = "loan_application_updated"
     PROPERTY_DEAL_UPDATED = "property_deal_updated"
     AGENT_LEAD_RESUBMITTED = "agent_lead_resubmitted"

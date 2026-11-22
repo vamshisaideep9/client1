@@ -53,6 +53,8 @@ from app.api.v1.payments import router as payments_router
 from app.api.v1.personalization import router as personalization_router
 from app.api.v1.pincodes import router as pincodes_router
 from app.api.v1.properties import router as properties_router
+from app.api.v1.property_catalog_types import public_router as public_property_types_router
+from app.api.v1.property_catalog_types import router as property_catalog_types_router
 from app.api.v1.property_deals import router as property_deals_router
 from app.api.v1.property_submissions import router as property_submissions_router
 from app.api.v1.public_catalog import router as public_catalog_router
@@ -68,6 +70,8 @@ from app.api.v1.sub_admin import router as sub_admin_router
 from app.api.v1.support_tickets import router as support_tickets_router
 from app.api.v1.telecaller import router as telecaller_router
 from app.api.v1.transactions import router as transactions_router
+from app.api.v1.website_content import public_router as public_website_content_router
+from app.api.v1.website_content import router as website_content_router
 from app.core.config import settings
 from app.db.session import engine, get_db
 
@@ -198,6 +202,18 @@ app.include_router(
 )
 app.include_router(pincodes_router, prefix="/api/v1/pincodes", tags=["pincodes"])
 app.include_router(content_router, prefix="/api/v1/content-blocks", tags=["content-blocks"])
+app.include_router(
+    property_catalog_types_router, prefix="/api/v1/admin/property-types", tags=["properties"]
+)
+app.include_router(
+    public_property_types_router, prefix="/api/v1/public/property-types", tags=["public-catalog"]
+)
+app.include_router(
+    website_content_router, prefix="/api/v1/website-content", tags=["website-content"]
+)
+app.include_router(
+    public_website_content_router, prefix="/api/v1/public/website-content", tags=["public-content"]
+)
 app.include_router(
     referral_bonus_router, prefix="/api/v1/referral-bonus-config", tags=["referral-bonus-config"]
 )

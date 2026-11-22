@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Home, Loader2, PencilLine, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -230,6 +231,11 @@ export function PublishedListingsPanel({ onChanged }: { onChanged?: () => void }
             <PencilLine className="h-4 w-4" aria-hidden="true" />
             Edit
           </Button>
+          {row.property ? (
+            <Button size="sm" variant="outline" asChild>
+              <Link href={`/dashboard/website-content?key=property/${row.property.id}`}>Edit FAQs</Link>
+            </Button>
+          ) : null}
           <Button
             size="sm"
             variant="ghost"

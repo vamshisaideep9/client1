@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { WebsitePageContent } from "@/components/website-content";
+import { getWebsiteContent } from "@/lib/public-website-content";
 import { CookiesContent } from "@/components/help/cookies-content";
 export const metadata: Metadata = {
   title: "Cookie Policy | Dhanadhara",
@@ -11,4 +13,7 @@ export const metadata: Metadata = {
     url: "/cookies",
   },
 };
-export default function Page() { return <CookiesContent />; }
+export default async function Page() {
+  const published = await getWebsiteContent("page/cookies");
+  return <WebsitePageContent content={published?.content} title="Cookies" fallback={<CookiesContent />} />;
+}

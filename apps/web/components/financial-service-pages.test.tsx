@@ -16,6 +16,10 @@ vi.mock("@/lib/financial-catalog", () => ({
   getPublicFinancialProduct: vi.fn(),
   getPublicProviderOffers: vi.fn(),
 }));
+vi.mock("@/lib/public-website-content", () => ({
+  getWebsiteContent: vi.fn().mockResolvedValue(null),
+  getWebsiteArticles: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("next/navigation", () => ({
   notFound: () => { throw new Error("NOT_FOUND"); },
   permanentRedirect: (href: string) => { throw new Error(`REDIRECT:${href}`); },
@@ -37,14 +41,20 @@ describe("financial service overview pages", () => {
     expect((await sitemap()).some((entry) => entry.url === `${SITE_URL}${href}`)).toBe(false);
   });
 
-  it.each(LOAN_PRODUCTS)("$label keeps the provider comparison and application journey when published", async (service) => {
+  it.each(LOAN_PRODUCTS)("$label keeps the published enquiry and provider comparison", async (service) => {
     const slug = financialServiceHref(service.id).replace("/loans/", "");
     vi.mocked(getPublicFinancialProduct).mockResolvedValue({ id: "example", slug, label: service.label, summary: "Published summary", description: "Published description", category: service.group === "insurance" ? "insurance" : service.group === "credit-cards" ? "credit_card" : "loan", highlights: [], eligibility: [], documents: [], faq: [], homepage_featured: false, provider_count: 0, updated_at: "2026-09-13T00:00:00Z" });
     vi.mocked(getPublicProviderOffers).mockResolvedValue({ items: [], total: 0, page: 1, page_size: 9 });
     const page = await FinancialServicePage({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({}) });
     const markup = renderToStaticMarkup(page);
     expect(markup).toContain("Published description");
-    expect(markup).toContain(`dashboard%2Fapply%3Fproduct%3D${slug}`);
+    expect(markup).toContain("Enquire now");
+    expect(markup).not.toContain("Apply inside Dhanadhara");
+    if (service.group === "loans") {
+      expect(markup).not.toContain(`dashboard%2Fapply%3Fproduct%3D${slug}`);
+    } else {
+      expect(markup).toContain(`dashboard%2Fapply%3Fproduct%3D${slug}`);
+    }
     expect(markup).toContain("Compare configured provider options");
     expect(getPublicProviderOffers).toHaveBeenCalledWith(slug, expect.any(Object));
   });

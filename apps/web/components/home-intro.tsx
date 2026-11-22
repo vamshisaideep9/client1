@@ -17,7 +17,10 @@ export const HOME_FACTS: readonly string[] = [
 
 // The page's single, visible H1 with the answer-first summary and the four
 // facts a borrower checks first. Sits directly under the campaign carousel.
-export function HomeIntro() {
+export function HomeIntro({ title = HOME_H1, summary = HOME_INTRO }: {
+  title?: string;
+  summary?: string;
+} = {}) {
   return (
     <section aria-labelledby="home-intro-heading" className="w-full border-t border-[var(--nav-border)] bg-surface">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
@@ -25,9 +28,9 @@ export function HomeIntro() {
           id="home-intro-heading"
           className="max-w-4xl text-balance font-heading text-3xl font-semibold leading-tight tracking-tight text-brand-heading sm:text-4xl lg:text-5xl"
         >
-          {HOME_H1}
+          {title}
         </h1>
-        <p className="mt-5 max-w-3xl text-lg leading-relaxed text-text-secondary">{HOME_INTRO}</p>
+        <p className="mt-5 max-w-3xl text-lg leading-relaxed text-text-secondary">{summary}</p>
         <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {HOME_FACTS.map((fact) => (
             <li key={fact} className="flex items-start gap-3 rounded-xl border border-border bg-surface-sky p-4 text-base text-text-primary">

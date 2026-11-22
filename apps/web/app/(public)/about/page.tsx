@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
 import { AboutContent } from "@/components/about/about-content";
-import { FaqSection } from "@/components/faq-section";
+import { WebsiteBody, WebsiteFaq } from "@/components/website-content";
 import { ABOUT_FAQ_ITEMS } from "@/lib/about";
-import { faqPageJsonLd } from "@/lib/faq";
 import { jsonLdScript, organizationJsonLd } from "@/lib/organization-jsonld";
+import { getWebsiteContent } from "@/lib/public-website-content";
 import { SITE_URL } from "@/lib/site";
 
 const TITLE = "About Dhanadhara: Loans & Property, Vikarabad, Telangana";
@@ -29,20 +29,24 @@ const aboutJsonLd = {
         { "@type": "ListItem", position: 2, name: "About", item: `${SITE_URL}/about` },
       ],
     },
-    faqPageJsonLd(ABOUT_FAQ_ITEMS),
   ],
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const [about, stories, milestones] = await Promise.all([
+    getWebsiteContent("page/about"),
+    getWebsiteContent("page/success-stories"),
+    getWebsiteContent("page/milestones"),
+  ]);
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(aboutJsonLd) }} />
-      <AboutContent />
-      <FaqSection
-        id="about-faq"
-        heading="Questions about Dhanadhara"
-        items={ABOUT_FAQ_ITEMS}
-      />
+      {about?.content.body?.trim()
+        ? <WebsiteBody content={about.content} label="About Dhanadhara" primary />
+        : <><AboutContent /><WebsiteBody content={about?.content} /></>}
+      <WebsiteBody content={stories?.content} label="Success Stories" />
+      <WebsiteBody content={milestones?.content} label="Our Journey and Milestones" />
+      <WebsiteFaq id="about-faq" heading="Questions about Dhanadhara" items={about?.content.faq} defaults={ABOUT_FAQ_ITEMS} />
     </>
   );
 }

@@ -94,6 +94,10 @@ class PropertySubmission(Base):
     listing_intent: Mapped[ListingIntent] = mapped_column(
         listing_intent_enum, nullable=False, default=ListingIntent.SALE
     )
+    catalog_type_code: Mapped[str | None] = mapped_column(
+        String(40), ForeignKey("property_catalog_types.code")
+    )
+    sale_classification: Mapped[str | None] = mapped_column(String(12))
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     type: Mapped[str] = mapped_column(String(40), nullable=False)
     location: Mapped[str] = mapped_column(String(160), nullable=False)

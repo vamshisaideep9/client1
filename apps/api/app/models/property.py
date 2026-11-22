@@ -157,6 +157,15 @@ rera_verification_status_enum = ENUM(
 )
 
 
+class PropertyCatalogType(Base):
+    __tablename__ = "property_catalog_types"
+
+    code: Mapped[str] = mapped_column(String(40), primary_key=True)
+    label: Mapped[str] = mapped_column(String(40))
+    form_subtype: Mapped[str] = mapped_column(String(40))
+    active: Mapped[bool]
+
+
 class Property(Base):
     __tablename__ = "properties"
 
@@ -189,6 +198,10 @@ class Property(Base):
     property_subtype: Mapped[PropertySubtype | None] = mapped_column(
         property_subtype_enum, nullable=True
     )
+    catalog_type_code: Mapped[str | None] = mapped_column(
+        String(40), ForeignKey("property_catalog_types.code")
+    )
+    sale_classification: Mapped[str | None] = mapped_column(String(12))
     city: Mapped[str] = mapped_column(String(120), nullable=False)
     locality: Mapped[str] = mapped_column(String(120), nullable=False)
     state: Mapped[str | None] = mapped_column(String(120), nullable=True)

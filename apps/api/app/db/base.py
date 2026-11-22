@@ -15,6 +15,7 @@ class Base(DeclarativeBase):
 
 
 from app.models.user import User  # noqa
+from app.models.website_content import WebsiteDocument, WebsiteEditorGrant, WebsiteRevision  # noqa
 from app.models.auth import RefreshToken, AuthEvent  # noqa
 from app.models.profile import (  # noqa
     AgentApplication,
@@ -42,7 +43,7 @@ from app.models.bookmark import Bookmark  # noqa
 from app.models.notification import Notification  # noqa
 from app.models.transaction import Transaction  # noqa
 from app.models.payout import Payout  # noqa
-from app.models.property import Property  # noqa
+from app.models.property import Property, PropertyCatalogType  # noqa
 from app.models.property_submission import PropertySubmission  # noqa
 from app.models.property_media import PropertyMedia, PropertySubmissionMedia  # noqa
 from app.models.property_deal import PropertyDeal  # noqa

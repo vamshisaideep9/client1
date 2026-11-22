@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { WebsitePageContent } from "@/components/website-content";
+import { getWebsiteContent } from "@/lib/public-website-content";
 import { TermsContent } from "@/components/help/terms-content";
 export const metadata: Metadata = {
   title: "Terms of Use | Dhanadhara",
@@ -11,4 +13,7 @@ export const metadata: Metadata = {
     url: "/terms",
   },
 };
-export default function Page() { return <TermsContent />; }
+export default async function Page() {
+  const published = await getWebsiteContent("page/terms");
+  return <WebsitePageContent content={published?.content} title="Terms and Conditions" fallback={<TermsContent />} />;
+}

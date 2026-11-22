@@ -13,6 +13,7 @@ import uuid
 from datetime import UTC, datetime
 from uuid import UUID
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +27,7 @@ from app.models.audit_log import AuditAction
 from app.models.property import (
     ListingIntent,
     Property,
+    PropertyCatalogType,
     ReraApplicability,
     ReraVerificationStatus,
 )
@@ -71,6 +73,36 @@ _MEDIA_EXTENSION = {
 
 class SubmissionAlreadyReviewed(Exception):
     """Raised when approve/reject targets a row that is no longer pending."""
+
+
+async def validate_catalog_type(
+    db: AsyncSession,
+    payload: SubmissionCreate | SubmissionUpdate,
+    existing: PropertySubmission | None = None,
+) -> None:
+    if (
+        existing is not None
+        and existing.property_subtype == payload.property_subtype
+        and "catalog_type_code" not in payload.model_fields_set
+    ):
+        payload.catalog_type_code = existing.catalog_type_code
+    if (
+        existing is not None
+        and existing.property_subtype == payload.property_subtype
+        and existing.listing_intent == payload.listing_intent == ListingIntent.SALE
+        and not hasattr(payload.structured_details, "sale_type")
+        and "sale_classification" not in payload.model_fields_set
+    ):
+        payload.sale_classification = existing.sale_classification
+    code = payload.catalog_type_code or payload.property_subtype.value
+    item = await db.get(PropertyCatalogType, code)
+    if item is None or item.form_subtype != payload.property_subtype.value:
+        raise HTTPException(422, "Choose a property type that uses this listing form.")
+    existing_code = existing.catalog_type_code or existing.property_subtype if existing else None
+    if not item.active and code != existing_code:
+        raise HTTPException(422, "This property type has been retired.")
+    if code != payload.property_subtype.value:
+        payload.type = item.label
 
 
 class MediaUploadRateExceeded(Exception):
@@ -188,6 +220,7 @@ async def create_submission(
     payload: SubmissionCreate,
     owner_uuid: UUID,
 ) -> PropertySubmission:
+    await validate_catalog_type(db, payload)
     owner_prefix = f"{_STAGING_PREFIX}{owner_uuid}/"
     verified: list[tuple[SubmissionMediaInput, UUID, str, int, str, datetime | None]] = []
     canonical_keys: list[str] = []
@@ -380,6 +413,7 @@ async def update_submission(
         ):
             raise AdminCorrectionReasonRequired
         previous_status = sub.status
+        await validate_catalog_type(session, payload, sub)
         values = _payload_fact_values(payload)
         changed_fields = sorted(
             field for field, value in values.items() if getattr(sub, field) != value
@@ -705,6 +739,8 @@ async def approve_submission(
                 image=sub.image,
                 category=sub.category,
                 property_subtype=sub.property_subtype,
+                catalog_type_code=sub.catalog_type_code,
+                sale_classification=sub.sale_classification,
                 city=sub.city,
                 locality=sub.locality,
                 state=sub.state,

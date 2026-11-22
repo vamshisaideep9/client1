@@ -9,11 +9,19 @@ test.setTimeout(120_000);
 
 test("the listing form shows the refined property fields", async ({ page, baseURL }, testInfo) => {
   await mockMobileApi(page, "agent", "real_estate");
+  await page.route("**/api/v1/public/property-types", (route) => route.fulfill({
+    json: [{
+      code: "gated_community_apartment",
+      form_subtype: "gated_community_apartment",
+      label: "Gated community apartment",
+      active: true,
+    }],
+  }));
   await page.context().addCookies([{ name: "session_hint", value: "1", url: baseURL! }]);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/dashboard/property-submit", { waitUntil: "domcontentloaded" });
 
-  await expect(page.getByLabel("Property name")).toBeVisible();
+  await expect(page.getByLabel("Property name")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Listing name")).toHaveCount(0);
 
   await page.locator("#property-type").click();
