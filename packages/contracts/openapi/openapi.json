@@ -961,7 +961,6 @@
         "type": "object"
       },
       "AdminLeadDetailsRead": {
-        "description": "Admin view: also what the client applied for and when.",
         "properties": {
           "business_line": {
             "enum": [
@@ -970,6 +969,13 @@
             ],
             "title": "Business Line",
             "type": "string"
+          },
+          "chat_inquiries": {
+            "items": {
+              "$ref": "#/components/schemas/ChatInquiryRead"
+            },
+            "title": "Chat Inquiries",
+            "type": "array"
           },
           "editable_fields": {
             "items": {
@@ -10463,6 +10469,241 @@
           "confirm_password"
         ],
         "title": "ChangePasswordRequest",
+        "type": "object"
+      },
+      "ChatAction": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "ChatAction",
+        "type": "object"
+      },
+      "ChatFlow": {
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/ChatAction"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "browse_href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Browse Href"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/ChatQuestion"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "section": {
+            "enum": [
+              "loans",
+              "credit_cards",
+              "insurance",
+              "real_estate"
+            ],
+            "title": "Section",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "section",
+          "label",
+          "questions",
+          "actions"
+        ],
+        "title": "ChatFlow",
+        "type": "object"
+      },
+      "ChatInquiryCreate": {
+        "properties": {
+          "action": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Action",
+            "type": "string"
+          },
+          "answers": {
+            "items": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Answers",
+            "type": "array"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
+          },
+          "flow": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Flow",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "format": "uuid4",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "location": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Location",
+            "type": "string"
+          },
+          "mobile": {
+            "pattern": "^\\+91[6-9]\\d{9}$",
+            "title": "Mobile",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotency_key",
+          "flow",
+          "action",
+          "answers",
+          "name",
+          "mobile",
+          "location"
+        ],
+        "title": "ChatInquiryCreate",
+        "type": "object"
+      },
+      "ChatInquiryRead": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "location": {
+            "title": "Location",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "preferences": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Preferences",
+            "type": "object"
+          },
+          "reference": {
+            "format": "uuid",
+            "title": "Reference",
+            "type": "string"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference",
+          "service",
+          "action",
+          "location",
+          "preferences",
+          "created_at"
+        ],
+        "title": "ChatInquiryRead",
+        "type": "object"
+      },
+      "ChatInquiryReceipt": {
+        "properties": {
+          "reference": {
+            "format": "uuid",
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference"
+        ],
+        "title": "ChatInquiryReceipt",
+        "type": "object"
+      },
+      "ChatQuestion": {
+        "properties": {
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt",
+          "options"
+        ],
+        "title": "ChatQuestion",
         "type": "object"
       },
       "ClientHistoryLead": {
@@ -29296,6 +29537,13 @@
             ],
             "title": "Business Line",
             "type": "string"
+          },
+          "chat_inquiries": {
+            "items": {
+              "$ref": "#/components/schemas/ChatInquiryRead"
+            },
+            "title": "Chat Inquiries",
+            "type": "array"
           },
           "created_at": {
             "format": "date-time",
@@ -48418,6 +48666,72 @@
           }
         },
         "summary": "Create Lead",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
+    "/api/v1/leads/chat-inquiries": {
+      "post": {
+        "operationId": "submit_chat_inquiry_api_v1_leads_chat_inquiries_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatInquiryCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatInquiryReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Chat Inquiry",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
+    "/api/v1/leads/chat-inquiries/flows": {
+      "get": {
+        "operationId": "chat_flows_api_v1_leads_chat_inquiries_flows_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ChatFlow"
+                  },
+                  "title": "Response Chat Flows Api V1 Leads Chat Inquiries Flows Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Chat Flows",
         "tags": [
           "leads"
         ]

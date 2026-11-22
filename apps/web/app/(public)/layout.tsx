@@ -4,7 +4,9 @@ import { AnnouncementBanner } from "@/components/announcement-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { ReferralCapture } from "@/components/referral-capture";
 import { SiteHeader } from "@/components/site-header";
+import { PublicChat } from "@/features/public/public-chat";
 import { getPublishedServiceProducts } from "@/lib/financial-catalog";
+import { SITE_WHATSAPP_HREF } from "@/lib/site";
 
 // Site navigation shares Admin-controlled publication state. Individual CMS
 // fetches retain their caches; the complete public page must not freeze links.
@@ -29,6 +31,7 @@ export default async function PublicLayout({ children }: { children: ReactNode }
         {children}
       </main>
       <SiteFooter products={products} />
+      <PublicChat whatsappHref={SITE_WHATSAPP_HREF} />
     </div>
   );
 }

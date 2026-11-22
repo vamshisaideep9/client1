@@ -25,6 +25,7 @@ from app.models.profile import (  # noqa
     StaffProfile,
 )
 from app.models.lead import Lead  # noqa
+from app.models.chat_inquiry import ChatInquiry  # noqa
 from app.models.lead_activity import LeadActivity  # noqa
 from app.models.loan import (  # noqa
     Bank,

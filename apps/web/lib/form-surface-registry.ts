@@ -122,6 +122,7 @@ export const FORM_SURFACE_REGISTRY = {
   "features/loans/add-to-compare-button.tsx": "mutation",
   "features/loans/loan-progress-form.tsx": "mutation",
   "features/loans/provider-offer-filters.tsx": "filter",
+  "features/public/public-chat.tsx": "mutation",
   "features/property-deals/property-deal-progress-controls.tsx": "mutation",
   "features/real-estate/property-action-dialog.tsx": "mutation",
   "features/real-estate/published-listings-panel.tsx": "mutation",

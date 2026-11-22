@@ -197,6 +197,7 @@ async def delete_account(
     # unresolved lead still keyed only by the account's verified mobile. It also
     # erases their requirement.email from active and historical leads (CS-028)
     # without erasing contacts of third-party prospects this account referred.
+    await db.scalar(func.erase_account_chat_inquiries(target_auth_user_uuid))
     await db.scalar(func.close_account_leads(target_auth_user_uuid))
     user.first_name = "Deleted"
     user.last_name = "User"

@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.schemas.chat_inquiries import ChatInquiryRead
 from app.schemas.telecaller import LeadRequestSummary
 
 LeadDetailOwner = Literal[
@@ -63,6 +64,7 @@ class LeadDetailsRead(BaseModel):
 
 
 class AdminLeadDetailsRead(LeadDetailsRead):
+    chat_inquiries: list[ChatInquiryRead] = Field(default_factory=list)
     """Admin view: also what the client applied for and when."""
 
     requests: list[LeadRequestSummary]

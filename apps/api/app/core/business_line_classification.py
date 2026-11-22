@@ -51,6 +51,7 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     # Reusable campaign artwork can be scoped to one business line or shared
     # across both, matching banners/offers rather than operational row rules.
     "campaign_media_assets": ClassificationMode.GLOBAL_CONTENT,
+    "chat_inquiries": ClassificationMode.DERIVED,  # scope follows the linked lead
     "client_profiles": ClassificationMode.OPERATIONAL,
     "commission_payout_items": ClassificationMode.DERIVED,
     "commissions": ClassificationMode.OPERATIONAL,

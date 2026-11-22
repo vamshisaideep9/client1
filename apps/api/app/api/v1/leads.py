@@ -14,7 +14,10 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.routing import APIRoute
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cache.redis_keys import (
@@ -29,8 +32,11 @@ from app.core.client_ip import get_client_ip
 from app.core.config import settings
 from app.core.deps import get_cache
 from app.db.session import get_db
+from app.schemas.chat_inquiries import ChatFlow, ChatInquiryCreate, ChatInquiryReceipt
 from app.schemas.field_visibility import ContactInvitationRead
 from app.schemas.leads import PublicLeadCreate, PublicLeadResponse
+from app.services.chat_flows import available_flows
+from app.services.chat_inquiries import ChatInquiryInvalid, create_chat_inquiry
 from app.services.field_visibility import consume_invitation, invitation_is_valid
 from app.services.leads import capture_lead
 from app.services.properties import get_active_property
@@ -129,3 +135,52 @@ async def create_lead(
         await consume_invitation(req.invitation_token, req.mobile)
 
     return PublicLeadResponse()
+
+
+class ChatInquiryRoute(APIRoute):
+    def get_route_handler(self):
+        handle = super().get_route_handler()
+
+        async def sanitized(request: Request) -> Response:
+            try:
+                return await handle(request)
+            except RequestValidationError:
+                raise HTTPException(422, "Check your answers and contact details.") from None
+            except SQLAlchemyError:
+                logger.error("lead.chat_inquiry_database_error")
+                raise HTTPException(
+                    503, "The inquiry service is temporarily unavailable."
+                ) from None
+
+        return sanitized
+
+
+chat_router = APIRouter(prefix="/chat-inquiries", route_class=ChatInquiryRoute)
+
+
+@chat_router.get("/flows", response_model=list[ChatFlow])
+async def chat_flows(response: Response, db: AsyncSession = Depends(get_db)) -> list[ChatFlow]:
+    response.headers["Cache-Control"] = "no-store"
+    return await available_flows(db)
+
+
+@chat_router.post("", response_model=ChatInquiryReceipt, status_code=status.HTTP_201_CREATED)
+async def submit_chat_inquiry(
+    payload: ChatInquiryCreate,
+    request: Request,
+    response: Response,
+    cache: RedisCache = Depends(get_cache),
+    db: AsyncSession = Depends(get_db),
+) -> ChatInquiryReceipt:
+    if payload.company:
+        raise HTTPException(422, "Check your answers and contact details.")
+    await _check_lead_rates(cache, get_client_ip(request), payload.mobile)
+    try:
+        reference = await create_chat_inquiry(db, payload)
+    except ChatInquiryInvalid:
+        raise HTTPException(422, "These options have changed. Please start again.") from None
+    response.headers["Cache-Control"] = "no-store"
+    return ChatInquiryReceipt(reference=reference)
+
+
+router.include_router(chat_router)

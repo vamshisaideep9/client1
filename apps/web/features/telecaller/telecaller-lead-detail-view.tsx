@@ -1,5 +1,7 @@
 "use client";
 
+import { ChatInquiries } from "@/features/dashboard/chat-inquiries";
+
 import * as React from "react";
 import { ContactActions } from "@/components/contact-actions";
 import { Loader2 } from "lucide-react";
@@ -275,6 +277,7 @@ export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-5 xl:col-start-1 xl:row-start-1">
+          <ChatInquiries inquiries={lead.chat_inquiries} />
           <TelecallerRequestList
             requests={requests}
             activities={lead.activities}

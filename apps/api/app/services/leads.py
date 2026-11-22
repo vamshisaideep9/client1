@@ -439,76 +439,9 @@ async def capture_lead(
             if origin_agent_profile_uuid is not None or origin != LeadOrigin.DIRECT.value:
                 raise ValueError("Agent lead capture must use capture_agent_lead().")
 
-            await lock_lead_mobile(session, mobile)
-            if await _has_active_operational_identity(session, mobile):
-                await session.rollback()
-                return True
-            await _lock_assignment_line(session, business_line)
-            live = Lead.status != LeadStatus.CLOSED
-            candidate = await session.scalar(
-                select(Lead)
-                .where(
-                    Lead.mobile == mobile,
-                    live,
-                    Lead.business_line == business_line,
-                )
-                .order_by(Lead.updated_at.desc(), Lead.id)
-                .limit(1)
-                .with_for_update()
+            _, notice = await stage_direct_lead(
+                session, mobile, name=name, business_line=business_line, requirement=requirement
             )
-
-            if candidate is None:
-                candidate = Lead(
-                    mobile=mobile,
-                    name=name,
-                    business_line=business_line,
-                    origin=LeadOrigin.DIRECT,
-                    status=LeadStatus.NEW,
-                    requirement=requirement,
-                    detail_ownership=initial_ownership(
-                        name=name,
-                        requirement=requirement,
-                        creator_role="unclaimed",
-                    ),
-                )
-                session.add(candidate)
-            else:
-                # Public/auth capture must never rewrite an assigned workflow.
-                # It may enrich only an open, unassigned enquiry.
-                if (
-                    candidate.assigned_telecaller_profile_uuid is None
-                    and candidate.status in _ASSIGNABLE_STATUSES
-                ):
-                    additions = initial_ownership(
-                        name=name,
-                        requirement=requirement,
-                        creator_role="unclaimed",
-                    )
-                    ownership = dict(candidate.detail_ownership or {})
-                    name_owner = ownership.get("name")
-                    if name is not None and (
-                        name_owner is None
-                        or (isinstance(name_owner, dict) and name_owner.get("role") == "unclaimed")
-                    ):
-                        candidate.name = name
-                        ownership.setdefault("name", additions["name"])
-
-                    merged_requirement = dict(candidate.requirement or {})
-                    for key, value in (requirement or {}).items():
-                        path = f"requirement.{key}"
-                        descriptor = ownership.get(path)
-                        if descriptor is not None and not (
-                            isinstance(descriptor, dict) and descriptor.get("role") == "unclaimed"
-                        ):
-                            continue
-                        merged_requirement[key] = value
-                        ownership.setdefault(path, additions[path])
-                    if requirement is not None:
-                        candidate.requirement = merged_requirement
-                    candidate.detail_ownership = ownership
-                candidate.updated_at = datetime.now(UTC)
-            await session.flush()
-            notice = await auto_assign_locked_lead(session, candidate)
             await session.commit()
         if notice is not None:
             await notify_lead_assignments([notice])
@@ -516,6 +449,87 @@ async def capture_lead(
     except Exception:  # capture is best-effort; never break the auth flow
         logger.warning("lead.capture_failed mobile=%s", mask_mobile(mobile), exc_info=True)
         return False
+
+
+async def stage_direct_lead(
+    session: AsyncSession,
+    mobile: str,
+    *,
+    name: str | None,
+    business_line: str,
+    requirement: dict[str, Any] | None,
+) -> tuple[Lead | None, LeadAssignmentNotice | None]:
+    """Stage lead assignment in the caller's transaction."""
+    await lock_lead_mobile(session, mobile)
+    if await _has_active_operational_identity(session, mobile):
+        return None, None
+    await _lock_assignment_line(session, business_line)
+    live = Lead.status != LeadStatus.CLOSED
+    candidate = await session.scalar(
+        select(Lead)
+        .where(
+            Lead.mobile == mobile,
+            live,
+            Lead.business_line == business_line,
+        )
+        .order_by(Lead.updated_at.desc(), Lead.id)
+        .limit(1)
+        .with_for_update()
+    )
+
+    if candidate is None:
+        candidate = Lead(
+            mobile=mobile,
+            name=name,
+            business_line=business_line,
+            origin=LeadOrigin.DIRECT,
+            status=LeadStatus.NEW,
+            requirement=requirement,
+            detail_ownership=initial_ownership(
+                name=name,
+                requirement=requirement,
+                creator_role="unclaimed",
+            ),
+        )
+        session.add(candidate)
+    else:
+        # Public/auth capture must never rewrite an assigned workflow.
+        # It may enrich only an open, unassigned enquiry.
+        if (
+            candidate.assigned_telecaller_profile_uuid is None
+            and candidate.status in _ASSIGNABLE_STATUSES
+        ):
+            additions = initial_ownership(
+                name=name,
+                requirement=requirement,
+                creator_role="unclaimed",
+            )
+            ownership = dict(candidate.detail_ownership or {})
+            name_owner = ownership.get("name")
+            if name is not None and (
+                name_owner is None
+                or (isinstance(name_owner, dict) and name_owner.get("role") == "unclaimed")
+            ):
+                candidate.name = name
+                ownership.setdefault("name", additions["name"])
+
+            merged_requirement = dict(candidate.requirement or {})
+            for key, value in (requirement or {}).items():
+                path = f"requirement.{key}"
+                descriptor = ownership.get(path)
+                if descriptor is not None and not (
+                    isinstance(descriptor, dict) and descriptor.get("role") == "unclaimed"
+                ):
+                    continue
+                merged_requirement[key] = value
+                ownership.setdefault(path, additions[path])
+            if requirement is not None:
+                candidate.requirement = merged_requirement
+            candidate.detail_ownership = ownership
+        candidate.updated_at = datetime.now(UTC)
+    await session.flush()
+    notice = await auto_assign_locked_lead(session, candidate)
+    return candidate, notice
 
 
 async def _record_agent_attempt(

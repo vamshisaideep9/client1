@@ -8,21 +8,39 @@ Requires: running Postgres + Redis (docker compose up -d).
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 import pytest
 import redis.asyncio as aioredis
 from httpx import AsyncClient
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select, text
 
 import app.db.session as db_session
 from app.cache.redis_keys import lead_rate_ip_key, lead_rate_mobile_key
 from app.core.config import settings
+from app.models.chat_inquiry import ChatInquiry
 from app.models.lead import Lead
-from conftest import unique_mobile
+from app.models.user import User
+from app.tests.test_leads_rls import _seed_telecaller_staff_profile
+from conftest import unique_email, unique_mobile
 
 # ASGITransport stamps every request with this client host.
 _TEST_IP = "127.0.0.1"
+_CHAT_PATH = "/api/v1/leads/chat-inquiries"
+
+
+def _chat_payload(**overrides) -> dict:
+    return {
+        "name": "Test Visitor",
+        "mobile": unique_mobile(),
+        "idempotency_key": str(uuid.uuid4()),
+        "flow": "residential",
+        "action": "visit",
+        "answers": ["Buy property", "Independent villa", "Under ₹60 lakh"],
+        "location": "Test locality",
+        **overrides,
+    }
 
 
 def _payload(mobile: str | None = None, **overrides) -> dict:
@@ -108,6 +126,166 @@ async def test_create_lead_persists_row(client: AsyncClient) -> None:
     assert lead.requirement["page"] == "contact"
     assert lead.requirement["product"] == "Personal Loan"
     assert lead.requirement["message"] == "Need 5 lakh"
+
+
+async def test_chat_concurrent_retry_and_assigned_lead_are_preserved(client: AsyncClient) -> None:
+    payload = _chat_payload()
+    staff = await _seed_telecaller_staff_profile("real_estate")
+    async with db_session.AsyncSessionLocal() as db:
+        lead = Lead(
+            mobile=payload["mobile"],
+            name="Previously assigned",
+            origin="direct",
+            status="assigned",
+            business_line="real_estate",
+            assigned_telecaller_profile_uuid=uuid.UUID(staff),
+            requirement={"notes": "Existing notes"},
+        )
+        db.add(lead)
+        await db.commit()
+        lead_id = lead.id
+
+    first, duplicate = await asyncio.gather(
+        client.post(_CHAT_PATH, json=payload), client.post(_CHAT_PATH, json=payload)
+    )
+    assert first.status_code == duplicate.status_code == 201
+    assert first.json() == duplicate.json()
+    reference = uuid.UUID(first.json()["reference"])
+    new_request = await client.post(
+        _CHAT_PATH, json={**payload, "idempotency_key": str(uuid.uuid4())}
+    )
+    assert new_request.status_code == 201
+    assert new_request.json()["reference"] != str(reference)
+
+    async with db_session.AsyncSessionLocal() as db:
+        lead = await db.get(Lead, lead_id)
+        assert lead is not None
+        assert lead.name == "Previously assigned"
+        assert lead.requirement == {"notes": "Existing notes"}
+        assert str(lead.assigned_telecaller_profile_uuid) == staff
+        inquiries = (
+            await db.scalars(select(ChatInquiry).where(ChatInquiry.lead_id == lead_id))
+        ).all()
+        assert len(inquiries) == 2
+        assert all(
+            inquiry.preferences["What type of home do you prefer?"] == "Independent villa"
+            for inquiry in inquiries
+        )
+        assert all(inquiry.location == "Test locality" for inquiry in inquiries)
+
+    async with db_session.AsyncSessionLocal() as db:
+        await db.execute(text("SET LOCAL ROLE api_user"))
+        query = select(ChatInquiry.reference).where(ChatInquiry.lead_id == lead_id)
+        await db.execute(
+            text(
+                "SELECT set_config('app.role', 'telecaller', true), "
+                "set_config('app.staff_profile_uuid', :staff, true), "
+                "set_config('app.business_line', 'real_estate', true)"
+            ),
+            {"staff": staff},
+        )
+        assert len((await db.scalars(query)).all()) == 2
+        await db.execute(text("SELECT set_config('app.business_line', 'loans', true)"))
+        assert (await db.scalars(query)).all() == []
+        await db.execute(
+            text(
+                "SELECT set_config('app.business_line', 'real_estate', true), "
+                "set_config('app.staff_profile_uuid', '', true)"
+            )
+        )
+        assert (await db.scalars(query)).all() == []
+        await db.execute(text("SELECT set_config('app.platform_scope', 'true', true)"))
+        assert (await db.scalars(query)).all() == []
+        await db.execute(text("SELECT set_config('app.role', 'admin', true)"))
+        assert len((await db.scalars(query)).all()) == 2
+
+
+async def test_chat_rejects_invalid_answers_without_echo(client: AsyncClient) -> None:
+    invalid = _chat_payload()
+    response = await client.post(_CHAT_PATH, json={**invalid, "answers": ["arbitrary"] * 3})
+    assert response.status_code == 422
+    assert "arbitrary" not in response.text
+    response = await client.post(_CHAT_PATH, json={**invalid, "mobile": "private input"})
+    assert response.status_code == 422
+    assert "private input" not in response.text
+    assert await _get_lead(invalid["mobile"]) is None
+
+
+async def test_account_erasure_removes_chat_contact_details(client: AsyncClient) -> None:
+    payload = _chat_payload()
+    async with db_session.AsyncSessionLocal() as db:
+        account = User(
+            first_name="Test",
+            last_name="Visitor",
+            email=unique_email(),
+            mobile=payload["mobile"],
+            password_hash="unused",
+        )
+        db.add(account)
+        await db.commit()
+        account_id = account.id
+
+    response = await client.post(_CHAT_PATH, json=payload)
+    assert response.status_code == 201
+    reference = uuid.UUID(response.json()["reference"])
+    async with db_session.AsyncSessionLocal() as db:
+        await db.execute(text("SET LOCAL ROLE api_user"))
+        await db.execute(
+            text("SELECT set_config('app.auth_user_uuid', :owner, true)"),
+            {"owner": str(account_id)},
+        )
+        await db.scalar(select(func.erase_account_chat_inquiries(account_id)))
+        await db.commit()
+
+    async with db_session.AsyncSessionLocal() as db:
+        assert await db.get(ChatInquiry, reference) is None
+
+
+async def test_chat_catalog_respects_publication_and_credit_card_slug(client: AsyncClient) -> None:
+    from app.models.loan import LoanType
+
+    async with db_session.AsyncSessionLocal() as db:
+        products = (
+            await db.scalars(
+                select(LoanType).where(LoanType.name.in_(["credit-cards", "health-insurance"]))
+            )
+        ).all()
+        assert {p.name for p in products} == {"credit-cards", "health-insurance"}
+        original = {
+            p.id: (p.active, p.public_visible, p.public_summary, p.public_description)
+            for p in products
+        }
+        for product in products:
+            product.active = True
+            product.public_visible = product.name == "credit-cards"
+            product.public_summary = "Test summary"
+            product.public_description = "Test description"
+        await db.commit()
+    try:
+        response = await client.get(f"{_CHAT_PATH}/flows")
+        assert response.status_code == 200
+        flows = {item["id"]: item for item in response.json()}
+        assert flows["credit-card"]["browse_href"] == "/loans/credit-card"
+        assert "health-insurance" not in flows
+        assert all(len(item["questions"]) == 3 for item in flows.values())
+        response = await client.post(
+            _CHAT_PATH,
+            json=_chat_payload(
+                flow="health-insurance", action="quote", answers=["Not sure yet"] * 3
+            ),
+        )
+        assert response.status_code == 422
+    finally:
+        async with db_session.AsyncSessionLocal() as db:
+            for product_id, fields in original.items():
+                product = await db.get(LoanType, product_id)
+                (
+                    product.active,
+                    product.public_visible,
+                    product.public_summary,
+                    product.public_description,
+                ) = fields
+            await db.commit()
 
 
 async def test_property_lead_uses_canonical_listing_facts(client: AsyncClient) -> None:

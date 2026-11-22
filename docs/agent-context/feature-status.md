@@ -1,5 +1,17 @@
 # Feature implementation status
 
+**Public-site chatbot.** Visitors can open a floating assistant, answer guided
+questions, browse published services or properties, and submit a callback
+request. PostgreSQL assigns each saved inquiry a reference. Admin and the
+assigned Telecaller can view its preferences through the linked lead. Insurance
+choices follow catalogue publication. WhatsApp remains a human contact option.
+
+The migration round trip, 52 focused API tests, two Playwright journeys,
+and deterministic contract generation passed. Browser verification also covered
+the narrow property contact bar and deferred loading of chat options.
+[Upstream review](https://github.com/brollysolutions/client1/pulls?q=is%3Apr+head%3Afeat%2Fpublic-site-chatbot)
+· [Mirror review](https://github.com/vamshisaideep9/client1/pulls?q=is%3Apr+head%3Afeat%2Fpublic-site-chatbot)
+
 **Website Content and public catalog.** Main Admin manages publishing and
 revision restoration. Assigned Admins and Sub Admins can save and preview
 website drafts. Public pages read published copy and FAQs, and the Knowledge

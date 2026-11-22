@@ -1,5 +1,7 @@
 "use client";
 
+import { ChatInquiries } from "@/features/dashboard/chat-inquiries";
+
 import * as React from "react";
 import { Loader2, PencilLine } from "lucide-react";
 import { toast } from "sonner";
@@ -198,6 +200,8 @@ export function LeadDetailsDialog({
                 </ul>
               )}
             </section>
+
+            <ChatInquiries inquiries={details.chat_inquiries} />
 
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">

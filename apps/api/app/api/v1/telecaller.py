@@ -39,6 +39,7 @@ from app.schemas.telecaller import (
     TelecallerPropertyEnquiryRead,
     TelecallerSiteVisitRead,
 )
+from app.services.chat_inquiries import list_chat_inquiries
 from app.services.field_visibility import effective_modes, project_values
 from app.services.lead_details import visible_requirement
 from app.services.lead_signals import facets, lead_signals, transaction_summary
@@ -329,6 +330,13 @@ async def get_lead(
         activities=[to_activity_read(a) for a in activities],
         loan_applications=loan_applications,
         financial_enquiries=financial_enquiries,
+        chat_inquiries=(
+            await list_chat_inquiries(
+                db, lead.id, include_name=modes.get(("lead", "name")) == FieldVisibilityMode.ALLOW
+            )
+            if modes.get(("lead", "requirement")) == FieldVisibilityMode.ALLOW
+            else []
+        ),
         property_enquiries=property_enquiries,
         site_visits=site_visits,
         property_deals=property_deals,
