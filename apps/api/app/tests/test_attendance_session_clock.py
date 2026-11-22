@@ -8,6 +8,7 @@ import app.db.session as db_session
 from app.models.attendance import AttendanceDay, AttendancePolicy
 from app.models.profile import StaffRole
 from app.services import attendance
+from app.services.attendance_rollover import run_attendance_rollover
 from app.services.attendance_sessions import IST, late_penalty_units, session_coverage
 from app.tests.contest_support import (
     admin_token,
@@ -26,7 +27,7 @@ SESSION_POLICY = {
     "half_day_minutes": 240,
     "full_day_minutes": 480,
     "weekly_off": [6],
-    "leave_quotas": {},
+    "leave_quotas": {"sick": 2},
     "session_clock": True,
 }
 
@@ -73,7 +74,7 @@ def test_monthly_late_schedule_uses_quarter_days():
 
 
 @pytest.mark.asyncio
-async def test_session_clock_midnight_preserves_original_punch_and_monthly_lop(
+async def test_session_clock_rollover_and_reviewed_attendance(
     client, monkeypatch, session_policies
 ):
     now = datetime(2027, 1, 1, 9, tzinfo=IST)
@@ -93,13 +94,13 @@ async def test_session_clock_midnight_preserves_original_punch_and_monthly_lop(
         now = datetime.combine(day, time(9, 46), IST)
         login = await client.post(f"{BASE}/check-in", headers=employee)
         assert login.status_code == 200, login.text
-        now = datetime.combine(day + timedelta(days=1), time(0, 5), IST)
+        now = datetime.combine(day, time(18, 30), IST)
         logout = await client.post(f"{BASE}/check-out", headers=employee)
         assert logout.status_code == 200, logout.text
         result = logout.json()
         assert result["day"] == str(day)
-        assert result["original_check_out"] is None
-        assert datetime.fromisoformat(result["system_check_out"]) == now.replace(minute=0)
+        assert datetime.fromisoformat(result["original_check_out"]) == now
+        assert result["system_check_out"] is None
         assert result["worked_minutes"] == 464
         assert result["status"] == "present"
         assert result["lop_units"] == expected
@@ -162,8 +163,64 @@ async def test_session_clock_midnight_preserves_original_punch_and_monthly_lop(
     assert dates[str(tuesday)]["adjustments"] == ["comp_off"]
     assert dates[str(tuesday)]["lop_units"] == 0
 
+    missed = tuesday + timedelta(days=1)
+    now = datetime.combine(missed, time(9, 30), IST)
+    login = await client.post(f"{BASE}/check-in", headers=employee)
+    assert login.status_code == 200, login.text
+    submitted = await client.post(
+        f"{BASE}/leave",
+        headers=employee,
+        json={
+            "start_day": str(missed),
+            "end_day": str(missed),
+            "leave_type": "sick",
+            "half_day": True,
+            "leave_session": "afternoon",
+            "reason": "Verified half-day leave",
+        },
+    )
+    assert submitted.status_code == 201, submitted.text
+    now = datetime.combine(missed, time(23, 59, 59), IST)
+    await run_attendance_rollover(now)
+    checked_in = await client.get(f"{BASE}/me", headers=employee)
+    assert checked_in.json()["today"]["status"] == "checked_in"
+
+    now += timedelta(seconds=1)
+    await run_attendance_rollover(now)
+    for _ in range(2):
+        missed_out = await client.post(f"{BASE}/check-out", headers=employee)
+        assert missed_out.status_code == 200, missed_out.text
+        absent = missed_out.json()
+        assert absent["day"] == str(missed)
+        assert datetime.fromisoformat(absent["original_check_in"]) == datetime.fromisoformat(
+            login.json()["original_check_in"]
+        )
+        assert absent["original_check_out"] is absent["check_out"] is None
+        assert datetime.fromisoformat(absent["system_check_out"]) == now
+        assert absent["status"] == "absent"
+        assert absent["worked_minutes"] == 0 and absent["lop_units"] == 4
+
+    request_id = submitted.json()["id"]
+    response = await client.post(
+        f"{BASE}/requests/{request_id}/decision",
+        headers=headers(admin),
+        json={**recommend, "expected_decisions": 0},
+    )
+    assert response.status_code == 200, response.text
+    response = await client.post(
+        f"{BASE}/requests/{request_id}/decision",
+        headers=headers(checker),
+        json={**decide, "expected_decisions": 1},
+    )
+    assert response.status_code == 200, response.text
+    report = await client.get(f"{BASE}/me", params={"month": 2, "year": 2027}, headers=employee)
+    absent = next(row for row in report.json()["days"] if row["day"] == str(missed))
+    assert absent["leave_codes"] == ["SL"]
+    assert absent["status"] == "on_leave" and absent["lop_units"] == 2
+
     loan_manager, _, loan_profile = await sub_admin_token()
     estate_manager, _, estate_profile = await sub_admin_token()
+    now = datetime.combine(tuesday, time(9, 30), IST)
     dual_user, dual_profile = await seed_staff(
         StaffRole.EMPLOYEE, business_line="both", created_at=now
     )
@@ -172,7 +229,6 @@ async def test_session_clock_midnight_preserves_original_punch_and_monthly_lop(
     dual = headers(
         token_for(dual_user, "employee", business_line="both", staff_profile=dual_profile)
     )
-    now = datetime.combine(tuesday, time(9, 30), IST)
     punch = await client.post(f"{BASE}/check-in", headers={**dual, "X-Business-Line": "loans"})
     assert punch.status_code == 200, punch.text
     for team, lead, expected in [(loans, loan_manager, 1), (estate, estate_manager, 0)]:

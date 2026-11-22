@@ -46,6 +46,17 @@ export function attendanceCode(day: AttendanceDay): { code: string; tone: string
   return null;
 }
 
+const LEAVE_BADGES = {
+  CL: { code: "CL", label: "Casual leave", tone: "bg-sky-100 text-sky-950" },
+  SL: { code: "SL", label: "Sick leave", tone: "bg-teal-100 text-teal-950" },
+};
+
+export function attendanceBadges(day: AttendanceDay) {
+  const status = attendanceCode(day);
+  const leave = (day.leave_codes ?? []).map((code) => LEAVE_BADGES[code]);
+  return status ? [{ ...status, label: ATTENDANCE_STATUS[day.status] }, ...leave] : leave;
+}
+
 export const ADJUSTMENT_LABELS: Record<AttendanceAdjustment["adjustment_type"], string> = {
   late_waiver: "Late waiver",
   early_exit: "Early-exit exception",

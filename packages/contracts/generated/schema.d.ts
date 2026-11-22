@@ -8607,6 +8607,8 @@ export interface components {
             early_exit: boolean;
             /** Late */
             late: boolean;
+            /** Leave Codes */
+            leave_codes?: ("CL" | "SL")[];
             /** Leave Sessions */
             leave_sessions?: ("morning" | "afternoon")[];
             /** Leave Units */

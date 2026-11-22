@@ -96,8 +96,6 @@ async def run_attendance_rollover(now: datetime | None = None) -> int:
                         if row is not None
                         else await clock.require_policy(db, day)
                     )
-                    if now < clock.shift_cutoff(day, policy):
-                        break
                     if (
                         row is None
                         and clock.allows_personal_attendance(profile.role, policy)
@@ -126,7 +124,7 @@ async def run_attendance_rollover(now: datetime | None = None) -> int:
                         db.add(row)
                         updated += 1
                     elif row is not None and row.status == "checked_in":
-                        clock.close_expired_day(row, policy)
+                        await clock.close_expired_day(db, row, policy)
                         if policy.session_clock:
                             recalculate_months.add(day.replace(day=1))
                         updated += 1

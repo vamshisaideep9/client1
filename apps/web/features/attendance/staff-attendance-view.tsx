@@ -19,8 +19,9 @@ import {
   cancelAttendanceRequest, getMyAttendance, requestAttendanceAdjustment, requestAttendanceCorrection,
   requestAttendanceLeave, setAttendanceClock, type AttendanceAdjustment, type AttendanceLeave, type AttendanceMine,
 } from "@/lib/attendance-api";
-import { ADJUSTMENT_LABELS, ATTENDANCE_STATUS, attendanceCode, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays, previousMonth, requestLabel } from "./attendance-display";
+import { ADJUSTMENT_LABELS, ATTENDANCE_STATUS, attendanceBadges, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays, previousMonth, requestLabel } from "./attendance-display";
 import { AttendanceCertificateControl } from "./attendance-certificate-control";
+import { prepareAttendanceChime } from "./attendance-chime";
 
 type RequestKind = "leave" | "correction" | AttendanceAdjustment["adjustment_type"];
 
@@ -42,6 +43,15 @@ function useAttendance(month?: string) {
     });
     return () => { current = false; };
   }, [month, retry]);
+  useEffect(() => {
+    if (!payload) return;
+    const serverTime = new Date(payload.server_time);
+    const today = istDay(serverTime);
+    const midnight = Date.parse(`${today}T00:00:00+05:30`) + 86_400_000;
+    const waitingForRollover = payload.days.some((day) => day.status === "checked_in" && day.day < today);
+    const timer = window.setTimeout(refresh, waitingForRollover ? 15_000 : midnight - serverTime.getTime() + 1000);
+    return () => window.clearTimeout(timer);
+  }, [payload, refresh]);
   return { payload, error, refresh };
 }
 
@@ -61,12 +71,15 @@ function AttendanceClock({ payload, refresh }: { payload: AttendanceMine; refres
     return () => window.clearInterval(timer);
   }, [payload.server_time, row, running]);
   async function punch() {
+    const chime = prepareAttendanceChime(!running);
     setBusy(true);
     setMessage("");
     const response = await setAttendanceClock(!running);
     setBusy(false);
+    const expired = response.ok && running && response.data.system_check_out && !response.data.check_out;
+    chime?.(response.ok && !expired);
     if (response.ok) {
-      setMessage(running ? "Checked out." : "Checked in.");
+      setMessage(expired ? "Your previous shift closed at midnight IST without a check-out." : running ? "Checked out." : "Checked in.");
       refresh();
     } else {
       setMessage(response.error);
@@ -156,12 +169,16 @@ export function StaffAttendanceView() {
                 {calendar.map((date) => {
                   const entry = dates.get(date);
                   const status = entry ? ATTENDANCE_STATUS[entry.status] : holidayDates.get(date) ?? "—";
-                  const badge = entry ? attendanceCode(entry) : null;
+                  const badges = entry ? attendanceBadges(entry) : [];
                   const sunday = new Date(`${date}T12:00:00Z`).getUTCDay() === 0;
                   return <div key={date} className="min-w-0 rounded-lg border border-border p-1 text-center sm:p-2">
                     <time dateTime={date} className="block font-medium">{Number(date.slice(-2))}</time>
-                    {sunday && badge?.code !== "SUN" ? <span className="mr-1 rounded bg-slate-200 px-1 font-medium text-slate-900">SUN</span> : null}
-                    {badge ? <span className={`rounded px-1 font-medium ${badge.tone}`}>{badge.code}</span> : null}
+                    <div className="flex flex-wrap justify-center gap-0.5">
+                      {sunday && !badges.some(({ code }) => code === "SUN") ? <span className="rounded bg-slate-200 px-1 font-medium text-slate-900">SUN</span> : null}
+                      {badges.map(({ code, label, tone }) => <span key={code} className={`rounded px-1 font-medium ${tone}`} title={label}>
+                        <span aria-hidden="true">{code}</span><span className="sr-only">{label}</span>
+                      </span>)}
+                    </div>
                     <span className="block text-text-secondary [overflow-wrap:anywhere]">{status}</span>
                   </div>;
                 })}
@@ -171,7 +188,7 @@ export function StaffAttendanceView() {
                   {payload.days.map((day) => (
                     <li key={day.day} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                       <span>{attendanceDate(day.day)} · {ATTENDANCE_STATUS[day.status]}{day.lop_units ? ` · ${day.lop_units / 4} day LOP` : ""}</span>
-                      <span className="text-text-secondary">{attendanceTime(day.check_in)} – {attendanceTime(day.check_out)} · {duration(day.worked_minutes)}</span>
+                      <span className="text-text-secondary">{attendanceTime(day.check_in)} – {attendanceTime(day.check_out ?? day.system_check_out ?? null)}{day.system_check_out && !day.check_out ? " (system)" : ""} · {duration(day.worked_minutes)}</span>
                     </li>
                   ))}
                 </ul>

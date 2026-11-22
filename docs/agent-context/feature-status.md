@@ -1,5 +1,16 @@
 # Feature implementation status
 
+**Attendance follow-up.** The staff and management calendars show `CL` for
+approved casual leave and `SL` for approved sick leave. A scheduled workday
+with a missed check-out rolls to `A` at midnight IST. The system records the
+closure time and credits zero worked minutes. Approved leave and on-duty
+credit still apply. Successful punches play distinct check-in and check-out
+chimes on Home and Attendance. The API adds an optional `leave_codes` field.
+Twelve PostgreSQL attendance checks, four Playwright journeys and 1,122 web
+unit tests passed. Contract regeneration was byte-stable.
+[Upstream review branch](https://github.com/brollysolutions/client1/compare/main...feat/attendance-month-close)
+· [Mirror #104](https://github.com/vamshisaideep9/client1/pull/104)
+
 **Delivered for review — Officer roles and attendance policy:** Officer
 labels, two distinct team types per manager and line, and the session-clock
 workflow with midnight checkout, fractional LOP, scoped two-stage approvals,

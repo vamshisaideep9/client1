@@ -18,7 +18,7 @@ import {
 } from "@/lib/attendance-api";
 import { getMyTeams, listTeams } from "@/lib/staff-teams-api";
 import { roleLabel } from "@/lib/role-label";
-import { ATTENDANCE_STATUS, attendanceCode, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays, previousMonth, requestLabel } from "./attendance-display";
+import { ATTENDANCE_STATUS, attendanceBadges, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays, previousMonth, requestLabel } from "./attendance-display";
 import { AttendancePolicyPanel } from "./attendance-policy-panel";
 import { AttendanceEmploymentDialog } from "./attendance-employment-dialog";
 import { AttendanceCertificateControl } from "./attendance-certificate-control";
@@ -241,13 +241,15 @@ function RosterTable({ roster, dates, daily, edit }: {
               {daily ? <>
                 <td className="p-2">{row ? ATTENDANCE_STATUS[row.status] : "Unrecorded"}{row?.late ? " · Late" : ""}</td>
                 <td className="p-2">{attendanceTime(row?.check_in ?? null)}</td>
-                <td className="p-2">{attendanceTime(row?.check_out ?? null)}{row?.system_check_out && row.system_check_out === row.check_out ? " (system)" : ""}</td>
+                <td className="p-2">{attendanceTime(row?.check_out ?? row?.system_check_out ?? null)}{row?.system_check_out && (!row.check_out || row.system_check_out === row.check_out) ? " (system)" : ""}</td>
                 <td className="p-2">{row ? duration(row.worked_minutes) : "—"}</td>
               </> : dates.map((day) => {
                 const entry = byDay.get(`${member.staff_profile_id}/${day}`);
-                const badge = entry ? attendanceCode(entry) : null;
-                return <td key={day} className="p-2 text-xs">{badge
-                  ? <span className={`rounded px-1 ${badge.tone}`} title={ATTENDANCE_STATUS[entry!.status]}>{badge.code}</span>
+                const badges = entry ? attendanceBadges(entry) : [];
+                return <td key={day} className="p-2 text-xs">{badges.length
+                  ? <div className="flex gap-0.5">{badges.map(({ code, label, tone }) => <span key={code} className={`rounded px-1 ${tone}`} title={label}>
+                    <span aria-hidden="true">{code}</span><span className="sr-only">{label}</span>
+                  </span>)}</div>
                   : entry ? ATTENDANCE_STATUS[entry.status] : "—"}</td>;
               })}
               <td className="p-2">{totalLop / 4}</td>

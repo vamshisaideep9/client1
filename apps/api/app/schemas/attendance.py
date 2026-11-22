@@ -30,6 +30,7 @@ AttendanceStatus = Literal[
 RequestStatus = Literal["pending", "approved", "rejected", "cancelled"]
 AttendanceAdjustment = Literal["late_waiver", "early_exit", "on_duty", "holiday_work", "comp_off"]
 LeaveSession = Literal["morning", "afternoon"]
+AttendanceLeaveCode = Literal["CL", "SL"]
 Reason = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=500)]
 LeaveType = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]{0,31}$")]
 LeaveUnits = Annotated[int, Field(ge=0, le=732)]
@@ -161,6 +162,7 @@ class AttendanceDayRead(BaseModel):
     lop_units: int | None = None
     adjustments: list[AttendanceAdjustment] = Field(default_factory=list)
     leave_sessions: list[LeaveSession] = Field(default_factory=list)
+    leave_codes: list[AttendanceLeaveCode] = Field(default_factory=list)
 
     @field_validator("adjustments", "leave_sessions", mode="before")
     @classmethod

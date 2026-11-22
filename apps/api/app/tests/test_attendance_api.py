@@ -24,13 +24,13 @@ from app.tests.contest_support import (
 
 BASE = "/api/v1/attendance"
 POLICY = {
-    "shift_start_minute": 22 * 60,
+    "shift_start_minute": 9 * 60,
     "shift_minutes": 480,
     "grace_minutes": 10,
     "half_day_minutes": 180,
     "full_day_minutes": 360,
     "weekly_off": [],
-    "leave_quotas": {"annual": 3},
+    "leave_quotas": {"casual_leave": 3},
 }
 pytestmark = pytest.mark.asyncio
 
@@ -46,7 +46,7 @@ async def test_attendance_clock_review_roster_and_export(client, monkeypatch):
     day = attendance.work_date(attendance.utc_now())
     if latest:
         day = max(day, latest.effective_from + attendance.DAY)
-    checked_in = datetime.combine(day, time(22, 30), attendance.IST)
+    checked_in = datetime.combine(day, time(9, 30), attendance.IST)
     monkeypatch.setattr(attendance, "utc_now", lambda: checked_in)
     user, staff = await seed_staff(
         StaffRole.TELECALLER, first_name="=Synthetic", created_at=checked_in - attendance.DAY
@@ -94,7 +94,7 @@ async def test_attendance_clock_review_roster_and_export(client, monkeypatch):
         json={
             "start_day": str(leave_day),
             "end_day": str(leave_day),
-            "leave_type": "annual",
+            "leave_type": "casual_leave",
             "half_day": True,
             "reason": "Appointment",
         },
@@ -117,6 +117,8 @@ async def test_attendance_clock_review_roster_and_export(client, monkeypatch):
     assert response.status_code == 200, response.text
     assert response.json()["total"] == 1
     assert {row["status"] for row in response.json()["days"]} == {"present", "on_leave"}
+    leave = next(row for row in response.json()["days"] if row["day"] == str(leave_day))
+    assert leave["leave_codes"] == ["CL"]
     other = await client.get(f"{BASE}/roster", headers=headers(other_manager), params=params)
     assert other.json()["members"] == [] and other.json()["days"] == []
     assert (
@@ -144,7 +146,7 @@ async def test_attendance_clock_review_roster_and_export(client, monkeypatch):
     assert len(response.json()["decisions"]) == 2
     response = await client.get(f"{BASE}/me", headers=headers(token))
     assert response.json()["balances"] == [
-        {"leave_type": "annual", "allocated_units": 3, "used_units": 0}
+        {"leave_type": "casual_leave", "allocated_units": 3, "used_units": 0}
     ]
 
     corrected = await client.post(

@@ -1,5 +1,18 @@
 # Living implementation plan
 
+**Attendance leave codes, midnight absence and punch chimes**
+
+- Show CL and SL from approved leave in both attendance calendars.
+- At midnight IST, close an open punch and record an absence on the workday
+  when no approved leave or on-duty credit applies.
+- Play distinct confirmation chimes for successful check-in and check-out.
+- Keep previously finalized records and the audited correction workflow.
+- Verified 12 PostgreSQL attendance checks, four Playwright journeys, 1,122
+  web unit tests, and byte-stable API contract generation.
+- Next priority is reviewing the attendance stack and collecting hosted checks.
+  [Upstream review branch](https://github.com/brollysolutions/client1/compare/main...feat/attendance-month-close)
+  · [Mirror #104](https://github.com/vamshisaideep9/client1/pull/104)
+
 **Delivered for review — Monthly attendance close, revisions, and Analytics (slice 5)**
 
 - Officer labels reuse the existing role ID. The team slot now permits one

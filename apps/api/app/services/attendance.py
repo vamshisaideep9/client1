@@ -399,6 +399,20 @@ def require_employment_days(
 
 
 def apply_clock_result(row: AttendanceDay, policy: AttendancePolicy) -> None:
+    if row.check_out is None:
+        row.worked_minutes = 0
+        row.late = False
+        on_duty = "on_duty" in row.adjustments
+        calendar = row.calendar_status
+        if calendar is None:
+            calendar = row.status if row.status in ("holiday", "week_off") else "absent"
+        row.status = "present" if on_duty else "on_leave" if row.leave_units else calendar
+        if policy.session_clock:
+            row.morning_covered = row.afternoon_covered = row.early_exit = False
+            row.uncovered_units = (
+                (2 - row.leave_units) * 2 if calendar == "absent" and not on_duty else 0
+            )
+        return
     if policy.session_clock:
         coverage = session_coverage(row.day, row.check_in, row.check_out)
         row.worked_minutes = coverage.minutes_worked
@@ -462,12 +476,11 @@ async def recalculate_late_penalties(db: AsyncSession, staff_id: UUID, day: date
             row.lop_units = min(4 - 2 * row.leave_units, row.uncovered_units + penalty)
 
 
-def close_expired_day(row: AttendanceDay, policy: AttendancePolicy) -> None:
-    if policy.session_clock:
-        row.system_check_out = row.check_out = midnight_after(row.day)
-        apply_clock_result(row, policy)
-    else:
-        row.status = "missing_checkout"
+async def close_expired_day(db: AsyncSession, row: AttendanceDay, policy: AttendancePolicy) -> None:
+    if row.calendar_status is None:
+        row.status = await day_without_clock(db, row.day, policy, row.business_line)
+    row.system_check_out = midnight_after(row.day)
+    apply_clock_result(row, policy)
 
 
 async def open_day(db: AsyncSession, staff_id: UUID) -> AttendanceDay | None:
@@ -516,7 +529,7 @@ async def check_clock(actor: CurrentUser, *, checking_in: bool) -> AttendanceDay
         active = await open_day(db, profile.id)
         if active is not None:
             policy = await db.get(AttendancePolicy, active.policy_version)
-            if now < shift_cutoff(active.day, policy):
+            if now < midnight_after(active.day):
                 if checking_in:
                     return active
                 active.original_check_out = active.check_out = now
@@ -528,7 +541,7 @@ async def check_clock(actor: CurrentUser, *, checking_in: bool) -> AttendanceDay
                 )
                 await db.commit()
                 return active
-            close_expired_day(active, policy)
+            await close_expired_day(db, active, policy)
             if policy.session_clock:
                 await recalculate_late_penalties(db, profile.id, active.day)
             await db.flush()

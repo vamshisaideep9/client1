@@ -12,12 +12,69 @@ from app.models.attendance import (
     AttendanceEmployment,
     AttendanceHoliday,
     AttendanceLineHoliday,
-    AttendancePolicy,
     AttendanceRequest,
 )
-from app.schemas.attendance import AttendanceInboxRead, AttendanceRosterRead, MyAttendanceRead
+from app.schemas.attendance import (
+    AttendanceDayRead,
+    AttendanceInboxRead,
+    AttendanceLeaveCode,
+    AttendanceRosterRead,
+    MyAttendanceRead,
+)
 from app.services import attendance as clock
 from app.services.attendance_requests import balances
+
+_LEAVE_CODES: dict[str, AttendanceLeaveCode] = {
+    "casual": "CL",
+    "casual_leave": "CL",
+    "cl": "CL",
+    "sick": "SL",
+    "sick_leave": "SL",
+    "sl": "SL",
+}
+
+
+async def _day_reads(
+    db: AsyncSession, days: list[AttendanceDay]
+) -> dict[tuple[UUID, date], AttendanceDayRead]:
+    reads = {}
+    owners = {}
+    request_ids = set()
+    for row in days:
+        key = (row.staff_profile_id, row.day)
+        reads[key] = AttendanceDayRead.model_validate(row)
+        ids = {UUID(owner) for owner in row.leave_sessions.values()}
+        if row.leave_request_id is not None:
+            ids.add(row.leave_request_id)
+        if ids:
+            request_ids.update(ids)
+            owners[key] = ids
+    if request_ids:
+        approved = await db.execute(
+            select(
+                AttendanceRequest.id,
+                AttendanceRequest.staff_profile_id,
+                AttendanceRequest.leave_type,
+            ).where(
+                AttendanceRequest.id.in_(request_ids),
+                AttendanceRequest.kind == "leave",
+                AttendanceRequest.status == "approved",
+                AttendanceRequest.leave_type.in_(_LEAVE_CODES),
+            )
+        )
+        codes = {
+            (staff_id, request_id): _LEAVE_CODES[kind] for request_id, staff_id, kind in approved
+        }
+        for key, ids in owners.items():
+            staff_id, _ = key
+            reads[key].leave_codes = sorted(
+                {
+                    codes[staff_id, request_id]
+                    for request_id in ids
+                    if (staff_id, request_id) in codes
+                }
+            )
+    return reads
 
 
 def validate_period(start: date, end: date) -> None:
@@ -69,27 +126,26 @@ async def personal(
     if line is not None:
         calendar.update({row.day: row for row in await holidays(db, start, end, line)})
     active = await clock.open_day(db, staff_id)
-    if active is not None:
-        day_policy = await db.get(AttendancePolicy, active.policy_version)
-        if now >= clock.shift_cutoff(active.day, day_policy):
-            active = None
+    if active is not None and now >= clock.midnight_after(active.day):
+        active = None
     if active is None:
         active = await db.get(AttendanceDay, (staff_id, today))
+    days = list(
+        await db.scalars(
+            select(AttendanceDay)
+            .where(
+                AttendanceDay.staff_profile_id == staff_id, AttendanceDay.day.between(start, end)
+            )
+            .order_by(AttendanceDay.day)
+        )
+    )
+    reads = await _day_reads(db, [*days, active] if active is not None else days)
     return MyAttendanceRead(
         policy=policy if clock.allows_personal_attendance(role, policy) else None,
         server_time=now,
         work_day=active.day if active else today,
-        today=active,
-        days=list(
-            await db.scalars(
-                select(AttendanceDay)
-                .where(
-                    AttendanceDay.staff_profile_id == staff_id,
-                    AttendanceDay.day.between(start, end),
-                )
-                .order_by(AttendanceDay.day)
-            )
-        ),
+        today=reads[staff_id, active.day] if active is not None else None,
+        days=[reads[staff_id, row.day] for row in days],
         holidays=[calendar[day] for day in sorted(calendar)],
         employment_start=employment.start_day if employment else None,
         employment_end=employment.end_day if employment else None,
@@ -176,7 +232,7 @@ async def roster(
     return AttendanceRosterRead(
         configured=(await clock.policy_for(db, clock.work_date(clock.utc_now()))) is not None,
         members=members,
-        days=days,
+        days=list((await _day_reads(db, days)).values()),
         total=count or 0,
     )
 

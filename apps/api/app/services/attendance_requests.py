@@ -316,7 +316,7 @@ async def _apply_leave(db: AsyncSession, request: AttendanceRequest) -> None:
                 row.status, row.source = "on_leave", "leave"
                 if policy.session_clock and day < clock.work_date(clock.utc_now()):
                     row.uncovered_units = row.lop_units = (2 - row.leave_units) * 2
-            elif row.check_out is not None:
+            elif row.check_out is not None or row.system_check_out is not None:
                 clock.apply_clock_result(row, await db.get(AttendancePolicy, row.policy_version))
                 if policy.session_clock:
                     await clock.recalculate_late_penalties(db, request.staff_profile_id, day)
@@ -386,7 +386,7 @@ async def _undo_leave(db: AsyncSession, request: AttendanceRequest, today: date)
                 row.source = "rollover"
                 if policy.session_clock:
                     row.uncovered_units = row.lop_units = 4 if row.status == "absent" else 0
-        elif row.check_out is not None:
+        elif row.check_out is not None or row.system_check_out is not None:
             clock.apply_clock_result(row, policy)
             if policy.session_clock:
                 await clock.recalculate_late_penalties(db, request.staff_profile_id, day)
@@ -475,11 +475,10 @@ async def _undo_correction(db: AsyncSession, request: AttendanceRequest, now: da
         row.status, row.source = before["status"], before["source"]
         row.worked_minutes, row.late = before["worked_minutes"], before["late"]
         if row.status == "checked_in" and (
-            now >= clock.shift_cutoff(row.day, policy)
-            or await clock.open_day(db, row.staff_profile_id)
+            now >= clock.midnight_after(row.day) or await clock.open_day(db, row.staff_profile_id)
         ):
-            clock.close_expired_day(row, policy)
-        if row.check_out is not None:
+            await clock.close_expired_day(db, row, policy)
+        if row.check_out is not None or row.system_check_out is not None:
             clock.apply_clock_result(row, policy)
     row.correction_request_id = None
     if policy.session_clock:

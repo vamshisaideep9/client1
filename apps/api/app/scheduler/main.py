@@ -308,8 +308,9 @@ def build_scheduler() -> AsyncIOScheduler:
     )
     add_operational_job(
         attendance_rollover,
-        trigger="interval",
-        minutes=5,
+        trigger="cron",
+        minute="*/5",
+        timezone="Asia/Kolkata",
         id="attendance_rollover",
         max_instances=1,
         coalesce=True,

@@ -6684,6 +6684,17 @@
             "title": "Late",
             "type": "boolean"
           },
+          "leave_codes": {
+            "items": {
+              "enum": [
+                "CL",
+                "SL"
+              ],
+              "type": "string"
+            },
+            "title": "Leave Codes",
+            "type": "array"
+          },
           "leave_sessions": {
             "items": {
               "enum": [
