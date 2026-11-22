@@ -28,15 +28,17 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import Numeric, String, case, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.models.banner import Banner, BannerPlacement, BannerStatus, BannerTemplate, BannerType
 from app.models.content_block import ContentBlock, ContentStatus
-from app.models.property import Property
+from app.models.property import ListingIntent, Property
+from app.schemas.properties import PublicPropertySearch
 
 PUBLIC_CATALOG_PER_CATEGORY = 12
+PUBLIC_PROPERTY_SEARCH_PAGE_SIZE = 24
 
 # Flat per-placement caps, not a row_number() window like properties. Every
 # public carousel is deliberately kept to seven slides so the shared autoplay,
@@ -89,6 +91,92 @@ async def list_public_properties(db: AsyncSession) -> Sequence[Property]:
     )
     result = await db.execute(stmt)
     return result.scalars().all()
+
+
+async def search_public_properties(
+    db: AsyncSession, filters: PublicPropertySearch
+) -> tuple[Sequence[Property], int]:
+    """Filter the public inventory before pagination, including older listings."""
+    conditions = [Property.active.is_(True)]
+    if filters.mode:
+        conditions.append(
+            Property.listing_intent
+            == (ListingIntent.RENT if filters.mode == "rent" else ListingIntent.SALE)
+        )
+    if filters.mode == "resale":
+        conditions.append(
+            func.coalesce(
+                Property.sale_classification, Property.structured_details["sale_type"].astext
+            )
+            == "resale"
+        )
+    if location := (filters.location or "").strip():
+        conditions.append(
+            or_(
+                Property.city.icontains(location, autoescape=True),
+                Property.locality.icontains(location, autoescape=True),
+                Property.location.icontains(location, autoescape=True),
+            )
+        )
+    if filters.property_type:
+        conditions.append(
+            func.coalesce(Property.catalog_type_code, cast(Property.property_subtype, String))
+            == filters.property_type
+        )
+    if filters.bhk:
+        configuration = filters.bhk.replace(".", "_").replace("+", "_plus") + "_bhk"
+        legacy = (
+            Property.bhk >= 5
+            if filters.bhk == "5+"
+            else Property.bhk == int(filters.bhk)
+            if "." not in filters.bhk
+            else Property.bhk == -1
+        )
+        conditions.append(
+            or_(legacy, Property.structured_details["configurations"].contains([configuration]))
+        )
+    if filters.budget_min is not None:
+        conditions.append(Property.price_paise >= filters.budget_min * 100)
+    if filters.budget_max is not None:
+        conditions.append(Property.price_paise <= filters.budget_max * 100)
+    if filters.area_min is not None or filters.area_max is not None:
+        lower_area, upper_area = _public_property_area()
+        if filters.area_min is not None:
+            conditions.append(upper_area >= filters.area_min)
+        if filters.area_max is not None:
+            conditions.extend([lower_area > 0, lower_area <= filters.area_max])
+    total = await db.scalar(select(func.count()).select_from(Property).where(*conditions))
+    listings = await db.scalars(
+        select(Property)
+        .where(*conditions)
+        .order_by(Property.created_at.desc(), Property.id.desc())
+        .offset((filters.page - 1) * PUBLIC_PROPERTY_SEARCH_PAGE_SIZE)
+        .limit(PUBLIC_PROPERTY_SEARCH_PAGE_SIZE)
+    )
+    return listings.all(), total or 0
+
+
+def _public_property_area():
+    """Compare published area ranges in square feet, including agricultural land."""
+    details = Property.structured_details
+    land_area = case(
+        (
+            func.jsonb_typeof(details["land_area"]) == "number",
+            cast(details["land_area"].astext, Numeric),
+        )
+    )
+    unit = details["land_area_unit"].astext
+    lower = case(
+        (unit == "acres", land_area * 43_560),
+        (unit == "guntas", land_area * 1_089),
+        else_=Property.area_sqft,
+    )
+    maximum = details["unit_or_plot_area_max_sqft"]
+    upper = case(
+        (func.jsonb_typeof(maximum) == "number", cast(maximum.astext, Numeric)),
+        else_=lower,
+    )
+    return lower, upper
 
 
 async def get_public_property(db: AsyncSession, property_id: UUID) -> Property | None:

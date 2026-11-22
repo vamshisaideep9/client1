@@ -83,13 +83,13 @@ export async function serverFetchJson<TResponse>(
     // Node's TimeoutError is a DOMException. Passing it to Next's logger as a
     // raw object also prints every inherited legacy DOM error constant, burying
     // the useful name/message in a large, misleading dump.
-    console.error("serverFetchJson.network_error", path, errorDetail(error));
+    console.error("serverFetchJson.network_error", path.split("?")[0], errorDetail(error));
     return { ok: false, status: 0, error: NETWORK_ERROR };
   }
 
   if (!res.ok) {
     if (!expectedStatuses.includes(res.status)) {
-      console.error("serverFetchJson.http_error", path, res.status);
+      console.error("serverFetchJson.http_error", path.split("?")[0], res.status);
     }
     return { ok: false, status: res.status, error: errorMessage(res.status) };
   }

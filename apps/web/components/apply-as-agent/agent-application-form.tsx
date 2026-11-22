@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import type { WebsiteContent } from "@/lib/website-content";
 import {
   BadgeCheck,
   Camera,
@@ -106,8 +107,10 @@ function SectionHeader({
 
 export function AgentApplicationForm({
   defaultLine = "loans",
+  copy,
 }: {
   defaultLine?: LeadBusinessLine;
+  copy?: WebsiteContent["form_copy"];
 }) {
   const [line, setLine] = React.useState<LeadBusinessLine>(defaultLine);
   const [fields, setFields] = React.useState<Fields>(EMPTY_FIELDS);
@@ -493,7 +496,7 @@ export function AgentApplicationForm({
         <SectionHeader title="Contact" />
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="grid gap-2">
-            <Label htmlFor="apply-mobile">Phone number</Label>
+            <Label htmlFor="apply-mobile">{copy?.mobile || "Phone number"}</Label>
             <MobileInput
               id="apply-mobile"
               value={fields.mobile}
@@ -512,7 +515,7 @@ export function AgentApplicationForm({
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="apply-email">Email</Label>
+            <Label htmlFor="apply-email">{copy?.email || "Email"}</Label>
             <IconInput
               id="apply-email"
               icon={Mail}
@@ -652,7 +655,7 @@ export function AgentApplicationForm({
         className="h-12 bg-[var(--nav-primary)] text-base text-white hover:bg-[var(--nav-primary-hover)] focus-visible:ring-ring"
       >
         {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-        {submitting ? "Sending code..." : "Continue"}
+        {submitting ? "Sending code..." : copy?.submit || "Continue"}
       </Button>
     </form>
   );

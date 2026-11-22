@@ -1,5 +1,8 @@
 "use client";
 
+import type { components } from "@contracts/generated/schema";
+import { apiRequest } from "@/lib/api/client";
+
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -53,6 +56,17 @@ export function AppSidebar({
   const { activeLine } = useLine();
   const { count: bookmarkCount } = useBookmarks();
   const { session } = useAuth();
+  const token = session?.accessToken;
+  const role = session?.role;
+  const [websiteAccessToken, setWebsiteAccessToken] = React.useState<string>();
+  React.useEffect(() => {
+    if (!token || (role !== "admin" && role !== "sub_admin")) return;
+    let active = true;
+    void apiRequest<components["schemas"]["WebsiteAccess"]>("/api/v1/website-content/access").then((result) => {
+      if (active) setWebsiteAccessToken(result.ok && result.data.can_edit ? token : undefined);
+    });
+    return () => { active = false; };
+  }, [role, token]);
   const { me, status: meStatus } = useMe();
   const managesTeam = useManagesTeam(session?.role, session?.accessToken);
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -90,6 +104,7 @@ export function AppSidebar({
         managesTeam,
         subAdminAccess: me?.subAdminAccess,
         subAdminAccessLoading: meStatus !== "ready",
+        websiteDraftAccess: token != null && token === websiteAccessToken,
       })
     : [];
 

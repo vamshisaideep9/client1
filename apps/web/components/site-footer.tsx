@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 
 import { FOOTER_COLUMNS, LEGAL_LINKS } from "@/components/footer-links";
 import { Logo } from "@/components/logo";
-import { BUSINESS_FACTS, SITE_CONTACT, SITE_NAME, TRUST_LINES } from "@/lib/site";
+import { BUSINESS_FACTS, SITE_CONTACT, SITE_NAME, SITE_WHATSAPP_HREF, TRUST_LINES } from "@/lib/site";
 import type { PublicServiceLink } from "@/components/navbars/financial-services-menu";
 
 // Server-rendered navigation with native office disclosure on small screens.
@@ -59,7 +59,10 @@ export function SiteFooter({ products = [] }: { products?: readonly PublicServic
             <h2 className="font-heading text-sm font-semibold text-brand-heading">Get in touch</h2>
             <div className="mt-3 flex flex-col items-start">
               <a href={SITE_CONTACT.phoneHref} className="pressable inline-flex min-h-11 items-center rounded-sm py-2 text-base font-medium text-brand-heading transition-colors hover:text-brand-link focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
-                {SITE_CONTACT.phone}
+                Call {SITE_CONTACT.phone}
+              </a>
+              <a href={SITE_WHATSAPP_HREF} className="inline-flex min-h-11 items-center rounded-sm py-2 text-sm font-medium text-brand-link hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
+                WhatsApp
               </a>
               <a href={SITE_CONTACT.emailHref} className="pressable inline-flex min-h-11 max-w-full items-center break-all rounded-sm py-2 text-sm text-text-secondary transition-colors hover:text-brand-link focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
                 {SITE_CONTACT.email}

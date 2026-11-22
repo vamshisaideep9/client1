@@ -1,5 +1,21 @@
 # Living implementation plan
 
+**Website Content and public catalog**
+
+- Add Main Admin publishing and restoration, revocable staff draft access,
+  page and FAQ editing, and published knowledge articles. Existing copy
+  supplies the defaults for pages that have no published revision.
+- Reuse financial and property workspaces for catalog changes. Browser
+  visitors can call or message on WhatsApp, and public loan pages use the
+  enquiry path. Insurance awaits business confirmation before publication.
+- Publish configurable property types through existing listing forms. Search
+  published properties by sale, resale, or rent and lease, and combine
+  location, type, budget, bedrooms, and area before pagination.
+- Roll out the two additive migrations with the API and web app. Success
+  stories, milestones, and articles can be populated with approved material.
+  [Upstream comparison](https://github.com/brollysolutions/client1/compare/main...feat/website-content-catalog)
+  · [Mirror comparison](https://github.com/vamshisaideep9/client1/compare/main...feat/website-content-catalog)
+
 **Attendance leave codes, midnight absence and punch chimes**
 
 - Show CL and SL from approved leave in both attendance calendars.

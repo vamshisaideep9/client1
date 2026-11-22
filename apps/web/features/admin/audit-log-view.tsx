@@ -390,6 +390,7 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   content_block_updated: { label: "Content block updated", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
   content_block_published: { label: "Content block published", icon: Megaphone, tone: "bg-success/10 text-success" },
   content_block_archived: { label: "Content block archived", icon: Archive, tone: "bg-muted text-text-secondary" },
+  website_content_changed: { label: "Website content changed", icon: ScrollText, tone: "bg-muted text-text-secondary" },
   loan_application_updated: { label: "Loan application updated", icon: ClipboardList, tone: "bg-loans-soft text-brand-link" },
   property_deal_updated: { label: "Property deal updated", icon: Home, tone: "bg-realestate-soft text-brand-link" },
   agent_lead_resubmitted: { label: "Agent lead resubmitted", icon: RefreshCw, tone: "bg-loans-soft text-brand-link" },

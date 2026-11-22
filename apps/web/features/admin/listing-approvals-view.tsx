@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import * as React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -342,6 +344,7 @@ export function ListingApprovalsView() {
         title="Listing approvals"
         description="Review Agent, Admin, and Sub Admin listings before publishing them to the catalog."
       />
+      <div><Button asChild variant="outline"><Link href="/dashboard/property-review/types">Manage property types</Link></Button></div>
 
       <Tabs value={tab} onValueChange={setTab} className="gap-5">
         <TabsList>

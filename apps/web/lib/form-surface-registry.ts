@@ -7,6 +7,9 @@
 export type FormSurfaceKind = "mutation" | "filter" | "calculator" | "composite";
 
 export const FORM_SURFACE_REGISTRY = {
+  "components/public-property-search.tsx": "filter",
+  "features/admin/website-content-editor.tsx": "mutation",
+  "features/admin/property-type-editor.tsx": "mutation",
   "features/attendance/staff-attendance-view.tsx": "mutation",
   "features/attendance/attendance-management-view.tsx": "mutation",
   "features/attendance/attendance-policy-panel.tsx": "mutation",

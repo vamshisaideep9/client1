@@ -12,7 +12,7 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.models.property import (
     ConstructionStatus,
@@ -24,7 +24,7 @@ from app.models.property import (
     ReraVerificationStatus,
 )
 from app.schemas.listing_links import StoredListingLinks
-from app.schemas.property_details import PropertyStructuredDetails
+from app.schemas.property_details import PropertyStructuredDetails, SaleType
 
 
 class PropertyMediaRead(BaseModel):
@@ -79,6 +79,51 @@ class AdminPropertyStatusUpdate(BaseModel):
     reason: str = Field(min_length=1, max_length=1000)
 
 
+class PublicPropertySearch(BaseModel):
+    mode: Literal["sale", "resale", "rent"] | None = None
+    location: str | None = Field(default=None, max_length=120)
+    property_type: str | None = Field(default=None, max_length=40, pattern=r"^[a-z0-9_]+$")
+    budget_min: int | None = Field(default=None, ge=0, le=10**12)
+    budget_max: int | None = Field(default=None, ge=0, le=10**12)
+    area_min: int | None = Field(default=None, ge=1, le=10**9)
+    area_max: int | None = Field(default=None, ge=1, le=10**9)
+    bhk: Literal["1", "2", "2.5", "3", "3.5", "4", "5+"] | None = None
+    page: int = Field(default=1, ge=1, le=10000)
+
+    @model_validator(mode="after")
+    def validate_ranges(self):
+        if (self.budget_min is not None or self.budget_max is not None) and not self.mode:
+            raise ValueError("Choose sale, resale, or rent / lease before filtering by budget.")
+        if (
+            self.budget_min is not None
+            and self.budget_max is not None
+            and self.budget_min > self.budget_max
+        ):
+            raise ValueError("The maximum budget must be at least the minimum.")
+        if (
+            self.area_min is not None
+            and self.area_max is not None
+            and self.area_min > self.area_max
+        ):
+            raise ValueError("The maximum area must be at least the minimum.")
+        return self
+
+
+class PropertyCatalogTypeWrite(BaseModel):
+    label: str = Field(min_length=1, max_length=40, pattern=r"^\S(?:.*\S)?$")
+    form_subtype: PropertySubtype
+
+
+class PropertyCatalogTypeUpdate(BaseModel):
+    label: str = Field(min_length=1, max_length=40, pattern=r"^\S(?:.*\S)?$")
+    active: bool
+
+
+class PropertyCatalogTypeRead(PropertyCatalogTypeWrite):
+    code: str
+    active: bool
+
+
 class PublicPropertyRead(BaseModel):
     """Anonymous-read shape (docs/specs/public-property-catalog.md).
 
@@ -107,6 +152,8 @@ class PublicPropertyRead(BaseModel):
     media: list[PropertyMediaRead] = Field(default_factory=list)
     category: PropertyCategory
     property_subtype: PropertySubtype | None
+    catalog_type_code: str | None = None
+    sale_classification: SaleType | None = None
     rera_number: str | None
     rera_verification_status: ReraVerificationStatus
     structured_details: PropertyStructuredDetails | None
@@ -114,6 +161,12 @@ class PublicPropertyRead(BaseModel):
 
 class PublicPropertyListResponse(BaseModel):
     properties: list[PublicPropertyRead]
+
+
+class PublicPropertySearchResponse(PublicPropertyListResponse):
+    page: int
+    total: int
+    page_size: int
 
 
 class PublicPropertyDetailRead(BaseModel):
@@ -144,6 +197,8 @@ class PublicPropertyDetailRead(BaseModel):
     media: list[PropertyMediaRead] = Field(default_factory=list)
     category: PropertyCategory
     property_subtype: PropertySubtype | None
+    catalog_type_code: str | None = None
+    sale_classification: SaleType | None = None
     city: str
     locality: str
     state: str | None

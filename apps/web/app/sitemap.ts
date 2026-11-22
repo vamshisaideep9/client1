@@ -3,6 +3,7 @@ import type { MetadataRoute } from "next";
 import { CALCULATOR_SLUGS } from "@/lib/calculators/registry";
 import { financialServiceHref } from "@/lib/products";
 import { getPublishedServiceProducts } from "@/lib/financial-catalog";
+import { getWebsiteArticles } from "@/lib/public-website-content";
 import { SITE_URL } from "@/lib/site";
 
 export const revalidate = 0;
@@ -20,16 +21,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/contact",
     "/get-started",
     "/help-center",
+    "/knowledge",
     "/privacy",
     "/terms",
     "/cookies",
   ];
   const calculatorPaths = CALCULATOR_SLUGS.map((slug) => `/calculators/${slug}`);
-  const products = await getPublishedServiceProducts();
+  const [products, articles] = await Promise.all([getPublishedServiceProducts(), getWebsiteArticles()]);
   const servicePaths = [...new Set(products.map((product) => financialServiceHref(product.slug)))];
-  return [...staticPaths, ...calculatorPaths, ...servicePaths].map((path) => ({
+  return [...[...staticPaths, ...calculatorPaths, ...servicePaths].map((path) => ({
     url: `${SITE_URL}${path}`,
     changeFrequency: "monthly",
     priority: path === "" ? 1 : 0.7,
-  }));
+  } as const)), ...articles.map(({ key, published_at }) => ({
+    url: `${SITE_URL}/knowledge/${key.slice("article/".length)}`,
+    lastModified: published_at,
+  }))];
 }

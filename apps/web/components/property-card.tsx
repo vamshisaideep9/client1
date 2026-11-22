@@ -56,7 +56,7 @@ export function PropertyCard({ listing }: { listing: PropertyListing }) {
                 For rent / lease
               </span>
             ) : null}
-            {listing.listingIntent === "sale" && listingSaleType(listing.structuredDetails) === "resale" ? (
+            {listing.listingIntent === "sale" && (listing.saleClassification ?? listingSaleType(listing.structuredDetails)) === "resale" ? (
               <span className="rounded-full bg-sky-100/95 px-2.5 py-1 text-xs font-semibold text-sky-900 ring-1 ring-sky-200">
                 Resale
               </span>

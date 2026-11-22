@@ -1047,6 +1047,41 @@ export interface paths {
         patch: operations["update_property_deal_progress_api_v1_admin_property_deals__deal_id__patch"];
         trace?: never;
     };
+    "/api/v1/admin/property-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Managed Types */
+        get: operations["managed_types_api_v1_admin_property_types_get"];
+        put?: never;
+        /** Add Type */
+        post: operations["add_type_api_v1_admin_property_types_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/property-types/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Type */
+        patch: operations["update_type_api_v1_admin_property_types__code__patch"];
+        trace?: never;
+    };
     "/api/v1/admin/provider-logos/upload-url": {
         parameters: {
             query?: never;
@@ -5627,6 +5662,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/properties/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Properties Public */
+        get: operations["search_properties_public_api_v1_public_properties_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/properties/{property_id}": {
         parameters: {
             query?: never;
@@ -5636,6 +5688,57 @@ export interface paths {
         };
         /** Get Property Public */
         get: operations["get_property_public_api_v1_public_properties__property_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/property-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Types */
+        get: operations["public_types_api_v1_public_property_types_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/website-content/articles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Articles */
+        get: operations["public_articles_api_v1_public_website_content_articles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/website-content/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Document */
+        get: operations["public_document_api_v1_public_website_content__key__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6255,6 +6358,126 @@ export interface paths {
         };
         /** Transaction Detail */
         get: operations["transaction_detail_api_v1_transactions__transaction_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/website-content/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Access */
+        get: operations["access_api_v1_website_content_access_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/website-content/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Documents */
+        get: operations["documents_api_v1_website_content_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/website-content/documents/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Document */
+        get: operations["document_api_v1_website_content_documents__key__get"];
+        /** Update Document */
+        put: operations["update_document_api_v1_website_content_documents__key__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/website-content/editors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Editors */
+        get: operations["editors_api_v1_website_content_editors_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/website-content/editors/{profile_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Editor */
+        put: operations["update_editor_api_v1_website_content_editors__profile_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/website-content/publish/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish */
+        post: operations["publish_api_v1_website_content_publish__key__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/website-content/revisions/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Revisions */
+        get: operations["revisions_api_v1_website_content_revisions__key__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7008,6 +7231,8 @@ export interface components {
              * @default 0
              */
             bhk: number;
+            /** Catalog Type Code */
+            catalog_type_code?: string | null;
             category: components["schemas"]["PropertyCategory"];
             /** City */
             city: string;
@@ -7037,6 +7262,7 @@ export interface components {
             rera_applicability: components["schemas"]["ReraApplicability"];
             /** Rera Number */
             rera_number?: string | null;
+            sale_classification?: components["schemas"]["SaleType"] | null;
             /** Security Deposit Paise */
             security_deposit_paise?: number | null;
             /** State */
@@ -9083,7 +9309,7 @@ export interface components {
          *     `services/fee_cashbacks.py` (FR-6.6 processing-fee cashback).
          * @enum {string}
          */
-        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_specialty_updated" | "staff_feature_granted" | "staff_feature_revoked" | "sub_admin_access_updated" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "contact_history_viewed" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded" | "contest_created" | "contest_updated" | "attendance_updated" | "attendance_exported" | "contest_submitted" | "contest_deleted" | "contest_approved" | "contest_rejected" | "contest_cancelled" | "contest_went_live" | "contest_ended" | "contest_recalculated" | "contest_finalized" | "contest_prize_payout_requested" | "contest_prize_marked_paid" | "agent_leads_bulk_submitted" | "commission_rate_proposed" | "commission_rate_set" | "commission_rate_approved" | "commission_rate_rejected" | "commission_rate_withdrawn";
+        AuditAction: "agent_approved" | "agent_rejected" | "staff_created" | "staff_specialty_updated" | "staff_feature_granted" | "staff_feature_revoked" | "sub_admin_access_updated" | "staff_invite_created" | "staff_invite_revoked" | "account_removed" | "account_status_updated" | "payout_approved" | "payout_rejected" | "payout_manual_issued" | "payout_manual_cleared" | "payout_manual_failed" | "payout_manual_reversed" | "property_submission_approved" | "property_submission_rejected" | "property_listing_updated" | "property_listing_corrected" | "support_ticket_advanced" | "retention_purged" | "loan_type_created" | "loan_type_updated" | "loan_type_deleted" | "bank_created" | "bank_updated" | "bank_deleted" | "bank_availability_updated" | "agent_invite_created" | "agent_invite_revoked" | "financial_product_offer_created" | "financial_product_offer_updated" | "commission_entered" | "commission_cancelled" | "fee_cashback_entered" | "fee_cashback_cancelled" | "document_verified" | "document_unverified" | "payout_link_reconciled" | "notification_broadcast" | "agent_lead_expired" | "lead_assigned" | "employee_work_assigned" | "employee_task_reopened" | "lead_details_updated" | "field_visibility_updated" | "mobile_change_verified" | "mobile_changed" | "mobile_change_rejected" | "contact_changed" | "contact_change_requested" | "contact_change_rejected" | "contact_history_viewed" | "vehicle_arrangement_updated" | "banner_created" | "banner_updated" | "banner_submitted" | "banner_approved" | "banner_rejected" | "banner_archived" | "banner_activated" | "banner_deleted" | "banner_template_versioned" | "referral_rule_created" | "referral_rule_updated" | "referral_rule_deleted" | "offer_created" | "offer_updated" | "offer_submitted" | "offer_approved" | "offer_rejected" | "offer_scheduled" | "offer_activated" | "offer_expired" | "offer_archived" | "offer_deleted" | "campaign_media_created" | "campaign_media_updated" | "campaign_media_archived" | "campaign_media_deleted" | "content_block_created" | "content_block_updated" | "content_block_published" | "content_block_archived" | "website_content_changed" | "loan_application_updated" | "property_deal_updated" | "agent_lead_resubmitted" | "agent_payout_details_updated" | "agent_payout_details_deleted" | "agent_payout_details_viewed" | "staff_team_created" | "staff_team_updated" | "staff_team_archived" | "staff_team_member_added" | "staff_team_member_removed" | "team_lead_viewed" | "team_lead_reassigned" | "team_task_reassigned" | "team_lead_status_updated" | "team_task_updated" | "team_note_added" | "team_task_viewed" | "client_export_downloaded" | "contest_created" | "contest_updated" | "attendance_updated" | "attendance_exported" | "contest_submitted" | "contest_deleted" | "contest_approved" | "contest_rejected" | "contest_cancelled" | "contest_went_live" | "contest_ended" | "contest_recalculated" | "contest_finalized" | "contest_prize_payout_requested" | "contest_prize_marked_paid" | "agent_leads_bulk_submitted" | "commission_rate_proposed" | "commission_rate_set" | "commission_rate_approved" | "commission_rate_rejected" | "commission_rate_withdrawn";
         /** AuditLogListResponse */
         AuditLogListResponse: {
             /** Entries */
@@ -13318,6 +13544,29 @@ export interface components {
             /** Unit Or Plot Area Sqft */
             unit_or_plot_area_sqft: number;
         };
+        /** PropertyCatalogTypeRead */
+        PropertyCatalogTypeRead: {
+            /** Active */
+            active: boolean;
+            /** Code */
+            code: string;
+            form_subtype: components["schemas"]["PropertySubtype"];
+            /** Label */
+            label: string;
+        };
+        /** PropertyCatalogTypeUpdate */
+        PropertyCatalogTypeUpdate: {
+            /** Active */
+            active: boolean;
+            /** Label */
+            label: string;
+        };
+        /** PropertyCatalogTypeWrite */
+        PropertyCatalogTypeWrite: {
+            form_subtype: components["schemas"]["PropertySubtype"];
+            /** Label */
+            label: string;
+        };
         /**
          * PropertyCategory
          * @enum {string}
@@ -13838,6 +14087,8 @@ export interface components {
             available_from: string | null;
             /** Bhk */
             bhk: number;
+            /** Catalog Type Code */
+            catalog_type_code?: string | null;
             category: components["schemas"]["PropertyCategory"];
             /** City */
             city: string;
@@ -13876,6 +14127,7 @@ export interface components {
             /** Rera Number */
             rera_number: string | null;
             rera_verification_status: components["schemas"]["ReraVerificationStatus"];
+            sale_classification?: components["schemas"]["SaleType"] | null;
             /** Security Deposit Display */
             security_deposit_display?: string | null;
             /** State */
@@ -13908,6 +14160,8 @@ export interface components {
          *     information; the rent terms behind it stay on the detail shape.
          */
         PublicPropertyRead: {
+            /** Catalog Type Code */
+            catalog_type_code?: string | null;
             category: components["schemas"]["PropertyCategory"];
             /** Developer Name */
             developer_name?: string | null;
@@ -13933,12 +14187,24 @@ export interface components {
             /** Rera Number */
             rera_number: string | null;
             rera_verification_status: components["schemas"]["ReraVerificationStatus"];
+            sale_classification?: components["schemas"]["SaleType"] | null;
             /** Structured Details */
             structured_details: (components["schemas"]["ProjectResidenceDetails"] | components["schemas"]["IndividualPropertyDetails"] | components["schemas"]["CommercialPropertyDetails"] | components["schemas"]["PlotDetails"] | components["schemas"]["AgriculturalLandDetails"]) | null;
             /** Title */
             title: string;
             /** Type */
             type: string;
+        };
+        /** PublicPropertySearchResponse */
+        PublicPropertySearchResponse: {
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Properties */
+            properties: components["schemas"]["PublicPropertyRead"][];
+            /** Total */
+            total: number;
         };
         /** PublicProviderOfferListResponse */
         PublicProviderOfferListResponse: {
@@ -13996,6 +14262,17 @@ export interface components {
             /** Name */
             name: string;
             provider_type: components["schemas"]["ProviderType"];
+        };
+        /** PublicWebsiteContent */
+        PublicWebsiteContent: {
+            content: components["schemas"]["WebsiteContent"];
+            /** Key */
+            key: string;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
         };
         /** PushSubscribeRequest */
         PushSubscribeRequest: {
@@ -15116,6 +15393,8 @@ export interface components {
              * @default 0
              */
             bhk: number;
+            /** Catalog Type Code */
+            catalog_type_code?: string | null;
             category: components["schemas"]["PropertyCategory"];
             /** City */
             city: string;
@@ -15145,6 +15424,7 @@ export interface components {
             rera_applicability: components["schemas"]["ReraApplicability"];
             /** Rera Number */
             rera_number?: string | null;
+            sale_classification?: components["schemas"]["SaleType"] | null;
             /** Security Deposit Paise */
             security_deposit_paise?: number | null;
             /** State */
@@ -15220,6 +15500,8 @@ export interface components {
             available_from: string | null;
             /** Bhk */
             bhk: number;
+            /** Catalog Type Code */
+            catalog_type_code?: string | null;
             category: components["schemas"]["PropertyCategory"];
             /** City */
             city: string;
@@ -15275,6 +15557,7 @@ export interface components {
             reviewed_at: string | null;
             /** Reviewed By Uuid */
             reviewed_by_uuid: string | null;
+            sale_classification?: components["schemas"]["SaleType"] | null;
             /** Security Deposit Paise */
             security_deposit_paise: number | null;
             /** State */
@@ -15326,6 +15609,8 @@ export interface components {
              * @default 0
              */
             bhk: number;
+            /** Catalog Type Code */
+            catalog_type_code?: string | null;
             category: components["schemas"]["PropertyCategory"];
             /** City */
             city: string;
@@ -15353,6 +15638,7 @@ export interface components {
             rera_applicability: components["schemas"]["ReraApplicability"];
             /** Rera Number */
             rera_number?: string | null;
+            sale_classification?: components["schemas"]["SaleType"] | null;
             /** Security Deposit Paise */
             security_deposit_paise?: number | null;
             /** State */
@@ -16692,6 +16978,113 @@ export interface components {
              * @default ok
              */
             status: string;
+        };
+        /** WebsiteAccess */
+        WebsiteAccess: {
+            /** Can Edit */
+            can_edit: boolean;
+            /** Can Publish */
+            can_publish: boolean;
+        };
+        /** WebsiteContent */
+        WebsiteContent: {
+            /**
+             * Body
+             * @default
+             */
+            body: string;
+            /** Faq */
+            faq?: components["schemas"]["WebsiteFAQ"][] | null;
+            /** Form Copy */
+            form_copy?: {
+                [key: string]: string;
+            };
+            /** Sections */
+            sections?: components["schemas"]["WebsiteEntry"][];
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+        };
+        /** WebsiteDocumentRead */
+        WebsiteDocumentRead: {
+            draft: components["schemas"]["WebsiteContent"];
+            /** Key */
+            key: string;
+            /** Published Revision */
+            published_revision: number | null;
+            /** Version */
+            version: number;
+        };
+        /** WebsiteDraftWrite */
+        WebsiteDraftWrite: {
+            content: components["schemas"]["WebsiteContent"];
+            /** Expected Version */
+            expected_version: number;
+        };
+        /** WebsiteEditor */
+        WebsiteEditor: {
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "admin" | "sub_admin";
+            /** Staff Code */
+            staff_code: string;
+        };
+        /** WebsiteEntry */
+        WebsiteEntry: {
+            /** Body */
+            body: string;
+            /** Title */
+            title: string;
+        };
+        /** WebsiteFAQ */
+        WebsiteFAQ: {
+            /** Answer */
+            answer: string;
+            /** Question */
+            question: string;
+        };
+        /** WebsiteGrantWrite */
+        WebsiteGrantWrite: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** WebsitePublishWrite */
+        WebsitePublishWrite: {
+            /** Expected Version */
+            expected_version: number;
+            /** Restore Revision */
+            restore_revision?: number | null;
+        };
+        /** WebsiteRevisionRead */
+        WebsiteRevisionRead: {
+            /**
+             * Actor Id
+             * Format: uuid
+             */
+            actor_id: string;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Revision */
+            revision: number;
         };
         /**
          * YesNoUnknown
@@ -18744,6 +19137,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminPropertyDealRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    managed_types_api_v1_admin_property_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyCatalogTypeRead"][];
+                };
+            };
+        };
+    };
+    add_type_api_v1_admin_property_types_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyCatalogTypeWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyCatalogTypeRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_type_api_v1_admin_property_types__code__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyCatalogTypeUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyCatalogTypeRead"];
                 };
             };
             /** @description Validation Error */
@@ -28253,6 +28734,45 @@ export interface operations {
             };
         };
     };
+    search_properties_public_api_v1_public_properties_search_get: {
+        parameters: {
+            query?: {
+                mode?: ("sale" | "resale" | "rent") | null;
+                location?: string | null;
+                property_type?: string | null;
+                budget_min?: number | null;
+                budget_max?: number | null;
+                area_min?: number | null;
+                area_max?: number | null;
+                bhk?: ("1" | "2" | "2.5" | "3" | "3.5" | "4" | "5+") | null;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPropertySearchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_property_public_api_v1_public_properties__property_id__get: {
         parameters: {
             query?: never;
@@ -28271,6 +28791,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicPropertyDetailRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_types_api_v1_public_property_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyCatalogTypeRead"][];
+                };
+            };
+        };
+    };
+    public_articles_api_v1_public_website_content_articles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicWebsiteContent"][];
+                };
+            };
+        };
+    };
+    public_document_api_v1_public_website_content__key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicWebsiteContent"];
                 };
             };
             /** @description Validation Error */
@@ -29471,6 +30062,231 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TransactionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    access_api_v1_website_content_access_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteAccess"];
+                };
+            };
+        };
+    };
+    documents_api_v1_website_content_documents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+        };
+    };
+    document_api_v1_website_content_documents__key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteDocumentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_document_api_v1_website_content_documents__key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteDraftWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteDocumentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    editors_api_v1_website_content_editors_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteEditor"][];
+                };
+            };
+        };
+    };
+    update_editor_api_v1_website_content_editors__profile_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteGrantWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_api_v1_website_content_publish__key__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsitePublishWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteDocumentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revisions_api_v1_website_content_revisions__key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteRevisionRead"][];
                 };
             };
             /** @description Validation Error */

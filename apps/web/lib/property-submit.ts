@@ -207,6 +207,9 @@ export type SubmitFormState = {
   /** Up to MAX_PANORAMAS equirectangular 360 images. */
   panoramas: File[];
   propertySubtype: PropertySubtype | "";
+  catalogTypeCode?: string;
+  saleClassification?: Schemas["SaleType"] | "";
+  bedrooms?: string;
   city: string;
   locality: string;
   state: string;
@@ -443,6 +446,9 @@ export function buildSubmissionUpdatePayload(form: SubmitFormState): SubmissionU
     meta: orNull(form.meta),
     category: subtype.category,
     property_subtype: subtype.value,
+    ...(form.catalogTypeCode !== undefined ? { catalog_type_code: form.catalogTypeCode || null } : {}),
+    ...(form.saleClassification && !isRent && (family === "individual" || family === "agricultural")
+      ? { sale_classification: form.saleClassification } : {}),
     city: form.city.trim(),
     locality: form.locality.trim(),
     state: form.state.trim(),
@@ -455,7 +461,7 @@ export function buildSubmissionUpdatePayload(form: SubmitFormState): SubmissionU
     minimum_lease_months: isRent ? toInt(form.minimumLeaseMonths) : null,
     available_from: isRent ? orNull(form.availableFrom) : null,
     listing_links: listingLinksPayload(form),
-    bhk: 0,
+    bhk: family === "individual" && form.bedrooms ? toInt(form.bedrooms) : 0,
     area_sqft: areaSqft,
     furnishing:
       family === "project" || family === "commercial" ? (form.furnishing || null) : null,
@@ -593,6 +599,9 @@ export function submissionToFormState(submission: SubmissionRead): SubmitFormSta
     documents: [],
     panoramas: [],
     propertySubtype: submission.property_subtype ?? "",
+    catalogTypeCode: submission.catalog_type_code ?? "",
+    saleClassification: submission.sale_classification ?? "",
+    bedrooms: submission.bhk ? String(submission.bhk) : "",
     city: submission.city,
     locality: submission.locality,
     state: submission.state ?? "",

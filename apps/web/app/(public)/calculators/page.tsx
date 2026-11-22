@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { WebsiteBody } from "@/components/website-content";
+import { jsonLdScript } from "@/lib/organization-jsonld";
+import { getWebsiteContent } from "@/lib/public-website-content";
 
 import { CalculatorCard } from "@/components/calculators/calculator-card";
 import { CalculatorFaq } from "@/components/calculators/calculator-faq";
@@ -33,7 +36,7 @@ export const metadata: Metadata = {
   },
 };
 
-const hubJsonLd = {
+const hubJsonLd = (faq: typeof HUB_FAQ) => ({
   "@context": "https://schema.org",
   "@graph": [
     {
@@ -47,18 +50,20 @@ const hubJsonLd = {
         applicationCategory: "FinanceApplication",
       })),
     },
-    {
+    ...(faq.length ? [{
       "@type": "FAQPage",
-      mainEntity: HUB_FAQ.map((f) => ({
+      mainEntity: faq.map((f) => ({
         "@type": "Question",
         name: f.q,
         acceptedAnswer: { "@type": "Answer", text: f.a },
       })),
-    },
+    }] : []),
   ],
-};
+});
 
-export default function CalculatorsHubPage() {
+export default async function CalculatorsHubPage() {
+  const published = await getWebsiteContent("page/calculators");
+  const faq = published?.content.faq?.map(({ question, answer }) => ({ q: question, a: answer })) ?? HUB_FAQ;
   const loans = CALCULATORS.filter((c) => c.group === "loans");
   const realEstate = CALCULATORS.filter((c) => c.group === "real_estate");
   const creditCards = CALCULATORS.filter((c) => c.group === "credit_cards");
@@ -68,7 +73,7 @@ export default function CalculatorsHubPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(hubJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(hubJsonLd(faq)) }}
       />
 
       {/* Hero */}
@@ -77,12 +82,10 @@ export default function CalculatorsHubPage() {
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
             <div>
               <h1 className="font-heading text-4xl font-semibold text-[var(--nav-text)] sm:text-5xl lg:text-6xl">
-                Free loan and property calculators
+                {published?.content.title || "Free loan and property calculators"}
               </h1>
               <p className="mt-4 max-w-2xl text-lg text-[var(--nav-text)] sm:text-xl">
-                Plan your money with clear, honest numbers. Work out your EMI, loan eligibility,
-                stamp duty, credit card payoff, and the insurance cover your family needs. Free for
-                everyone, built for India.
+                {published?.content.summary || "Plan your money with clear, honest numbers. Work out your EMI, loan eligibility, stamp duty, credit card payoff, and the insurance cover your family needs. Free for everyone, built for India."}
               </p>
               {/* Uniform category jump-links. whitespace-nowrap keeps each
                   label on one line; the row wraps as a whole only on narrow
@@ -146,17 +149,18 @@ export default function CalculatorsHubPage() {
       />
 
       {/* Hub FAQ */}
-      <section className="relative w-full overflow-hidden border-t border-[var(--nav-border)] bg-[var(--nav-bg)]">
+      <WebsiteBody content={published && { body: published.content.body, sections: published.content.sections }} />
+      {faq.length ? <section className="relative w-full overflow-hidden border-t border-[var(--nav-border)] bg-[var(--nav-bg)]">
         <FaqDoodles />
         <div className="relative mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           <h2 className="font-heading text-2xl font-semibold text-[var(--nav-text)] sm:text-3xl">
             Frequently asked questions
           </h2>
           <div className="mt-6">
-            <CalculatorFaq items={HUB_FAQ} />
+            <CalculatorFaq items={faq} />
           </div>
         </div>
-      </section>
+      </section> : null}
 
       {/* Closing CTA */}
       <section className="w-full bg-[var(--nav-primary)]">

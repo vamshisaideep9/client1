@@ -270,6 +270,14 @@ describe("dashboard direct-route UX access", () => {
     expect(isDashboardPathAllowed(route, context("client", "loans"))).toBe(false);
   });
 
+  it("shows Website Content in navigation for an assigned Sub Admin", () => {
+    const subAdmin = context("sub_admin");
+    const items = (websiteDraftAccess: boolean) =>
+      getNavigationSections({ ...subAdmin, websiteDraftAccess }).flatMap(({ items }) => items);
+    expect(items(false).some(({ key }) => key === "website-content")).toBe(false);
+    expect(items(true).some(({ key }) => key === "website-content")).toBe(true);
+  });
+
   it("opens personal attendance to Telecallers, Officers, and Sub Admins", () => {
     expect(isDashboardPathAllowed("/dashboard/attendance", context("employee", "loans"))).toBe(true);
     expect(isDashboardPathAllowed("/dashboard/attendance", context("telecaller", "both"))).toBe(true);

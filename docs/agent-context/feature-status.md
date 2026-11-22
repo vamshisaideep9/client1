@@ -1,5 +1,27 @@
 # Feature implementation status
 
+**Website Content and public catalog.** Main Admin manages publishing and
+revision restoration. Assigned Admins and Sub Admins can save and preview
+website drafts. Public pages read published copy and FAQs, and the Knowledge
+Sharing index reads published articles. Success stories and milestones are
+available as editable About sections for client-supplied material.
+
+Financial products retain the catalog controls for providers, forms and
+publication, with editable public summaries and descriptions. Insurance
+remains private pending the existing business confirmation. Public loan detail
+pages retain enquiry, and Contact and the footer offer calling and WhatsApp.
+Public property search combines sale, resale, or rent and lease with location,
+budget, type, BHK, and area. Existing records and reviewed listing forms are
+retained when a property type is retired.
+
+The PostgreSQL migration round trip retained one head. Initial focused database
+verification covered grant, revoke, draft privacy, revision restore, and public
+property search. All 1,123 web unit tests passed and changed submission and
+financial-page cases passed focused web verification. See the review checks for
+the final candidate.
+[Upstream comparison](https://github.com/brollysolutions/client1/compare/main...feat/website-content-catalog)
+· [Mirror comparison](https://github.com/vamshisaideep9/client1/compare/main...feat/website-content-catalog)
+
 **Attendance follow-up.** The staff and management calendars show `CL` for
 approved casual leave and `SL` for approved sick leave. A scheduled workday
 with a missed check-out rolls to `A` at midnight IST. The system records the

@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { submitLead, type LeadTopic } from "@/lib/leads";
 import { isValidMobile, normalizeMobile } from "@/lib/phone";
+import type { WebsiteContent } from "@/lib/website-content";
 
 // Standalone enquiry form for the /contact page. Same field idiom as the
 // agent application form (IconInput, MobileInput, h-12 controls) and the same
@@ -29,6 +30,7 @@ export function ContactForm({
   initialProduct,
   invitationToken,
   propertyRef,
+  copy,
 }: {
   // Prefilled from the /contact query string when a visitor arrives via an
   // Enquire / callback CTA, so the telecaller sees what they came for.
@@ -36,6 +38,7 @@ export function ContactForm({
   initialProduct?: string;
   invitationToken?: string;
   propertyRef?: string;
+  copy?: WebsiteContent["form_copy"];
 } = {}) {
   const [topic, setTopic] = useState<LeadTopic>(initialLine ?? "loans");
   // When the visitor arrived via a category-specific CTA (?line=...), lock the
@@ -147,7 +150,7 @@ export function ContactForm({
 
       {initialProduct ? (
         <div className="grid gap-1.5">
-          <span className="text-sm text-text-secondary">Enquiring about</span>
+          <span className="text-sm text-text-secondary">{copy?.product || "Enquiring about"}</span>
           <span className="inline-flex w-fit max-w-full items-center rounded-full bg-[var(--nav-tint)] px-3 py-1 text-sm font-medium text-brand-link">
             {initialProduct}
           </span>
@@ -155,7 +158,7 @@ export function ContactForm({
       ) : null}
 
       <div className="grid gap-2">
-        <Label id="contact-line-label">What is this about?</Label>
+        <Label id="contact-line-label">{copy?.topic || "What is this about?"}</Label>
         {locked ? (
           <div
             aria-labelledby="contact-line-label"
@@ -193,7 +196,7 @@ export function ContactForm({
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="contact-name">Name</Label>
+        <Label htmlFor="contact-name">{copy?.name || "Name"}</Label>
         <IconInput
           id="contact-name"
           icon={User}
@@ -213,7 +216,7 @@ export function ContactForm({
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="contact-mobile">Mobile number</Label>
+        <Label htmlFor="contact-mobile">{copy?.mobile || "Mobile number"}</Label>
         <MobileInput
           id="contact-mobile"
           value={mobile}
@@ -233,7 +236,7 @@ export function ContactForm({
 
       <div className="grid gap-2">
         <Label htmlFor="contact-email">
-          Email <span className="text-text-secondary">(optional)</span>
+          {copy?.email || "Email"} <span className="text-text-secondary">(optional)</span>
         </Label>
         <IconInput
           id="contact-email"
@@ -256,7 +259,7 @@ export function ContactForm({
 
       <div className="grid gap-2">
         <Label htmlFor="contact-message">
-          Message <span className="text-text-secondary">(optional)</span>
+          {copy?.message || "Message"} <span className="text-text-secondary">(optional)</span>
         </Label>
         <Textarea
           id="contact-message"
@@ -275,7 +278,7 @@ export function ContactForm({
         className="h-12 bg-[var(--nav-primary)] text-base text-white hover:bg-[var(--nav-primary-hover)] focus-visible:ring-ring"
       >
         {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-        {submitting ? "Sending..." : "Send message"}
+        {submitting ? "Sending..." : copy?.submit || "Send message"}
       </Button>
     </form>
   );

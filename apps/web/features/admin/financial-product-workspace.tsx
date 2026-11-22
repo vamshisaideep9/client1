@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { FileText, Landmark, Loader2, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 
@@ -9,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { FieldError, RequiredIndicator } from "@/components/ui/field-error";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -55,6 +57,8 @@ export function FinancialProductWorkspace({
   const [draftLabel, setDraftLabel] = React.useState("");
   const [draftActive, setDraftActive] = React.useState(true);
   const [draftPublicVisible, setDraftPublicVisible] = React.useState(false);
+  const [draftSummary, setDraftSummary] = React.useState("");
+  const [draftDescription, setDraftDescription] = React.useState("");
   const [draftOrder, setDraftOrder] = React.useState("1000");
   const [draftFeatured, setDraftFeatured] = React.useState(false);
   const [draftFeaturedOrder, setDraftFeaturedOrder] = React.useState("1000");
@@ -70,6 +74,8 @@ export function FinancialProductWorkspace({
     setDraftLabel(product.label);
     setDraftActive(product.active);
     setDraftPublicVisible(product.public_visible);
+    setDraftSummary(product.public_summary ?? "");
+    setDraftDescription(product.public_description ?? "");
     setDraftOrder(String(product.display_order));
     setDraftFeatured(product.homepage_featured);
     setDraftFeaturedOrder(String(product.homepage_feature_order));
@@ -111,10 +117,10 @@ export function FinancialProductWorkspace({
     }
     if (
       draftPublicVisible &&
-      (!product.public_summary?.trim() || !product.public_description?.trim())
+      (!draftSummary.trim() || !draftDescription.trim())
     ) {
       next.publicVisible =
-        "This product has no frozen summary or description, so it cannot be published yet.";
+        "Enter a summary and description before publishing this product.";
     }
     const nextBuilderErrors = validateProductFormDefinition(product.category, draftForm);
     setFieldErrors(next);
@@ -134,6 +140,8 @@ export function FinancialProductWorkspace({
     const payload = {
       ...(draftLabel.trim() !== product.label ? { label: draftLabel.trim() } : {}),
       ...(draftActive !== product.active ? { active: draftActive } : {}),
+      ...(draftSummary.trim() !== (product.public_summary ?? "") ? { public_summary: draftSummary.trim() } : {}),
+      ...(draftDescription.trim() !== (product.public_description ?? "") ? { public_description: draftDescription.trim() } : {}),
       ...(draftPublicVisible !== product.public_visible
         ? { public_visible: draftPublicVisible }
         : {}),
@@ -336,9 +344,30 @@ export function FinancialProductWorkspace({
                       are selected. Deactivating hides the product immediately on the next page load;
                       activating restores it if publication is enabled.
                     </p>
+                    {product.category === "insurance" ? (
+                      <p className="mt-2 text-sm text-text-secondary">
+                        Publish insurance only after the business owner confirms the IRDAI licence or licensed partnership.
+                      </p>
+                    ) : null}
                     <FieldError id="product-workspace-featured-error" className="mt-2">
                       {fieldErrors.featured}
                     </FieldError>
+                  </section>
+                  <section className="space-y-4 rounded-xl border border-border bg-card p-5">
+                    <h2 className="font-semibold text-text-primary">Public product copy</h2>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="product-public-summary">Summary</Label>
+                      <Input id="product-public-summary" value={draftSummary} maxLength={280}
+                        onChange={(event) => setDraftSummary(event.target.value)} />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="product-public-description">Description</Label>
+                      <Textarea id="product-public-description" value={draftDescription} maxLength={4000}
+                        onChange={(event) => setDraftDescription(event.target.value)} />
+                    </div>
+                    <Button asChild variant="outline">
+                      <Link href={`/dashboard/website-content?key=page/loans/${product.name}`}>Edit public FAQs</Link>
+                    </Button>
                   </section>
                 </div>
               </TabsContent>

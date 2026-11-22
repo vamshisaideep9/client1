@@ -3,6 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import { ArrowDown, ArrowUp, FileText, Loader2, Rotate3D, X } from "lucide-react";
+import type { components } from "@contracts/generated/schema";
 
 import { Button } from "@/components/ui/button";
 import { CLOSE_BUTTON_CLASS } from "@/components/ui/close-button";
@@ -12,9 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -24,8 +23,9 @@ import {
   MAX_PANORAMAS,
   MEDIA_IMAGE_TYPES,
   PREDEFINED_AMENITIES,
+  propertyFormFamily,
 } from "@/lib/property-submit";
-import { PROPERTY_SUBTYPE_GROUPS } from "@/lib/property-taxonomy";
+import { apiRequest } from "@/lib/api/client";
 import type { Submission } from "@/lib/property-submissions-api";
 import { cn } from "@/lib/utils";
 import { ListingLinksField } from "./listing-links-field";
@@ -46,6 +46,21 @@ export function SubmitPropertyForm({
 }) {
   const f = useSubmitProperty(submission, { adminCorrection });
   const isRent = f.form.listingIntent === "rent";
+  const family = propertyFormFamily(f.form.propertySubtype);
+  const [types, setTypes] = React.useState<components["schemas"]["PropertyCatalogTypeRead"][]>([]);
+  const [typeError, setTypeError] = React.useState("");
+  const selectedType = f.form.catalogTypeCode || f.form.propertySubtype;
+  const existingType = submission?.catalog_type_code ?? submission?.property_subtype;
+  const managedType = selectedType !== f.form.propertySubtype;
+  React.useEffect(() => {
+    let active = true;
+    void apiRequest<components["schemas"]["PropertyCatalogTypeRead"][]>("/api/v1/public/property-types").then((result) => {
+      if (!active) return;
+      if (result.ok) setTypes(result.data);
+      else setTypeError(result.error);
+    });
+    return () => { active = false; };
+  }, []);
   const [amenityDraft, setAmenityDraft] = React.useState("");
   const imagePreviews = React.useMemo(
     () => f.form.images.map((file) => ({ file, url: URL.createObjectURL(file) })),
@@ -173,35 +188,47 @@ export function SubmitPropertyForm({
           </div>
           <div>
             <Label htmlFor="type">Display type</Label>
-            <Input id="type" placeholder="e.g. Apartment" value={f.form.type} onChange={(e) => f.setField("type", e.target.value)} maxLength={40} />
+            <Input id="type" placeholder="e.g. Apartment" value={f.form.type} onChange={(e) => f.setField("type", e.target.value)} maxLength={40} readOnly={managedType} />
             <FieldError msg={f.errors.type} />
           </div>
           <div>
             <Label htmlFor="property-type">Property type</Label>
             <Select
-              value={f.form.propertySubtype}
-              onValueChange={(value) =>
-                f.setField("propertySubtype", value as typeof f.form.propertySubtype)
-              }
+              value={selectedType}
+              onValueChange={(value) => {
+                const item = types.find(({ code }) => code === value);
+                if (!item) return;
+                f.setField("propertySubtype", item.form_subtype);
+                f.setField("catalogTypeCode", item.code === item.form_subtype ? "" : item.code);
+                if (item.code !== item.form_subtype) f.setField("type", item.label);
+              }}
             >
               <SelectTrigger id="property-type" className="w-full">
                 <SelectValue placeholder="Choose a property type" />
               </SelectTrigger>
               <SelectContent>
-                {PROPERTY_SUBTYPE_GROUPS.map((group) => (
-                  <SelectGroup key={group.heading}>
-                    <SelectLabel>{group.heading}</SelectLabel>
-                    {group.items.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
+                {selectedType && selectedType === existingType && !types.some(({ code }) => code === selectedType)
+                  ? <SelectItem value={selectedType}>{submission?.type}</SelectItem> : null}
+                {types.map((option) => <SelectItem key={option.code} value={option.code}>{option.label}</SelectItem>)}
               </SelectContent>
             </Select>
             <FieldError msg={f.errors.propertySubtype} />
+            <FieldError msg={typeError} />
           </div>
+          {!isRent && (family === "individual" || family === "agricultural") ? (
+            <div>
+              <Label htmlFor="sale-classification">Sale classification</Label>
+              <Select value={f.form.saleClassification ?? ""} onValueChange={(value) => f.setField("saleClassification", value === "resale" ? "resale" : "new_sale")}>
+                <SelectTrigger id="sale-classification" className="w-full"><SelectValue placeholder="Choose new sale or resale" /></SelectTrigger>
+                <SelectContent><SelectItem value="new_sale">New sale</SelectItem><SelectItem value="resale">Resale</SelectItem></SelectContent>
+              </Select>
+            </div>
+          ) : null}
+          {family === "individual" ? <div>
+            <Label htmlFor="bedrooms">Bedrooms (BHK)</Label>
+            <Input id="bedrooms" type="number" min={1} max={30} value={f.form.bedrooms ?? ""}
+              onChange={(event) => f.setField("bedrooms", event.target.value)} />
+          </div> : null}
         </DashboardFormSection>
 
         <DashboardFormSection

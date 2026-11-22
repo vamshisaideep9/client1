@@ -49,6 +49,8 @@ export type PropertyListing = {
   category: PropertyCategory;
   /** Structured navigation and campaign subtype. Missing only on legacy listings. */
   propertySubtype?: PropertySubtype;
+  catalogTypeCode?: string;
+  saleClassification?: SaleType | null;
   meta?: string; // "2 bed · 1,120 sqft"
   /** Resolved image URL; undefined ⇒ cream placeholder band. */
   image?: string;

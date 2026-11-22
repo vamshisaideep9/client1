@@ -4,11 +4,16 @@ import { HeroCarousel } from "@/components/hero-carousel";
 import { PropertyCatalogEmpty } from "@/components/property-catalog-empty";
 import { ProductPage, PropertyDoodles } from "@/components/product-page";
 import { PropertyRow } from "@/components/property-row";
+import { PublicPropertySearch, PropertySearchPagination, propertySearchParams } from "@/components/public-property-search";
 import { TrustStrip } from "@/components/trust-strip";
+import { WebsiteBody } from "@/components/website-content";
 import { faqPageJsonLd, REAL_ESTATE_FAQ_ITEMS } from "@/lib/faq";
 import { RE_TRUST, REAL_ESTATE_JOURNEY } from "@/lib/products";
 import { getHeroBanners } from "@/lib/public-banners";
-import { getPublicListings } from "@/lib/public-properties";
+import { getPublicPropertyTypes, searchPublicListings } from "@/lib/public-properties";
+import { getWebsiteContent } from "@/lib/public-website-content";
+import { jsonLdScript } from "@/lib/organization-jsonld";
+import { resolveWebsiteFaq } from "@/lib/website-content";
 import { groupByCategory, PROPERTY_CATEGORIES } from "@/lib/properties";
 import { propertySubtypeOption } from "@/lib/property-taxonomy";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
@@ -43,7 +48,7 @@ export const metadata: Metadata = {
   },
 };
 
-const realEstateJsonLd = {
+const realEstateJsonLd = (faq: typeof REAL_ESTATE_FAQ_ITEMS) => ({
   "@context": "https://schema.org",
   "@graph": [
     {
@@ -58,30 +63,28 @@ const realEstateJsonLd = {
         },
       ],
     },
-    faqPageJsonLd(REAL_ESTATE_FAQ_ITEMS),
+    ...(faq.length ? [faqPageJsonLd(faq)] : []),
   ],
   publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
-};
+});
 
 export default async function RealEstatePage({
   searchParams,
 }: {
-  searchParams: Promise<{ property_type?: string | string[] }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  // Parallel, not sequential: two independent 5s serverFetchJson timeouts
-  // should not stack on a single page render.
-  const [listings, banners] = await Promise.all([
-    getPublicListings(),
+  const params = propertySearchParams(await searchParams);
+  const [results, banners, types, published] = await Promise.all([
+    searchPublicListings(params),
     getHeroBanners("properties"),
+    getPublicPropertyTypes(),
+    getWebsiteContent("page/real-estate"),
   ]);
-  const params = await searchParams;
-  const requestedSubtype = Array.isArray(params.property_type)
-    ? params.property_type[0]
-    : params.property_type;
-  const selectedSubtype = propertySubtypeOption(requestedSubtype);
-  const visibleListings = selectedSubtype
-    ? listings.filter((listing) => listing.propertySubtype === selectedSubtype.value)
-    : listings;
+  const requestedType = params.get("property_type");
+  const selectedType = types.find(({ code }) => code === requestedType)?.label
+    ?? propertySubtypeOption(requestedType)?.label;
+  const visibleListings = results.ok ? results.data.properties : [];
+  const faq = resolveWebsiteFaq(published?.content.faq, REAL_ESTATE_FAQ_ITEMS);
   const grouped = groupByCategory(visibleListings);
   // Only render category rows that actually have listings (empty-state guard,
   // so a category with nothing to show does not render an empty scroller).
@@ -93,11 +96,11 @@ export default async function RealEstatePage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(realEstateJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(realEstateJsonLd(faq)) }}
       />
       <ProductPage
-        title="Verified flats, villas and plots for sale in Hyderabad"
-        intro="Flats, villas, plots, resale homes, rentals and commercial space in Hyderabad. Before a listing goes live, we check its RERA registration, review its title documents, visit the site and complete KYC on the builder or seller. We still recommend a title check by your own lawyer before you pay a token amount."
+        title={published?.content.title || "Properties for sale, resale and rent in Hyderabad"}
+        intro={published?.content.summary || "Explore flats, villas, plots and commercial space in Hyderabad. Before you pay a token amount, have your own lawyer check the title."}
         heroDoodles
         heroPlant="/illustrations/heroes/real-estate.svg"
         beforeHero={
@@ -109,12 +112,23 @@ export default async function RealEstatePage({
           <>
             <div className="relative w-full border-t border-[var(--nav-border)] bg-[var(--nav-bg)] py-20 sm:py-24 lg:py-28">
               <PropertyDoodles />
-              <div className="relative z-10 space-y-16 sm:space-y-20">
-                {selectedSubtype && visibleListings.length > 0 ? (
+              <div className="relative z-10 space-y-10 sm:space-y-16">
+                <PublicPropertySearch params={params} types={types} />
+                <div id="property-results" className="scroll-mt-[var(--site-header-h)]" />
+                {results.ok && params.size ? (
+                  <p className="mx-auto max-w-7xl px-4 text-sm text-text-secondary sm:px-6 lg:px-8">
+                    {results.data.total} {results.data.total === 1 ? "property" : "properties"} found
+                  </p>
+                ) : null}
+                {!results.ok ? (
+                  <p role="status" className="mx-auto max-w-7xl px-4 text-text-secondary sm:px-6 lg:px-8">
+                    {results.status === 422 ? "Check your search filters and try again." : "Property results are temporarily unavailable. Please try again shortly."}
+                  </p>
+                ) : selectedType && visibleListings.length > 0 ? (
                   <PropertyRow
-                    id={selectedSubtype.value}
-                    heading={selectedSubtype.label}
-                    types={`Explore verified ${selectedSubtype.label.toLowerCase()} available now.`}
+                    id={requestedType ?? "matched-properties"}
+                    heading={selectedType}
+                    types={`Browse ${selectedType.toLowerCase()} available now.`}
                     listings={visibleListings}
                   />
                 ) : populatedCategories.length > 0 ? (
@@ -130,23 +144,26 @@ export default async function RealEstatePage({
                 ) : (
                   <PropertyCatalogEmpty />
                 )}
+                {results.ok ? <PropertySearchPagination params={params} page={results.data.page}
+                  pageSize={results.data.page_size} total={results.data.total} /> : null}
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                   <TrustStrip points={RE_TRUST} />
                 </div>
               </div>
             </div>
+            <WebsiteBody content={published && { body: published.content.body, sections: published.content.sections }} />
           </>
         }
         journeyHeading="What happens when you reach out"
         journey={REAL_ESTATE_JOURNEY}
         journeyTimeline
-        faq={{
+        faq={faq.length ? {
           heading: "Property questions, answered",
           subheading: "What buyers usually ask before their first visit.",
-          items: REAL_ESTATE_FAQ_ITEMS,
-        }}
+          items: faq,
+        } : undefined}
         ctaHeading="Ready to find your place?"
-        ctaText="Leave your number and our real estate team will call you back about buying a property."
+        ctaText="Leave your number and our real estate team will call you back about buying, renting or leasing a property."
         ctaLabel="Get a callback"
         ctaBanner
         businessLine="real_estate"

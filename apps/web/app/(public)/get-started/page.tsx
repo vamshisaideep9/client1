@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { WebsiteBody, WebsiteFaq } from "@/components/website-content";
+import { getWebsiteContent } from "@/lib/public-website-content";
 import { HelpCenter } from "@/components/help/help-center";
 
 export const metadata: Metadata = {
@@ -8,6 +10,7 @@ export const metadata: Metadata = {
   openGraph: { title: "How to Get Started with Dhanadhara", description: "Create a free account with your mobile number, tell us which loan, card or property you need, and an advisor calls you back to take it forward.", url: "/get-started", images: ["/brand/social.png"] },
 };
 
-export default function Page() {
-  return <HelpCenter started={true} />;
+export default async function Page() {
+  const published = await getWebsiteContent("page/get-started");
+  return <><HelpCenter started={true} /><WebsiteBody content={published?.content} /><WebsiteFaq items={published?.content.faq} /></>;
 }

@@ -79,6 +79,7 @@ _DOCUMENTED_SUB_ADMIN_EXCEPTIONS = {
 # f5a6b7c8d9e0 added the loan-document policies later; keep this ledger aligned
 # with those additive migrations rather than the earlier policy names.
 _ALL_PLATFORM_SCOPE_POLICIES = {
+    ("property_catalog_types", "property_catalog_type_admin"),
     ("auth_users", "auth_users_rls"),
     ("audit_log", "audit_log_select"),
     ("agent_applications", "agent_applications_rls"),
