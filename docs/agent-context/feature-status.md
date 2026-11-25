@@ -11,7 +11,7 @@ reveal lead volume. Existing leads were numbered in creation order by a
 batched, resumable migration. PostgreSQL checks cover the public form and
 Agent creation paths, tolerant search, cross-Agent, cross-line and
 cross-team denial, the money surfaces and the immutability guard; 833
-related API tests passed.
+related API tests passed locally and hosted CI passed the full API suite.
 [Upstream #407](https://github.com/brollysolutions/client1/pull/407)
 · [Mirror #107](https://github.com/vamshisaideep9/client1/pull/107)
 
