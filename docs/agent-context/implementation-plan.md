@@ -28,7 +28,8 @@ branch `feat/lead-ref-1-api`, part 1 of 2)
   order with one head. Ruff, format and contract generation passed. The full
   API suite was not run.
 - Next priority is part 2: the reference and its search on the web.
-  Review PRs: pending.
+  [Upstream #407](https://github.com/brollysolutions/client1/pull/407)
+  · [Mirror #107](https://github.com/vamshisaideep9/client1/pull/107)
 
 **Public-site chatbot release verification**
 

@@ -12,7 +12,8 @@ batched, resumable migration. PostgreSQL checks cover the public form and
 Agent creation paths, tolerant search, cross-Agent, cross-line and
 cross-team denial, the money surfaces and the immutability guard; 833
 related API tests passed.
-Review PRs: pending.
+[Upstream #407](https://github.com/brollysolutions/client1/pull/407)
+· [Mirror #107](https://github.com/vamshisaideep9/client1/pull/107)
 
 **Public-site chatbot.** Visitors can open a floating assistant, answer guided
 questions, browse published services or properties, and submit a callback
