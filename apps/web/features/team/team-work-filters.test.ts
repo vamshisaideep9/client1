@@ -16,6 +16,7 @@ const BALA = "30000000-0000-4000-8000-000000000002";
 function lead(overrides: Partial<TeamLeadRow>): TeamLeadRow {
   return {
     id: crypto.randomUUID(),
+    lead_ref: "LD-00000001",
     name: "Kiran Kumar",
     mobile: "+919800000001",
     status: "working",
@@ -82,6 +83,16 @@ describe("team work filters", () => {
     expect(filterTeamLeads(rows, { ...base, source: "agent", referredBy: "ag-10" }, NOW)).toEqual([hot]);
     expect(filterTeamLeads(rows, { ...base, callStatus: "not_called" }, NOW)).toEqual([bala, notCalled]);
     expect(filterTeamLeads(rows, { ...base, status: "closed" }, NOW)).toEqual([]);
+  });
+
+  it("finds a lead by its exact reference", () => {
+    const target = lead({ lead_ref: "LD-00000777" });
+    const other = lead({ lead_ref: "LD-00007770" });
+    const rows = [target, other];
+    const base = DEFAULT_TEAM_WORK_FILTERS;
+    expect(filterTeamLeads(rows, { ...base, search: "LD-00000777" }, NOW)).toEqual([target]);
+    expect(filterTeamLeads(rows, { ...base, search: "ld-777" }, NOW)).toEqual([target]);
+    expect(filterTeamLeads(rows, { ...base, search: "7770" }, NOW)).toEqual([other]);
   });
 
   it("keeps only open leads past their follow-up when overdue is on", () => {

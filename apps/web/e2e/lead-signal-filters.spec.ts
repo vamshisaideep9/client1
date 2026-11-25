@@ -12,9 +12,16 @@ const AGENT_LEAD = "65000000-0000-4000-8000-0000000000a1";
 const CLIENT_LEAD = "65000000-0000-4000-8000-0000000000a2";
 const DIRECT_LEAD = "65000000-0000-4000-8000-0000000000a3";
 
+const LEAD_REF: Record<string, string> = {
+  [AGENT_LEAD]: "LD-00000201",
+  [CLIENT_LEAD]: "LD-00000202",
+  [DIRECT_LEAD]: "LD-00000203",
+};
+
 function lead(id: string, name: string, patch: Record<string, unknown>) {
   return {
     id,
+    lead_ref: LEAD_REF[id],
     name,
     mobile: "+919876543210",
     business_line: "loans",
@@ -97,7 +104,13 @@ test("telecaller filters leads by loan status, call status, interest and referre
   await expect(page.getByRole("combobox", { name: "Filter by status" })).toHaveText("Status");
   await expect(page.getByRole("combobox", { name: "Filter by lead interest" })).toHaveCount(0);
   await expect(page.getByText("From", { exact: true })).toBeVisible();
+  await expect(rows(page).filter({ hasText: "Client Lead" })).toContainText("LD-00000202");
   await page.screenshot({ path: test.info().outputPath("telecaller-leads-filters.png"), fullPage: true, animations: "disabled" });
+  await page.getByLabel("Search leads").fill("ld-202");
+  await expect(rows(page)).toHaveCount(1);
+  await expect(rows(page).first()).toContainText("Client Lead");
+  await page.getByLabel("Search leads").fill("");
+  await expect(rows(page)).toHaveCount(3);
 
   await pick(page, "Filter by loan status", "Approved");
   await expect(rows(page)).toHaveCount(1);
@@ -135,6 +148,9 @@ test("lead detail shows who referred the lead", async ({ page, baseURL }) => {
   await page.goto(`/dashboard/leads/${CLIENT_LEAD}`);
 
   await expect(page.getByTestId("lead-referrer")).toHaveText("Referred by Client · 7K2M9QXA");
+  await expect(page.getByRole("heading", { level: 1, name: "Client Lead" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy lead reference LD-00000202" })).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("telecaller-lead-ref-header.png"), animations: "disabled" });
 });
 
 test("employee tasks filter by the lead's signals and show the referrer", async ({ page, baseURL }) => {

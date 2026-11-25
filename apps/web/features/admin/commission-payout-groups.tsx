@@ -3,6 +3,7 @@
 import * as React from "react";
 import { IndianRupee } from "lucide-react";
 
+import { LeadRefText } from "@/features/dashboard/lead-ref";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DashboardPanel } from "@/features/dashboard/dashboard-ui";
@@ -131,6 +132,9 @@ export function CommissionPayoutGroups({ onCreated, revision }: { onCreated: () 
                       />
                       <span className="min-w-0 flex-1 text-sm">
                         {commissionLabel(row)}
+                        {row.lead_ref ? (
+                          <span className="block"><LeadRefText value={row.lead_ref} /></span>
+                        ) : null}
                         <span className="block break-all text-xs text-text-secondary">{formatDate(row.created_at)} · Deal {row.deal_uuid}</span>
                       </span>
                       <span className="shrink-0 text-sm font-semibold tabular-nums">{formatPaise(row.agreed_amount_paise)}</span>

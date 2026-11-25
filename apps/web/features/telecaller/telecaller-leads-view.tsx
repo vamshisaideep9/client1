@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, PhoneCall, X } from "lucide-react";
 
+import { LeadRefText } from "@/features/dashboard/lead-ref";
 import { Button } from "@/components/ui/button";
 import { FilterSelect } from "@/features/dashboard/filter-select";
 import { ResubmissionBadge } from "@/features/dashboard/resubmission-badge";
@@ -199,7 +200,7 @@ export function TelecallerLeadsView() {
               }))
             }
             searchLabel="Search leads"
-            searchPlaceholder="Name or mobile"
+            searchPlaceholder="Name, mobile or lead ref"
             statusOptions={STATUS_FILTER_OPTIONS}
             showLine={false}
             extra={<FilterSelect label="Resubmission" value={filters.resubmission} options={RESUBMISSION_OPTIONS}
@@ -267,7 +268,11 @@ export function TelecallerLeadsView() {
                           <p className="font-medium text-text-primary transition-colors group-hover:text-brand-link">
                             {lead.name ?? "Unnamed lead"}
                           </p>
-                          <p className="text-xs text-text-secondary">{formatMobile(lead.mobile)}</p>
+                          <p className="text-xs text-text-secondary">
+                            {formatMobile(lead.mobile)}
+                            {lead.lead_ref ? " · " : null}
+                            <LeadRefText value={lead.lead_ref} />
+                          </p>
                           <ResubmissionBadge count={lead.resubmit_count} at={lead.last_resubmitted_at} />
                           {lead.latest_request ? (
                             <p className="mt-1 text-xs text-text-secondary">

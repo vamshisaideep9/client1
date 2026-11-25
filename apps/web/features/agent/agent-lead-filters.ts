@@ -16,6 +16,7 @@ import {
   type LeadSignalScope,
 } from "@/features/telecaller/lead-signal-filters";
 import type { AgentLead } from "@/lib/agent-api";
+import { matchesLeadRef } from "@/lib/lead-ref";
 
 export const AGENT_LEAD_STATUS_LABEL: Record<string, string> = {
   new: "New",
@@ -48,9 +49,13 @@ export function agentLeadScope(rows: readonly Pick<AgentLead, "business_line">[]
   return lineScope(line);
 }
 
-function matchesSearch(lead: Pick<AgentLead, "name" | "mobile">, search: string): boolean {
+function matchesSearch(
+  lead: Pick<AgentLead, "name" | "mobile" | "lead_ref">,
+  search: string,
+): boolean {
   const query = search.trim().toLocaleLowerCase();
   if (!query) return true;
+  if (matchesLeadRef(search, lead.lead_ref)) return true;
   if ((lead.name ?? "").toLocaleLowerCase().includes(query)) return true;
   const digits = query.replace(/\D/g, "");
   return digits.length > 0 && lead.mobile.replace(/\D/g, "").includes(digits);

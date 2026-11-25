@@ -14,6 +14,7 @@ import {
 function lead(overrides: Partial<TelecallerLead>): TelecallerLead {
   return {
     id: overrides.id ?? "lead-1",
+    lead_ref: "LD-00000001",
     business_line: "loans",
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
@@ -39,6 +40,22 @@ describe("filterTelecallerLeads", () => {
   it("matches search against name and mobile", () => {
     expect(filterTelecallerLeads(leads, { ...DEFAULT_TELECALLER_LEAD_FILTERS, search: "asha", status: "all" })).toEqual([leads[0]]);
     expect(filterTelecallerLeads(leads, { ...DEFAULT_TELECALLER_LEAD_FILTERS, search: "7000011111", status: "all" })).toEqual([leads[2]]);
+  });
+
+  it("matches an exact lead reference in tolerant forms", () => {
+    const referenced = [
+      lead({ id: "a", lead_ref: "LD-00000123", mobile: "9000000001" }),
+      lead({ id: "b", lead_ref: "LD-00001234", mobile: "9000000002" }),
+    ];
+    for (const search of ["LD-00000123", "ld-123", "LD123", "123"]) {
+      expect(
+        filterTelecallerLeads(referenced, { ...DEFAULT_TELECALLER_LEAD_FILTERS, search }).map((row) => row.id),
+      ).toEqual(["a"]);
+    }
+    // A reference is exact, never a substring of a longer number.
+    expect(
+      filterTelecallerLeads(referenced, { ...DEFAULT_TELECALLER_LEAD_FILTERS, search: "LD-1234" }).map((row) => row.id),
+    ).toEqual(["b"]);
   });
 
   it("filters by status", () => {

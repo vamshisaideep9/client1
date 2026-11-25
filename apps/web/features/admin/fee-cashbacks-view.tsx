@@ -4,6 +4,7 @@ import * as React from "react";
 import { Banknote, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { LeadRefText } from "@/features/dashboard/lead-ref";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -84,7 +85,12 @@ export function FeeCashbacksView() {
         render: (application) => (
           <DataTablePrimaryCell
             title={application.client_name ?? "Unknown client"}
-            subtitle="Disbursed loan"
+            subtitle={
+              <>
+                Disbursed loan{application.lead_ref ? " · " : ""}
+                <LeadRefText value={application.lead_ref} />
+              </>
+            }
           />
         ),
       },
@@ -129,7 +135,13 @@ export function FeeCashbacksView() {
         render: (cashback) => (
           <DataTablePrimaryCell
             title={cashback.client_name ?? "Unknown client"}
-            subtitle={`Fee charged: ${formatPaise(cashback.processing_fee_paise)}`}
+            subtitle={
+              <>
+                Fee charged: {formatPaise(cashback.processing_fee_paise)}
+                {cashback.lead_ref ? " · " : ""}
+                <LeadRefText value={cashback.lead_ref} />
+              </>
+            }
           />
         ),
       },
@@ -206,6 +218,7 @@ export function FeeCashbacksView() {
     columns: eligibleColumns,
     rowKey: (application) => application.loan_application_uuid,
     searchText: (application) => `${application.client_name ?? ""} loan disbursed`,
+    leadRefs: (application) => [application.lead_ref],
     line: (application) => application.business_line,
     date: (application) => application.eligible_since,
     searchLabel: "Search eligible cashback applications",
@@ -222,6 +235,7 @@ export function FeeCashbacksView() {
     columns: ledgerColumns,
     rowKey: (cashback) => cashback.id,
     searchText: (cashback) => `${cashback.client_name ?? ""} ${cashback.cancelled_reason ?? ""}`,
+    leadRefs: (cashback) => [cashback.lead_ref],
     status: (cashback) => cashback.status,
     line: (cashback) => cashback.business_line,
     date: (cashback) => cashback.created_at,

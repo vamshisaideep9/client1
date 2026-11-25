@@ -4,6 +4,8 @@ import * as React from "react";
 import { CheckCircle2, Loader2, Wallet, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
+import { LeadRefList, LeadRefText } from "@/features/dashboard/lead-ref";
+import { matchesAnyLeadRef } from "@/lib/lead-ref";
 import { useAuth } from "@/components/auth/session-provider";
 import { listCoveredCommissions } from "@/lib/admin-commissions-api";
 import { Button } from "@/components/ui/button";
@@ -161,6 +163,7 @@ export function PayoutsView() {
           (filters.line === "all" || payout.business_line === filters.line) &&
           isInDateRange(payout.created_at, filters.from, filters.to) &&
           (!filters.search ||
+            matchesAnyLeadRef(filters.search, payout.lead_refs) ||
             matchesSearch(
               `${payout.recipient_name ?? ""} ${payout.recipient_code ?? ""} ${
                 payout.maker_name ?? ""
@@ -304,7 +307,13 @@ export function PayoutsView() {
         render: (payout) => (
           <DataTablePrimaryCell
             title={TYPE_LABEL[payout.type] ?? payout.type}
-            subtitle={payout.business_line === "real_estate" ? "Real Estate" : "Loans"}
+            subtitle={
+              <>
+                {payout.business_line === "real_estate" ? "Real Estate" : "Loans"}
+                {payout.lead_refs?.length ? " · " : ""}
+                <LeadRefList values={payout.lead_refs} />
+              </>
+            }
           />
         ),
       },
@@ -424,7 +433,7 @@ export function PayoutsView() {
         value={filters}
         onChange={updateFilters}
         searchLabel="Search payouts"
-        searchPlaceholder={canReview ? "Recipient, maker, checker, or destination" : "Recipient or destination"}
+        searchPlaceholder={canReview ? "Name, destination or lead ref" : "Recipient, destination or lead ref"}
         statusOptions={FILTER_OPTIONS}
         statusLabel="Payout status"
         kindOptions={TYPE_OPTIONS}
@@ -530,6 +539,9 @@ export function PayoutsView() {
                           <li key={item.id} className="flex flex-wrap justify-between gap-x-3 py-2 text-sm">
                             <span className="min-w-0">
                               {item.deal_type === "loan_application" ? "Loan commission" : "Property commission"}
+                              {item.lead_ref ? (
+                                <span className="block"><LeadRefText value={item.lead_ref} /></span>
+                              ) : null}
                               <span className="block break-all text-xs text-text-secondary">Deal {item.deal_uuid}</span>
                             </span>
                             <span className="font-semibold tabular-nums">{formatPaise(item.amount_paise)}</span>

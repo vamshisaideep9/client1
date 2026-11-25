@@ -1,5 +1,26 @@
 # Living implementation plan
 
+**Lead reference numbers — web (part 2 of 2)** (branch
+`feat/lead-ref-2-web`, stacked on part 1)
+
+- Telecaller, Agent, Admin lead-assignment and Team Manager lead lists show
+  the reference beside the mobile number. Their search also matches an exact
+  reference (`LD-00000123`, `ld-123` or `123`).
+- Telecaller and Agent lead pages, the Team Manager lead dialog and the Admin
+  details dialog show a "Lead ref" badge with a copy button.
+- Commission and fee-cashback ledgers, eligible queues and the bulk-payout
+  picker, payout rows and covered commissions, and the Agent's earnings,
+  commission sheet and payment trail show the reference. Their searches match
+  it.
+- The Admin lead-assignment list searches only the 100 rows it loads; the API
+  filter finds older leads.
+- Verified: lint, typecheck and 1,155 unit tests passed. 24 mocked
+  Playwright journeys passed at desktop, 390 px and 360 px, including
+  reference search and the copy badge. The Linux production build passed.
+- Next priority is hosted review of both parts, then the additive migration
+  on `dev.dhanadhara.com` before the web rollout.
+  Review PRs: pending.
+
 **In progress — Lead reference numbers (`LD-00000123`)** (2026-11-25;
 branch `feat/lead-ref-1-api`, part 1 of 2)
 

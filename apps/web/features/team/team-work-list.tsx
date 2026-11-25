@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { LeadRefBadge, LeadRefText } from "@/features/dashboard/lead-ref";
 import { useMe } from "@/features/dashboard/me-provider";
 import { assignedLines } from "@/lib/sub-admin-access";
 import { ArrowRightLeft, FileText, Pencil } from "lucide-react";
@@ -508,6 +509,7 @@ function DetailDialog({
       <DialogContent preventOutsideClose className="max-h-[85vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{target?.label}</DialogTitle>
+          {lead ? <LeadRefBadge value={lead.lead.lead_ref} /> : null}
           <DialogDescription>
             {lead
               ? `${lead.lead.mobile} · ${STATUS_LABEL[lead.lead.status] ?? lead.lead.status} · with ${personName(lead.assigned_to)}`
@@ -629,6 +631,8 @@ function LeadRows({
               </p>
               <p className="mt-0.5 text-sm text-text-secondary">
                 {lead.mobile}
+                {lead.lead_ref ? " · " : null}
+                <LeadRefText value={lead.lead_ref} />
                 {latest ? ` · ${latest.title}` : ""}
                 {referrer ? ` · ${referrer}` : ""}
               </p>
@@ -751,8 +755,8 @@ function TeamWorkFilterBar({
       <FilterBar
         value={{ ...EMPTY_FILTERS, search: filters.search, status: filters.status, kind: filters.taskType }}
         onChange={(next) => onChange({ search: next.search, status: next.status, taskType: next.kind })}
-        searchLabel="Search client name or mobile"
-        searchPlaceholder="Search client name or mobile"
+        searchLabel={kind === "leads" ? "Search client name, mobile or lead ref" : "Search client name or mobile"}
+        searchPlaceholder={kind === "leads" ? "Name, mobile or lead ref" : "Search client name or mobile"}
         statusOptions={statusOptions}
         kindOptions={kind === "tasks" ? TASK_TYPE_OPTIONS : undefined}
         kindLabel="Task type"
