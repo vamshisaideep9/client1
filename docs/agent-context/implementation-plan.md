@@ -47,8 +47,9 @@ branch `feat/lead-ref-1-api`, part 1 of 2)
   immutability and route-coverage checks, and 833 passed (1 Redis skip that
   passed on rerun) across 58 lead, money, RLS, retention and seed suites.
   The migration round trip renumbered 1,150 leads contiguously in creation
-  order with one head. Ruff, format and contract generation passed. The full
-  API suite was not run.
+  order with one head. Ruff, format and contract generation passed. Hosted
+  CI passed the full API suite (2,986 tests); its web typecheck needed the
+  new required field in three unit-test fixtures, added in this part.
 - Next priority is part 2: the reference and its search on the web.
   [Upstream #407](https://github.com/brollysolutions/client1/pull/407)
   · [Mirror #107](https://github.com/vamshisaideep9/client1/pull/107)
