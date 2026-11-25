@@ -13,6 +13,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.core.lead_reference import LeadRef
 from app.models.payout import PayoutDestination, PayoutProvider, PayoutStatus, PayoutType
 
 
@@ -133,6 +134,10 @@ class PayoutRead(BaseModel):
     rejected_by_name: str | None = None
     viewer_is_maker: bool = False
     viewer_can_approve: bool = False
+    # Leads behind a commission or fee-cashback payout that the caller's RLS
+    # can read, in reference order. Empty for referral and contest payouts,
+    # which have no lead.
+    lead_refs: list[LeadRef] = Field(default_factory=list)
     # Development gateway simulator only: the outcomes this Admin may apply now.
     # Always empty in production, with live credentials, or for non-Admins.
     simulate_events: list[SimulatedGatewayEvent] = Field(default_factory=list)

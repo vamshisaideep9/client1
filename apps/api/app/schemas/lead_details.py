@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.core.lead_reference import LeadRef
 from app.schemas.chat_inquiries import ChatInquiryRead
 from app.schemas.telecaller import LeadRequestSummary
 
@@ -68,6 +69,9 @@ class AdminLeadDetailsRead(LeadDetailsRead):
     """Admin view: also what the client applied for and when."""
 
     requests: list[LeadRequestSummary]
+    # Staff-only. LeadDetailsRead also serves the client's own view, so the
+    # reference lives on this Admin subclass only.
+    lead_ref: LeadRef
 
 
 class JourneyContactRead(BaseModel):

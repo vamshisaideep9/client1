@@ -13,6 +13,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.core.lead_reference import LeadRef
 from app.schemas.staff_analytics import AnalyticsKpi, StaffAnalyticsResponse
 from app.schemas.telecaller import (
     STAFF_NOTE_MAX_CHARS,
@@ -161,6 +162,7 @@ class TeamLeadSignals(BaseModel):
 
 class TeamLeadRow(BaseModel):
     id: UUID
+    lead_ref: LeadRef
     # Null when the Admin hides it from this team's member role; the key is
     # then listed in hidden_fields so the page can say so.
     name: str | None

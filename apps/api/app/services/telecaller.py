@@ -35,6 +35,7 @@ from app.schemas.telecaller import (
     TelecallerLeadUpdate,
 )
 from app.services.employee_assignment import assign_task_if_possible
+from app.services.leads import lead_number_predicates
 
 _TERMINAL_STATUSES = {LeadStatus.CONVERTED, LeadStatus.CLOSED, LeadStatus.RELEASED}
 logger = logging.getLogger(__name__)
@@ -247,9 +248,16 @@ async def list_activities_for_leads(
 
 
 async def list_assigned_leads(
-    db: AsyncSession, staff_profile_uuid: UUID, status_filter: str | None = None
+    db: AsyncSession,
+    staff_profile_uuid: UUID,
+    status_filter: str | None = None,
+    *,
+    lead_number: int | None = None,
 ) -> list[Lead]:
-    stmt = select(Lead).where(Lead.assigned_telecaller_profile_uuid == staff_profile_uuid)
+    stmt = select(Lead).where(
+        Lead.assigned_telecaller_profile_uuid == staff_profile_uuid,
+        *lead_number_predicates(lead_number),
+    )
     if status_filter is not None:
         stmt = stmt.where(Lead.status == LeadStatus(status_filter))
     stmt = stmt.order_by(Lead.updated_at.desc())

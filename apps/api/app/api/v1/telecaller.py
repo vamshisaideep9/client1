@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import CurrentUser, require_telecaller
+from app.core.lead_reference import lead_number_filter
 from app.db.session import get_db
 from app.models.field_visibility import FieldTargetRole, FieldVisibilityMode
 from app.schemas.loans import LoanApplicationProgressUpdate
@@ -195,10 +196,13 @@ def _staff_profile_uuid(current_user: CurrentUser) -> UUID:
 async def list_leads(
     status_filter: LeadStatusLiteral | None = None,
     current_user: CurrentUser = Depends(require_telecaller),
+    lead_number: int | None = Depends(lead_number_filter),
     db: AsyncSession = Depends(get_db),
 ) -> list[TelecallerLeadRead]:
     staff_profile_uuid = _staff_profile_uuid(current_user)
-    leads = await list_assigned_leads(db, staff_profile_uuid, status_filter)
+    leads = await list_assigned_leads(
+        db, staff_profile_uuid, status_filter, lead_number=lead_number
+    )
     lead_ids = [lead.id for lead in leads]
     last_by_lead = await get_last_activities(db, lead_ids)
     requests_by_lead = await request_summaries_for_leads(db, lead_ids)
@@ -212,6 +216,7 @@ async def list_leads(
         out.append(
             TelecallerLeadRead(
                 id=lead.id,
+                lead_ref=lead.lead_ref,
                 mobile=lead.mobile,
                 business_line=lead.business_line,
                 status=lead.status,
@@ -313,6 +318,7 @@ async def get_lead(
 
     return TelecallerLeadDetailRead(
         id=lead.id,
+        lead_ref=lead.lead_ref,
         mobile=lead.mobile,
         business_line=lead.business_line,
         status=lead.status,
@@ -379,6 +385,7 @@ async def patch_lead(
     modes = await effective_modes(db, FieldTargetRole.TELECALLER)
     return TelecallerLeadRead(
         id=lead.id,
+        lead_ref=lead.lead_ref,
         mobile=lead.mobile,
         business_line=lead.business_line,
         status=lead.status,

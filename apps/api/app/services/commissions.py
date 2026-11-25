@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 import app.db.session as db_session
+from app.core.lead_reference import format_lead_ref, format_optional_lead_ref
 from app.models.commission import Commission, CommissionStatus
 from app.models.commission_rate import CommissionRateStatus, ProductCommissionRate
 from app.models.lead import Lead
@@ -125,6 +126,7 @@ def _loan_eligible_deal(r) -> EligibleDeal:  # noqa: ANN001 — a SQLAlchemy Row
         agent_code=r.agent_code,
         agent_name=r.agent_name,
         lead_uuid=r.lead_uuid,
+        lead_ref=format_lead_ref(r.lead_number),
         eligible_since=r.eligible_since,
         loan_type_id=r.loan_type_id,
         product_label=r.product_label,
@@ -158,6 +160,7 @@ async def list_eligible_deals(
             AgentProfile.agent_code,
             _name_expr(AgentUser).label("agent_name"),
             LoanApplication.lead_uuid,
+            Lead.lead_number,
             LoanApplication.disbursed_at.label("eligible_since"),
             LoanApplication.loan_type_id,
             LoanApplication.amount_sanctioned,
@@ -201,6 +204,7 @@ async def list_eligible_deals(
             AgentProfile.agent_code,
             _name_expr(AgentUser).label("agent_name"),
             PropertyDeal.lead_uuid,
+            Lead.lead_number,
             PropertyDeal.closed_at.label("eligible_since"),
         )
         .join(Lead, Lead.id == PropertyDeal.lead_uuid)
@@ -231,6 +235,7 @@ async def list_eligible_deals(
             agent_code=r.agent_code,
             agent_name=r.agent_name,
             lead_uuid=r.lead_uuid,
+            lead_ref=format_lead_ref(r.lead_number),
             eligible_since=r.eligible_since,
         )
         for r in deal_rows
@@ -376,7 +381,12 @@ def _deal_fields(commission: Commission) -> tuple[str, uuid.UUID]:
     return "property_deal", commission.property_deal_uuid
 
 
-def _row_to_read(commission: Commission, agent_code: str, agent_name: str | None) -> CommissionRead:
+def _row_to_read(
+    commission: Commission,
+    agent_code: str,
+    agent_name: str | None,
+    lead_number: int | None = None,
+) -> CommissionRead:
     deal_type, deal_uuid = _deal_fields(commission)
     return CommissionRead(
         id=commission.id,
@@ -386,6 +396,7 @@ def _row_to_read(commission: Commission, agent_code: str, agent_name: str | None
         business_line=commission.business_line,
         deal_type=deal_type,
         deal_uuid=deal_uuid,
+        lead_ref=format_optional_lead_ref(lead_number),
         agreed_amount_paise=commission.agreed_amount_paise,
         status=commission.status,
         payout_uuid=commission.payout_uuid,
@@ -424,16 +435,22 @@ async def list_for_admin(
     total = await db.scalar(select(func.count()).select_from(Commission).where(*filters)) or 0
 
     stmt = (
-        select(Commission, AgentProfile.agent_code, _name_expr(User).label("agent_name"))
+        select(
+            Commission,
+            AgentProfile.agent_code,
+            _name_expr(User).label("agent_name"),
+            Lead.lead_number,
+        )
         .join(AgentProfile, AgentProfile.id == Commission.agent_profile_uuid)
         .join(User, User.id == Commission.agent_auth_user_uuid)
+        .outerjoin(Lead, Lead.id == Commission.lead_uuid)
         .where(*filters)
         .order_by(Commission.created_at.desc(), Commission.id.desc())
         .limit(limit)
         .offset(offset)
     )
     rows = (await db.execute(stmt)).all()
-    return [_row_to_read(c, code, name) for c, code, name in rows], total
+    return [_row_to_read(c, code, name, number) for c, code, name, number in rows], total
 
 
 async def get_for_admin(db: AsyncSession, commission_id: uuid.UUID) -> CommissionRead | None:
@@ -441,16 +458,22 @@ async def get_for_admin(db: AsyncSession, commission_id: uuid.UUID) -> Commissio
     after create_commission so the response carries agent_code/agent_name
     without duplicating the join logic."""
     stmt = (
-        select(Commission, AgentProfile.agent_code, _name_expr(User).label("agent_name"))
+        select(
+            Commission,
+            AgentProfile.agent_code,
+            _name_expr(User).label("agent_name"),
+            Lead.lead_number,
+        )
         .join(AgentProfile, AgentProfile.id == Commission.agent_profile_uuid)
         .join(User, User.id == Commission.agent_auth_user_uuid)
+        .outerjoin(Lead, Lead.id == Commission.lead_uuid)
         .where(Commission.id == commission_id)
     )
     row = (await db.execute(stmt)).first()
     if row is None:
         return None
-    commission, agent_code, agent_name = row
-    return _row_to_read(commission, agent_code, agent_name)
+    commission, agent_code, agent_name, lead_number = row
+    return _row_to_read(commission, agent_code, agent_name, lead_number)
 
 
 # The Agent's own commission history moved to services/agent_dashboard.py

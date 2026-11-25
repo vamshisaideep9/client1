@@ -9,6 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from app.core.lead_reference import LeadRef
 from app.schemas.chat_inquiries import ChatInquiryRead
 from app.schemas.financial_products import FormAnswers, ProductFormDefinition
 from app.schemas.profile_metadata import TaskStaffRead
@@ -232,6 +233,7 @@ class TelecallerLeadUpdate(BaseModel):
 
 class TelecallerLeadRead(BaseModel):
     id: UUID
+    lead_ref: LeadRef
     name: str | None = None
     mobile: str
     business_line: Literal["loans", "real_estate"]

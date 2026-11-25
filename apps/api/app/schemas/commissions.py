@@ -16,6 +16,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.core.lead_reference import LeadRef
 from app.models.payout import PayoutDestination, PayoutProvider, PayoutStatus
 from app.models.transaction import TransactionStatus, TransactionType
 from app.schemas.payments import PayoutDestinationInput, validate_destination
@@ -45,6 +46,7 @@ class EligibleDeal(BaseModel):
     agent_code: str
     agent_name: str | None
     lead_uuid: UUID
+    lead_ref: LeadRef
     # The date this deal became commission-eligible: disbursed_at for a loan
     # (DISBURSED is not terminal — a loan can move on to CLOSED afterward,
     # so this is an event marker, not live status), closed_at for a property
@@ -83,6 +85,8 @@ class CommissionRead(BaseModel):
     business_line: str
     deal_type: DealType
     deal_uuid: UUID
+    # The commission's lead; null only if the caller's RLS cannot read it.
+    lead_ref: LeadRef | None = None
     agreed_amount_paise: int
     status: str
     payout_uuid: UUID | None
@@ -121,6 +125,7 @@ class AgentEarningsRow(BaseModel):
     payout_txn_uuid: UUID | None
     created_at: datetime
     lead_uuid: UUID | None
+    lead_ref: LeadRef | None = None
     lead_status: str | None
     client_name: str | None
     product_uuid: UUID | None
@@ -190,6 +195,7 @@ class AgentTransactionItem(BaseModel):
     deal_type: DealType
     deal_uuid: UUID
     lead_uuid: UUID
+    lead_ref: LeadRef | None = None
     client_name: str | None
     product_label: str | None
     bank_name: str | None
@@ -248,6 +254,7 @@ class CoveredCommission(BaseModel):
     id: UUID
     deal_type: DealType
     deal_uuid: UUID
+    lead_ref: LeadRef | None = None
     amount_paise: int
 
 

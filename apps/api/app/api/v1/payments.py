@@ -51,6 +51,7 @@ from app.schemas.payments import (
 )
 from app.services import agent_payout_cheque, agent_payout_details, storage
 from app.services import payments as payments_service
+from app.services.payout_leads import payout_lead_refs
 from app.services.payout_links import list_link_divergences
 from app.services.payout_recipients import resolve_payout_identities, search_payout_recipients
 
@@ -123,6 +124,7 @@ async def _get_payout_or_404(db: AsyncSession, payout_id: UUID) -> Payout:
 async def _to_read(
     payouts: Sequence[Payout],
     current_user: CurrentUser,
+    db: AsyncSession,
 ) -> list[PayoutRead]:
     """Enrich payout rows with display identity in a small, bounded batch.
 
@@ -154,6 +156,8 @@ async def _to_read(
             profile_line=line if current_user.sub_admin_access is not None else None,
         )
 
+    # On the caller's RLS session: only leads the caller can already read.
+    lead_refs = await payout_lead_refs(db, [p.id for p in payouts])
     reads: list[PayoutRead] = []
     for p in payouts:
         identities = identities_by_line[p.business_line]
@@ -167,6 +171,7 @@ async def _to_read(
         read.maker_name = maker.name if maker else None
         read.checker_name = checker.name if checker else None
         read.rejected_by_name = rejected_by.name if rejected_by else None
+        read.lead_refs = lead_refs.get(p.id, [])
         read.viewer_is_maker = p.maker_user_uuid == current_user.id
         read.viewer_can_approve = (
             p.status == PayoutStatus.PENDING_APPROVAL
@@ -211,7 +216,7 @@ async def create_payout(
         raise _map_error(exc) from None
 
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.post("/{payout_id}/approve", response_model=PayoutRead)
@@ -231,7 +236,7 @@ async def approve_payout(
         raise _map_error(exc) from None
 
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.post("/{payout_id}/simulate-gateway", response_model=PayoutRead)
@@ -259,7 +264,7 @@ async def simulate_gateway(
     payout = await _get_payout_or_404(db, payout_id)
     # The settle ran on another session; read the committed state, not a cached row.
     await db.refresh(payout)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.post("/{payout_id}/reject", response_model=PayoutRead)
@@ -312,7 +317,7 @@ async def reject_payout(
     # instead of the ORM-vs-Core split there).
     db.expire(payout)
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.post("/{payout_id}/manual/issue", response_model=PayoutRead)
@@ -333,7 +338,7 @@ async def issue_manual_cheque(
     except payments_service.PayoutError as exc:
         raise _map_error(exc) from None
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.post("/{payout_id}/manual/clear", response_model=PayoutRead)
@@ -352,7 +357,7 @@ async def clear_manual_cheque(
     except payments_service.PayoutError as exc:
         raise _map_error(exc) from None
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.post("/{payout_id}/manual/fail", response_model=PayoutRead)
@@ -373,7 +378,7 @@ async def fail_manual_cheque(
     except payments_service.PayoutError as exc:
         raise _map_error(exc) from None
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.post("/{payout_id}/manual/reverse", response_model=PayoutRead)
@@ -394,7 +399,7 @@ async def reverse_manual_cheque(
     except payments_service.PayoutError as exc:
         raise _map_error(exc) from None
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.get("/recipients", response_model=PayoutRecipientListResponse)
@@ -627,7 +632,7 @@ async def list_payouts(
         stmt = stmt.where(Payout.status == status_filter)
     result = await db.execute(stmt)
     payouts = result.scalars().all()
-    return PayoutListResponse(payouts=await _to_read(payouts, current_user))
+    return PayoutListResponse(payouts=await _to_read(payouts, current_user, db))
 
 
 @router.post("/webhook/razorpay", response_model=WebhookAck)

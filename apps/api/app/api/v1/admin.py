@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.cache.redis_keys import RedisCache
 from app.core.client_ip import get_client_ip
 from app.core.deps import CurrentUser, get_cache, require_platform_admin
+from app.core.lead_reference import lead_number_filter
 from app.db.session import get_db
 from app.models.audit_log import AuditAction
 from app.models.profile import AgentApplication, StaffRole, SubmissionStatus
@@ -928,9 +929,10 @@ async def list_leads(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     current_user: CurrentUser = Depends(require_platform_admin),
+    lead_number: int | None = Depends(lead_number_filter),
     db: AsyncSession = Depends(get_db),
 ) -> list[AdminLeadRead]:
-    leads = await list_unassigned_leads(db, limit, offset)
+    leads = await list_unassigned_leads(db, limit, offset, lead_number=lead_number)
     return [AdminLeadRead.model_validate(lead, from_attributes=True) for lead in leads]
 
 
@@ -939,12 +941,14 @@ async def list_assigned(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     current_user: CurrentUser = Depends(require_platform_admin),
+    lead_number: int | None = Depends(lead_number_filter),
     db: AsyncSession = Depends(get_db),
 ) -> list[AdminAssignedLeadRead]:
-    rows = await list_assigned_leads(db, limit, offset)
+    rows = await list_assigned_leads(db, limit, offset, lead_number=lead_number)
     return [
         AdminAssignedLeadRead(
             id=lead.id,
+            lead_ref=lead.lead_ref,
             name=lead.name,
             mobile=lead.mobile,
             business_line=lead.business_line,
@@ -982,6 +986,7 @@ async def get_lead_details(
     requests = (await request_summaries_for_leads(db, [lead.id]))[lead.id]
     return AdminLeadDetailsRead(
         **to_lead_details_read(lead, actor).model_dump(),
+        lead_ref=lead.lead_ref,
         requests=requests,
         chat_inquiries=await list_chat_inquiries(db, lead.id),
     )

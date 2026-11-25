@@ -17,6 +17,7 @@ from pydantic import (
     model_validator,
 )
 
+from app.core.lead_reference import LeadRef
 from app.schemas.financial_products import FormAnswers, ProductFormDefinition
 from app.schemas.profile_metadata import RoleProfileRead
 from app.schemas.sub_admin_access import (
@@ -210,6 +211,7 @@ class AdminUserStatusUpdateRequest(BaseModel):
 
 class AdminLeadRead(BaseModel):
     id: UUID
+    lead_ref: LeadRef
     name: str | None
     mobile: str
     business_line: Literal["loans", "real_estate"]
@@ -222,6 +224,7 @@ class AdminLeadRead(BaseModel):
 
 class AdminAssignedLeadRead(BaseModel):
     id: UUID
+    lead_ref: LeadRef
     name: str | None
     mobile: str
     business_line: Literal["loans", "real_estate"]

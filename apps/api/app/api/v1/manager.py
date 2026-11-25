@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import CurrentUser, check_assignment_line, require_assignment
+from app.core.lead_reference import lead_number_filter
 from app.db.session import get_db
 from app.models.staff_team import StaffTeam
 from app.schemas.staff_analytics import StaffAnalyticsResponse
@@ -301,11 +302,18 @@ async def get_team_work(
     response: Response,
     scope: str = Query("open", pattern="^(open|all)$"),
     current_user: CurrentUser = Depends(team_view),
+    lead_number: int | None = Depends(lead_number_filter),
     db: AsyncSession = Depends(get_db),
 ) -> TeamWorkResponse:
     response.headers["Cache-Control"] = "private, no-store"
     try:
-        return await team_work(db, team_id, _manager_uuid(current_user), open_only=scope == "open")
+        return await team_work(
+            db,
+            team_id,
+            _manager_uuid(current_user),
+            open_only=scope == "open",
+            lead_number=lead_number,
+        )
     except TeamNotFound as exc:
         raise _http(exc) from exc
 
@@ -317,12 +325,18 @@ async def get_member_work(
     response: Response,
     scope: str = Query("open", pattern="^(open|all)$"),
     current_user: CurrentUser = Depends(team_view),
+    lead_number: int | None = Depends(lead_number_filter),
     db: AsyncSession = Depends(get_db),
 ) -> TeamMemberWorkResponse:
     response.headers["Cache-Control"] = "private, no-store"
     try:
         return await member_work(
-            db, team_id, _manager_uuid(current_user), member_id, open_only=scope == "open"
+            db,
+            team_id,
+            _manager_uuid(current_user),
+            member_id,
+            open_only=scope == "open",
+            lead_number=lead_number,
         )
     except (TeamNotFound, MemberNotInTeam) as exc:
         raise _http(exc) from exc
