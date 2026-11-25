@@ -7,7 +7,8 @@ Lead and money searches accept it in tolerant forms as an exact match. A
 "Lead ref" badge on lead pages copies it. No public or client screen shows
 it. Lint, typecheck, 1,155 unit tests, 24 browser journeys and the Linux
 production build passed.
-Review PRs: pending.
+[Upstream #408](https://github.com/brollysolutions/client1/pull/408)
+· [Mirror #108](https://github.com/vamshisaideep9/client1/pull/108)
 
 **Lead reference numbers (API, part 1 of 2).** Every lead has a sequential
 `lead_number`, assigned by the database on every creation path and immutable

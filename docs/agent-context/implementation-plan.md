@@ -19,7 +19,8 @@
   reference search and the copy badge. The Linux production build passed.
 - Next priority is hosted review of both parts, then the additive migration
   on `dev.dhanadhara.com` before the web rollout.
-  Review PRs: pending.
+  [Upstream #408](https://github.com/brollysolutions/client1/pull/408)
+  · [Mirror #108](https://github.com/vamshisaideep9/client1/pull/108)
 
 **In progress — Lead reference numbers (`LD-00000123`)** (2026-11-25;
 branch `feat/lead-ref-1-api`, part 1 of 2)
