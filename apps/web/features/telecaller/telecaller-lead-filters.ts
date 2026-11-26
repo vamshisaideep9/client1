@@ -72,6 +72,8 @@ export function telecallerSignalValues(lead: TelecallerLead): LeadSignalValues {
     referrer: lead.referrer,
     facets: lead.facets,
     transactions: lead.transactions,
+    productId: lead.product_id,
+    productLabel: lead.product_label,
   };
 }
 

@@ -213,8 +213,47 @@ describe("product and property filters", () => {
   });
 
   it("falls back to the loan statuses on rows without facets", () => {
-    expect(matchesLeadSignals(agentLead, only({ loanStatus: "contacted" }))).toBe(true);
     expect(matchesLeadSignals(agentLead, only({ loanTypeId: HOME }))).toBe(false);
+    expect(matchesLeadSignals(agentLead, only({ loanStatus: "contacted" }))).toBe(true);
+  });
+
+  it("matches the stored product first, then an application of that product", () => {
+    const CARD = "card-product";
+    // An enquiry-only lead: no application, but its product is recorded.
+    const enquiry: LeadSignalValues = { ...directLead, productId: CARD, productLabel: "Platinum Card" };
+    expect(matchesLeadSignals(enquiry, only({ loanTypeId: CARD }))).toBe(true);
+    expect(matchesLeadSignals(enquiry, only({ loanTypeId: HOME }))).toBe(false);
+    // Application filters still need one matching application.
+    expect(matchesLeadSignals(enquiry, only({ loanTypeId: CARD, bankId: HDFC }))).toBe(false);
+    const recorded: LeadSignalValues = { ...twoLoans, productId: CARD };
+    expect(matchesLeadSignals(recorded, only({ loanTypeId: CARD }))).toBe(true);
+    expect(matchesLeadSignals(recorded, only({ loanTypeId: CARD, bankId: SBI, loanStatus: "new" }))).toBe(true);
+    // Facets still answer for a lead recorded under another product.
+    expect(matchesLeadSignals(recorded, only({ loanTypeId: HOME }))).toBe(true);
+    // A row from an older API with statuses only: the stored product still counts.
+    const legacy: LeadSignalValues = { ...agentLead, productId: CARD };
+    expect(matchesLeadSignals(legacy, only({ loanTypeId: CARD, loanStatus: "contacted" }))).toBe(true);
+    expect(matchesLeadSignals(legacy, only({ loanTypeId: CARD, loanStatus: "disbursed" }))).toBe(false);
+  });
+
+  it("offers every catalogue category and the rows' stored products", () => {
+    const options = leadSignalOptions(
+      {
+        loanTypes: [{ value: HOME, label: "Home Loan" }],
+        products: [
+          { value: HOME, label: "Home Loan" },
+          { value: "insurance", label: "Term Insurance" },
+        ],
+        banks: [],
+        bankNames: [],
+      },
+      [{ ...directLead, productId: "retired", productLabel: "Retired Card" }],
+    );
+    expect(options.loanTypes.map((option) => option.label)).toEqual([
+      "Home Loan",
+      "Retired Card",
+      "Term Insurance",
+    ]);
   });
 
   it("needs one deal to match category, type and deal status together", () => {

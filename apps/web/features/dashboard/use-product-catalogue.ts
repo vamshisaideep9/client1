@@ -10,11 +10,16 @@ import type { FilterOption } from "./filter-options";
 export type ProductCatalogue = {
   /** Lending products only: loan applications exist only for these. */
   loanTypes: FilterOption[];
+  /**
+   * Every active product (loan, credit card and insurance), for filters on a
+   * lead's stored product, which can be any category.
+   */
+  products: FilterOption[];
   banks: FilterOption[];
   bankNames: string[];
 };
 
-const EMPTY: ProductCatalogue = { loanTypes: [], banks: [], bankNames: [] };
+const EMPTY: ProductCatalogue = { loanTypes: [], products: [], banks: [], bankNames: [] };
 
 // One fetch per page load for every filter bar on screen; a failed read is not
 // kept, so the next bar that mounts tries again.
@@ -29,6 +34,9 @@ function loadCatalogue(): Promise<ProductCatalogue> {
           ? types.data
               .filter((product) => product.category === "loan")
               .map((product) => ({ value: product.id, label: product.label }))
+          : [],
+        products: types.ok
+          ? types.data.map((product) => ({ value: product.id, label: product.label }))
           : [],
         banks: banks.ok ? banks.data.map((bank) => ({ value: bank.id, label: bank.name })) : [],
         bankNames: banks.ok ? banks.data.map((bank) => bank.name) : [],
