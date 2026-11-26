@@ -75,3 +75,29 @@ test("Main Admin can preview and save independent module grants", async ({ page,
   await expect(page.getByRole("dialog", { name: "Pending Reviewer" })).toHaveCount(0);
   await expect(page.getByText("Scoped access", { exact: true })).toBeVisible();
 });
+
+test("a scoped Team Manager opens Products only with a Loans grant", async ({ page, context, baseURL }) => {
+  await context.addCookies([{ name: "session_hint", value: "1", url: baseURL! }]);
+  await mockMobileApi(page, "sub_admin");
+  let line = "loans";
+  await page.route("**/api/v1/auth/me", async (route) => route.fulfill({ json: {
+    first_name: "Scope", last_name: "Manager", email: "manager@example.test",
+    email_verified: true, profiles: [], sub_admin_access: {
+      status: "active", version: 1, grants: [{ assignment: "team_manager", business_line: line, actions: ["view"] }],
+    },
+  } }));
+  await page.route("**/api/v1/manager/products", async (route) => route.fulfill({ json: { products: [
+    { product_id: FIXTURE_ID, label: "Team Home Loan", category: "loan", active: true, specialists: 1, open_leads: 3, open_tasks: 0 },
+  ] } }));
+
+  await page.goto("/dashboard/products");
+  await expect(page.getByRole("heading", { level: 1, name: "Products" })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText("Team Home Loan", { exact: true }).first()).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
+
+  line = "real_estate";
+  await page.goto("/dashboard/products");
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 60_000 });
+  await page.goto(`/dashboard/products/${FIXTURE_ID}`);
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 60_000 });
+});

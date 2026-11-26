@@ -69,6 +69,8 @@ export function teamSignalValues(row: TeamLeadRow | TeamTaskRow): LeadSignalValu
     referrer: row.signals?.referrer,
     facets: row.signals?.facets,
     transactions: row.signals?.transactions,
+    productId: row.product_id,
+    productLabel: row.product_label,
   };
 }
 

@@ -1,5 +1,14 @@
 # Feature implementation status
 
+**Product specialists (slice 4 of 4: Products area).** Admin has a Products &
+staffing page showing which Telecallers and Officers cover each product,
+where leads wait unassigned and which products lack a specialist, with
+shortcuts to create or assign one. Every product opens one dashboard with
+lead and task KPIs, requests by status, a weekly trend and the people
+working it. Team Managers get the same dashboard limited to their own Loans
+teams, a product index, member specialties and a product filter on team
+work. The feature is complete for review; rollout waits for the migration.
+
 **Product specialists (slice 3 of 4: web, creation and specialist home).**
 Admin can give a Loans or dual-line Telecaller or Officer one product of any
 category when creating the account, from a staffing-page link, or later in the
