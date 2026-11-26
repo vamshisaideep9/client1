@@ -1,4 +1,9 @@
-"""Durable round-robin assignment for field tasks and ready vehicle pickups."""
+"""Durable round-robin assignment for field tasks and ready vehicle pickups.
+
+Loans tasks take their product from the lead (``leads.product_id``) and route
+specialist Officers first, then unspecialised Officers, then anyone on the
+line, with one cursor per pool. Real Estate work stays line-wide.
+"""
 
 from __future__ import annotations
 
@@ -11,12 +16,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.db.session as db_session
 from app.models.audit_log import AuditAction
+from app.models.lead import Lead
 from app.models.notification import NotificationType
 from app.models.profile import ProfileStatus, StaffProfile, StaffRole
 from app.models.task import EmployeeAssignmentCursor, Task, TaskStatus
 from app.models.vehicle_arrangement import VehicleArrangement, VehicleArrangementStatus
 from app.services.audit_log import record as record_audit
 from app.services.notifications import emit_notification
+from app.services.routing_pools import narrow_to_pool
 
 _VALID_LINES = frozenset({"loans", "real_estate"})
 
@@ -43,7 +50,16 @@ async def lock_assignment_lines(db: AsyncSession, business_lines: set[str]) -> N
         await _lock_line(db, business_line)
 
 
-async def _select_employee(db: AsyncSession, business_line: str) -> StaffProfile | None:
+async def _select_employee(
+    db: AsyncSession, business_line: str, product_id: UUID | None = None
+) -> StaffProfile | None:
+    """Select and advance one durable rotation turn in the work's pool.
+
+    Loans work with a known product goes to that product's specialists, then
+    to unspecialised Officers, then to anyone on the line; each pool has its
+    own cursor (``routing_pools``). The caller holds the per-line lock, so the
+    cursor and the assignment commit or roll back together.
+    """
     employees = list(
         (
             await db.scalars(
@@ -61,13 +77,17 @@ async def _select_employee(db: AsyncSession, business_line: str) -> StaffProfile
     if not employees:
         return None
 
+    employees, pool = narrow_to_pool(employees, business_line, product_id)
     cursor = await db.scalar(
         select(EmployeeAssignmentCursor)
-        .where(EmployeeAssignmentCursor.business_line == business_line)
+        .where(
+            EmployeeAssignmentCursor.business_line == business_line,
+            EmployeeAssignmentCursor.pool == pool,
+        )
         .with_for_update()
     )
     if cursor is None:
-        cursor = EmployeeAssignmentCursor(business_line=business_line)
+        cursor = EmployeeAssignmentCursor(business_line=business_line, pool=pool)
         db.add(cursor)
 
     selected = employees[0]
@@ -97,7 +117,11 @@ async def auto_assign_locked_task(db: AsyncSession, task: Task) -> EmployeeAssig
     ):
         return None
     await _lock_line(db, task.business_line)
-    employee = await _select_employee(db, task.business_line)
+    product_id = None
+    if task.business_line == "loans":
+        # The lead's stored product (leads.product_id); unknown means line-wide.
+        product_id = await db.scalar(select(Lead.product_id).where(Lead.id == task.lead_uuid))
+    employee = await _select_employee(db, task.business_line, product_id)
     if employee is None:
         return None
     task.assigned_employee_profile_uuid = employee.id
@@ -127,6 +151,9 @@ async def auto_assign_locked_vehicle(
     ):
         return None
     await _lock_line(db, arrangement.business_line)
+    # Vehicle pickups belong to Real Estate site visits (the table's
+    # real_estate_only check). They have no lead or loan product, so they always
+    # use the line-wide pool; product specialties only apply on the loans line.
     employee = await _select_employee(db, arrangement.business_line)
     if employee is None:
         return None

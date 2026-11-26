@@ -96,7 +96,7 @@ class StaffProfile(Base):
     __table_args__ = (
         CheckConstraint(
             "loan_specialty_id IS NULL OR "
-            "(role::text = 'telecaller' AND business_line IS NOT NULL "
+            "(role::text IN ('telecaller', 'employee') AND business_line IS NOT NULL "
             "AND business_line::text IN ('loans', 'both'))",
             name="loan_specialty_role_line",
         ),
@@ -110,6 +110,11 @@ class StaffProfile(Base):
     scope: Mapped[ProfileScope] = mapped_column(profile_scope_enum, nullable=False)
     business_line: Mapped[str | None] = mapped_column(business_line_enum, nullable=True)
     staff_code: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    # One optional product specialty (an active product of any category) for a
+    # Loans or dual-line Telecaller or Officer. Routing prefers specialists,
+    # then unspecialised staff, then anyone on the line. The legacy name is
+    # kept for contract compatibility; trg_staff_loan_specialty restricts
+    # writes to platform Admin.
     loan_specialty_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("loan_types.id", ondelete="RESTRICT"), nullable=True
     )

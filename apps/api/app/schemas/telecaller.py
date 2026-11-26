@@ -239,6 +239,10 @@ class TelecallerLeadRead(BaseModel):
     business_line: Literal["loans", "real_estate"]
     status: LeadStatusLiteral
     requirement: dict[str, Any] | None = None
+    # The lead's stored product (loan, credit card or insurance) and its
+    # label; null when unknown or ambiguous, and always on real estate.
+    product_id: UUID | None = None
+    product_label: str | None = None
     last_disposition: CallDispositionLiteral | None = None
     # Interest level recorded on that same latest call (set only when connected).
     last_interest_level: InterestLevelLiteral | None = None

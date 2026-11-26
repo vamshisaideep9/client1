@@ -48,6 +48,10 @@ class EmployeeTaskRead(TaskStaffRead):
     lead_mobile: str | None = None
     lead_contact_mode: Literal["allow", "deny", "share_link"]
     business_line: Literal["loans", "real_estate"]
+    # The task's product, from its lead's stored product; null when unknown
+    # and always on real estate.
+    product_id: UUID | None = None
+    product_label: str | None = None
     task_type: TaskTypeLiteral
     status: TaskStatusLiteral
     outcome: BgCheckOutcomeLiteral | None

@@ -11519,6 +11519,10 @@ export interface components {
             notes: string | null;
             /** Outcome */
             outcome: ("clear" | "flagged" | "inconclusive") | null;
+            /** Product Id */
+            product_id?: string | null;
+            /** Product Label */
+            product_label?: string | null;
             /** Raised By Telecaller Code */
             raised_by_telecaller_code?: string | null;
             /** Raised By Telecaller Name */
@@ -16602,6 +16606,10 @@ export interface components {
             name?: string | null;
             /** Next Follow Up At */
             next_follow_up_at?: string | null;
+            /** Product Id */
+            product_id?: string | null;
+            /** Product Label */
+            product_label?: string | null;
             /**
              * Property Deals
              * @default []
@@ -16683,6 +16691,10 @@ export interface components {
             name?: string | null;
             /** Next Follow Up At */
             next_follow_up_at?: string | null;
+            /** Product Id */
+            product_id?: string | null;
+            /** Product Label */
+            product_label?: string | null;
             referrer?: components["schemas"]["LeadReferrerRead"] | null;
             /** Requirement */
             requirement?: {

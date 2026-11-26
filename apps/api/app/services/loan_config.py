@@ -31,6 +31,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.audit_log import AuditAction
+from app.models.lead import Lead
 from app.models.loan import (
     Bank,
     BankLoanTypeAvailability,
@@ -39,6 +40,7 @@ from app.models.loan import (
     LoanApplication,
     LoanType,
 )
+from app.models.profile import StaffProfile
 from app.schemas.financial_catalog import FinancialProductMarketingFields
 from app.schemas.financial_products import ProductCategory, ensure_category_form
 from app.schemas.loan_config import (
@@ -288,6 +290,8 @@ async def delete_loan_type(
         LoanApplication.loan_type_id,
         FinancialServiceEnquiry.product_id,
         FinancialProductProviderOffer.loan_type_id,
+        Lead.product_id,
+        StaffProfile.loan_specialty_id,
     ):
         if await db.scalar(select(select(reference).where(reference == loan_type_id).exists())):
             raise LoanTypeInUse
