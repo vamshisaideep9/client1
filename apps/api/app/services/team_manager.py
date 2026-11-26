@@ -63,6 +63,7 @@ from app.schemas.staff_teams import (
 )
 from app.services.audit_log import record as record_audit
 from app.services.field_visibility import effective_modes
+from app.services.lead_products import product_labels
 from app.services.lead_signals import facets, team_lead_signals_for_ids, transaction_summary
 from app.services.leads import lead_number_predicates
 from app.services.notifications import emit_notification
@@ -447,6 +448,7 @@ async def _lead_rows(db: AsyncSession, team: StaffTeamRead, leads: list[Lead]) -
     summaries = await request_summaries_for_leads(db, ids)
     last = await get_last_activities(db, ids)
     signals = await _signals(db, team, ids)
+    labels = await product_labels(db, (lead.product_id for lead in leads))
     # Lead mobile is locked visible for Telecallers; name and referrer follow
     # the Admin's Telecaller rules.
     hidden = await _hidden_fields(db, team, ("name", "referrer"))
@@ -457,6 +459,8 @@ async def _lead_rows(db: AsyncSession, team: StaffTeamRead, leads: list[Lead]) -
             TeamLeadRow(
                 id=lead.id,
                 lead_ref=lead.lead_ref,
+                product_id=lead.product_id,
+                product_label=labels.get(lead.product_id) if lead.product_id else None,
                 name=None if "name" in hidden else lead.name,
                 mobile=lead.mobile,
                 status=lead.status.value,
@@ -485,20 +489,27 @@ async def _lead_rows(db: AsyncSession, team: StaffTeamRead, leads: list[Lead]) -
 async def _task_rows(db: AsyncSession, team: StaffTeamRead, tasks: list[Task]) -> list[TeamTaskRow]:
     lead_ids = list(dict.fromkeys(task.lead_uuid for task in tasks))
     leads = {
-        lead_id: (name, mobile)
-        for lead_id, name, mobile in (
-            await db.execute(select(Lead.id, Lead.name, Lead.mobile).where(Lead.id.in_(lead_ids)))
+        lead_id: (name, mobile, product_id)
+        for lead_id, name, mobile, product_id in (
+            await db.execute(
+                select(Lead.id, Lead.name, Lead.mobile, Lead.product_id).where(
+                    Lead.id.in_(lead_ids)
+                )
+            )
         ).all()
     }
+    labels = await product_labels(db, (row[2] for row in leads.values()))
     signals = await _signals(db, team, lead_ids)
     hidden = await _hidden_fields(db, team, ("name", "mobile", "referrer"))
     rows: list[TeamTaskRow] = []
     for task in tasks:
-        name, mobile = leads.get(task.lead_uuid, (None, None))
+        name, mobile, product_id = leads.get(task.lead_uuid, (None, None, None))
         rows.append(
             TeamTaskRow(
                 id=task.id,
                 lead_uuid=task.lead_uuid,
+                product_id=product_id,
+                product_label=labels.get(product_id) if product_id else None,
                 lead_name=None if "name" in hidden else name,
                 lead_mobile=None if "mobile" in hidden else mobile,
                 task_type=task.task_type.value,

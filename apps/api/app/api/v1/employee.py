@@ -7,6 +7,7 @@ every other role-gated router in this codebase).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -78,6 +79,7 @@ from app.services.lead_products import (
 )
 from app.services.lead_signals import EMPTY_SIGNALS, LeadSignals, facets, lead_signals_for_ids
 from app.services.profile_metadata import task_staff_for_ids
+from app.services.specialist_home import officer_product_counts, staff_specialty
 from app.services.task_feedback import (
     FeedbackLimitReached,
     FeedbackRateExceeded,
@@ -625,6 +627,7 @@ async def home(
     )
     staff = await task_staff_for_ids(db, (task.id for task, _, _ in tasks_today))
     products = await lead_products_for_ids(db, (task.lead_uuid for task, _, _ in tasks_today))
+    specialty = await staff_specialty(db, staff_profile_uuid)
     modes = await effective_modes(db, FieldTargetRole.EMPLOYEE)
     return EmployeeHomeResponse(
         tasks_today=[
@@ -641,4 +644,8 @@ async def home(
         overdue_count=overdue_count,
         counts_by_type=counts_by_type,
         counts_by_status=counts_by_status,
+        specialty=specialty,
+        product_counts=await officer_product_counts(
+            db, staff_profile_uuid, datetime.now(UTC), specialty
+        ),
     )

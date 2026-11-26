@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 from app.core.lead_reference import LeadRef
 from app.schemas.chat_inquiries import ChatInquiryRead
 from app.schemas.financial_products import FormAnswers, ProductFormDefinition
+from app.schemas.product_dashboards import ProductLeadCount, ProductRef
 from app.schemas.profile_metadata import TaskStaffRead
 
 LeadStatusLiteral = Literal["new", "assigned", "working", "converted", "closed", "released"]
@@ -439,3 +440,7 @@ class TelecallerFollowUpItem(BaseModel):
 class TelecallerHomeResponse(BaseModel):
     follow_ups_due: list[TelecallerFollowUpItem]
     counts_by_status: dict[str, int]
+    # The caller's own product specialty (null when unspecialised).
+    specialty: ProductRef | None = None
+    # The caller's own Loans leads by product, specialty first.
+    product_counts: list[ProductLeadCount] = Field(default_factory=list)

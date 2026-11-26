@@ -1,5 +1,16 @@
 # Feature implementation status
 
+**Product specialists (slice 2 of 4: API dashboards).** Specialist homes
+return the caller's specialty and their own Loans work by product. Platform
+Admin gets a product-staffing index with specialists, open and unassigned
+leads, open tasks, coverage flags and the staff available to assign. One
+per-product dashboard endpoint serves KPIs, requests by status, task timing,
+a weekly trend and a staff table: platform-wide for Admin, limited to the
+caller's own Loans teams for a Team Manager, and 403 for everyone else. Team
+Managers also get a product index, and their team work rows carry the
+product. Positive, cross-team, Real Estate-only, other-role and unknown-product
+checks pass on PostgreSQL. Web screens follow in slices 3-4.
+
 **Product specialists (slice 1 of 4: API routing).** Admin can give a Loans or
 dual-line Telecaller or Officer one active product of any category (loan,
 credit card or insurance) as a specialty, at creation or later; Real Estate
