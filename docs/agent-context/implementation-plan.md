@@ -62,6 +62,28 @@ stacked on slice 1):
   specialise in or work on. Team work rows carry `product_id` and
   `product_label` for the Team Manager product filter.
 
+Slice 3 — web, Admin creation and the specialist's own dashboard (branch
+`feat/product-specialists-3-web-specialist`, stacked on slice 2):
+
+- Admin create and the account dialog offer a "Product specialty" for Loans
+  or dual-line Telecallers and Officers, listing active products of every
+  category grouped by category. `/dashboard/users?role=&product=` opens the
+  create form prefilled for the staffing page's "Add Telecaller/Officer".
+- Telecaller and Officer homes show a "<Product> specialist" chip, a "My
+  product" panel (open, overdue, converted or completed in 30 days) and an
+  "Other products" breakdown for fallback work; unspecialised staff see only
+  the breakdown. Loans line only.
+- Lead and task lists match the product filter on the stored product first,
+  then on applications, offer every category, and start a specialist on a
+  removable "My product" chip (once per visit; a home link's `?product=`
+  wins). Other product filters (Admin loans, Agent, analytics) keep the
+  lending-only list.
+- Verified: lint and typecheck passed; 1,168 of 1,172 unit tests passed in
+  the full run, and the 4 that timed out under load (file-scanning tests)
+  passed on rerun. 29 mocked Playwright journeys passed on the dev server
+  (staff specialty 20, specialist dashboard 6, lead signal filters 3), at
+  390 px and 1,440 px where relevant.
+
 **Merged upstream — Lead reference numbers — web (part 2 of 2)** (branch
 `feat/lead-ref-2-web`, stacked on part 1)
 

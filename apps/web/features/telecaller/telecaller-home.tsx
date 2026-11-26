@@ -19,6 +19,7 @@ import { ContestHomeCard } from "@/features/contests/contest-home-card";
 import { AttendanceTodayCard } from "@/features/attendance/staff-attendance-view";
 import { useLine } from "@/features/dashboard/line-provider";
 import { useMe } from "@/features/dashboard/me-provider";
+import { ProductWorkPanels, SpecialtyChip } from "@/features/dashboard/product-work-panels";
 import { getNotifications, type AppNotification } from "@/lib/notifications";
 import { getTelecallerHome, type TelecallerHome as TelecallerHomeData } from "@/lib/telecaller-api";
 
@@ -108,6 +109,7 @@ export function TelecallerHome() {
       <DashboardHeader
         title={greeting(me?.firstName)}
         description="Welcome to your workspace."
+        meta={home.specialty ? <SpecialtyChip specialty={home.specialty} /> : undefined}
         actions={<DashboardTextLink href="/dashboard/leads">Open lead queue</DashboardTextLink>}
       />
 
@@ -138,6 +140,10 @@ export function TelecallerHome() {
           href="/dashboard/leads"
         />
       </MetricGrid>
+
+      {activeLine === "loans" ? (
+        <ProductWorkPanels kind="leads" specialty={home.specialty} counts={home.product_counts} />
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-2">
         <DashboardPanel

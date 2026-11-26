@@ -77,7 +77,8 @@ export function StaffAccountDialog({
 }) {
   const isStaff = user != null && user.roles.some((role) => STAFF_ROLES.includes(role));
   const name = user ? `${user.first_name} ${user.last_name}`.trim() : "";
-  const telecaller = user?.role_profiles?.find((profile) => profile.role === "telecaller" && (profile.business_line === "loans" || profile.business_line === "both"));
+  // Loans or dual-line Telecallers and Officers can specialise in one product.
+  const specialist = user?.role_profiles?.find((profile) => (profile.role === "telecaller" || profile.role === "employee") && (profile.business_line === "loans" || profile.business_line === "both"));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -140,7 +141,7 @@ export function StaffAccountDialog({
                     </div>
                   </section>
 
-                  {telecaller && user.status !== "soft_deleted" && <StaffSpecialtyEditor key={user.id} userId={user.id} profile={telecaller} onSaved={onSpecialtySaved} />}
+                  {specialist && user.status !== "soft_deleted" && <StaffSpecialtyEditor key={user.id} userId={user.id} profile={specialist} onSaved={onSpecialtySaved} />}
 
                   {isStaff ? (
                     <TempCredentialPanel

@@ -22,6 +22,7 @@ import {
 import { ContestHomeCard } from "@/features/contests/contest-home-card";
 import { AttendanceTodayCard } from "@/features/attendance/staff-attendance-view";
 import { useLine } from "@/features/dashboard/line-provider";
+import { ProductWorkPanels, SpecialtyChip } from "@/features/dashboard/product-work-panels";
 import { getNotifications, type AppNotification } from "@/lib/notifications";
 import { getEmployeeHome, type EmployeeHome as EmployeeHomeData } from "@/lib/employee-api";
 
@@ -108,6 +109,7 @@ export function EmployeeHome() {
       <DashboardHeader
         title="Field operations"
         description="Prioritize today's assigned work, overdue tasks, and field follow-through."
+        meta={home.specialty ? <SpecialtyChip specialty={home.specialty} /> : undefined}
       />
 
       <MetricGrid>
@@ -137,6 +139,10 @@ export function EmployeeHome() {
           href="/dashboard/tasks"
         />
       </MetricGrid>
+
+      {activeLine === "loans" ? (
+        <ProductWorkPanels kind="tasks" specialty={home.specialty} counts={home.product_counts} />
+      ) : null}
 
       {home.overdue_count > 0 ? (
         <div className="flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
