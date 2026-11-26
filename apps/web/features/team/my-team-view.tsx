@@ -26,6 +26,8 @@ import {
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { ListEmptyState, ListLoadingState } from "@/features/dashboard/list-states";
 import { DASHBOARD_ICONS } from "@/features/dashboard/dashboard-icons";
+import { FilterSelect } from "@/features/dashboard/filter-select";
+import { productDashboardHref } from "@/features/products/product-coverage";
 import {
   formatRangeLabel,
   resolveRangePreset,
@@ -44,12 +46,31 @@ import {
 import { TeamContestsPanel } from "@/features/contests/team-contests-panel";
 
 import { TeamAnalyticsFilterBar, useHiddenFilters, useTeamAnalyticsRequest } from "./team-analytics-filter-bar";
+import { filterMembersBySpecialty, memberSpecialtyOptions } from "./member-specialty";
 import { TeamWorkList } from "./team-work-list";
 import { useLoad } from "./use-load";
+
+/** A member's product specialty; on a Loans team it opens that product's dashboard. */
+function SpecialtyChip({ member }: { member: StaffTeam["members"][number] }) {
+  if (!member.loan_specialty_id) return <span className="text-text-secondary">None</span>;
+  return (
+    <Link
+      href={productDashboardHref(member.loan_specialty_id)}
+      className="inline-flex min-h-8 max-w-full items-center rounded-full bg-brand-cta-tint px-2.5 text-xs font-medium text-brand-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span className="truncate">{member.loan_specialty_label ?? "Product"}</span>
+      <span className="sr-only"> dashboard</span>
+    </Link>
+  );
+}
 
 function MembersTable({ team, overview }: { team: StaffTeam; overview: TeamOverview }) {
   const columns = overview.members[0]?.kpis ?? overview.totals;
   const href = (memberId: string) => `/dashboard/team/${team.id}/members/${memberId}`;
+  const loans = team.business_line === "loans";
+  const [specialty, setSpecialty] = React.useState("all");
+  const specialtyOptions = React.useMemo(() => memberSpecialtyOptions(overview.members), [overview.members]);
+  const members = loans ? filterMembersBySpecialty(overview.members, specialty) : overview.members;
 
   if (overview.members.length === 0) {
     return (
@@ -63,9 +84,26 @@ function MembersTable({ team, overview }: { team: StaffTeam; overview: TeamOverv
 
   return (
     <>
+      {loans && specialtyOptions.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <FilterSelect
+            label="Specialty"
+            value={specialty}
+            onValueChange={setSpecialty}
+            options={specialtyOptions}
+            className="w-full sm:w-64"
+          />
+          <p className="text-xs text-text-secondary" aria-live="polite">
+            {members.length} of {overview.members.length} members
+          </p>
+        </div>
+      ) : null}
+      {members.length === 0 ? (
+        <p className="py-6 text-center text-sm text-text-secondary">No members with this specialty.</p>
+      ) : null}
       {/* Phones: one card per member. */}
       <ul className="space-y-3 md:hidden" aria-label="Team members">
-        {overview.members.map(({ member, kpis }) => (
+        {members.map(({ member, kpis }) => (
           <li key={member.staff_profile_uuid}>
             <Link
               href={href(member.staff_profile_uuid)}
@@ -79,6 +117,11 @@ function MembersTable({ team, overview }: { team: StaffTeam; overview: TeamOverv
                 <Badge variant="outline" className="mt-1">
                   Inactive
                 </Badge>
+              ) : null}
+              {loans ? (
+                <span className="mt-1 block text-xs text-text-secondary">
+                  Specialty: {member.loan_specialty_label ?? "None"}
+                </span>
               ) : null}
               <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                 {kpis.map((kpi) => (
@@ -102,6 +145,11 @@ function MembersTable({ team, overview }: { team: StaffTeam; overview: TeamOverv
               <th scope="col" className="px-3 py-2 font-medium">
                 Member
               </th>
+              {loans ? (
+                <th scope="col" className="px-3 py-2 font-medium">
+                  Specialty
+                </th>
+              ) : null}
               {columns.map((kpi) => (
                 <th key={kpi.key} scope="col" className="px-3 py-2 text-right font-medium">
                   {kpi.label}
@@ -113,7 +161,7 @@ function MembersTable({ team, overview }: { team: StaffTeam; overview: TeamOverv
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {overview.members.map(({ member, kpis }) => (
+            {members.map(({ member, kpis }) => (
               <tr key={member.staff_profile_uuid} className="hover:bg-background">
                 <th scope="row" className="px-3 py-2 font-medium text-text-primary">
                   {personName(member)}
@@ -123,6 +171,11 @@ function MembersTable({ team, overview }: { team: StaffTeam; overview: TeamOverv
                     </Badge>
                   ) : null}
                 </th>
+                {loans ? (
+                  <td className="px-3 py-2">
+                    <SpecialtyChip member={member} />
+                  </td>
+                ) : null}
                 {kpis.map((kpi) => (
                   <td key={kpi.key} className="px-3 py-2 text-right tabular-nums">
                     {formatMetric(kpi.value, kpi.unit)}

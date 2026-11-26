@@ -230,6 +230,45 @@ describe("role-aware dashboard navigation", () => {
     expect(isDashboardPathAllowed("/dashboard/teams", context("sub_admin"))).toBe(false);
   });
 
+  it("shows Products to Admin and to a Sub Admin who manages a team", () => {
+    const manager = { ...context("sub_admin"), managesTeam: true };
+    expect(navKeys(manager)).toContain("sub-admin-products");
+    expect(navKeys(context("sub_admin"))).not.toContain("sub-admin-products");
+    expect(navKeys(context("admin"))).toContain("admin-products");
+    for (const role of ["telecaller", "employee", "agent", "client"] as const) {
+      expect(navKeys({ ...context(role, "loans"), managesTeam: true })).not.toContain("sub-admin-products");
+    }
+    for (const route of ["/dashboard/products", "/dashboard/products/p1"]) {
+      expect(isDashboardPathAllowed(route, context("admin"))).toBe(true);
+      expect(isDashboardPathAllowed(route, manager)).toBe(true);
+      expect(isDashboardPathAllowed(route, context("sub_admin"))).toBe(false);
+      expect(isDashboardPathAllowed(route, context("telecaller", "loans"))).toBe(false);
+      expect(isDashboardPathAllowed(route, context("employee", "both"))).toBe(false);
+      expect(isDashboardPathAllowed(route, context("client", "loans"))).toBe(false);
+    }
+    expect(getDashboardPathLine("/dashboard/products/p1")).toBeNull();
+  });
+
+  it("opens Products to a scoped Sub Admin only with Team Manager view on Loans", () => {
+    const scoped = (grants: { assignment: string; business_line: string; actions: string[] }[]) =>
+      ({
+        ...context("sub_admin"),
+        subAdminAccess: { status: "active", version: 1, grants },
+      }) as DashboardAccessContext;
+    const loans = scoped([{ assignment: "team_manager", business_line: "loans", actions: ["view"] }]);
+    const estate = scoped([{ assignment: "team_manager", business_line: "real_estate", actions: ["view"] }]);
+    const media = scoped([{ assignment: "media_sub_admin", business_line: "loans", actions: ["view"] }]);
+    for (const route of ["/dashboard/products", "/dashboard/products/p1"]) {
+      expect(isDashboardPathAllowed(route, loans)).toBe(true);
+      expect(isDashboardPathAllowed(route, estate)).toBe(false);
+      expect(isDashboardPathAllowed(route, media)).toBe(false);
+    }
+    expect(navKeys(loans)).toContain("sub-admin-products");
+    expect(navKeys(estate)).not.toContain("sub-admin-products");
+    const pending = { ...context("sub_admin"), subAdminAccess: { status: "pending", version: 1, grants: [] } } as DashboardAccessContext;
+    expect(isDashboardPathAllowed("/dashboard/products", pending)).toBe(false);
+  });
+
   it("makes every existing Admin workspace reachable in grouped navigation", () => {
     expect(navKeys(context("admin"))).toEqual([
       "home",
@@ -245,6 +284,7 @@ describe("role-aware dashboard navigation", () => {
       "attendance-management",
       "admin-users",
       "admin-teams",
+      "admin-products",
       "admin-contests",
       "admin-agents",
       "admin-support-tickets",
