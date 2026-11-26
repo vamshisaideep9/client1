@@ -4,13 +4,16 @@ import { ResponsiveArtwork } from "@/components/responsive-artwork";
 import { ContactForm } from "@/components/contact/contact-form";
 import { ContactInfo } from "@/components/contact/contact-info";
 import { ScrollCue } from "@/components/scroll-cue";
-import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { Button } from "@/components/ui/button";
+import { WebsiteBody, WebsiteFaq } from "@/components/website-content";
+import { getWebsiteContent } from "@/lib/public-website-content";
+import { SITE_CONTACT, SITE_NAME, SITE_URL, SITE_WHATSAPP_HREF } from "@/lib/site";
 import type { LeadTopic } from "@/lib/leads";
 
 export const metadata: Metadata = {
-  title: "Contact Us: Talk to Our Financial Services and Real Estate Team",
+  title: "Contact Dhanadhara: Loans & Property in Telangana",
   description:
-    "Get in touch with our financial services and real estate team. Leave your number and we will call you back, or reach us by phone and email.",
+    "Call +91 90100 53010 or email Dhanadhara, Monday to Saturday, 10 AM to 6 PM. Office in Vikarabad, serving Hyderabad and Telangana. Request a callback.",
   keywords: [
     "contact",
     "get in touch",
@@ -20,9 +23,9 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/contact" },
   openGraph: {
-    title: "Contact Us: Talk to Our Financial Services and Real Estate Team",
+    title: "Contact Dhanadhara: Loans & Property in Telangana",
     description:
-      "Get in touch with our financial services and real estate team. Leave your number and we will call you back.",
+      "Call +91 90100 53010 or email Dhanadhara, Monday to Saturday, 10 AM to 6 PM. Office in Vikarabad, serving Hyderabad and Telangana. Request a callback.",
     type: "website",
     url: "/contact",
   },
@@ -62,7 +65,11 @@ export default async function ContactPage({
     invitation?: string;
   }>;
 }) {
-  const { line, product, property, invitation } = await searchParams;
+  const [{ line, product, property, invitation }, published] = await Promise.all([
+    searchParams, getWebsiteContent("page/contact"),
+  ]);
+  const content = published?.content;
+  const copy = content?.form_copy;
   const invitationToken =
     invitation && /^[A-Za-z0-9_-]{32,128}$/.test(invitation) ? invitation : undefined;
   const propertyRef =
@@ -97,13 +104,15 @@ export default async function ContactPage({
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
             <div>
               <h1 className="max-w-3xl font-heading text-3xl font-semibold leading-tight tracking-tight text-brand-heading sm:text-5xl lg:text-6xl">
-                Talk to a real person
+                {content?.title || "Talk to our loans and property team"}
               </h1>
               <p className="mt-5 max-w-2xl text-lg text-[var(--nav-text)] sm:text-xl">
-                A loan or a property. Whatever brought you here, leave your
-                number and the right team will call you back. No bots, no hold
-                music.
+                {content?.summary || "A loan or a property. Whatever brought you here, leave your number and the right team will call you back. No bots, no hold music."}
               </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Button asChild size="lg"><a href={SITE_CONTACT.phoneHref}>Call {SITE_CONTACT.phone}</a></Button>
+                <Button asChild size="lg" variant="outline"><a href={SITE_WHATSAPP_HREF}>WhatsApp</a></Button>
+              </div>
             </div>
             <div
               aria-hidden
@@ -132,11 +141,10 @@ export default async function ContactPage({
           <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
             <div className="rounded-2xl border border-border bg-surface p-5 sm:p-8">
               <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-3xl">
-                Send us a message
+                {copy?.heading || "Send us a message"}
               </h2>
               <p className="mt-2 text-text-secondary">
-                Tell us what it is about, share your details, and we will be in
-                touch.
+                {copy?.help || "Tell us what it is about, share your details, and we will be in touch."}
               </p>
               <div className="mt-8">
                 <ContactForm
@@ -144,6 +152,7 @@ export default async function ContactPage({
                   initialProduct={initialProduct}
                   propertyRef={propertyRef}
                   invitationToken={invitationToken}
+                  copy={copy}
                 />
               </div>
             </div>
@@ -163,6 +172,8 @@ export default async function ContactPage({
           </div>
         </div>
       </section>
+      <WebsiteBody content={content && { body: content.body, sections: content.sections }} />
+      <WebsiteFaq items={content?.faq} />
     </>
   );
 }

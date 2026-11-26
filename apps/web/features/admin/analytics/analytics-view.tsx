@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AttendanceMonthPanel } from "@/features/attendance/attendance-month-panel";
 import {
   DashboardHeader,
   DashboardPage,
@@ -36,6 +37,7 @@ import {
   type ReportSummary,
   type TeamPerformanceSummary,
 } from "@/lib/reports-api";
+import { ReportCharts } from "./report-charts";
 import { ReportFilterBar, type ReportFilterValue } from "./report-filter-bar";
 import { ReportTable, type ReportColumn } from "./report-table";
 import { useReport } from "./use-report";
@@ -210,7 +212,7 @@ function TeamPerformance({ teams }: { teams: TeamPerformanceSummary[] }) {
 
 function defaultFilters(): ReportFilterValue {
   const { dateFrom, dateTo } = resolveDatePreset("this_month", new Date());
-  return { dateFrom, dateTo, bucket: "week", businessLine: undefined, agentProfileUuids: [] };
+  return { dateFrom, dateTo, bucket: "week", businessLine: undefined, agentProfileUuids: [], detail: {} };
 }
 
 function ReportPanel({ kind }: { kind: ReportKind }) {
@@ -242,6 +244,7 @@ function ReportPanel({ kind }: { kind: ReportKind }) {
       bucket: filters.bucket,
       businessLine: filters.businessLine,
       agentProfileUuids: filters.agentProfileUuids,
+      detail: kind === "agents" ? undefined : filters.detail,
     };
     const res =
       format === "csv"
@@ -280,6 +283,8 @@ function ReportPanel({ kind }: { kind: ReportKind }) {
           ))}
         </MetricGrid>
       )}
+
+      <ReportCharts kind={kind} filters={filters} />
 
       <div className="flex flex-wrap justify-end gap-2">
         <Button variant="outline" size="sm" onClick={() => void onExport("csv")} disabled={exporting || loading}>
@@ -343,7 +348,7 @@ export function AnalyticsView() {
     <DashboardPage>
       <DashboardHeader
         title="Analytics & reports"
-        description="Lead, loan, and deal activity across both business lines, with per-agent performance."
+        description="Lead, loan, and deal activity, per-agent performance, and attendance across both business lines."
       />
 
       <Tabs defaultValue="leads">
@@ -353,12 +358,14 @@ export function AnalyticsView() {
               {k.label}
             </TabsTrigger>
           ))}
+          <TabsTrigger value="attendance">Attendance</TabsTrigger>
         </TabsList>
         {REPORT_KINDS.map((k) => (
           <TabsContent key={k.value} value={k.value} className="mt-4">
             <ReportPanel kind={k.value} />
           </TabsContent>
         ))}
+        <TabsContent value="attendance" className="mt-4"><AttendanceMonthPanel /></TabsContent>
       </Tabs>
     </DashboardPage>
   );

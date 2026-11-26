@@ -21,7 +21,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cache.redis_keys import ADMIN_BROADCAST_RATE, RedisCache
 from app.core.config import settings
-from app.core.deps import CurrentUser, get_active_user, get_cache, require_platform_admin
+from app.core.deps import (
+    CurrentUser,
+    get_active_user,
+    get_cache,
+    get_personal_user,
+    require_platform_admin,
+)
 from app.db.session import get_db
 from app.models.notification import Notification
 from app.models.user import User
@@ -64,7 +70,7 @@ _ADMIN_LIST_LIMIT = 200
 
 @router.get("", response_model=NotificationListResponse)
 async def list_notifications(
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(get_personal_user),
     db: AsyncSession = Depends(get_db),
 ) -> NotificationListResponse:
     result = await db.execute(
@@ -83,7 +89,7 @@ async def list_notifications(
 
 @router.get("/unread-count", response_model=UnreadCountResponse)
 async def get_unread_count(
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(get_personal_user),
     db: AsyncSession = Depends(get_db),
 ) -> UnreadCountResponse:
     result = await db.execute(
@@ -133,7 +139,7 @@ async def list_notifications_for_admin(
 @router.patch("/{notification_id}/read", response_model=NotificationRead)
 async def mark_read(
     notification_id: UUID,
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(get_personal_user),
     db: AsyncSession = Depends(get_db),
 ) -> NotificationRead:
     result = await db.execute(
@@ -156,7 +162,7 @@ async def mark_read(
 
 @router.post("/read-all", status_code=status.HTTP_204_NO_CONTENT)
 async def mark_all_read(
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(get_personal_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     await db.execute(

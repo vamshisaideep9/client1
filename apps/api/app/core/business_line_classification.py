@@ -32,7 +32,20 @@ class ClassificationMode(enum.StrEnum):
 TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     "agent_applications": ClassificationMode.OPERATIONAL,
     "agent_invite_links": ClassificationMode.DERIVED,
+    # Per-account payout destination keyed by auth_user_uuid; no line column.
+    "agent_payout_details": ClassificationMode.IDENTITY,
     "agent_profiles": ClassificationMode.OPERATIONAL,
+    "attendance_certificates": ClassificationMode.DERIVED,
+    # Older attendance days and requests can lack a line snapshot. Their
+    # access is evaluated through the staff profile and attendance policies.
+    "attendance_days": ClassificationMode.PROFILE_SCOPE,
+    "attendance_employment": ClassificationMode.OPERATIONAL,
+    "attendance_holidays": ClassificationMode.PLATFORM_CONFIG,
+    "attendance_line_holidays": ClassificationMode.OPERATIONAL,
+    "attendance_month_revisions": ClassificationMode.DERIVED,
+    "attendance_policies": ClassificationMode.PLATFORM_CONFIG,
+    "attendance_requests": ClassificationMode.PROFILE_SCOPE,
+    "attendance_rollover_state": ClassificationMode.DERIVED,
     "audit_log": ClassificationMode.OPTIONAL_AUDIT,
     "auth_events": ClassificationMode.IDENTITY,
     "auth_users": ClassificationMode.IDENTITY,
@@ -49,7 +62,9 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     # Reusable campaign artwork can be scoped to one business line or shared
     # across both, matching banners/offers rather than operational row rules.
     "campaign_media_assets": ClassificationMode.GLOBAL_CONTENT,
+    "chat_inquiries": ClassificationMode.DERIVED,  # scope follows the linked lead
     "client_profiles": ClassificationMode.OPERATIONAL,
+    "commission_payout_items": ClassificationMode.DERIVED,
     "commissions": ClassificationMode.OPERATIONAL,
     "contact_share_links": ClassificationMode.DERIVED,
     "content_blocks": ClassificationMode.GLOBAL_CONTENT,
@@ -62,16 +77,34 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     "lead_assignment_cursors": ClassificationMode.OPERATIONAL,
     "employee_assignment_cursors": ClassificationMode.OPERATIONAL,
     "leads": ClassificationMode.OPERATIONAL,
+    # Rejected lead introductions / referral sign-ups (CS-024): the Agent's
+    # line on Agent attempts, NULL on referral attempts (the line is unknown
+    # at sign-up, as on a pending referral).
+    "lead_intake_attempts": ClassificationMode.OPTIONAL_AUDIT,
     "loan_applications": ClassificationMode.FIXED_LOANS,
     "loan_documents": ClassificationMode.FIXED_LOANS,
     "loan_txn_history": ClassificationMode.FIXED_LOANS,
     "loan_types": ClassificationMode.PLATFORM_CONFIG,
     "mobile_change_requests": ClassificationMode.IDENTITY,
+    # CS-025 phone/email changes and their permanent history are identity-wide
+    # (one account, both lines), like mobile_change_requests.
+    "contact_change_requests": ClassificationMode.IDENTITY,
+    "contact_change_history": ClassificationMode.IDENTITY,
+    # CS-027 contests: one operational line per contest, copied onto every
+    # result row, immutable by trigger.
+    "contests": ClassificationMode.OPERATIONAL,
+    "contest_results": ClassificationMode.OPERATIONAL,
+    # CS-026 India pincode reference list: line-neutral lookup data.
+    "pincodes": ClassificationMode.PLATFORM_CONFIG,
+    # CS-028 indicative commission rate per loan product: configuration of a
+    # loans-only product (loan_types is PLATFORM_CONFIG too); no line column.
+    "product_commission_rates": ClassificationMode.PLATFORM_CONFIG,
     "notifications": ClassificationMode.IDENTITY,
     "offers": ClassificationMode.GLOBAL_CONTENT,
     "payouts": ClassificationMode.OPERATIONAL,
     "personalization_preferences": ClassificationMode.IDENTITY,
     "properties": ClassificationMode.FIXED_REAL_ESTATE,
+    "property_catalog_types": ClassificationMode.PLATFORM_CONFIG,
     "property_deals": ClassificationMode.FIXED_REAL_ESTATE,
     "property_media": ClassificationMode.FIXED_REAL_ESTATE,
     "property_submission_media": ClassificationMode.FIXED_REAL_ESTATE,
@@ -83,14 +116,24 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     "refresh_tokens": ClassificationMode.IDENTITY,
     "site_visits": ClassificationMode.FIXED_REAL_ESTATE,
     "staff_profiles": ClassificationMode.PROFILE_SCOPE,
+    # Sub Admin–led teams (CS-019): one operational line per team, copied onto
+    # each membership so "one team per member per line" is a unique key.
+    "staff_team_members": ClassificationMode.OPERATIONAL,
+    "staff_teams": ClassificationMode.OPERATIONAL,
+    "team_work_notes": ClassificationMode.OPERATIONAL,
     "staff_feature_grants": ClassificationMode.PLATFORM_CONFIG,
     "staff_invite_links": ClassificationMode.DERIVED,
+    "sub_admin_access": ClassificationMode.PLATFORM_CONFIG,
     "support_tickets": ClassificationMode.IDENTITY,
     "task_documents": ClassificationMode.DERIVED,
     "task_feedback_media": ClassificationMode.OPERATIONAL,
     "tasks": ClassificationMode.OPERATIONAL,
     "transactions": ClassificationMode.OPERATIONAL,
     "vehicle_arrangements": ClassificationMode.FIXED_REAL_ESTATE,
+    # Website drafts and permissions hold platform editorial configuration.
+    "website_documents": ClassificationMode.PLATFORM_CONFIG,
+    "website_editor_grants": ClassificationMode.PLATFORM_CONFIG,
+    "website_revisions": ClassificationMode.DERIVED,
 }
 
 

@@ -23,8 +23,10 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
   {
     heading: "Company",
     links: [
+      { label: "About", href: "/about" },
       { label: "Get started", href: "/get-started" },
       { label: "Help Center", href: "/help-center" },
+      { label: "Knowledge Sharing", href: "/knowledge" },
       { label: "Become a partner", href: "/apply-as-agent" },
       { label: "Contact", href: "/contact" },
     ],

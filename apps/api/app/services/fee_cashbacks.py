@@ -28,7 +28,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.db.session as db_session
+from app.core.lead_reference import format_optional_lead_ref
 from app.models.fee_cashback import FeeCashback, FeeCashbackStatus
+from app.models.lead import Lead
 from app.models.loan import FeeOutcome, LoanApplication
 from app.models.profile import ClientProfile
 from app.models.user import User
@@ -91,9 +93,11 @@ async def list_eligible_applications(
             _name_expr(User).label("client_name"),
             LoanApplication.processing_fee,
             LoanApplication.disbursed_at.label("eligible_since"),
+            Lead.lead_number,
         )
         .join(ClientProfile, ClientProfile.id == LoanApplication.client_profile_uuid)
         .join(User, User.id == ClientProfile.auth_user_uuid)
+        .outerjoin(Lead, Lead.id == LoanApplication.lead_uuid)
         .where(
             # disbursed_at IS NOT NULL, not status == DISBURSED: DISBURSED
             # isn't terminal, so a loan that has since moved on to CLOSED
@@ -118,6 +122,7 @@ async def list_eligible_applications(
     applications = [
         EligibleFeeApplication(
             loan_application_uuid=r.loan_application_uuid,
+            lead_ref=format_optional_lead_ref(r.lead_number),
             business_line=r.business_line,
             client_profile_uuid=r.client_profile_uuid,
             client_name=r.client_name,
@@ -239,10 +244,13 @@ async def cancel_fee_cashback(
     )
 
 
-def _row_to_read(cashback: FeeCashback, client_name: str | None) -> FeeCashbackRead:
+def _row_to_read(
+    cashback: FeeCashback, client_name: str | None, lead_number: int | None = None
+) -> FeeCashbackRead:
     return FeeCashbackRead(
         id=cashback.id,
         loan_application_uuid=cashback.loan_application_uuid,
+        lead_ref=format_optional_lead_ref(lead_number),
         client_profile_uuid=cashback.client_profile_uuid,
         client_name=client_name,
         business_line=cashback.business_line,
@@ -277,16 +285,18 @@ async def list_for_admin(
     total = await db.scalar(select(func.count()).select_from(FeeCashback).where(*filters)) or 0
 
     stmt = (
-        select(FeeCashback, _name_expr(User).label("client_name"))
+        select(FeeCashback, _name_expr(User).label("client_name"), Lead.lead_number)
         .join(ClientProfile, ClientProfile.id == FeeCashback.client_profile_uuid)
         .join(User, User.id == ClientProfile.auth_user_uuid)
+        .outerjoin(LoanApplication, LoanApplication.id == FeeCashback.loan_application_uuid)
+        .outerjoin(Lead, Lead.id == LoanApplication.lead_uuid)
         .where(*filters)
         .order_by(FeeCashback.created_at.desc())
         .limit(limit)
         .offset(offset)
     )
     rows = (await db.execute(stmt)).all()
-    return [_row_to_read(c, name) for c, name in rows], total
+    return [_row_to_read(c, name, number) for c, name, number in rows], total
 
 
 async def get_for_admin(db: AsyncSession, cashback_id: uuid.UUID) -> FeeCashbackRead | None:
@@ -294,16 +304,18 @@ async def get_for_admin(db: AsyncSession, cashback_id: uuid.UUID) -> FeeCashback
     after create_fee_cashback so the response carries client_name without
     duplicating the join logic."""
     stmt = (
-        select(FeeCashback, _name_expr(User).label("client_name"))
+        select(FeeCashback, _name_expr(User).label("client_name"), Lead.lead_number)
         .join(ClientProfile, ClientProfile.id == FeeCashback.client_profile_uuid)
         .join(User, User.id == ClientProfile.auth_user_uuid)
+        .outerjoin(LoanApplication, LoanApplication.id == FeeCashback.loan_application_uuid)
+        .outerjoin(Lead, Lead.id == LoanApplication.lead_uuid)
         .where(FeeCashback.id == cashback_id)
     )
     row = (await db.execute(stmt)).first()
     if row is None:
         return None
-    cashback, client_name = row
-    return _row_to_read(cashback, client_name)
+    cashback, client_name, lead_number = row
+    return _row_to_read(cashback, client_name, lead_number)
 
 
 # ---------------------------------------------------------------------------

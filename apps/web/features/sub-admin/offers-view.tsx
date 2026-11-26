@@ -2,6 +2,9 @@
 /* eslint-disable @next/next/no-img-element */
 
 import * as React from "react";
+import { useMe } from "@/features/dashboard/me-provider";
+import { assignedLines, canActOnLine } from "@/lib/sub-admin-access";
+
 import Link from "next/link";
 import {
   Archive,
@@ -96,6 +99,10 @@ export function OffersView({
 }) {
   const { session } = useAuth();
   const isAdmin = session?.role === "admin";
+  const { me } = useMe();
+  const access = me?.subAdminAccess;
+  const editLines = access ? assignedLines(access, "media_sub_admin", "edit") : undefined;
+  const canCreate = !isAdmin && (!editLines || editLines.length > 0);
   const { items, loading, error, reload } = useOfferQueue();
   const [filters, setFilters] = React.useState<FilterBarValue>(() =>
     initialStatus ? { ...EMPTY_FILTERS, status: initialStatus } : EMPTY_FILTERS,
@@ -112,7 +119,7 @@ export function OffersView({
   React.useEffect(() => onPendingCount?.(pendingCount), [onPendingCount, pendingCount]);
   const [createOpen, setCreateOpen] = React.useState(false);
   const [createDirty, setCreateDirty] = React.useState(false);
-  const canEdit = Boolean(active && !isAdmin && EDITABLE.has(active.status));
+  const canEdit = Boolean(active && !isAdmin && (!editLines || canActOnLine(editLines, active.business_line)) && EDITABLE.has(active.status));
 
   const columns = React.useMemo<readonly DataColumn<Offer>[]>(() => [
     { key: "offer", header: "Campaign", render: (item) => <DataTablePrimaryCell title={item.title} subtitle={`${item.partner_name ?? "Partner not set"} · ${audienceSummary(item.audience_rules)}`} /> },
@@ -231,7 +238,7 @@ export function OffersView({
         title={isAdmin ? "Offer approvals" : "Dashboard offers"}
         description={isAdmin ? "Approve complete partner coupon campaigns before they can reach a dashboard." : "Create role-targeted partner coupons, submit them for approval, then schedule or activate them."}
         actions={
-          isAdmin ? undefined : (
+          !canCreate ? undefined : (
             <div className="flex flex-wrap items-center gap-2">
               <Button asChild variant="outline">
                 <Link href="/dashboard/media-library">
@@ -253,7 +260,7 @@ export function OffersView({
         <MetricCard label="Approved" value={items.filter((item) => item.status === "approved" || item.status === "scheduled").length} icon={CalendarClock} />
         <MetricCard label="Live" value={items.filter((item) => item.status === "active").length} icon={DASHBOARD_ICONS.analytics} />
       </MetricGrid> : null}
-      <FilterBar value={filters} onChange={setFilters} searchLabel="Search offers" searchPlaceholder="Campaign, partner, description, or code" statusOptions={Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }))} statusLabel="offer states" kindLabel="discount types" kindOptions={KIND_OPTIONS} note={embedded ? undefined : "Coupon campaigns are dashboard-only and require explicit role targeting."} />
+      <FilterBar value={filters} onChange={setFilters} searchLabel="Search offers" searchPlaceholder="Campaign, partner, description, or code" statusOptions={Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }))} statusLabel="Offer status" kindLabel="Discount type" kindOptions={KIND_OPTIONS} note={embedded ? undefined : "Coupon campaigns are dashboard-only and require explicit role targeting."} />
       {error ? <FetchError status={null} message={error} onRetry={() => void reload()} /> : (
         <DashboardPanel title={isAdmin ? "Campaign oversight" : "Campaign library"} description={`${filtered.length} ${filtered.length === 1 ? "campaign" : "campaigns"} shown.`} bodyClassName={embedded ? "p-4" : "p-0"}>
           {loading ? <div className="p-5"><ListLoadingState rows={5} /></div> : filtered.length === 0 ? <ListEmptyState icon={Inbox} title={items.length ? "No campaigns match these filters" : "No dashboard offers yet"} description={items.length ? "Clear or adjust the filters." : isAdmin ? "Submitted campaigns will appear here." : "Create the first partner coupon campaign."} className="m-5" /> : <>{embedded ? <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{page.pageRows.map((item) => <li key={item.id}><button type="button" onClick={() => open(item)} className="w-full overflow-hidden rounded-xl border border-border bg-background text-left transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><div className="relative aspect-[16/7] overflow-hidden bg-muted">{item.image_url ? <img src={item.image_url} alt="" width={960} height={420} className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center text-text-secondary"><ImageIcon className="h-7 w-7" /></span>}<span className="absolute left-3 top-3"><StatusBadge tone={STATUS_TONE[item.status]}>{STATUS_LABEL[item.status]}</StatusBadge></span></div><div className="space-y-2 p-4"><div className="flex items-start justify-between gap-3"><p className="line-clamp-2 font-semibold text-text-primary">{item.title}</p><span className="shrink-0 text-xs font-semibold text-brand-link">{discountText(item)}</span></div><p className="text-xs text-text-secondary">{item.partner_name ?? "Partner incomplete"} · {audienceSummary(item.audience_rules)}</p></div></button></li>)}</ul> : <DataTable columns={columns} rows={page.pageRows} rowKey={(item) => item.id} onRowClick={open} rowActionLabel="Open offer workspace" minWidth="min-w-[820px]" />}<div className="px-5 pb-5"><ListPagination page={page.page} total={page.total} onPageChange={page.setPage} /></div></>}
@@ -261,7 +268,7 @@ export function OffersView({
       )}
 
       <Dialog open={active !== null} onOpenChange={closeWorkspace}>
-        <DialogContent showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}>
+        <DialogContent preventOutsideClose showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}>
           {active && canEdit ? <>
             <CmsWorkspaceHeader title={active.title} description={`${STATUS_LABEL[active.status]} · Correct every requested field before resubmitting`} />
             <div className="min-h-0 overflow-y-auto py-2">
@@ -302,8 +309,9 @@ export function OffersView({
                   {isAdmin && reviewAction ? <><Button variant="ghost" disabled={busy} onClick={() => { setReviewAction(null); setReviewNote(""); }}>Back</Button><Button variant={reviewAction === "remove" ? "destructive" : "default"} disabled={busy} onClick={() => void (reviewAction === "remove" ? removeReviewed(active) : reject(active))}>{reviewAction === "remove" ? <Trash2 className="h-4 w-4" /> : <X className="h-4 w-4" />}{reviewAction === "remove" ? "Confirm removal" : "Send change request"}</Button></> : null}
                   {isAdmin && !reviewAction && active.status === "pending_approval" ? <><Button variant="outline" disabled={busy} onClick={() => setReviewAction("changes")}><X className="h-4 w-4" />Request changes</Button><Button disabled={busy} onClick={() => void transition(approveOffer, active, "Offer approved")}><Check className="h-4 w-4" />Approve</Button></> : null}
                   {isAdmin && !reviewAction ? <Button variant="destructive" disabled={busy} onClick={() => setReviewAction("remove")}><Trash2 className="h-4 w-4" />Remove</Button> : null}
-                  {!isAdmin && active.status === "approved" ? <><Button variant="outline" disabled={busy} onClick={() => void transition(scheduleOffer, active, "Offer scheduled")}><CalendarClock className="h-4 w-4" />Schedule</Button><Button disabled={busy} onClick={() => void transition(activateOffer, active, "Offer activated")}><Check className="h-4 w-4" />Activate now</Button></> : null}
-                  {!isAdmin && (active.status === "scheduled" || active.status === "active" || active.status === "expired") ? <Button variant="outline" disabled={busy} onClick={() => void transition(archiveOffer, active, "Offer archived")}><Archive className="h-4 w-4" />Archive</Button> : null}
+                  {!access && active.status === "approved" ? <><Button variant="outline" disabled={busy} onClick={() => void transition(scheduleOffer, active, "Offer scheduled")}><CalendarClock className="h-4 w-4" />Schedule</Button><Button disabled={busy} onClick={() => void transition(activateOffer, active, "Offer activated")}><Check className="h-4 w-4" />Activate now</Button></> : null}
+                  {isAdmin && active.status === "scheduled" ? <Button disabled={busy} onClick={() => void transition(activateOffer, active, "Offer activated")}><Check className="h-4 w-4" />Activate now</Button> : null}
+                  {!access && !isAdmin && (active.status === "scheduled" || active.status === "active" || active.status === "expired") ? <Button variant="outline" disabled={busy} onClick={() => void transition(archiveOffer, active, "Offer archived")}><Archive className="h-4 w-4" />Archive</Button> : null}
                 </DialogFooter>
               </div>}
               preview={<CmsPreviewFrame title="Dashboard appearance" description="Coupon codes are never rendered on public pages." contexts={[{ value: "dashboard", label: "Dashboard" }]} context="dashboard" onContextChange={() => undefined}><OfferPreview offer={active} /></CmsPreviewFrame>}
@@ -312,7 +320,7 @@ export function OffersView({
         </DialogContent>
       </Dialog>
 
-      {isAdmin ? null : <Dialog open={createOpen} onOpenChange={closeCreate}><DialogContent showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}><CmsWorkspaceHeader title="New dashboard offer" description="Create a complete private draft before sending it to Admin." /><div className="min-h-0 overflow-y-auto py-2"><OfferForm embedded onDirtyChange={setCreateDirty} onCreated={() => { setCreateDirty(false); setCreateOpen(false); void reload(); }} /></div></DialogContent></Dialog>}
+      {!canCreate ? null : <Dialog open={createOpen} onOpenChange={closeCreate}><DialogContent preventOutsideClose showCloseButton={false} className={CMS_WORKSPACE_DIALOG_CLASS}><CmsWorkspaceHeader title="New dashboard offer" description="Create a complete private draft before sending it to Admin." /><div className="min-h-0 overflow-y-auto py-2"><OfferForm embedded allowedLines={editLines} onDirtyChange={setCreateDirty} onCreated={() => { setCreateDirty(false); setCreateOpen(false); void reload(); }} /></div></DialogContent></Dialog>}
     </DashboardPage>
   );
 }

@@ -30,7 +30,7 @@ from app.services.media_processing import (
 )
 from app.services.provider_logos import BUILT_IN_LOGO_REVIEWED_AT, BUILT_IN_PROVIDER_LOGOS
 
-PROVIDER_LOGO_MAX_BYTES = 1024 * 1024
+PROVIDER_LOGO_MAX_BYTES = 5 * 1024 * 1024
 _LOGO_STAGING_PREFIX = "private/provider-logos/staging/"
 _LOGO_PUBLIC_PREFIX = "public/provider-logos/"
 _LOGO_EXTENSIONS = {
@@ -120,6 +120,23 @@ async def delete_managed_provider_logo(logo_key: str | None) -> None:
         await asyncio.to_thread(storage.delete_object, logo_key)
 
 
+_PUBLIC_PRODUCT_CONDITIONS = (
+    LoanType.active.is_(True),
+    LoanType.public_visible.is_(True),
+    LoanType.public_summary.is_not(None),
+    LoanType.public_description.is_not(None),
+)
+
+
+async def published_product_names(db: AsyncSession, names: set[str]) -> dict[str, str]:
+    result = await db.execute(
+        select(LoanType.name, LoanType.category).where(
+            LoanType.name.in_(names), *_PUBLIC_PRODUCT_CONDITIONS
+        )
+    )
+    return {name: category for name, category in result}
+
+
 async def list_public_products(
     db: AsyncSession,
     *,
@@ -145,12 +162,7 @@ async def list_public_products(
         .group_by(FinancialProductProviderOffer.loan_type_id)
         .subquery()
     )
-    predicates = [
-        LoanType.active.is_(True),
-        LoanType.public_visible.is_(True),
-        LoanType.public_summary.is_not(None),
-        LoanType.public_description.is_not(None),
-    ]
+    predicates = list(_PUBLIC_PRODUCT_CONDITIONS)
     if query:
         pattern = f"%{query.strip()}%"
         predicates.append(
@@ -200,10 +212,7 @@ async def get_public_product(db: AsyncSession, slug: str) -> tuple[LoanType, int
             select(LoanType, provider_count)
             .where(
                 LoanType.name == slug,
-                LoanType.active.is_(True),
-                LoanType.public_visible.is_(True),
-                LoanType.public_summary.is_not(None),
-                LoanType.public_description.is_not(None),
+                *_PUBLIC_PRODUCT_CONDITIONS,
             )
             .limit(1)
         )

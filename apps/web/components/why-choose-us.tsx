@@ -85,7 +85,7 @@ export function WhyChooseUs() {
     <section
       id="why-choose-us"
       aria-labelledby="why-choose-us-heading"
-      className="w-full scroll-mt-16 border-t border-[var(--nav-border)] bg-[var(--nav-bg)]"
+      className="w-full scroll-mt-[var(--site-header-h)] border-t border-[var(--nav-border)] bg-[var(--nav-bg)]"
     >
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
         {/* Header */}
@@ -167,11 +167,11 @@ export function WhyChooseUs() {
           </span>
           <div className="flex-1">
             <h3 className="font-heading text-base font-semibold text-foreground">
-              Refer and earn cashback
+              Refer and earn a referral bonus
             </h3>
             <p className="text-sm leading-snug text-text-secondary">
               Share your referral code with friends. When someone you refer
-              buys a property or closes a loan, you earn cashback.
+              buys a property or closes a loan, you earn a referral bonus.
             </p>
           </div>
           <Link

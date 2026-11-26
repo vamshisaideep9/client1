@@ -7,9 +7,25 @@ from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
 
+from app.core.lead_reference import LeadRef
 from app.schemas.financial_products import FormAnswers, ProductFormDefinition
+from app.schemas.profile_metadata import RoleProfileRead
+from app.schemas.sub_admin_access import (
+    GrantList,
+    SubAdminAccess,
+    SubAdminTeamLink,
+    validate_grants,
+)
 
 # ---------------------------------------------------------------------------
 # Staff provisioning
@@ -28,6 +44,8 @@ class StaffCreateRequest(BaseModel):
     # admin/sub_admin are platform-scoped (business_line omitted); telecaller
     # and employee are line-scoped (loans, real_estate, or both is required).
     business_line: Literal["loans", "real_estate", "both"] | None = None
+    loan_specialty_id: UUID | None = None
+    sub_admin_grants: Annotated[GrantList, AfterValidator(validate_grants)] | None = None
 
     @field_validator("email")
     @classmethod
@@ -36,6 +54,12 @@ class StaffCreateRequest(BaseModel):
 
     @model_validator(mode="after")
     def check_business_line_matches_role(self) -> StaffCreateRequest:
+        if self.sub_admin_grants is not None and self.role != "sub_admin":
+            raise ValueError("Only Sub Admins may receive dashboard grants.")
+        if self.loan_specialty_id is not None and (
+            self.role != "telecaller" or self.business_line not in ("loans", "both")
+        ):
+            raise ValueError("Only Loans or dual-line Telecallers may have a loan specialty.")
         if self.role in ("admin", "sub_admin"):
             if self.business_line is not None:
                 raise ValueError("Platform Admin staff must not provide a business_line.")
@@ -46,6 +70,7 @@ class StaffCreateRequest(BaseModel):
 
 
 class StaffCreateResponse(BaseModel):
+    loan_specialty_id: UUID | None = None
     first_name: str
     last_name: str
     mobile: str
@@ -69,6 +94,9 @@ class StaffAccessEntry(BaseModel):
     role: Literal["admin", "sub_admin"]
     is_primary_admin: bool
     features: list[StaffFeatureLiteral]
+    sub_admin_access: SubAdminAccess | None = None
+    suspended: bool = False
+    live_teams: list[SubAdminTeamLink] = Field(default_factory=list)
 
 
 class StaffAccessListResponse(BaseModel):
@@ -80,6 +108,12 @@ class StaffAccessListResponse(BaseModel):
 class StaffFeatureUpdateRequest(BaseModel):
     feature: StaffFeatureLiteral
     enabled: bool
+
+
+class StaffSpecialtyUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    loan_specialty_id: UUID | None
 
 
 # ---------------------------------------------------------------------------
@@ -147,6 +181,7 @@ class AdminClientProfileRead(BaseModel):
 
 
 class AdminUserRead(BaseModel):
+    role_profiles: list[RoleProfileRead] = Field(default_factory=list)
     id: UUID
     first_name: str
     last_name: str
@@ -176,15 +211,20 @@ class AdminUserStatusUpdateRequest(BaseModel):
 
 class AdminLeadRead(BaseModel):
     id: UUID
+    lead_ref: LeadRef
     name: str | None
     mobile: str
     business_line: Literal["loans", "real_estate"]
     origin: Literal["direct", "agent"]
     created_at: datetime
+    # CS-028: Agent resubmissions after the window ended (0 / null when never).
+    resubmit_count: int = 0
+    last_resubmitted_at: datetime | None = None
 
 
 class AdminAssignedLeadRead(BaseModel):
     id: UUID
+    lead_ref: LeadRef
     name: str | None
     mobile: str
     business_line: Literal["loans", "real_estate"]
@@ -195,6 +235,9 @@ class AdminAssignedLeadRead(BaseModel):
     assigned_telecaller_staff_code: str | None
     created_at: datetime
     updated_at: datetime
+    # CS-028: Agent resubmissions after the window ended (0 / null when never).
+    resubmit_count: int = 0
+    last_resubmitted_at: datetime | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -245,7 +288,10 @@ LoanStatusLiteral = Literal[
     "contacted",
     "docs_collected",
     "submitted_to_bank",
+    "under_review",
     "sanctioned",
+    "agreement_collected",
+    "agreement_submitted_to_bank",
     "disbursed",
     "closed",
     "rejected",

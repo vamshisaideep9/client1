@@ -96,7 +96,7 @@ export function CalculatorShell({
       </section>
 
       {/* FAQ */}
-      <section className="relative w-full overflow-hidden border-t border-[var(--nav-border)] bg-[var(--nav-bg)]">
+      {def.faq.length ? <section className="relative w-full overflow-hidden border-t border-[var(--nav-border)] bg-[var(--nav-bg)]">
         <FaqDoodles />
         <div className="relative mx-auto max-w-3xl px-4 py-14 sm:px-6 lg:px-8">
           <h2 className="font-heading text-2xl font-semibold text-[var(--nav-text)] sm:text-3xl">
@@ -106,7 +106,7 @@ export function CalculatorShell({
             <CalculatorFaq items={def.faq} />
           </div>
         </div>
-      </section>
+      </section> : null}
 
       {/* Related calculators */}
       {related.length > 0 ? (

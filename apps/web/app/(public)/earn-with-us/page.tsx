@@ -6,14 +6,15 @@ import { EarnEligibility } from "@/components/earn-with-us/eligibility";
 import { EarnHero } from "@/components/earn-with-us/hero";
 import { EarnHowItWorks } from "@/components/earn-with-us/how-earning-works";
 import { ReferAndEarn } from "@/components/earn-with-us/refer-and-earn";
-import { FaqSection } from "@/components/faq-section";
-import { AGENT_FAQ_ITEMS, faqPageJsonLd } from "@/lib/faq";
+import { WebsiteBody, WebsiteFaq } from "@/components/website-content";
+import { AGENT_FAQ_ITEMS } from "@/lib/faq";
+import { getWebsiteContent } from "@/lib/public-website-content";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Earn with Us: Partner Commission and Referral Cashback",
+  title: "Become a Loan DSA Partner or Refer & Earn | Dhanadhara",
   description:
-    "Become a loan DSA or real estate partner and earn commission, or refer friends and earn cashback when their deal completes. Free to join, KYC verified.",
+    "Join from anywhere in India as a loan DSA or real estate partner. Earn commission on closed deals, paid within 45 days. Free to join, KYC verified.",
   keywords: [
     "become a loan agent",
     "loan DSA registration",
@@ -23,13 +24,13 @@ export const metadata: Metadata = {
     "loan agent commission",
     "agent partner program",
     "refer and earn",
-    "referral cashback",
+    "referral bonus",
   ],
   alternates: { canonical: "/earn-with-us" },
   openGraph: {
-    title: "Earn with Us: Partner Commission and Referral Cashback",
+    title: "Become a Loan DSA Partner or Refer & Earn | Dhanadhara",
     description:
-      "Become a loan DSA or real estate partner and earn commission, or refer friends and earn cashback when their deal completes. Free to join, KYC verified.",
+      "Join from anywhere in India as a loan DSA or real estate partner. Earn commission on closed deals, paid within 45 days. Free to join, KYC verified.",
     type: "website",
     url: "/earn-with-us",
   },
@@ -50,28 +51,30 @@ const earnWithUsJsonLd = {
         },
       ],
     },
-    faqPageJsonLd(AGENT_FAQ_ITEMS),
   ],
   publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
 };
 
-export default function EarnWithUsPage() {
+export default async function EarnWithUsPage() {
+  const website = await getWebsiteContent("page/earn-with-us");
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(earnWithUsJsonLd) }}
       />
-      <EarnHero />
+      <EarnHero title={website?.content.title} summary={website?.content.summary} />
       <ReferAndEarn />
       <EarnEligibility />
       <EarnHowItWorks />
       <EarnAgentTracks />
-      <FaqSection
+      <WebsiteBody content={website && { body: website.content.body, sections: website.content.sections }} />
+      <WebsiteFaq
         id="agent-faq"
         heading="Questions, answered"
         subheading="Partners and referrals, everything people usually ask."
-        items={AGENT_FAQ_ITEMS}
+        items={website?.content.faq}
+        defaults={AGENT_FAQ_ITEMS}
         columns={2}
         size="lg"
       />

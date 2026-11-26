@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { WebsiteBody } from "@/components/website-content";
+import { jsonLdScript } from "@/lib/organization-jsonld";
+import { getWebsiteContent } from "@/lib/public-website-content";
 
 import { CalculatorShell } from "@/components/calculators/calculator-shell";
 import { CalculatorIsland } from "@/components/calculators/calculator-island";
@@ -44,18 +47,22 @@ export default async function CalculatorPage({
 }) {
   const def = getCalculator((await params).slug);
   if (!def) notFound();
+  const published = await getWebsiteContent(`page/calculators/${def.slug}`);
+  const faq = published?.content.faq?.map(({ question, answer }) => ({ q: question, a: answer })) ?? def.faq;
+  const calculator = { ...def, faq };
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(calculatorJsonLd(def)) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(calculatorJsonLd(calculator)) }}
       />
-      <CalculatorShell def={def}>
+      <CalculatorShell def={calculator}>
         <Suspense fallback={<CalculatorPending />}>
           <CalculatorIsland slug={def.slug} />
         </Suspense>
       </CalculatorShell>
+      <WebsiteBody content={published?.content} />
     </>
   );
 }

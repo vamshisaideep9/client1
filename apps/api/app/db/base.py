@@ -15,6 +15,7 @@ class Base(DeclarativeBase):
 
 
 from app.models.user import User  # noqa
+from app.models.website_content import WebsiteDocument, WebsiteEditorGrant, WebsiteRevision  # noqa
 from app.models.auth import RefreshToken, AuthEvent  # noqa
 from app.models.profile import (  # noqa
     AgentApplication,
@@ -24,6 +25,7 @@ from app.models.profile import (  # noqa
     StaffProfile,
 )
 from app.models.lead import Lead  # noqa
+from app.models.chat_inquiry import ChatInquiry  # noqa
 from app.models.lead_activity import LeadActivity  # noqa
 from app.models.loan import (  # noqa
     Bank,
@@ -42,7 +44,7 @@ from app.models.bookmark import Bookmark  # noqa
 from app.models.notification import Notification  # noqa
 from app.models.transaction import Transaction  # noqa
 from app.models.payout import Payout  # noqa
-from app.models.property import Property  # noqa
+from app.models.property import Property, PropertyCatalogType  # noqa
 from app.models.property_submission import PropertySubmission  # noqa
 from app.models.property_media import PropertyMedia, PropertySubmissionMedia  # noqa
 from app.models.property_deal import PropertyDeal  # noqa
@@ -67,3 +69,10 @@ from app.models.staff_invite import StaffInviteLink  # noqa
 from app.models.agent_invite import AgentInviteLink  # noqa
 from app.models.mobile_change import MobileChangeRequest  # noqa
 from app.models.personalization import PersonalizationPreference  # noqa
+from app.models.agent_payout_details import AgentPayoutDetails  # noqa
+from app.models.staff_team import StaffTeam, StaffTeamMember, TeamWorkNote  # noqa
+from app.models.lead_intake_attempt import LeadIntakeAttempt  # noqa
+from app.models.contact_change import ContactChangeHistory, ContactChangeRequest  # noqa
+from app.models.pincode import Pincode  # noqa
+from app.models.contest import Contest, ContestResult  # noqa
+from app.models.commission_rate import ProductCommissionRate  # noqa

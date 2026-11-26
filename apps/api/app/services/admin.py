@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import generate_profile_code, generate_temp_password, hash_password
 from app.models.audit_log import AuditAction
+from app.models.loan import LoanType
 from app.models.notification import NotificationType
 from app.models.profile import (
     AgentApplication,
@@ -34,18 +35,80 @@ from app.models.profile import (
     StaffFeatureGrant,
     StaffProfile,
     StaffRole,
+    SubAdminAccessProfile,
     SubmissionStatus,
 )
+from app.models.staff_team import StaffTeam
 from app.models.user import User, UserStatus
 from app.schemas.admin import StaffCreateRequest
 from app.services import storage
 from app.services.admin_notify import notify_admins
 from app.services.agent_applications import scrub_documents
 from app.services.audit_log import record as record_audit
+from app.services.sub_admin_access import read_access, validate_assigned_agents
 
 
 class StaffAlreadyExists(Exception):
     """Raised when the target mobile already has an ACTIVE staff profile."""
+
+
+class InvalidLoanSpecialty(Exception):
+    """Specialties require an active lending product and a Loans Telecaller."""
+
+
+async def validate_loan_specialty(
+    db: AsyncSession, *, role: str, business_line: str | None, product_id: UUID | None
+) -> None:
+    if product_id is None:
+        return
+    if role != "telecaller" or business_line not in ("loans", "both"):
+        raise InvalidLoanSpecialty
+    product = await db.scalar(
+        select(LoanType).where(LoanType.id == product_id).with_for_update(read=True)
+    )
+    if product is None or not product.active or product.category != "loan":
+        raise InvalidLoanSpecialty
+
+
+async def set_staff_specialty(
+    db: AsyncSession, *, user_id: UUID, product_id: UUID | None, actor_id: UUID
+) -> None:
+    profile = await db.scalar(
+        select(StaffProfile)
+        .join(User, User.id == StaffProfile.auth_user_uuid)
+        .where(
+            StaffProfile.auth_user_uuid == user_id,
+            StaffProfile.status == ProfileStatus.ACTIVE,
+            StaffProfile.role == StaffRole.TELECALLER,
+            User.status != UserStatus.SOFT_DELETED,
+        )
+        .with_for_update(of=StaffProfile)
+    )
+    if profile is None:
+        raise AdminUserNotFound
+    if profile.business_line not in ("loans", "both"):
+        raise InvalidLoanSpecialty
+    await validate_loan_specialty(
+        db, role=profile.role.value, business_line=profile.business_line, product_id=product_id
+    )
+    previous = profile.loan_specialty_id
+    if previous == product_id:
+        return
+    profile.loan_specialty_id = product_id
+    await record_audit(
+        db,
+        action=AuditAction.STAFF_SPECIALTY_UPDATED,
+        entity_type="staff_profile",
+        entity_uuid=profile.id,
+        actor_uuid=actor_id,
+        actor_role="admin",
+        business_line="loans",
+        detail={
+            "previous_product_id": str(previous) if previous else None,
+            "product_id": str(product_id) if product_id else None,
+        },
+    )
+    await db.commit()
 
 
 class PrimaryAdminRequired(Exception):
@@ -331,6 +394,20 @@ async def create_staff(
     forced-reset flow (Auth Design §6.2) takes over on first sign-in.
     """
     role = StaffRole(payload.role)
+    admin_can_delegate = False
+    if role == StaffRole.SUB_ADMIN and payload.sub_admin_grants is not None:
+        admin_can_delegate = await is_primary_admin(
+            db, auth_user_uuid=actor_id, staff_profile_uuid=actor_staff_profile_uuid
+        )
+        if not admin_can_delegate:
+            raise PrimaryAdminRequired
+        await validate_assigned_agents(db, payload.sub_admin_grants)
+    await validate_loan_specialty(
+        db,
+        role=payload.role,
+        business_line=payload.business_line,
+        product_id=payload.loan_specialty_id,
+    )
     if role == StaffRole.ADMIN:
         if not await is_primary_admin(
             db,
@@ -361,15 +438,22 @@ async def create_staff(
     )
     business_line = None if scope == ProfileScope.PLATFORM else payload.business_line
 
-    user = await db.scalar(select(User).where(User.mobile == payload.mobile))
+    user = await db.scalar(select(User).where(User.mobile == payload.mobile).with_for_update())
     temp_password: str | None = None
 
     if user is not None:
         existing = await db.scalar(
-            select(StaffProfile).where(
+            select(StaffProfile.id)
+            .where(
                 StaffProfile.auth_user_uuid == user.id,
-                StaffProfile.status == ProfileStatus.ACTIVE,
+                or_(
+                    StaffProfile.status == ProfileStatus.ACTIVE,
+                    StaffProfile.role == StaffRole.SUB_ADMIN
+                    if role == StaffRole.SUB_ADMIN
+                    else False,
+                ),
             )
+            .limit(1)
         )
         if existing is not None:
             raise StaffAlreadyExists
@@ -407,6 +491,7 @@ async def create_staff(
         scope=scope,
         business_line=business_line,
         staff_code="",
+        loan_specialty_id=payload.loan_specialty_id,
         status=ProfileStatus.ACTIVE,
         created_by_auth_user_uuid=actor_id,
         is_primary_admin=False,
@@ -420,6 +505,24 @@ async def create_staff(
         except IntegrityError:
             if attempt == 4:
                 raise
+
+    if role == StaffRole.SUB_ADMIN:
+        access = SubAdminAccessProfile(
+            staff_profile_uuid=profile.id,
+            status="active" if admin_can_delegate else "pending",
+            grants=[grant.model_dump(mode="json") for grant in payload.sub_admin_grants or ()],
+            version=1,
+        )
+        db.add(access)
+        await record_audit(
+            db,
+            action=AuditAction.SUB_ADMIN_ACCESS_UPDATED,
+            entity_type="staff_profile",
+            entity_uuid=profile.id,
+            actor_uuid=actor_id,
+            actor_role=actor_role,
+            detail={"after": read_access(access).model_dump(mode="json")},
+        )
 
     # Same transaction as the provisioning itself, so a rolled-back create leaves
     # no audit row claiming it happened. No mobile/email in `detail` — the service
@@ -455,21 +558,35 @@ async def create_staff(
     return profile, temp_password
 
 
-async def list_staff_access(db: AsyncSession) -> tuple[list[dict], int]:
+async def list_staff_access(
+    db: AsyncSession, *, pending_only: bool = False
+) -> tuple[list[dict], int]:
+    visible = (
+        SubAdminAccessProfile.status == "pending"
+        if pending_only
+        else or_(
+            StaffProfile.status == ProfileStatus.ACTIVE,
+            SubAdminAccessProfile.staff_profile_uuid.is_not(None),
+        )
+    )
     rows = (
         await db.execute(
-            select(StaffProfile, User)
+            select(StaffProfile, User, SubAdminAccessProfile)
             .join(User, User.id == StaffProfile.auth_user_uuid)
+            .outerjoin(
+                SubAdminAccessProfile, SubAdminAccessProfile.staff_profile_uuid == StaffProfile.id
+            )
             .where(
                 StaffProfile.role.in_((StaffRole.ADMIN, StaffRole.SUB_ADMIN)),
-                StaffProfile.status == ProfileStatus.ACTIVE,
+                User.status != UserStatus.SOFT_DELETED,
+                visible,
             )
             .order_by(
                 StaffProfile.is_primary_admin.desc(), StaffProfile.created_at, StaffProfile.id
             )
         )
     ).all()
-    profile_ids = [profile.id for profile, _user in rows]
+    profile_ids = [profile.id for profile, _user, _access in rows]
     grants = (
         await db.execute(
             select(StaffFeatureGrant.staff_profile_uuid, StaffFeatureGrant.feature).where(
@@ -480,6 +597,29 @@ async def list_staff_access(db: AsyncSession) -> tuple[list[dict], int]:
     by_profile: dict[UUID, list[str]] = {}
     for profile_uuid, feature in grants:
         by_profile.setdefault(profile_uuid, []).append(feature)
+    teams_by_profile: dict[UUID, list[dict]] = {}
+    if not pending_only and profile_ids:
+        teams = await db.execute(
+            select(
+                StaffTeam.manager_staff_profile_uuid,
+                StaffTeam.id,
+                StaffTeam.name,
+                StaffTeam.business_line,
+            )
+            .where(
+                StaffTeam.manager_staff_profile_uuid.in_(profile_ids),
+                StaffTeam.archived_at.is_(None),
+            )
+            .order_by(StaffTeam.name, StaffTeam.id)
+        )
+        for manager_id, team_id, name, line in teams:
+            teams_by_profile.setdefault(manager_id, []).append(
+                {
+                    "id": team_id,
+                    "name": name,
+                    "business_line": line,
+                }
+            )
 
     entries = [
         {
@@ -490,12 +630,15 @@ async def list_staff_access(db: AsyncSession) -> tuple[list[dict], int]:
             "role": profile.role.value,
             "is_primary_admin": profile.is_primary_admin,
             "features": sorted(by_profile.get(profile.id, [])),
+            "sub_admin_access": read_access(access),
+            "suspended": user.status == UserStatus.SUSPENDED,
+            "live_teams": teams_by_profile.get(profile.id, []),
         }
-        for profile, user in rows
+        for profile, user, access in rows
     ]
     additional_count = sum(
         1
-        for profile, _user in rows
+        for profile, _user, _access in rows
         if profile.role == StaffRole.ADMIN and not profile.is_primary_admin
     )
     return entries, additional_count
@@ -526,6 +669,7 @@ async def set_staff_feature(
         or target.role != StaffRole.SUB_ADMIN
         or target.scope != ProfileScope.PLATFORM
         or target.status != ProfileStatus.ACTIVE
+        or await db.get(SubAdminAccessProfile, target.id) is not None
     ):
         raise InvalidStaffFeatureTarget
 

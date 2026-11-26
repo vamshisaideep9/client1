@@ -52,11 +52,52 @@ export const YES_NO_UNKNOWN_OPTIONS = [
 export const CONFIGURATION_OPTIONS = [
   { value: "1_bhk", label: "1 BHK" },
   { value: "2_bhk", label: "2 BHK" },
+  { value: "2_5_bhk", label: "2.5 BHK" },
   { value: "3_bhk", label: "3 BHK" },
+  { value: "3_5_bhk", label: "3.5 BHK" },
   { value: "4_bhk", label: "4 BHK" },
   { value: "5_plus_bhk", label: "5+ BHK" },
   { value: "studio", label: "Studio" },
 ] as const;
+
+/** Approved local planning bodies; "other" reveals a free-text authority. */
+export const APPROVAL_AUTHORITY_OPTIONS = [
+  { value: "GHMC", label: "GHMC" },
+  { value: "HMDA", label: "HMDA" },
+  { value: "DTCP", label: "DTCP" },
+  { value: "GP", label: "GP" },
+  { value: "other", label: "Other" },
+] as const;
+
+const PREDEFINED_AUTHORITIES = new Set(["GHMC", "HMDA", "DTCP", "GP"]);
+
+export const SITE_AREA_UNIT_OPTIONS = [
+  { value: "sqft", label: "sq ft" },
+  { value: "sqyd", label: "sq yd" },
+] as const;
+
+/** Common amenities a lister can add with one click; free-typed ones still work. */
+export const PREDEFINED_AMENITIES = [
+  "Swimming pool",
+  "Gym",
+  "Clubhouse",
+  "Children's play area",
+  "Park / garden",
+  "Covered parking",
+  "Lift",
+  "Power backup",
+  "24x7 security",
+  "CCTV",
+  "Gated community",
+  "Indoor games",
+  "Jogging track",
+  "Rainwater harvesting",
+  "Water supply",
+  "Community hall",
+] as const;
+
+export const MAX_PANORAMAS = 10;
+export const MEDIA_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"] as const;
 
 export type PropertyDetailForm = {
   projectName: string;
@@ -64,14 +105,23 @@ export type PropertyDetailForm = {
   numberOfTowers: string;
   totalUnits: string;
   configurations: string[];
+  /** Unit or flat area "From"; required. */
   unitAreaSqft: string;
-  udsSqft: string;
+  /** Unit or flat area "To"; optional. */
+  unitAreaMaxSqft: string;
+  /** Undivided share From/To and unit; all optional, From before To. */
+  udsFrom: string;
+  udsTo: string;
+  udsUnit: string;
   rateRupees: string;
   saleType: string;
   expectedHandoverDate: string;
   plotFacing: string;
   facing: string;
+  /** One of APPROVAL_AUTHORITY_OPTIONS, or "" when not provided. */
   approvalAuthority: string;
+  /** The authority name when approvalAuthority is "other". */
+  approvalAuthorityOther: string;
   approvalReference: string;
   amenitiesDescription: string;
   about: string;
@@ -106,13 +156,17 @@ export const EMPTY_DETAILS: PropertyDetailForm = {
   totalUnits: "",
   configurations: [],
   unitAreaSqft: "",
-  udsSqft: "",
+  unitAreaMaxSqft: "",
+  udsFrom: "",
+  udsTo: "",
+  udsUnit: "sqft",
   rateRupees: "",
   saleType: "",
   expectedHandoverDate: "",
   plotFacing: "not_applicable",
   facing: "",
   approvalAuthority: "",
+  approvalAuthorityOther: "",
   approvalReference: "",
   amenitiesDescription: "",
   about: "",
@@ -145,11 +199,17 @@ export type SubmitFormState = {
   title: string;
   type: string;
   location: string;
+  /** Optional developer / builder brand, e.g. "My Home". */
+  developerName: string;
   meta: string;
   images: File[];
   documents: File[];
-  panorama: File | null;
+  /** Up to MAX_PANORAMAS equirectangular 360 images. */
+  panoramas: File[];
   propertySubtype: PropertySubtype | "";
+  catalogTypeCode?: string;
+  saleClassification?: Schemas["SaleType"] | "";
+  bedrooms?: string;
   city: string;
   locality: string;
   state: string;
@@ -174,10 +234,11 @@ export const EMPTY_FORM: SubmitFormState = {
   title: "",
   type: "",
   location: "",
+  developerName: "",
   meta: "",
   images: [],
   documents: [],
-  panorama: null,
+  panoramas: [],
   propertySubtype: "",
   city: "",
   locality: "",
@@ -237,13 +298,24 @@ function orNull(value: string): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
+function approvalAuthorityName(details: PropertyDetailForm): string {
+  return details.approvalAuthority === "other"
+    ? details.approvalAuthorityOther.trim()
+    : details.approvalAuthority.trim();
+}
+
 function localApproval(details: PropertyDetailForm) {
-  return details.approvalAuthority.trim()
+  const authority = approvalAuthorityName(details);
+  return authority
     ? {
-        authority: details.approvalAuthority.trim(),
+        authority,
         reference_number: orNull(details.approvalReference),
       }
     : null;
+}
+
+function optionalInt(value: string): number | null {
+  return value.trim() ? toInt(value) : null;
 }
 
 function buildStructuredDetails(form: SubmitFormState): StructuredDetails {
@@ -261,14 +333,20 @@ function buildStructuredDetails(form: SubmitFormState): StructuredDetails {
         total_units: toInt(details.totalUnits),
         configurations: details.configurations as Schemas["ResidentialConfiguration"][],
         unit_or_plot_area_sqft: toInt(details.unitAreaSqft),
-        uds_sqft: details.udsSqft.trim() ? toInt(details.udsSqft) : null,
+        unit_or_plot_area_max_sqft: optionalInt(details.unitAreaMaxSqft),
+        uds_sqft: null,
+        uds_area_from: optionalInt(details.udsFrom),
+        uds_area_to: details.udsFrom.trim() ? optionalInt(details.udsTo) : null,
+        uds_area_unit: details.udsFrom.trim()
+          ? (details.udsUnit as Schemas["SiteAreaUnit"])
+          : null,
         price_per_sqft_paise: toPaise(details.rateRupees),
         sale_type: isRent ? null : (details.saleType as Schemas["SaleType"]),
         expected_handover_date: orNull(details.expectedHandoverDate),
         plot_facing: details.plotFacing as Schemas["Facing"],
         entrance_facing: details.facing as Schemas["Facing"],
         local_approval: localApproval(details),
-        amenities_description: details.amenitiesDescription.trim(),
+        amenities_description: orNull(details.amenitiesDescription),
         about_project: details.about.trim(),
       };
     case "individual":
@@ -364,9 +442,13 @@ export function buildSubmissionUpdatePayload(form: SubmitFormState): SubmissionU
     title: form.title.trim(),
     type: form.type.trim(),
     location: form.location.trim(),
+    developer_name: orNull(form.developerName),
     meta: orNull(form.meta),
     category: subtype.category,
     property_subtype: subtype.value,
+    ...(form.catalogTypeCode !== undefined ? { catalog_type_code: form.catalogTypeCode || null } : {}),
+    ...(form.saleClassification && !isRent && (family === "individual" || family === "agricultural")
+      ? { sale_classification: form.saleClassification } : {}),
     city: form.city.trim(),
     locality: form.locality.trim(),
     state: form.state.trim(),
@@ -379,7 +461,7 @@ export function buildSubmissionUpdatePayload(form: SubmitFormState): SubmissionU
     minimum_lease_months: isRent ? toInt(form.minimumLeaseMonths) : null,
     available_from: isRent ? orNull(form.availableFrom) : null,
     listing_links: listingLinksPayload(form),
-    bhk: 0,
+    bhk: family === "individual" && form.bedrooms ? toInt(form.bedrooms) : 0,
     area_sqft: areaSqft,
     furnishing:
       family === "project" || family === "commercial" ? (form.furnishing || null) : null,
@@ -390,7 +472,8 @@ export function buildSubmissionUpdatePayload(form: SubmitFormState): SubmissionU
     amenities: form.amenities,
     age_years: 0,
     rera_applicability: form.reraApplicability as ReraApplicability,
-    rera_number: orNull(form.reraNumber),
+    // The number is only meaningful when RERA applies; otherwise nothing is sent.
+    rera_number: form.reraApplicability === "applicable" ? orNull(form.reraNumber) : null,
     structured_details: buildStructuredDetails(form),
   };
 }
@@ -400,7 +483,15 @@ function detailsFromSubmission(submission: SubmissionRead): PropertyDetailForm {
   const details = submission.structured_details;
   if (!details) return form;
   const setApproval = (approval?: Schemas["LocalApproval"] | null) => {
-    form.approvalAuthority = approval?.authority ?? "";
+    const authority = approval?.authority?.trim() ?? "";
+    if (!authority) {
+      form.approvalAuthority = "";
+    } else if (PREDEFINED_AUTHORITIES.has(authority.toUpperCase())) {
+      form.approvalAuthority = authority.toUpperCase();
+    } else {
+      form.approvalAuthority = "other";
+      form.approvalAuthorityOther = authority;
+    }
     form.approvalReference = approval?.reference_number ?? "";
   };
   if (details.kind === "project_residence") {
@@ -411,7 +502,17 @@ function detailsFromSubmission(submission: SubmissionRead): PropertyDetailForm {
       totalUnits: String(details.total_units),
       configurations: [...details.configurations],
       unitAreaSqft: String(details.unit_or_plot_area_sqft),
-      udsSqft: details.uds_sqft == null ? "" : String(details.uds_sqft),
+      unitAreaMaxSqft:
+        details.unit_or_plot_area_max_sqft == null ? "" : String(details.unit_or_plot_area_max_sqft),
+      // A legacy single sq ft value becomes the "From" of the new range.
+      udsFrom:
+        details.uds_area_from != null
+          ? String(details.uds_area_from)
+          : details.uds_sqft != null
+            ? String(details.uds_sqft)
+            : "",
+      udsTo: details.uds_area_to == null ? "" : String(details.uds_area_to),
+      udsUnit: details.uds_area_unit ?? "sqft",
       rateRupees: String(details.price_per_sqft_paise / 100),
       saleType: details.sale_type,
       expectedHandoverDate: details.expected_handover_date ?? "",
@@ -492,11 +593,15 @@ export function submissionToFormState(submission: SubmissionRead): SubmitFormSta
     title: submission.title,
     type: submission.type,
     location: submission.location,
+    developerName: submission.developer_name ?? "",
     meta: submission.meta ?? "",
     images: [],
     documents: [],
-    panorama: null,
+    panoramas: [],
     propertySubtype: submission.property_subtype ?? "",
+    catalogTypeCode: submission.catalog_type_code ?? "",
+    saleClassification: submission.sale_classification ?? "",
+    bedrooms: submission.bhk ? String(submission.bhk) : "",
     city: submission.city,
     locality: submission.locality,
     state: submission.state ?? "",
@@ -519,7 +624,11 @@ export function submissionToFormState(submission: SubmissionRead): SubmitFormSta
   };
 }
 
-const UNSAFE_NARRATIVE = /\p{Nd}|[a-z][a-z0-9+.-]*:\/\/|www\.|\b(?:[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\.)+[a-z]{2,63}\b|<[^>]+>|\[[^\]]+\]\([^)]+\)|\S+@\S+/iu;
+const UNSAFE_NARRATIVE = /[a-z][a-z0-9+.-]*:\/\/|www\.|\b(?:[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\.)+[a-z]{2,63}\b|<[^>]+>|\[[^\]]+\]\([^)]+\)|\S+@\S+/iu;
+// Mirrors the API: numbers up to 6 digits are fine, but a run of 7 or more
+// digits (even split by spaces, dashes, dots, brackets or +) reads as a phone
+// or account number.
+const LONG_NUMBER = /\d(?:[\s().+-]*\d){6,}/u;
 
 function requireValue(errors: Record<string, string>, key: string, value: string, label: string) {
   if (!value.trim()) errors[key] = `${label} is required.`;
@@ -527,6 +636,51 @@ function requireValue(errors: Record<string, string>, key: string, value: string
 
 function requirePositive(errors: Record<string, string>, key: string, value: string, label: string) {
   if (toNumber(value) <= 0) errors[key] = `Enter a valid ${label.toLowerCase()}.`;
+}
+
+/** Rupee amounts are sent as whole paise; anything that rounds to 0 is rejected by the API. */
+function requirePositiveRupees(
+  errors: Record<string, string>,
+  key: string,
+  value: string,
+  label: string,
+) {
+  if (toPaise(value) <= 0) errors[key] = `Enter a valid ${label.toLowerCase()}.`;
+}
+
+/** Optional "To" of a From-To pair: a whole number not below "From". */
+function validateOptionalRange(
+  errors: Record<string, string>,
+  key: string,
+  from: string,
+  to: string,
+  label: string,
+) {
+  if (!to.trim()) return;
+  if (!isPositiveWholeNumber(to)) {
+    errors[key] = `Enter a whole number greater than 0 for the ${label} To value, or leave it blank.`;
+  } else if (isPositiveWholeNumber(from) && toInt(to) < toInt(from)) {
+    errors[key] = `The ${label} To value must not be less than From.`;
+  }
+}
+
+function isPositiveWholeNumber(value: string): boolean {
+  return /^\d+$/.test(value.trim()) && toInt(value) > 0;
+}
+
+/**
+ * Whole-number fields are sent with parseInt, so "0.5" would reach the API as
+ * 0 and fail its greater-than-zero rule with no field named. Catch it here.
+ */
+function requirePositiveInt(
+  errors: Record<string, string>,
+  key: string,
+  value: string,
+  label: string,
+) {
+  if (!isPositiveWholeNumber(value)) {
+    errors[key] = `Enter a whole number greater than 0 for ${label.toLowerCase()}.`;
+  }
 }
 
 function validateNarrative(
@@ -539,8 +693,10 @@ function validateNarrative(
 ) {
   const trimmed = value.trim();
   if (!trimmed) return;
-  if (UNSAFE_NARRATIVE.test(trimmed)) {
-    errors[key] = `${label} cannot contain numbers, links, email addresses, or markup.`;
+  if (LONG_NUMBER.test(trimmed)) {
+    errors[key] = `${label} can include numbers of up to 6 digits, but not phone numbers or longer numbers.`;
+  } else if (UNSAFE_NARRATIVE.test(trimmed)) {
+    errors[key] = `${label} cannot contain links, email addresses, or markup.`;
   } else if (trimmed.split(/\s+/).length < minWords) {
     errors[key] = `${label} must be at least ${minWords} words.`;
   } else if (trimmed.split(/\s+/).length > maxWords) {
@@ -565,7 +721,7 @@ export function validateForm(
   ] as const) requireValue(errors, key, value, label);
   if (!/^[1-9]\d{5}$/.test(form.pincode.trim())) errors.pincode = "Enter a valid 6-digit pincode.";
   const isRent = form.listingIntent === "rent";
-  requirePositive(
+  requirePositiveRupees(
     errors,
     "priceRupees",
     form.priceRupees,
@@ -578,7 +734,7 @@ export function validateForm(
       form.securityDepositRupees,
       "security deposit",
     );
-    requirePositive(
+    requirePositiveInt(
       errors,
       "minimumLeaseMonths",
       form.minimumLeaseMonths,
@@ -603,43 +759,53 @@ export function validateForm(
   if (family === "project") {
     requireValue(errors, "projectName", details.projectName, "Project name");
     requirePositive(errors, "projectAreaAcres", details.projectAreaAcres, "project area");
-    requirePositive(errors, "numberOfTowers", details.numberOfTowers, "number of towers");
-    requirePositive(errors, "totalUnits", details.totalUnits, "total units");
+    requirePositiveInt(errors, "numberOfTowers", details.numberOfTowers, "number of towers");
+    requirePositiveInt(errors, "totalUnits", details.totalUnits, "total units");
     if (details.configurations.length === 0) errors.configurations = "Choose a configuration.";
-    requirePositive(errors, "unitAreaSqft", details.unitAreaSqft, "unit or plot area");
-    requirePositive(errors, "rateRupees", details.rateRupees, "price per square foot");
+    requirePositiveInt(errors, "unitAreaSqft", details.unitAreaSqft, "unit or flat area");
+    validateOptionalRange(
+      errors,
+      "unitAreaMaxSqft",
+      details.unitAreaSqft,
+      details.unitAreaMaxSqft,
+      "unit or flat area",
+    );
+    // Optional, but the API rejects 0: an agent typing 0 for "not applicable"
+    // used to get a bare "Input should be greater than 0".
+    if (details.udsFrom.trim() && !isPositiveWholeNumber(details.udsFrom)) {
+      errors.udsFrom = "Enter a whole number greater than 0, or leave undivided share blank.";
+    }
+    if (details.udsTo.trim() && !details.udsFrom.trim()) {
+      errors.udsFrom = "Enter the undivided share From value before To.";
+    } else if (details.udsFrom.trim() && !errors.udsFrom) {
+      validateOptionalRange(errors, "udsTo", details.udsFrom, details.udsTo, "undivided share");
+    }
+    requirePositiveRupees(errors, "rateRupees", details.rateRupees, "price per square foot");
     if (!isRent) requireValue(errors, "saleType", details.saleType, "Sale type");
     requireValue(errors, "facing", details.facing, "Entrance facing");
     requireValue(errors, "about", details.about, "About the project");
-    requireValue(errors, "amenitiesDescription", details.amenitiesDescription, "Amenities description");
     requireValue(errors, "furnishing", form.furnishing, "Furnishing");
     requireValue(errors, "constructionStatus", form.constructionStatus, "Construction status");
     if (form.constructionStatus === "under_construction") {
       requireValue(errors, "expectedHandoverDate", details.expectedHandoverDate, "Expected handover date");
     }
     validateNarrative(errors, "about", details.about, "About the project", 500);
-    validateNarrative(
-      errors,
-      "amenitiesDescription",
-      details.amenitiesDescription,
-      "Amenities description",
-      500,
-      150,
-    );
+    // Optional, with no minimum length; only the 500-word cap applies.
+    validateNarrative(errors, "amenitiesDescription", details.amenitiesDescription, "Amenities description", 500);
   } else if (family === "individual") {
     requireValue(errors, "propertyUse", details.propertyUse, "Property use");
     requirePositive(errors, "totalLandArea", details.totalLandArea, "total land area");
     requireValue(errors, "landAreaUnit", details.landAreaUnit, "Land area unit");
-    requirePositive(errors, "unitAreaSqft", details.unitAreaSqft, "built-up area");
-    requirePositive(errors, "numberOfFloors", details.numberOfFloors, "number of floors");
+    requirePositiveInt(errors, "unitAreaSqft", details.unitAreaSqft, "built-up area");
+    requirePositiveInt(errors, "numberOfFloors", details.numberOfFloors, "number of floors");
     requireValue(errors, "facing", details.facing, "Facing");
     requireValue(errors, "ongoingLoanStatus", details.ongoingLoanStatus, "Ongoing loan status");
     requireValue(errors, "about", details.about, "About the property");
     validateNarrative(errors, "about", details.about, "About the property", 250);
   } else if (family === "commercial") {
     requireValue(errors, "ownershipType", details.ownershipType, "Ownership type");
-    requirePositive(errors, "totalAreaSqft", details.totalAreaSqft, "total area");
-    requirePositive(errors, "unitAreaSqft", details.unitAreaSqft, "unit area");
+    requirePositiveInt(errors, "totalAreaSqft", details.totalAreaSqft, "total area");
+    requirePositiveInt(errors, "unitAreaSqft", details.unitAreaSqft, "unit area");
     requireValue(errors, "facing", details.facing, "Facing");
     if (!isRent) requireValue(errors, "saleType", details.saleType, "Sale type");
     requireValue(errors, "rentalIncomeStart", details.rentalIncomeStart, "Income start");
@@ -650,10 +816,10 @@ export function validateForm(
   } else if (family === "plot") {
     requireValue(errors, "projectName", details.projectName, "Project name");
     requirePositive(errors, "totalProjectAreaAcres", details.totalProjectAreaAcres, "project area");
-    requirePositive(errors, "plotSizeSqyd", details.plotSizeSqyd, "plot size");
-    requirePositive(errors, "totalPlots", details.totalPlots, "total plots");
+    requirePositiveInt(errors, "plotSizeSqyd", details.plotSizeSqyd, "plot size");
+    requirePositiveInt(errors, "totalPlots", details.totalPlots, "total plots");
     requireValue(errors, "facing", details.facing, "Facing");
-    requirePositive(errors, "rateRupees", details.rateRupees, "price per square yard");
+    requirePositiveRupees(errors, "rateRupees", details.rateRupees, "price per square yard");
     if (!isRent) requireValue(errors, "saleType", details.saleType, "Sale type");
     requireValue(errors, "projectStatus", details.projectStatus, "Project status");
     requireValue(errors, "about", details.about, "About the project");
@@ -669,6 +835,11 @@ export function validateForm(
     requireValue(errors, "registrationDistrict", details.registrationDistrict, "Registration district");
     requireValue(errors, "subRegistrarOffice", details.subRegistrarOffice, "Sub-Registrar Office");
   }
+  if (family === "project" || family === "commercial" || family === "plot") {
+    if (details.approvalAuthority === "other" && !details.approvalAuthorityOther.trim()) {
+      errors.approvalAuthorityOther = "Enter the approval authority.";
+    }
+  }
   if (family !== "project") {
     validateNarrative(errors, "amenitiesDescription", details.amenitiesDescription, "Amenities description", 150);
   }
@@ -679,9 +850,9 @@ export function validateForm(
   }
   if (form.documents.length > 2) errors.documents = "Choose at most 2 PDF documents.";
   const maxBytes = 5 * 1024 * 1024;
-  const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+  const imageTypes = new Set<string>(MEDIA_IMAGE_TYPES);
   if (form.images.some((file) => !imageTypes.has(file.type))) {
-    errors.images = "Images must be JPEG, PNG, or WebP.";
+    errors.images = "Images must be JPEG, PNG, WebP, or AVIF.";
   } else if (form.images.some((file) => file.size > maxBytes)) {
     errors.images = "Each image must be 5 MiB or smaller.";
   }
@@ -690,14 +861,65 @@ export function validateForm(
   } else if (form.documents.some((file) => file.size > maxBytes)) {
     errors.documents = "Each PDF must be 5 MiB or smaller.";
   }
-  if (form.panorama) {
-    if (!new Set(["image/jpeg", "image/webp"]).has(form.panorama.type)) {
-      errors.panorama = "The 360 panorama must be a JPEG or WebP image.";
-    } else if (form.panorama.size > maxBytes) {
-      errors.panorama = "The 360 panorama must be 5 MiB or smaller.";
-    } else if (form.panorama.size < 1) {
-      errors.panorama = "The 360 panorama is empty.";
-    }
+  if (form.panoramas.length > MAX_PANORAMAS) {
+    errors.panoramas = `Choose at most ${MAX_PANORAMAS} 360 images.`;
+  } else if (form.panoramas.some((file) => !imageTypes.has(file.type))) {
+    errors.panoramas = "360 images must be JPEG, PNG, WebP, or AVIF.";
+  } else if (form.panoramas.some((file) => file.size > maxBytes)) {
+    errors.panoramas = "Each 360 image must be 5 MiB or smaller.";
+  } else if (form.panoramas.some((file) => file.size < 1)) {
+    errors.panoramas = "A 360 image is empty.";
+  }
+  return errors;
+}
+
+// API field -> form key, for 422s the client checks did not catch. Structured
+// detail issues arrive as structured_details[.<variant>].<field>, so the last
+// segment is matched.
+const API_FIELD_TO_FORM_KEY: Record<string, string> = {
+  title: "title",
+  type: "type",
+  location: "location",
+  city: "city",
+  locality: "locality",
+  state: "state",
+  pincode: "pincode",
+  price_paise: "priceRupees",
+  security_deposit_paise: "securityDepositRupees",
+  minimum_lease_months: "minimumLeaseMonths",
+  available_from: "availableFrom",
+  project_name: "projectName",
+  project_area_acres: "projectAreaAcres",
+  number_of_towers: "numberOfTowers",
+  total_units: "totalUnits",
+  unit_or_plot_area_sqft: "unitAreaSqft",
+  unit_or_plot_area_max_sqft: "unitAreaMaxSqft",
+  uds_sqft: "udsFrom",
+  uds_area_from: "udsFrom",
+  uds_area_to: "udsTo",
+  uds_area_unit: "udsUnit",
+  price_per_sqft_paise: "rateRupees",
+  total_land_area: "totalLandArea",
+  built_up_area_sqft: "unitAreaSqft",
+  number_of_floors: "numberOfFloors",
+  total_area_sqft: "totalAreaSqft",
+  unit_area_sqft: "unitAreaSqft",
+  total_project_area_acres: "totalProjectAreaAcres",
+  plot_size_sqyd: "plotSizeSqyd",
+  total_plots: "totalPlots",
+  price_per_sqyd_paise: "rateRupees",
+  land_area: "landArea",
+};
+
+/** Turn API validation issues into inline field errors; unknown paths are skipped. */
+export function submissionIssuesToFieldErrors(
+  issues: readonly { field: string; message: string }[] | undefined,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const issue of issues ?? []) {
+    const segments = issue.field.split(".");
+    const key = API_FIELD_TO_FORM_KEY[segments[segments.length - 1]];
+    if (key && !errors[key]) errors[key] = issue.message;
   }
   return errors;
 }

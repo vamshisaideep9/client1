@@ -44,6 +44,11 @@ PUBLIC_ROUTES = frozenset(
         "POST /api/v1/auth/register/initiate",
         "POST /api/v1/auth/register/verify-otp",
         "POST /api/v1/auth/register/set-password",
+        # CS-025 registration email code: needs a registration token (mobile
+        # already proven), binds the code to that mobile and the address's
+        # fingerprint, and never looks the address up.
+        "POST /api/v1/auth/register/email/initiate",
+        "POST /api/v1/auth/register/email/verify",
         "POST /api/v1/auth/forgot/initiate",
         "POST /api/v1/auth/forgot/verify",
         "POST /api/v1/auth/forgot/reset",
@@ -72,6 +77,14 @@ PUBLIC_ROUTES = frozenset(
         "GET /api/v1/public/banners",
         "GET /api/v1/public/properties",
         "GET /api/v1/public/properties/{property_id}",
+        # Search requires active listings and returns the public property projection.
+        "GET /api/v1/public/properties/search",
+        # Public type labels are limited to active configuration.
+        "GET /api/v1/public/property-types",
+        # A publication pointer selects one immutable revision per key. Drafts,
+        # editor grants and revision actors are absent from the public projection.
+        "GET /api/v1/public/website-content/articles",
+        "GET /api/v1/public/website-content/{key:path}",
         "GET /api/v1/public/content-blocks",
         "GET /api/v1/public/content-blocks/{slug}",
         "GET /api/v1/public/financial-products",
@@ -79,6 +92,11 @@ PUBLIC_ROUTES = frozenset(
         "GET /api/v1/public/financial-products/{slug}/providers",
         # Anonymous lead capture from the public site.
         "POST /api/v1/leads",
+        # The chat menu exposes only published catalog entries and fixed prompts.
+        "GET /api/v1/leads/chat-inquiries/flows",
+        # The same public rate limits protect chat intake. The server checks the
+        # published flow and derives the lead line. The response is a receipt only.
+        "POST /api/v1/leads/chat-inquiries",
         # Bearer-token-in-URL invitation lookup; the token is the authorization.
         "GET /api/v1/leads/invitations/{token}",
         # VAPID public key is public by construction.

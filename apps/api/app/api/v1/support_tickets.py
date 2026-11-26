@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import CurrentUser, get_active_user
+from app.core.deps import CurrentUser, get_personal_user
 from app.db.session import get_db
 from app.models.notification import NotificationType
 from app.models.support_ticket import SupportTicket
@@ -29,7 +29,7 @@ router = APIRouter()
 
 @router.get("/tickets", response_model=SupportTicketListResponse)
 async def list_tickets(
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(get_personal_user),
     db: AsyncSession = Depends(get_db),
 ) -> SupportTicketListResponse:
     result = await db.execute(select(SupportTicket).order_by(SupportTicket.created_at.desc()))
@@ -42,7 +42,7 @@ async def list_tickets(
 @router.post("/tickets", response_model=SupportTicketRead, status_code=status.HTTP_201_CREATED)
 async def create_ticket(
     req: SupportTicketCreate,
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(get_personal_user),
     db: AsyncSession = Depends(get_db),
 ) -> SupportTicketRead:
     ticket = SupportTicket(

@@ -14,6 +14,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.core.lead_reference import LeadRef
 from app.models.payout import PayoutDestination
 from app.schemas.payments import PayoutDestinationInput, validate_destination
 
@@ -24,6 +25,8 @@ class EligibleFeeApplication(BaseModel):
     row yet."""
 
     loan_application_uuid: UUID
+    # The loan application's lead; null only if the caller's RLS cannot read it.
+    lead_ref: LeadRef | None = None
     business_line: str
     client_profile_uuid: UUID
     client_name: str | None
@@ -47,6 +50,7 @@ class FeeCashbackCreate(BaseModel):
 class FeeCashbackRead(BaseModel):
     id: UUID
     loan_application_uuid: UUID
+    lead_ref: LeadRef | None = None
     client_profile_uuid: UUID
     client_name: str | None
     business_line: str

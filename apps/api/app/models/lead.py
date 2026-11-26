@@ -12,10 +12,20 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, text
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    text,
+)
 from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.lead_reference import format_lead_ref
 from app.db.base import Base
 from app.models.user import business_line_enum
 
@@ -40,7 +50,7 @@ lead_status_enum = ENUM(LeadStatus, name="lead_status", create_type=False, value
 
 
 class LeadAssignmentCursor(Base):
-    """Internal per-line cursor for deterministic automatic assignment."""
+    """Internal per-line, per-candidate-pool automatic assignment cursor."""
 
     __tablename__ = "lead_assignment_cursors"
     __table_args__ = (
@@ -48,11 +58,20 @@ class LeadAssignmentCursor(Base):
             "business_line::text IN ('loans', 'real_estate')",
             name="business_line_operational",
         ),
+        CheckConstraint(
+            "pool = 'all' OR (business_line::text = 'loans' AND "
+            "(pool = 'unspecialised' OR pool ~ "
+            "'^product:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'))",
+            name="pool",
+        ),
     )
 
     business_line: Mapped[str] = mapped_column(
         business_line_enum,
         primary_key=True,
+    )
+    pool: Mapped[str] = mapped_column(
+        String(64), primary_key=True, default="all", server_default="all"
     )
     last_telecaller_profile_uuid: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -100,6 +119,17 @@ class Lead(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # Human-readable reference number (``lead_ref`` below). The database
+    # assigns it from leads_lead_number_seq on every insert path, so no
+    # application code sets it, and trg_leads_lead_number_immutable rejects any
+    # later change. Display and search only: ``id`` stays the primary key and
+    # the target of every foreign key.
+    lead_number: Mapped[int] = mapped_column(
+        BigInteger,
+        nullable=False,
+        unique=True,
+        server_default=text("nextval('leads_lead_number_seq'::regclass)"),
+    )
     client_profile_uuid: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("client_profiles.id", ondelete="SET NULL"),
@@ -145,9 +175,36 @@ class Lead(Base):
     agent_expired_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Same-Agent resubmissions after expiry (2026-11-14 amendment to FR-4.6).
+    resubmit_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    # Set once the 7-day "client hasn't registered" reminder is sent for the
+    # current window; cleared when the Agent resubmits.
+    expiry_reminder_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # CS-028: the Telecaller whose assignment was most recently cleared
+    # (expiry, stale-assignee repair, Admin release). A resubmitted lead goes
+    # back to them while they are still eligible. The trigger
+    # trg_leads_last_telecaller_guard allows only the assignee being cleared.
+    last_telecaller_profile_uuid: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("staff_profiles.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # CS-028: when the originating Agent last resubmitted the lead.
+    last_resubmitted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+
+    @property
+    def lead_ref(self) -> str:
+        """``LD-00000123``: for authenticated staff and Agent responses only."""
+        return format_lead_ref(self.lead_number)

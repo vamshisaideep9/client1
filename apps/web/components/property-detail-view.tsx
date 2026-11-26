@@ -159,7 +159,7 @@ export function PropertyDetailView({
             <header className="border-b border-border pb-7">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-semibold text-text-secondary">
-                  {listing.listingIntent === "rent" ? "For rent / lease" : "For sale"}
+                  {listing.listingIntent === "rent" ? "For rent / lease" : listing.saleClassification === "resale" ? "Resale" : "For sale"}
                 </span>
                 {listing.reraNumber && listing.reraVerificationStatus === "verified" ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
@@ -175,6 +175,11 @@ export function PropertyDetailView({
                 <MapPin className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
                 {listing.location}
               </p>
+              {listing.developerName ? (
+                <p className="mt-1.5 text-sm text-text-secondary">
+                  By <span className="font-semibold text-foreground">{listing.developerName}</span>
+                </p>
+              ) : null}
               <p className="mt-5 font-heading text-3xl font-semibold text-brand-link">
                 {listing.price}
               </p>
@@ -271,7 +276,7 @@ export function PropertyDetailView({
               rail column, stacking the contact card and the panel as one
               scrolling unit. */}
           <div className="contents lg:sticky lg:top-24 lg:block lg:self-start lg:space-y-6">
-            <aside className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.10)] backdrop-blur lg:static lg:z-10 lg:rounded-2xl lg:border lg:p-6 lg:shadow-sm">
+            <aside data-property-contact-bar className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.10)] backdrop-blur lg:static lg:z-10 lg:rounded-2xl lg:border lg:p-6 lg:shadow-sm">
               <div className="hidden lg:block">
                 <p className="text-sm font-medium text-text-secondary">Interested in this property?</p>
                 <p className="mt-1 font-heading text-2xl font-semibold text-foreground">{listing.price}</p>
