@@ -22,6 +22,7 @@ function commission(overrides: Record<string, unknown>) {
     payout_txn_uuid: TXN_ID,
     created_at: "2026-10-05T06:00:00Z",
     lead_uuid: LEAD_ID,
+    lead_ref: "LD-00000042",
     lead_status: "converted",
     client_name: "Asha Rao",
     product_uuid: "60000000-0000-4000-8000-000000000001",
@@ -49,6 +50,7 @@ const EARNINGS = {
       payout_txn_uuid: null,
       paid_at: null,
       client_name: "Vikram Shah",
+      lead_ref: "LD-00000043",
       product_uuid: "60000000-0000-4000-8000-000000000002",
       product_label: "Car Loan",
       bank_uuid: "70000000-0000-4000-8000-000000000002",
@@ -97,6 +99,7 @@ const TRANSACTION = {
       deal_type: "loan_application",
       deal_uuid: "50000000-0000-4000-8000-000000000001",
       lead_uuid: LEAD_ID,
+      lead_ref: "LD-00000042",
       client_name: "Asha Rao",
       product_label: "Home Loan",
       bank_name: "HDFC Bank",
@@ -145,6 +148,9 @@ for (const width of [1440, 390]) {
     await page.getByLabel("Search commissions").fill("vikram");
     await expect(page.getByText("1 of 2 commissions", { exact: false })).toBeVisible();
     await expect(page.getByText("Asha Rao")).toHaveCount(0);
+    await page.getByLabel("Search commissions").fill("ld-43");
+    await expect(page.getByText("1 of 2 commissions", { exact: false })).toBeVisible();
+    await expect(page.getByText("Asha Rao")).toHaveCount(0);
     await page.getByLabel("Search commissions").fill("");
 
     await page.getByRole("combobox", { name: "Filter by status" }).click();
@@ -155,12 +161,14 @@ for (const width of [1440, 390]) {
     const sheet = page.getByRole("dialog", { name: "Commission details" });
     await expect(sheet).toBeVisible();
     await expect(sheet.getByText("HDFC Bank")).toBeVisible();
+    await expect(sheet.getByText("LD-00000042")).toBeVisible();
     await expect(sheet.getByText("₹25,00,000")).toBeVisible();
     await sheet.getByRole("button", { name: "View payment trail" }).click();
 
     const trail = page.getByRole("dialog", { name: "Transaction details" });
     await expect(trail).toBeVisible();
     await expect(trail.getByText("98******10@okhdfc")).toBeVisible();
+    await expect(trail.getByText("LD-00000042")).toBeVisible();
     await expect(trail.getByText("Maker Person (Sub Admin)")).toBeVisible();
     await expect(trail.getByText("Checker Person (Admin)")).toBeVisible();
     await noHorizontalScroll(page, width);
@@ -205,6 +213,7 @@ test("lead detail shows the lead's history and hidden fields", async ({ page, ba
     route.fulfill({
       json: {
         id: LEAD_ID,
+        lead_ref: "LD-00000042",
         name: "Asha Rao",
         mobile: "+919812345678",
         business_line: "loans",
@@ -278,6 +287,7 @@ test("lead detail shows the lead's history and hidden fields", async ({ page, ba
   await expect(page.getByText("by Tara Caller")).toBeVisible();
   await expect(page.getByText("Your Admin hides call notes.")).toBeVisible();
   await expect(page.getByText("Loan and deal amounts are hidden by your Admin.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy lead reference LD-00000042" })).toBeVisible();
   await noHorizontalScroll(page, 390);
   await page.screenshot({ path: testInfo.outputPath("agent-lead-history-390.png"), fullPage: true });
 });

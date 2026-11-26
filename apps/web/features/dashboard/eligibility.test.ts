@@ -121,6 +121,22 @@ describe("agent lead filters (CS-024)", () => {
     expect(ids({ search: "98123 45678" })).toEqual(["a"]);
   });
 
+  it("matches an exact lead reference in tolerant forms", () => {
+    const referenced = [
+      lead({ id: "x", lead_ref: "LD-00000042", mobile: "+919811111111" }),
+      lead({ id: "y", lead_ref: "LD-00000420", mobile: "+919822222222" }),
+    ];
+    const found = (search: string) =>
+      filterAgentLeads(referenced, { ...DEFAULT_AGENT_LEAD_FILTERS, search }, agentLeadScope(referenced)).map(
+        (row) => row.id,
+      );
+    expect(found("LD-00000042")).toEqual(["x"]);
+    expect(found("ld-42")).toEqual(["x"]);
+    expect(found("42")).toEqual(["x"]);
+    expect(found("LD-420")).toEqual(["y"]);
+    expect(found("LD-4")).toEqual([]);
+  });
+
   it("matches product, bank and loan status on one application", () => {
     expect(ids({ loanTypeId: "home" })).toEqual(["a"]);
     expect(ids({ loanTypeId: "home", bankId: "hdfc", loanStatus: "sanctioned" })).toEqual(["a"]);

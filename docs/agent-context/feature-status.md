@@ -1,5 +1,15 @@
 # Feature implementation status
 
+**Lead reference numbers (web, part 2 of 2).** Signed-in staff and Agents
+see the reference on lead lists, lead pages and dialogs, commission and
+fee-cashback ledgers, payouts, and the Agent's earnings and payment trail.
+Lead and money searches accept it in tolerant forms as an exact match. A
+"Lead ref" badge on lead pages copies it. No public or client screen shows
+it. Lint, typecheck, 1,155 unit tests, 24 browser journeys and the Linux
+production build passed.
+[Upstream #408](https://github.com/brollysolutions/client1/pull/408)
+· [Mirror #108](https://github.com/vamshisaideep9/client1/pull/108)
+
 **Lead reference numbers (API, part 1 of 2).** Every lead has a sequential
 `lead_number`, assigned by the database on every creation path and immutable
 afterwards. Staff and Agent responses show it as `lead_ref` (`LD-00000123`)
