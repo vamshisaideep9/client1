@@ -118,3 +118,31 @@ describe("team work filters", () => {
     expect(filterTeamTasks(rows, { ...base, search: "ravi" }, NOW)).toEqual([blocked]);
   });
 });
+
+describe("team work product filter", () => {
+  const CARD = "40000000-0000-4000-8000-000000000001";
+  const HOME = "40000000-0000-4000-8000-000000000002";
+
+  it("matches the stored product of a lead or a task's lead", () => {
+    const leads = [
+      lead({ product_id: CARD, product_label: "Platinum Card" }),
+      lead({ product_id: HOME, product_label: "Home Loan" }),
+      lead({}),
+    ];
+    const tasks = [task({ product_id: HOME, product_label: "Home Loan" }), task({})];
+    const byProduct = { ...DEFAULT_TEAM_WORK_FILTERS, loanTypeId: HOME };
+    expect(filterTeamLeads(leads, { ...DEFAULT_TEAM_WORK_FILTERS, loanTypeId: CARD }, NOW).map((row) => row.product_label)).toEqual(["Platinum Card"]);
+    expect(filterTeamTasks(tasks, byProduct, NOW)).toHaveLength(1);
+    expect(teamWorkFiltersActive(byProduct)).toBe(true);
+  });
+
+  it("still finds a lead through an application of the product", () => {
+    const applied = lead({
+      signals: {
+        loan_statuses: ["new"], last_disposition: null, last_interest_level: null, referrer: null,
+        facets: { loans: [{ loan_type_id: HOME, loan_type_label: "Home Loan", status: "new" }], deals: [] },
+      },
+    });
+    expect(filterTeamLeads([applied], { ...DEFAULT_TEAM_WORK_FILTERS, loanTypeId: HOME }, NOW)).toHaveLength(1);
+  });
+});
