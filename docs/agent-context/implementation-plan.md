@@ -40,6 +40,28 @@ Slice 1 — API routing (branch `feat/product-specialists-1-api-routing`):
 - Next: slice 2 (specialist home counts, Admin product staffing and the
   per-product dashboard endpoints).
 
+Slice 2 — API dashboards (branch `feat/product-specialists-2-api-dashboards`,
+stacked on slice 1):
+
+- Telecaller and Officer homes add `specialty` and `product_counts` (leads:
+  open, overdue, converted in 30 days; tasks: open, overdue, completed in 30
+  days), counted only over the caller's own Loans work.
+- `GET /admin/product-staffing` (platform Admin): every catalogue product
+  with specialist Telecallers and Officers, open and unassigned leads, open
+  tasks and coverage (`full`, `no_telecaller`, `no_officer`, `none`, from
+  active specialists only), totals, unspecialised staff per line, and the
+  unspecialised Loans/dual-line staff an Admin can assign.
+- `GET /products/{id}/dashboard` (`days` or `date_from`/`date_to`, default
+  30 IST days): lead KPIs (captured, open, converted, conversion rate, served
+  by fallback, unassigned), applications or enquiries by status, task KPIs
+  with on-time rate, a weekly trend and a staff table, each from one grouped
+  query. Platform Admin sees everything; a Team Manager with a Loans view
+  grant sees only their own active Loans teams' members and work; everyone
+  else gets 403, an unknown product 404, and inactive products stay readable.
+- `GET /manager/products` lists the products the manager's Loans team members
+  specialise in or work on. Team work rows carry `product_id` and
+  `product_label` for the Team Manager product filter.
+
 **Merged upstream — Lead reference numbers — web (part 2 of 2)** (branch
 `feat/lead-ref-2-web`, stacked on part 1)
 

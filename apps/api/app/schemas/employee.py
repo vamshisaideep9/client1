@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.schemas.product_dashboards import ProductRef, ProductTaskCount
 from app.schemas.profile_metadata import TaskStaffRead
 from app.schemas.telecaller import (
     STAFF_NOTE_MAX_CHARS,
@@ -102,6 +103,10 @@ class EmployeeHomeResponse(BaseModel):
     overdue_count: int
     counts_by_type: dict[str, int]
     counts_by_status: dict[str, int]
+    # The caller's own product specialty (null when unspecialised).
+    specialty: ProductRef | None = None
+    # The caller's own Loans field tasks by product, specialty first.
+    product_counts: list[ProductTaskCount] = Field(default_factory=list)
 
 
 class TaskDocumentPresignRequest(BaseModel):

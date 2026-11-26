@@ -7,6 +7,7 @@ same posture as every other role-gated router in this codebase).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -74,6 +75,7 @@ from app.services.property_deals import (
 from app.services.property_deals import (
     apply_progress_update as apply_deal_progress_update,
 )
+from app.services.specialist_home import staff_specialty, telecaller_product_counts
 from app.services.team_manager import work_notes
 from app.services.telecaller import (
     LoanApplicationNotFound,
@@ -690,6 +692,7 @@ async def home(
 ) -> TelecallerHomeResponse:
     staff_profile_uuid = _staff_profile_uuid(current_user)
     due, counts = await get_home_summary(db, staff_profile_uuid)
+    specialty = await staff_specialty(db, staff_profile_uuid)
     requests_by_lead = await request_summaries_for_leads(db, [lead.id for lead, _ in due])
     modes = await effective_modes(db, FieldTargetRole.TELECALLER)
     return TelecallerHomeResponse(
@@ -704,4 +707,8 @@ async def home(
             for lead, follow_up_at in due
         ],
         counts_by_status=counts,
+        specialty=specialty,
+        product_counts=await telecaller_product_counts(
+            db, staff_profile_uuid, datetime.now(UTC), specialty
+        ),
     )
