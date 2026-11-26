@@ -57,9 +57,12 @@ class StaffCreateRequest(BaseModel):
         if self.sub_admin_grants is not None and self.role != "sub_admin":
             raise ValueError("Only Sub Admins may receive dashboard grants.")
         if self.loan_specialty_id is not None and (
-            self.role != "telecaller" or self.business_line not in ("loans", "both")
+            self.role not in ("telecaller", "employee")
+            or self.business_line not in ("loans", "both")
         ):
-            raise ValueError("Only Loans or dual-line Telecallers may have a loan specialty.")
+            raise ValueError(
+                "Only Loans or dual-line Telecallers and Officers may have a product specialty."
+            )
         if self.role in ("admin", "sub_admin"):
             if self.business_line is not None:
                 raise ValueError("Platform Admin staff must not provide a business_line.")

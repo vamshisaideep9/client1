@@ -320,7 +320,7 @@ async def create_staff_user(
     except InvalidLoanSpecialty as exc:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "Choose an active loan product for this Telecaller.",
+            "Choose an active product for this Telecaller or Officer.",
         ) from exc
     except InvalidSubAdminAgents as exc:
         raise HTTPException(422, detail="Choose existing Agents in the assigned line.") from exc
@@ -767,11 +767,13 @@ async def update_staff_loan_specialty(
             actor_id=current_user.id,
         )
     except AdminUserNotFound as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Active Telecaller not found.") from exc
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Active Telecaller or Officer not found."
+        ) from exc
     except InvalidLoanSpecialty as exc:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "Choose an active loan product for a Loans Telecaller.",
+            "Choose an active product for a Loans Telecaller or Officer.",
         ) from exc
     return (await role_profiles_for_users(db, [auth_user_uuid])).get(auth_user_uuid, [])
 
@@ -1455,7 +1457,8 @@ async def delete_admin_loan_type(
     except LoanTypeInUse as exc:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            "This product has applications, enquiries or provider offers. Deactivate it instead.",
+            "This product has applications, enquiries, leads, specialists or provider offers. "
+            "Deactivate it instead.",
         ) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
