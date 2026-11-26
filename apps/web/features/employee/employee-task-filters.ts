@@ -13,6 +13,8 @@ export function employeeSignalValues(task: EmployeeTask): LeadSignalValues {
     lastInterestLevel: task.lead_last_interest_level,
     referrer: task.lead_referrer,
     facets: task.lead_facets,
+    productId: task.product_id,
+    productLabel: task.product_label,
   };
 }
 

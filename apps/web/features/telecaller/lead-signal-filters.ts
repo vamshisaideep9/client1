@@ -47,6 +47,9 @@ export type LeadSignalValues = {
   facets?: LeadFacets | null;
   /** Loan transactions; null for callers without that reach. */
   transactions?: LeadTransactionSummary | null;
+  /** The lead's stored product (any category) and its label, when recorded. */
+  productId?: string | null;
+  productLabel?: string | null;
 };
 
 export type ReferrerSource = "direct" | "agent" | "client";
@@ -214,18 +217,26 @@ function txnItemFiltered(filters: LeadSignalFilters): boolean {
   );
 }
 
-/** One loan application must match every loan filter at once. */
+/**
+ * The product filter matches the lead's stored product first, then a loan
+ * application of that product. Bank and loan status still need one
+ * application matching every application filter at once.
+ */
 function matchesLoans(values: LeadSignalValues, filters: LeadSignalFilters): boolean {
+  const storedProduct = filters.loanTypeId !== "all" && values.productId === filters.loanTypeId;
+  const applicationFiltered = filters.loanStatus !== "all" || filters.bankId !== "all";
+  if (storedProduct && !applicationFiltered) return true;
   const loans = values.facets?.loans;
   if (!loans) {
     // Rows without facets (an older API) can still answer the status filter.
-    if (filters.loanTypeId !== "all" || filters.bankId !== "all") return false;
-    return (values.loanStatuses ?? []).includes(filters.loanStatus);
+    if (filters.bankId !== "all") return false;
+    if (filters.loanTypeId !== "all" && !storedProduct) return false;
+    return filters.loanStatus === "all" || (values.loanStatuses ?? []).includes(filters.loanStatus);
   }
   return loans.some(
     (loan) =>
       (filters.loanStatus === "all" || loan.status === filters.loanStatus) &&
-      (filters.loanTypeId === "all" || loan.loan_type_id === filters.loanTypeId) &&
+      (filters.loanTypeId === "all" || storedProduct || loan.loan_type_id === filters.loanTypeId) &&
       (filters.bankId === "all" || loan.bank_id === filters.bankId),
   );
 }
@@ -313,14 +324,35 @@ export type LeadSignalOptions = {
 
 export const NO_LEAD_SIGNAL_OPTIONS: LeadSignalOptions = { loanTypes: [], banks: [], transactionBanks: [] };
 
-/** Catalogue choices plus every product, bank and transaction bank on the rows. */
+/** The stored products on the rows (any category), as filter options. */
+export function storedProductOptions(rows: readonly LeadSignalValues[]): FilterOption[] {
+  return mergeOptions(
+    rows.flatMap((row) =>
+      row.productId ? [{ value: row.productId, label: row.productLabel ?? "Unnamed product" }] : [],
+    ),
+  );
+}
+
+/**
+ * Catalogue choices plus every product, bank and transaction bank on the rows.
+ * Product choices cover every category when the catalogue supplies `products`.
+ */
 export function leadSignalOptions(
-  catalogue: { loanTypes: readonly FilterOption[]; banks: readonly FilterOption[]; bankNames: readonly string[] },
+  catalogue: {
+    loanTypes: readonly FilterOption[];
+    products?: readonly FilterOption[];
+    banks: readonly FilterOption[];
+    bankNames: readonly string[];
+  },
   rows: readonly LeadSignalValues[],
 ): LeadSignalOptions {
   const fromRows = facetLoanOptions(rows.map((row) => row.facets));
   return {
-    loanTypes: mergeOptions(catalogue.loanTypes, fromRows.loanTypes),
+    loanTypes: mergeOptions(
+      catalogue.products ?? catalogue.loanTypes,
+      fromRows.loanTypes,
+      storedProductOptions(rows),
+    ),
     banks: mergeOptions(catalogue.banks, fromRows.banks),
     transactionBanks: transactionBankOptions(
       catalogue.bankNames,

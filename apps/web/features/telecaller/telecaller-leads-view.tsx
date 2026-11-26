@@ -15,6 +15,8 @@ import { ListPagination, useListPagination } from "@/features/dashboard/list-pag
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { useLine } from "@/features/dashboard/line-provider";
 import { useProductCatalogue } from "@/features/dashboard/use-product-catalogue";
+import { withDefaultProduct, withMyProductChip } from "@/features/dashboard/product-specialty";
+import { useDefaultProductFilter } from "@/features/dashboard/use-specialty-filter";
 import { formatMobile } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
@@ -108,6 +110,16 @@ export function TelecallerLeadsView() {
     followUpDue: searchParams.get("followUp") === FOLLOW_UP_DUE_PARAM,
   }));
   const [sort, setSort] = React.useState<TelecallerLeadSort>(DEFAULT_TELECALLER_LEAD_SORT);
+  // Specialists start on their own product ("My product"); a home link's
+  // ?product= wins. Applied once per visit, so clearing the chip sticks.
+  const presetProduct = React.useCallback(
+    (productId: string) => setFilters((f) => withDefaultProduct(f, productId)),
+    [],
+  );
+  const specialtyId = useDefaultProductFilter(
+    activeLine === "loans" && searchParams.get("followUp") !== FOLLOW_UP_DUE_PARAM,
+    presetProduct,
+  );
 
   // Loan filters on Loans, property filters on Real Estate, transaction
   // filters on Loans minus the parts the Admin hides; options are the active
@@ -152,7 +164,7 @@ export function TelecallerLeadsView() {
     ...(filters.followUpDue
       ? [{ id: "followUpDue", label: "Follow-up: due now", onRemove: () => patchFilters({ followUpDue: false }) }]
       : []),
-    ...leadSignalChips(filters, patchFilters, scope, options),
+    ...withMyProductChip(leadSignalChips(filters, patchFilters, scope, options), effective.loanTypeId, specialtyId),
   ];
 
   function patchFilters(patch: Partial<TelecallerLeadFilters>) {

@@ -5,6 +5,7 @@ import { mockMobileApi, schemaExample, FIXTURE_ID } from "./helpers/mobile-fixtu
 test.setTimeout(180_000);
 test.use({ contextOptions: { reducedMotion: "reduce" } });
 const SECOND_PRODUCT = "20000000-0000-4000-8000-000000000001";
+const INSURANCE = "20000000-0000-4000-8000-000000000003";
 const TASK_ID = "30000000-0000-4000-8000-000000000001";
 const LEAD_ID = "40000000-0000-4000-8000-000000000001";
 const codes = { admin: "ADMIN-001", sub_admin: "SUB-001", telecaller: "TC-001", employee: "EMP-001", agent: "AGENT-001", client: "CLIENT-001" };
@@ -28,6 +29,7 @@ async function setup(page: Page, role: UserRole, metadata = true) {
     { id: SECOND_PRODUCT, label: "Home Loan", active: true, category: "loan" },
     { id: "retired", label: "Retired Loan", active: false, category: "loan" },
     { id: "card", label: "Credit Card", active: true, category: "credit_card" },
+    { id: INSURANCE, label: "Term Insurance", active: true, category: "insurance" },
   ] } }));
 }
 async function choose(page: Page, label: string | RegExp, option: string) {
@@ -54,30 +56,36 @@ test("Admin provisions a specialty and keeps form values after a save error", as
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await createForm(page);
-  await choose(page, "Loan specialty (optional)", "Home Loan");
+  await choose(page, "Product specialty (optional)", "Home Loan");
   await page.getByRole("button", { name: "Create account", exact: true }).click();
   await expect.poll(() => body).toMatchObject({ role: "telecaller", business_line: "loans", loan_specialty_id: SECOND_PRODUCT });
   await expect(page.getByLabel(/^First name/)).toHaveValue("Synthetic");
-  await expect(page.getByLabel("Loan specialty (optional)")).toContainText("Home Loan");
+  await expect(page.getByLabel("Product specialty (optional)")).toContainText("Home Loan");
   await page.screenshot({ path: info.outputPath("specialty-create-390.png"), fullPage: true });
 });
 
-test("role and line changes clear a hidden specialty", async ({ page }) => {
+test("role and line changes clear a hidden specialty, and Officers can specialise", async ({ page }) => {
   await setup(page, "admin");
   let body: unknown;
   await page.route("**/api/v1/admin/users/create", async (route) => { body = route.request().postDataJSON(); await route.fulfill({ status: 503, json: { detail: "Synthetic retry" } }); });
   await createForm(page);
-  await choose(page, "Loan specialty (optional)", "Home Loan");
+  await choose(page, "Product specialty (optional)", "Home Loan");
   await choose(page, /^Business line/, "Real Estate");
-  await expect(page.getByLabel("Loan specialty (optional)")).toHaveCount(0);
+  await expect(page.getByLabel("Product specialty (optional)")).toHaveCount(0);
   await choose(page, /^Business line/, "Loans");
-  await expect(page.getByLabel("Loan specialty (optional)")).toContainText("No specialty");
-  await choose(page, "Loan specialty (optional)", "Personal Loan");
+  await expect(page.getByLabel("Product specialty (optional)")).toContainText("No specialty");
+  await choose(page, "Product specialty (optional)", "Personal Loan");
+  // Changing the role clears the line and the specialty; Officers can specialise too.
   await choose(page, /^Role/, "Officer");
+  await expect(page.getByLabel("Product specialty (optional)")).toHaveCount(0);
   await choose(page, /^Business line/, "Loans");
-  await expect(page.getByLabel("Loan specialty (optional)")).toHaveCount(0);
+  await expect(page.getByLabel("Product specialty (optional)")).toContainText("No specialty");
+  await choose(page, "Product specialty (optional)", "Term Insurance");
   await page.getByRole("button", { name: "Create account", exact: true }).click();
-  await expect.poll(() => body).toMatchObject({ role: "employee", business_line: "loans", loan_specialty_id: null });
+  await expect.poll(() => body).toMatchObject({ role: "employee", business_line: "loans", loan_specialty_id: INSURANCE });
+  await choose(page, /^Role/, "Sub Admin");
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await expect.poll(() => body).toMatchObject({ role: "sub_admin", loan_specialty_id: null });
 });
 
 test("existing account specialty supports retry, clear and directory refresh", async ({ page }, info) => {
@@ -98,15 +106,15 @@ test("existing account specialty supports retry, clear and directory refresh", a
   await page.getByText("Synthetic Caller", { exact: true }).first().click();
   const dialog = page.getByRole("dialog", { name: "Synthetic Caller" });
   await expect(dialog.getByText("TC-001", { exact: true })).toBeVisible();
-  await choose(page, "Loan specialty (optional)", "Home Loan");
+  await choose(page, "Product specialty (optional)", "Home Loan");
   await dialog.getByRole("button", { name: "Save specialty", exact: true }).click();
   await expect(dialog.getByRole("alert")).toHaveText("Something went wrong on our end. Please try again in a moment.");
-  await expect(dialog.getByLabel("Loan specialty (optional)")).toContainText("Home Loan");
+  await expect(dialog.getByLabel("Product specialty (optional)")).toContainText("Home Loan");
   await dialog.getByRole("button", { name: "Save specialty", exact: true }).click();
   await expect(dialog.getByText("Specialty: Home Loan", { exact: true })).toBeVisible();
   expect(bodies.slice(0, 2)).toEqual([{ loan_specialty_id: SECOND_PRODUCT }, { loan_specialty_id: SECOND_PRODUCT }]);
   await page.screenshot({ path: info.outputPath("specialty-account-1440.png"), fullPage: true });
-  await choose(page, "Loan specialty (optional)", "No specialty");
+  await choose(page, "Product specialty (optional)", "No specialty");
   await dialog.getByRole("button", { name: "Save specialty", exact: true }).click();
   await expect.poll(() => bodies.at(-1)).toEqual({ loan_specialty_id: null });
   await expect(dialog.getByText("Specialty: Home Loan", { exact: true })).toHaveCount(0);
@@ -176,10 +184,11 @@ test("Officer list, detail and home show the raising Telecaller", async ({ page 
 
 test("specialty catalogue failures can be retried without losing the form", async ({ page }) => {
   await setup(page, "admin");
-  let requests = 0;
+  // Fails until Retry is pressed: React strict mode (dev) mounts the select
+  // twice, so "only the first request fails" would be consumed by the discarded mount.
+  let available = false;
   await page.route("**/api/v1/admin/loan-types", async (route) => {
-    requests++;
-    if (requests === 1) { await route.fulfill({ status: 503, json: { detail: "Synthetic catalogue unavailable" } }); return; }
+    if (!available) { await route.fulfill({ status: 503, json: { detail: "Synthetic catalogue unavailable" } }); return; }
     await route.fulfill({ json: { loan_types: [
       { id: FIXTURE_ID, label: "Personal Loan", active: true, category: "loan" },
       { id: "retired", label: "Retired Loan", active: false, category: "loan" },
@@ -187,12 +196,15 @@ test("specialty catalogue failures can be retried without losing the form", asyn
     ] } });
   });
   await createForm(page);
-  await expect(page.getByRole("alert").filter({ hasText: "Could not load loan products" })).toBeVisible();
-  await page.getByRole("button", { name: "Retry loan products", exact: true }).click();
-  await page.getByLabel("Loan specialty (optional)").click();
+  await expect(page.getByRole("alert").filter({ hasText: "Could not load products" })).toBeVisible();
+  available = true;
+  await page.getByRole("button", { name: "Retry products", exact: true }).click();
+  await page.getByLabel("Product specialty (optional)").click();
   await expect(page.getByRole("option", { name: "Personal Loan", exact: true })).toBeVisible();
   await expect(page.getByRole("option", { name: "Retired Loan", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("option", { name: "Credit Card", exact: true })).toHaveCount(0);
+  // Every active category is a specialty now, grouped under its category.
+  await expect(page.getByRole("option", { name: "Credit Card", exact: true })).toBeVisible();
+  await expect(page.getByRole("group").filter({ hasText: "Credit cards" })).toContainText("Credit Card");
   await page.getByRole("option", { name: "Personal Loan", exact: true }).click();
   await expect(page.getByLabel(/^First name/)).toHaveValue("Synthetic");
 });
@@ -225,15 +237,47 @@ test("a delayed specialty save cannot replace another open account's metadata", 
   });
   await page.goto("/dashboard/users", { waitUntil: "domcontentloaded" });
   await page.getByText("Synthetic First", { exact: true }).first().click();
-  await choose(page, "Loan specialty (optional)", "Home Loan");
+  await choose(page, "Product specialty (optional)", "Home Loan");
   await page.getByRole("button", { name: "Save specialty", exact: true }).click();
   await expect.poll(() => started).toBe(true);
   await page.getByRole("button", { name: "Close account", exact: true }).click();
   await page.getByText("Synthetic Second", { exact: true }).first().click();
   release();
-  await expect(page.getByText("Loan specialty saved", { exact: true })).toBeVisible();
+  await expect(page.getByText("Product specialty saved", { exact: true })).toBeVisible();
   const dialog = page.getByRole("dialog", { name: "Synthetic Second" });
   await expect(dialog.getByText("TC-SECOND", { exact: true })).toBeVisible();
   await expect(dialog.getByText("TC-FIRST", { exact: true })).toHaveCount(0);
-  await expect(dialog.getByLabel("Loan specialty (optional)")).toContainText("No specialty");
+  await expect(dialog.getByLabel("Product specialty (optional)")).toContainText("No specialty");
+});
+
+test("an Officer's account saves an insurance specialty", async ({ page }) => {
+  await setup(page, "admin");
+  let current = { ...profile("employee"), loan_specialty_id: null as string | null, loan_specialty_label: null as string | null };
+  const account = () => ({ id: FIXTURE_ID, first_name: "Synthetic", last_name: "Officer", mobile: "+919812345679", email: "officer@example.test", status: "active", roles: ["employee"], client_profiles: [], role_profiles: [current], created_at: "2026-11-20T06:00:00Z", last_login_at: null });
+  await page.route("**/api/v1/admin/users?**", (route) => route.fulfill({ json: { users: [account()], total: 1 } }));
+  const bodies: unknown[] = [];
+  await page.route(`**/api/v1/admin/users/${FIXTURE_ID}/loan-specialty`, async (route) => {
+    const body = route.request().postDataJSON(); bodies.push(body);
+    current = { ...current, loan_specialty_id: body.loan_specialty_id, loan_specialty_label: body.loan_specialty_id ? "Term Insurance" : null };
+    await route.fulfill({ json: [current] });
+  });
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto("/dashboard/users", { waitUntil: "domcontentloaded" });
+  await page.getByText("Synthetic Officer", { exact: true }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Synthetic Officer" });
+  await expect(dialog.getByRole("heading", { name: "Officer routing" })).toBeVisible();
+  await choose(page, "Product specialty (optional)", "Term Insurance");
+  await dialog.getByRole("button", { name: "Save specialty", exact: true }).click();
+  await expect(page.getByText("Product specialty saved", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("Specialty: Term Insurance", { exact: true })).toBeVisible();
+  expect(bodies).toEqual([{ loan_specialty_id: INSURANCE }]);
+});
+
+test("the staffing page's Add Officer link prefills a product specialist", async ({ page }) => {
+  await setup(page, "admin");
+  await page.goto(`/dashboard/users?role=employee&product=${INSURANCE}`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByLabel(/^Role/)).toContainText("Officer");
+  await expect(page.getByLabel(/^Business line/)).toContainText("Loans");
+  await expect(page.getByLabel("Product specialty (optional)")).toContainText("Term Insurance");
+  await expect(page).toHaveURL(/\/dashboard\/users$/);
 });

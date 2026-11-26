@@ -13,6 +13,8 @@ import { ListPagination, useListPagination } from "@/features/dashboard/list-pag
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { useLine } from "@/features/dashboard/line-provider";
 import { useProductCatalogue } from "@/features/dashboard/use-product-catalogue";
+import { withDefaultProduct, withMyProductChip } from "@/features/dashboard/product-specialty";
+import { useDefaultProductFilter } from "@/features/dashboard/use-specialty-filter";
 import { leadSignalFilterGroups } from "@/features/telecaller/lead-signal-filter-fields";
 import {
   DEFAULT_LEAD_SIGNAL_FILTERS,
@@ -73,6 +75,13 @@ export function EmployeeTasksView() {
   const [typeFilter, setTypeFilter] = React.useState<string>("all");
   const { activeLine } = useLine();
   const [signalFilters, setSignalFilters] = React.useState<LeadSignalFilters>(DEFAULT_LEAD_SIGNAL_FILTERS);
+  // Specialists start on their own product ("My product"); a home link's
+  // ?product= wins. Applied once per visit, so clearing the chip sticks.
+  const presetProduct = React.useCallback(
+    (productId: string) => setSignalFilters((f) => withDefaultProduct(f, productId)),
+    [],
+  );
+  const specialtyId = useDefaultProductFilter(activeLine === "loans", presetProduct);
   const { items, loading, error, reload } = useEmployeeTasks(
     statusFilter === "all" ? undefined : statusFilter,
     typeFilter === "all" ? undefined : typeFilter,
@@ -119,7 +128,11 @@ export function EmployeeTasksView() {
         more={leadSignalFilterGroups({ filters: signalFilters, scope, options, onChange: patchSignals })}
         moreActiveCount={leadSignalActiveCount(signalFilters, scope)}
         onClearMore={() => setSignalFilters(DEFAULT_LEAD_SIGNAL_FILTERS)}
-        chips={leadSignalChips(signalFilters, patchSignals, scope, options)}
+        chips={withMyProductChip(
+          leadSignalChips(signalFilters, patchSignals, scope, options),
+          effective.loanTypeId,
+          specialtyId,
+        )}
         onClear={() => {
           setStatusFilter("all");
           setTypeFilter("all");

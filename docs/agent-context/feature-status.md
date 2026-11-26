@@ -1,5 +1,13 @@
 # Feature implementation status
 
+**Product specialists (slice 3 of 4: web, creation and specialist home).**
+Admin can give a Loans or dual-line Telecaller or Officer one product of any
+category when creating the account, from a staffing-page link, or later in the
+account dialog. Specialists see their product chip, a "My product" panel and
+any other products that reached them by fallback; their lead and task lists
+open on "My product", which they can clear. Product filters now match each
+lead's stored product, so enquiry-only leads are found.
+
 **Product specialists (slice 2 of 4: API dashboards).** Specialist homes
 return the caller's specialty and their own Loans work by product. Platform
 Admin gets a product-staffing index with specialists, open and unassigned
