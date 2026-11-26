@@ -36,7 +36,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.audit_log import AuditAction
 from app.models.lead import Lead, LeadAssignmentCursor, LeadOrigin, LeadStatus
 from app.models.lead_intake_attempt import IntakeActorType
-from app.models.loan import LoanApplication, LoanType
+from app.models.loan import FinancialServiceEnquiry, LoanApplication, LoanType
 from app.models.notification import NotificationType
 from app.models.profile import (
     AgentProfile,
@@ -51,6 +51,7 @@ from app.services.eligibility import EligibilityReason
 from app.services.lead_details import initial_ownership, owner, transfer_unclaimed_to_client
 from app.services.lead_intake_attempts import record_attempt as record_intake_attempt
 from app.services.notifications import emit_notification
+from app.services.routing_pools import narrow_to_pool
 
 logger = logging.getLogger(__name__)
 
@@ -229,14 +230,7 @@ async def _select_round_robin_telecaller(
     if not telecallers:
         return None
 
-    pool = "all"
-    if business_line == "loans" and product_id is not None:
-        specialists = [tc for tc in telecallers if tc.loan_specialty_id == product_id]
-        unspecialised = [tc for tc in telecallers if tc.loan_specialty_id is None]
-        if specialists:
-            telecallers, pool = specialists, f"product:{product_id}"
-        elif unspecialised:
-            telecallers, pool = unspecialised, "unspecialised"
+    telecallers, pool = narrow_to_pool(telecallers, business_line, product_id)
 
     cursor = await db.scalar(
         select(LeadAssignmentCursor)
@@ -268,41 +262,91 @@ async def _select_round_robin_telecaller(
     return selected
 
 
-async def _routing_product_id(db: AsyncSession, lead: Lead, product_id: UUID | None) -> UUID | None:
-    """Resolve active lending products only; ambiguous or unknown hints use all staff."""
+async def resolve_lead_product_id(
+    db: AsyncSession, lead: Lead, product_id: UUID | None = None
+) -> UUID | None:
+    """The active product a loans lead is about, when it is unambiguous.
+
+    Products of every category count (loan, credit card and insurance). In
+    order: a trusted explicit hint (a Client's own application or enquiry),
+    the lead's stored product, the enquiry's product slug, its product label,
+    then the single product across its loan applications. An ambiguous,
+    unknown or inactive product returns None, so routing uses unspecialised
+    staff. Real Estate leads never have a product.
+    """
     if lead.business_line != "loans":
         return None
-    stmt = select(LoanType.id).where(LoanType.active.is_(True), LoanType.category == "loan")
-    requirement = lead.requirement or {}
+    stmt = select(LoanType.id).where(LoanType.active.is_(True))
+    requirement = lead.requirement if isinstance(lead.requirement, dict) else {}
     if product_id is not None:
         stmt = stmt.where(LoanType.id == product_id)
+    elif lead.product_id is not None:
+        stmt = stmt.where(LoanType.id == lead.product_id)
     elif isinstance(requirement.get("product_slug"), str):
         stmt = stmt.where(LoanType.name == requirement["product_slug"])
     elif isinstance(requirement.get("product"), str):
         stmt = stmt.where(func.lower(LoanType.label) == requirement["product"].strip().lower())
-    else:
+    elif lead.id is not None:
         stmt = (
             stmt.join(LoanApplication, LoanApplication.loan_type_id == LoanType.id)
             .where(LoanApplication.lead_uuid == lead.id)
             .distinct()
         )
+    else:
+        return None
     matches = list(await db.scalars(stmt.limit(2)))
     return matches[0] if len(matches) == 1 else None
+
+
+async def _record_lead_product(db: AsyncSession, lead: Lead, product_id: UUID | None) -> None:
+    """Store a lead's first known product; never overwrite one already stored.
+
+    A lead whose existing applications or enquiries already name a different
+    product stays unclassified, because its product is ambiguous. Runs on the
+    owner session: request sessions cannot change lead workflow columns.
+    """
+    if product_id is None or lead.product_id is not None or lead.business_line != "loans":
+        return
+    if lead.id is not None:
+        conflicting = await db.scalar(
+            select(
+                or_(
+                    select(LoanApplication.id)
+                    .where(
+                        LoanApplication.lead_uuid == lead.id,
+                        LoanApplication.loan_type_id != product_id,
+                    )
+                    .exists(),
+                    select(FinancialServiceEnquiry.id)
+                    .where(
+                        FinancialServiceEnquiry.lead_uuid == lead.id,
+                        FinancialServiceEnquiry.product_id != product_id,
+                    )
+                    .exists(),
+                )
+            )
+        )
+        if conflicting:
+            return
+    lead.product_id = product_id
 
 
 async def auto_assign_locked_lead(
     db: AsyncSession, lead: Lead, *, product_id: UUID | None = None
 ) -> LeadAssignmentNotice | None:
-    """Assign one caller-owned locked lead without committing or notifying."""
-    if (
-        lead.assigned_telecaller_profile_uuid is not None
-        or lead.business_line not in _VALID_LINES
-        or lead.status not in _ASSIGNABLE_STATUSES
-    ):
+    """Assign one caller-owned locked lead without committing or notifying.
+
+    Also records the lead's product the first time it becomes known, even when
+    the lead is already assigned (for example its first application).
+    """
+    if lead.business_line not in _VALID_LINES:
+        return None
+    product_id = await resolve_lead_product_id(db, lead, product_id)
+    await _record_lead_product(db, lead, product_id)
+    if lead.assigned_telecaller_profile_uuid is not None or lead.status not in _ASSIGNABLE_STATUSES:
         return None
 
     await _lock_assignment_line(db, lead.business_line)
-    product_id = await _routing_product_id(db, lead, product_id)
     telecaller = await _select_round_robin_telecaller(db, lead.business_line, product_id)
     if telecaller is None:
         return None

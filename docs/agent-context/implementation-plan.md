@@ -1,6 +1,68 @@
 # Living implementation plan
 
-**Lead reference numbers — web (part 2 of 2)** (branch
+**In progress — Product specialists for Telecallers and Officers, with
+dashboards** (2026-11-26; user-approved plan; four stacked slices, each PR
+against `main` on both repositories)
+
+Decisions: any active product (loan, credit card or insurance) can be the one
+specialty of a Loans or dual-line Telecaller or Officer. Unspecialised staff
+keep covering everything. Officers route product-first like Telecallers. Real
+Estate stays line-only. No new role, no multi-product specialty, no Sub Admin
+grant change and no reassignment of existing work when a specialty changes.
+
+Slice 1 — API routing (branch `feat/product-specialists-1-api-routing`):
+
+- Additive migration `5c8e2a7f1b94` on `0d26342db0ba`. The specialty check
+  admits Officers on loans/both, and the platform-Admin-only trigger now
+  requires an active product of any category. Officer cursors get one row per
+  `(business_line, pool)`, validated for pool membership. `leads.product_id`
+  (FK `ON DELETE RESTRICT`, index with line and status) is backfilled in
+  committed batches: the single application product, else the single
+  card/insurance enquiry product, else the exact `product_slug`; ambiguous
+  leads stay null. `leads` grants and policies are unchanged.
+- Lead routing resolves products of every category
+  (`resolve_lead_product_id`) and stores the first known, unambiguous product
+  on capture, routing or the first application/enquiry. Loans tasks route
+  specialist Officers, then unspecialised Officers, then anyone, with a cursor
+  per pool; vehicle pickups (Real Estate only) stay line-wide.
+- Admin create and `PATCH /admin/users/{id}/loan-specialty` accept Officers
+  and every active category, reusing `STAFF_SPECIALTY_UPDATED`. A product with
+  leads or specialists cannot be deleted (409; deactivate instead).
+- Telecaller lead reads and Officer task reads carry `product_id` and
+  `product_label`. Contracts regenerated; all new fields are optional.
+- Rollout: apply the migration, then update the API and the single scheduler
+  together with assignment quiesced (old workers cannot share the new cursor
+  keys). Downgrade removes Officer and non-loan specialties and pool history.
+- Verified on isolated PostgreSQL 18 and Redis: 59 focused routing, Officer
+  pool, backfill, read-model and Admin tests passed; the populated
+  upgrade/downgrade/upgrade round trip kept one head (`5c8e2a7f1b94`). Ruff,
+  format, both contract scripts and web typecheck passed.
+- Next: slice 2 (specialist home counts, Admin product staffing and the
+  per-product dashboard endpoints).
+
+Slice 2 — API dashboards (branch `feat/product-specialists-2-api-dashboards`,
+stacked on slice 1):
+
+- Telecaller and Officer homes add `specialty` and `product_counts` (leads:
+  open, overdue, converted in 30 days; tasks: open, overdue, completed in 30
+  days), counted only over the caller's own Loans work.
+- `GET /admin/product-staffing` (platform Admin): every catalogue product
+  with specialist Telecallers and Officers, open and unassigned leads, open
+  tasks and coverage (`full`, `no_telecaller`, `no_officer`, `none`, from
+  active specialists only), totals, unspecialised staff per line, and the
+  unspecialised Loans/dual-line staff an Admin can assign.
+- `GET /products/{id}/dashboard` (`days` or `date_from`/`date_to`, default
+  30 IST days): lead KPIs (captured, open, converted, conversion rate, served
+  by fallback, unassigned), applications or enquiries by status, task KPIs
+  with on-time rate, a weekly trend and a staff table, each from one grouped
+  query. Platform Admin sees everything; a Team Manager with a Loans view
+  grant sees only their own active Loans teams' members and work; everyone
+  else gets 403, an unknown product 404, and inactive products stay readable.
+- `GET /manager/products` lists the products the manager's Loans team members
+  specialise in or work on. Team work rows carry `product_id` and
+  `product_label` for the Team Manager product filter.
+
+**Merged upstream — Lead reference numbers — web (part 2 of 2)** (branch
 `feat/lead-ref-2-web`, stacked on part 1)
 
 - Telecaller, Agent, Admin lead-assignment and Team Manager lead lists show
@@ -22,7 +84,7 @@
   [Upstream #408](https://github.com/brollysolutions/client1/pull/408)
   · [Mirror #108](https://github.com/vamshisaideep9/client1/pull/108)
 
-**In progress — Lead reference numbers (`LD-00000123`)** (2026-11-25;
+**Merged upstream 2026-11-26 — Lead reference numbers (`LD-00000123`)** (2026-11-25;
 branch `feat/lead-ref-1-api`, part 1 of 2)
 
 - Every lead gets `leads.lead_number`, assigned by a PostgreSQL sequence

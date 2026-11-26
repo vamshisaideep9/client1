@@ -1013,6 +1013,28 @@ export interface paths {
         patch: operations["edit_product_provider_offer_api_v1_admin_product_provider_offers__offer_id__patch"];
         trace?: never;
     };
+    "/api/v1/admin/product-staffing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Product Staffing
+         * @description Every catalogue product with its specialist Telecallers and Officers,
+         *     open and unassigned leads, open tasks and a coverage flag, plus the
+         *     unspecialised staff Admin can assign. Platform Admin only.
+         */
+        get: operations["get_product_staffing_api_v1_admin_product_staffing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/property-deals": {
         parameters: {
             query?: never;
@@ -4276,6 +4298,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/manager/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get My Products
+         * @description Products the members of the caller's own Loans teams specialise in or
+         *     work on, with their open leads and tasks. Real Estate teams have none.
+         */
+        get: operations["get_my_products_api_v1_manager_products_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/manager/teams": {
         parameters: {
             query?: never;
@@ -5313,6 +5356,27 @@ export interface paths {
          * @description Place name (area, district, state) for a pincode.
          */
         get: operations["get_pincode_api_v1_pincodes__pincode__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/{product_id}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Product Dashboard
+         * @description KPIs, requests by status, a weekly trend and the staff table for one
+         *     product. The default period is the last 30 IST days.
+         */
+        get: operations["get_product_dashboard_api_v1_products__product_id__dashboard_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -11465,6 +11529,9 @@ export interface components {
             };
             /** Overdue Count */
             overdue_count: number;
+            /** Product Counts */
+            product_counts?: components["schemas"]["ProductTaskCount"][];
+            specialty?: components["schemas"]["ProductRef"] | null;
             /** Tasks Today */
             tasks_today: components["schemas"]["EmployeeTaskRead"][];
         };
@@ -11519,6 +11586,10 @@ export interface components {
             notes: string | null;
             /** Outcome */
             outcome: ("clear" | "flagged" | "inconclusive") | null;
+            /** Product Id */
+            product_id?: string | null;
+            /** Product Label */
+            product_label?: string | null;
             /** Raised By Telecaller Code */
             raised_by_telecaller_code?: string | null;
             /** Raised By Telecaller Name */
@@ -12633,6 +12704,46 @@ export interface components {
              */
             id: string;
         };
+        /** ManagerProductRow */
+        ManagerProductRow: {
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "loan" | "credit_card" | "insurance";
+            /** Label */
+            label: string;
+            /**
+             * Open Leads
+             * @default 0
+             */
+            open_leads: number;
+            /**
+             * Open Tasks
+             * @default 0
+             */
+            open_tasks: number;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /**
+             * Specialists
+             * @default 0
+             */
+            specialists: number;
+        };
+        /** ManagerProductsResponse */
+        ManagerProductsResponse: {
+            /** Products */
+            products: components["schemas"]["ManagerProductRow"][];
+        };
         /** ManagerTeamsResponse */
         ManagerTeamsResponse: {
             /** Teams */
@@ -13650,10 +13761,368 @@ export interface components {
             /** Product Slug */
             product_slug: string;
         };
+        /** ProductDashboardResponse */
+        ProductDashboardResponse: {
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            leads: components["schemas"]["ProductLeadKpis"];
+            product: components["schemas"]["ProductRef"];
+            /** Range Days */
+            range_days: number;
+            /** Requests By Status */
+            requests_by_status?: components["schemas"]["ProductStageCount"][];
+            /**
+             * Requests Kind
+             * @enum {string}
+             */
+            requests_kind: "applications" | "enquiries";
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "platform" | "team";
+            /** Staff */
+            staff?: components["schemas"]["ProductStaffRow"][];
+            tasks: components["schemas"]["ProductTaskKpis"];
+            /** Trend */
+            trend?: components["schemas"]["ProductTrendPoint"][];
+        };
         /** ProductFormDefinition */
         ProductFormDefinition: {
             /** Sections */
             sections: components["schemas"]["FormSectionDefinition"][];
+        };
+        /**
+         * ProductLeadCount
+         * @description The caller's own Loans leads for one product (null: no product recorded).
+         *
+         *     ``open``: assigned or working. ``overdue``: open with the latest call's
+         *     follow-up due. ``converted_30d``: converted in the last 30 days.
+         */
+        ProductLeadCount: {
+            /** Category */
+            category?: ("loan" | "credit_card" | "insurance") | null;
+            /**
+             * Converted 30D
+             * @default 0
+             */
+            converted_30d: number;
+            /** Label */
+            label?: string | null;
+            /**
+             * Open
+             * @default 0
+             */
+            open: number;
+            /**
+             * Overdue
+             * @default 0
+             */
+            overdue: number;
+            /** Product Id */
+            product_id?: string | null;
+        };
+        /** ProductLeadKpis */
+        ProductLeadKpis: {
+            /**
+             * Captured
+             * @default 0
+             */
+            captured: number;
+            /** Conversion Rate */
+            conversion_rate?: number | null;
+            /**
+             * Converted
+             * @default 0
+             */
+            converted: number;
+            /**
+             * Open
+             * @default 0
+             */
+            open: number;
+            /**
+             * Served By Fallback
+             * @default 0
+             */
+            served_by_fallback: number;
+            /**
+             * Unassigned
+             * @default 0
+             */
+            unassigned: number;
+        };
+        /**
+         * ProductRef
+         * @description One catalogue product as staff see it.
+         */
+        ProductRef: {
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "loan" | "credit_card" | "insurance";
+            /** Label */
+            label: string;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+        };
+        /**
+         * ProductStaffPerson
+         * @description A Telecaller or Officer as Admin sees them in the staffing index.
+         */
+        ProductStaffPerson: {
+            /**
+             * Auth User Uuid
+             * Format: uuid
+             */
+            auth_user_uuid: string;
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate" | "both";
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "telecaller" | "employee";
+            /** Staff Code */
+            staff_code: string;
+            /**
+             * Staff Profile Uuid
+             * Format: uuid
+             */
+            staff_profile_uuid: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "inactive" | "suspended";
+        };
+        /** ProductStaffRow */
+        ProductStaffRow: {
+            /**
+             * Assigned
+             * @default 0
+             */
+            assigned: number;
+            /**
+             * Completed Tasks
+             * @default 0
+             */
+            completed_tasks: number;
+            /**
+             * Contacted
+             * @default 0
+             */
+            contacted: number;
+            /**
+             * Converted
+             * @default 0
+             */
+            converted: number;
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
+            /**
+             * Open Tasks
+             * @default 0
+             */
+            open_tasks: number;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "telecaller" | "employee";
+            /** Specialist */
+            specialist: boolean;
+            /** Staff Code */
+            staff_code: string;
+            /**
+             * Staff Profile Uuid
+             * Format: uuid
+             */
+            staff_profile_uuid: string;
+        };
+        /** ProductStaffingResponse */
+        ProductStaffingResponse: {
+            /** Available */
+            available?: components["schemas"]["ProductStaffPerson"][];
+            /** Products */
+            products: components["schemas"]["ProductStaffingRow"][];
+            summary: components["schemas"]["ProductStaffingSummary"];
+        };
+        /** ProductStaffingRow */
+        ProductStaffingRow: {
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "loan" | "credit_card" | "insurance";
+            /**
+             * Coverage
+             * @default none
+             * @enum {string}
+             */
+            coverage: "full" | "no_telecaller" | "no_officer" | "none";
+            /** Label */
+            label: string;
+            /** Officers */
+            officers?: components["schemas"]["ProductStaffPerson"][];
+            /**
+             * Open Leads
+             * @default 0
+             */
+            open_leads: number;
+            /**
+             * Open Tasks
+             * @default 0
+             */
+            open_tasks: number;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Telecallers */
+            telecallers?: components["schemas"]["ProductStaffPerson"][];
+            /**
+             * Unassigned Leads
+             * @default 0
+             */
+            unassigned_leads: number;
+        };
+        /** ProductStaffingSummary */
+        ProductStaffingSummary: {
+            /**
+             * Active Products
+             * @default 0
+             */
+            active_products: number;
+            /**
+             * Fully Covered
+             * @default 0
+             */
+            fully_covered: number;
+            /**
+             * Open Leads
+             * @default 0
+             */
+            open_leads: number;
+            /**
+             * Open Tasks
+             * @default 0
+             */
+            open_tasks: number;
+            /**
+             * Products
+             * @default 0
+             */
+            products: number;
+            /**
+             * Unassigned Leads
+             * @default 0
+             */
+            unassigned_leads: number;
+            /** Unspecialised */
+            unspecialised?: components["schemas"]["UnspecialisedCount"][];
+        };
+        /** ProductStageCount */
+        ProductStageCount: {
+            /** Count */
+            count: number;
+            /** Status */
+            status: string;
+        };
+        /**
+         * ProductTaskCount
+         * @description The caller's own Loans field tasks for one product (null: no product recorded).
+         *
+         *     ``open``: assigned, in progress or blocked. ``overdue``: open and past its
+         *     due time. ``completed_30d``: completed in the last 30 days.
+         */
+        ProductTaskCount: {
+            /** Category */
+            category?: ("loan" | "credit_card" | "insurance") | null;
+            /**
+             * Completed 30D
+             * @default 0
+             */
+            completed_30d: number;
+            /** Label */
+            label?: string | null;
+            /**
+             * Open
+             * @default 0
+             */
+            open: number;
+            /**
+             * Overdue
+             * @default 0
+             */
+            overdue: number;
+            /** Product Id */
+            product_id?: string | null;
+        };
+        /** ProductTaskKpis */
+        ProductTaskKpis: {
+            /**
+             * Completed
+             * @default 0
+             */
+            completed: number;
+            /** On Time Rate */
+            on_time_rate?: number | null;
+            /**
+             * Open
+             * @default 0
+             */
+            open: number;
+        };
+        /** ProductTrendPoint */
+        ProductTrendPoint: {
+            /**
+             * Captured
+             * @default 0
+             */
+            captured: number;
+            /**
+             * Converted
+             * @default 0
+             */
+            converted: number;
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
         };
         /** ProfileTeamRead */
         ProfileTeamRead: {
@@ -16169,6 +16638,10 @@ export interface components {
             mobile: string;
             /** Name */
             name: string | null;
+            /** Product Id */
+            product_id?: string | null;
+            /** Product Label */
+            product_label?: string | null;
             /** Requests */
             requests: components["schemas"]["LeadRequestSummary"][];
             signals?: components["schemas"]["TeamLeadSignals"];
@@ -16428,6 +16901,10 @@ export interface components {
             lead_uuid: string;
             /** Notes */
             notes: string | null;
+            /** Product Id */
+            product_id?: string | null;
+            /** Product Label */
+            product_label?: string | null;
             signals?: components["schemas"]["TeamLeadSignals"];
             /** Status */
             status: string;
@@ -16543,6 +17020,9 @@ export interface components {
             };
             /** Follow Ups Due */
             follow_ups_due: components["schemas"]["TelecallerFollowUpItem"][];
+            /** Product Counts */
+            product_counts?: components["schemas"]["ProductLeadCount"][];
+            specialty?: components["schemas"]["ProductRef"] | null;
         };
         /** TelecallerLeadDetailRead */
         TelecallerLeadDetailRead: {
@@ -16602,6 +17082,10 @@ export interface components {
             name?: string | null;
             /** Next Follow Up At */
             next_follow_up_at?: string | null;
+            /** Product Id */
+            product_id?: string | null;
+            /** Product Label */
+            product_label?: string | null;
             /**
              * Property Deals
              * @default []
@@ -16683,6 +17167,10 @@ export interface components {
             name?: string | null;
             /** Next Follow Up At */
             next_follow_up_at?: string | null;
+            /** Product Id */
+            product_id?: string | null;
+            /** Product Label */
+            product_label?: string | null;
             referrer?: components["schemas"]["LeadReferrerRead"] | null;
             /** Requirement */
             requirement?: {
@@ -16967,6 +17455,24 @@ export interface components {
         UnreadCountResponse: {
             /** Count */
             count: number;
+        };
+        /** UnspecialisedCount */
+        UnspecialisedCount: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate" | "both";
+            /**
+             * Officers
+             * @default 0
+             */
+            officers: number;
+            /**
+             * Telecallers
+             * @default 0
+             */
+            telecallers: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -19268,6 +19774,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_product_staffing_api_v1_admin_product_staffing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductStaffingResponse"];
                 };
             };
         };
@@ -26154,6 +26680,26 @@ export interface operations {
             };
         };
     };
+    get_my_products_api_v1_manager_products_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagerProductsResponse"];
+                };
+            };
+        };
+    };
     get_my_teams_api_v1_manager_teams_get: {
         parameters: {
             query?: never;
@@ -28242,6 +28788,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PincodePlaceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_product_dashboard_api_v1_products__product_id__dashboard_get: {
+        parameters: {
+            query?: {
+                /** @description Period in days (7, 30 or 90). */
+                days?: number;
+                /** @description First IST day of the period, inclusive. */
+                date_from?: string | null;
+                /** @description Last IST day of the period, inclusive. */
+                date_to?: string | null;
+            };
+            header?: never;
+            path: {
+                product_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDashboardResponse"];
                 };
             };
             /** @description Validation Error */

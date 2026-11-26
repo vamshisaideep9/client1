@@ -1,5 +1,31 @@
 # Feature implementation status
 
+**Product specialists (slice 2 of 4: API dashboards).** Specialist homes
+return the caller's specialty and their own Loans work by product. Platform
+Admin gets a product-staffing index with specialists, open and unassigned
+leads, open tasks, coverage flags and the staff available to assign. One
+per-product dashboard endpoint serves KPIs, requests by status, task timing,
+a weekly trend and a staff table: platform-wide for Admin, limited to the
+caller's own Loans teams for a Team Manager, and 403 for everyone else. Team
+Managers also get a product index, and their team work rows carry the
+product. Positive, cross-team, Real Estate-only, other-role and unknown-product
+checks pass on PostgreSQL. Web screens follow in slices 3-4.
+
+**Product specialists (slice 1 of 4: API routing).** Admin can give a Loans or
+dual-line Telecaller or Officer one active product of any category (loan,
+credit card or insurance) as a specialty, at creation or later; Real Estate
+staff stay line-only. Leads route to Telecallers, and Loans field tasks to
+Officers, specialist first, then unspecialised staff, then anyone on the line,
+each pool with its own fair rotation. Every lead now stores its product when
+it is unambiguous (`leads.product_id`), set on capture, routing or the first
+application or enquiry, and backfilled for existing Loans leads. Telecaller
+lead and Officer task reads carry the product and its label. The database
+still allows only platform Admin to set a specialty and now rejects inactive
+products and Real Estate-only staff. Products with leads or specialists can
+no longer be deleted. Focused PostgreSQL routing, pool, backfill and Admin
+checks passed with a populated migration round trip. Dashboards follow in
+slices 2-4. No requirement-percentage change.
+
 **Lead reference numbers (web, part 2 of 2).** Signed-in staff and Agents
 see the reference on lead lists, lead pages and dialogs, commission and
 fee-cashback ledgers, payouts, and the Agent's earnings and payment trail.

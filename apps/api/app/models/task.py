@@ -83,7 +83,11 @@ class Task(Base):
 
 
 class EmployeeAssignmentCursor(Base):
-    """Internal per-line cursor shared by tasks and vehicle pickups."""
+    """Internal per-line, per-candidate-pool cursor shared by tasks and vehicle pickups.
+
+    Pools mirror ``LeadAssignmentCursor``: ``product:<id>`` for that product's
+    specialists, ``unspecialised`` and ``all``.
+    """
 
     __tablename__ = "employee_assignment_cursors"
     __table_args__ = (
@@ -91,9 +95,18 @@ class EmployeeAssignmentCursor(Base):
             "business_line::text IN ('loans', 'real_estate')",
             name="business_line_operational",
         ),
+        CheckConstraint(
+            "pool = 'all' OR (business_line::text = 'loans' AND "
+            "(pool = 'unspecialised' OR pool ~ "
+            "'^product:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'))",
+            name="pool",
+        ),
     )
 
     business_line: Mapped[str] = mapped_column(business_line_enum, primary_key=True)
+    pool: Mapped[str] = mapped_column(
+        String(64), primary_key=True, default="all", server_default="all"
+    )
     last_employee_profile_uuid: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("staff_profiles.id", ondelete="SET NULL"),

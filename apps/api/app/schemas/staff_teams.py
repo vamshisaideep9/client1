@@ -163,6 +163,9 @@ class TeamLeadSignals(BaseModel):
 class TeamLeadRow(BaseModel):
     id: UUID
     lead_ref: LeadRef
+    # The lead's stored product (Loans only) and its label.
+    product_id: UUID | None = None
+    product_label: str | None = None
     # Null when the Admin hides it from this team's member role; the key is
     # then listed in hidden_fields so the page can say so.
     name: str | None
@@ -181,6 +184,9 @@ class TeamLeadRow(BaseModel):
 class TeamTaskRow(BaseModel):
     id: UUID
     lead_uuid: UUID
+    # The product stored on the task's lead (Loans only) and its label.
+    product_id: UUID | None = None
+    product_label: str | None = None
     lead_name: str | None
     lead_mobile: str | None = None
     task_type: str

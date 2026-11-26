@@ -109,6 +109,7 @@ class Lead(Base):
                 "AND agent_expired_at IS NULL AND status <> 'closed'"
             ),
         ),
+        Index("ix_leads_product_line_status", "product_id", "business_line", "status"),
         Index(
             "ix_leads_assignment_workload",
             "business_line",
@@ -149,6 +150,16 @@ class Lead(Base):
     assigned_telecaller_profile_uuid: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("staff_profiles.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # The financial product the lead is about (any category), when it is
+    # unambiguous. Set on the owner session when the lead is captured or
+    # routed, or by its first application or enquiry; never by a request
+    # session. Routing, product filters and per-product dashboards read it.
+    # Always null on the real estate line.
+    product_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("loan_types.id", ondelete="RESTRICT"),
         nullable=True,
     )
     name: Mapped[str | None] = mapped_column(String, nullable=True)

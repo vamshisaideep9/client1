@@ -7,6 +7,7 @@ every other role-gated router in this codebase).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -70,8 +71,15 @@ from app.services.field_visibility import (
 from app.services.field_visibility import (
     create_contact_share_link as create_contact_share_link_record,
 )
+from app.services.lead_products import (
+    NO_PRODUCT,
+    LeadProduct,
+    lead_products,
+    lead_products_for_ids,
+)
 from app.services.lead_signals import EMPTY_SIGNALS, LeadSignals, facets, lead_signals_for_ids
 from app.services.profile_metadata import task_staff_for_ids
+from app.services.specialist_home import officer_product_counts, staff_specialty
 from app.services.task_feedback import (
     FeedbackLimitReached,
     FeedbackRateExceeded,
@@ -140,6 +148,7 @@ def _to_read(
     modes: dict[tuple[str, str], FieldVisibilityMode],
     signals: LeadSignals | None = None,
     staff: TaskStaffRead | None = None,
+    product: LeadProduct = NO_PRODUCT,
 ) -> EmployeeTaskRead:
     mode = contact_mode(modes)
     lead_values: dict[str, object] = {"name": lead_name, "mobile": lead_mobile}
@@ -159,6 +168,8 @@ def _to_read(
         lead_uuid=task.lead_uuid,
         lead_contact_mode=mode,
         business_line=task.business_line,
+        product_id=product.product_id,
+        product_label=product.label,
         task_type=task.task_type,
         status=task.status,
         outcome=task.outcome,
@@ -189,6 +200,7 @@ async def list_tasks(
     modes = await effective_modes(db, FieldTargetRole.EMPLOYEE)
     signals = await lead_signals_for_ids(db, (task.lead_uuid for task, _, _ in rows))
     staff = await task_staff_for_ids(db, (task.id for task, _, _ in rows))
+    products = await lead_products_for_ids(db, (task.lead_uuid for task, _, _ in rows))
     return [
         _to_read(
             task,
@@ -197,6 +209,7 @@ async def list_tasks(
             modes,
             signals.get(task.lead_uuid, EMPTY_SIGNALS),
             staff.get(task.id),
+            products.get(task.lead_uuid, NO_PRODUCT),
         )
         for task, name, mobile in rows
     ]
@@ -215,7 +228,14 @@ async def get_task(
     modes = await effective_modes(db, FieldTargetRole.EMPLOYEE)
     signals = await lead_signals_for_ids(db, [row[0].lead_uuid])
     staff = await task_staff_for_ids(db, [task_id])
-    read = _to_read(*row, modes, signals.get(row[0].lead_uuid, EMPTY_SIGNALS), staff.get(task_id))
+    products = await lead_products_for_ids(db, [row[0].lead_uuid])
+    read = _to_read(
+        *row,
+        modes,
+        signals.get(row[0].lead_uuid, EMPTY_SIGNALS),
+        staff.get(task_id),
+        products.get(row[0].lead_uuid, NO_PRODUCT),
+    )
     read.manager_notes = await work_notes(db, task_id=task_id)
     return read
 
@@ -248,6 +268,7 @@ async def reopen_employee_task(
         modes,
         signals.get(task.lead_uuid, EMPTY_SIGNALS),
         (await task_staff_for_ids(db, [task.id])).get(task.id),
+        (await lead_products(db, [lead]))[lead.id] if lead else NO_PRODUCT,
     )
 
 
@@ -296,6 +317,7 @@ async def patch_task(
         modes,
         signals.get(task.lead_uuid, EMPTY_SIGNALS),
         (await task_staff_for_ids(db, [task.id])).get(task.id),
+        (await lead_products(db, [lead]))[lead.id] if lead else NO_PRODUCT,
     )
 
 
@@ -604,13 +626,26 @@ async def home(
         db, staff_profile_uuid
     )
     staff = await task_staff_for_ids(db, (task.id for task, _, _ in tasks_today))
+    products = await lead_products_for_ids(db, (task.lead_uuid for task, _, _ in tasks_today))
+    specialty = await staff_specialty(db, staff_profile_uuid)
     modes = await effective_modes(db, FieldTargetRole.EMPLOYEE)
     return EmployeeHomeResponse(
         tasks_today=[
-            _to_read(task, name, mobile, modes, staff=staff.get(task.id))
+            _to_read(
+                task,
+                name,
+                mobile,
+                modes,
+                staff=staff.get(task.id),
+                product=products.get(task.lead_uuid, NO_PRODUCT),
+            )
             for task, name, mobile in tasks_today
         ],
         overdue_count=overdue_count,
         counts_by_type=counts_by_type,
         counts_by_status=counts_by_status,
+        specialty=specialty,
+        product_counts=await officer_product_counts(
+            db, staff_profile_uuid, datetime.now(UTC), specialty
+        ),
     )

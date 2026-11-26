@@ -7,6 +7,7 @@ same posture as every other role-gated router in this codebase).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -43,6 +44,7 @@ from app.schemas.telecaller import (
 from app.services.chat_inquiries import list_chat_inquiries
 from app.services.field_visibility import effective_modes, project_values
 from app.services.lead_details import visible_requirement
+from app.services.lead_products import lead_products
 from app.services.lead_signals import facets, lead_signals, transaction_summary
 from app.services.loan_applications import (
     BankNotAvailableForLoanType,
@@ -73,6 +75,7 @@ from app.services.property_deals import (
 from app.services.property_deals import (
     apply_progress_update as apply_deal_progress_update,
 )
+from app.services.specialist_home import staff_specialty, telecaller_product_counts
 from app.services.team_manager import work_notes
 from app.services.telecaller import (
     LoanApplicationNotFound,
@@ -207,12 +210,14 @@ async def list_leads(
     last_by_lead = await get_last_activities(db, lead_ids)
     requests_by_lead = await request_summaries_for_leads(db, lead_ids)
     signals_by_lead = await lead_signals(db, leads)
+    products = await lead_products(db, leads)
     modes = await effective_modes(db, FieldTargetRole.TELECALLER)
     out: list[TelecallerLeadRead] = []
     for lead in leads:
         activity = last_by_lead.get(lead.id)
         requests = requests_by_lead.get(lead.id) or []
         signals = signals_by_lead[lead.id]
+        product = products[lead.id]
         out.append(
             TelecallerLeadRead(
                 id=lead.id,
@@ -220,6 +225,8 @@ async def list_leads(
                 mobile=lead.mobile,
                 business_line=lead.business_line,
                 status=lead.status,
+                product_id=product.product_id,
+                product_label=product.label,
                 last_disposition=activity.disposition if activity else None,
                 last_interest_level=activity.interest_level if activity else None,
                 next_follow_up_at=activity.follow_up_at if activity else None,
@@ -315,6 +322,7 @@ async def get_lead(
     task_staff = await task_staff_for_ids(db, (task.id for task in tasks))
     requests = (await request_summaries_for_leads(db, [lead_id]))[lead_id]
     signals = (await lead_signals(db, [lead]))[lead.id]
+    product = (await lead_products(db, [lead]))[lead.id]
 
     return TelecallerLeadDetailRead(
         id=lead.id,
@@ -322,6 +330,8 @@ async def get_lead(
         mobile=lead.mobile,
         business_line=lead.business_line,
         status=lead.status,
+        product_id=product.product_id,
+        product_label=product.label,
         last_disposition=last.disposition if last else None,
         last_interest_level=last.interest_level if last else None,
         next_follow_up_at=last.follow_up_at if last else None,
@@ -383,12 +393,15 @@ async def patch_lead(
     lead = await update_lead(db, lead, payload)
     activity = (await get_last_activities(db, [lead.id])).get(lead.id)
     modes = await effective_modes(db, FieldTargetRole.TELECALLER)
+    product = (await lead_products(db, [lead]))[lead.id]
     return TelecallerLeadRead(
         id=lead.id,
         lead_ref=lead.lead_ref,
         mobile=lead.mobile,
         business_line=lead.business_line,
         status=lead.status,
+        product_id=product.product_id,
+        product_label=product.label,
         last_disposition=activity.disposition if activity else None,
         next_follow_up_at=activity.follow_up_at if activity else None,
         created_at=lead.created_at,
@@ -679,6 +692,7 @@ async def home(
 ) -> TelecallerHomeResponse:
     staff_profile_uuid = _staff_profile_uuid(current_user)
     due, counts = await get_home_summary(db, staff_profile_uuid)
+    specialty = await staff_specialty(db, staff_profile_uuid)
     requests_by_lead = await request_summaries_for_leads(db, [lead.id for lead, _ in due])
     modes = await effective_modes(db, FieldTargetRole.TELECALLER)
     return TelecallerHomeResponse(
@@ -693,4 +707,8 @@ async def home(
             for lead, follow_up_at in due
         ],
         counts_by_status=counts,
+        specialty=specialty,
+        product_counts=await telecaller_product_counts(
+            db, staff_profile_uuid, datetime.now(UTC), specialty
+        ),
     )

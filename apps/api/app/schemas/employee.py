@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.schemas.product_dashboards import ProductRef, ProductTaskCount
 from app.schemas.profile_metadata import TaskStaffRead
 from app.schemas.telecaller import (
     STAFF_NOTE_MAX_CHARS,
@@ -48,6 +49,10 @@ class EmployeeTaskRead(TaskStaffRead):
     lead_mobile: str | None = None
     lead_contact_mode: Literal["allow", "deny", "share_link"]
     business_line: Literal["loans", "real_estate"]
+    # The task's product, from its lead's stored product; null when unknown
+    # and always on real estate.
+    product_id: UUID | None = None
+    product_label: str | None = None
     task_type: TaskTypeLiteral
     status: TaskStatusLiteral
     outcome: BgCheckOutcomeLiteral | None
@@ -98,6 +103,10 @@ class EmployeeHomeResponse(BaseModel):
     overdue_count: int
     counts_by_type: dict[str, int]
     counts_by_status: dict[str, int]
+    # The caller's own product specialty (null when unspecialised).
+    specialty: ProductRef | None = None
+    # The caller's own Loans field tasks by product, specialty first.
+    product_counts: list[ProductTaskCount] = Field(default_factory=list)
 
 
 class TaskDocumentPresignRequest(BaseModel):

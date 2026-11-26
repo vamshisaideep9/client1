@@ -14278,6 +14278,23 @@
             "title": "Overdue Count",
             "type": "integer"
           },
+          "product_counts": {
+            "items": {
+              "$ref": "#/components/schemas/ProductTaskCount"
+            },
+            "title": "Product Counts",
+            "type": "array"
+          },
+          "specialty": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProductRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "tasks_today": {
             "items": {
               "$ref": "#/components/schemas/EmployeeTaskRead"
@@ -14489,6 +14506,29 @@
               }
             ],
             "title": "Outcome"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
+          "product_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Label"
           },
           "raised_by_telecaller_code": {
             "anyOf": [
@@ -17831,6 +17871,71 @@
           "created_at"
         ],
         "title": "ManagerNoteRead",
+        "type": "object"
+      },
+      "ManagerProductRow": {
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "category": {
+            "enum": [
+              "loan",
+              "credit_card",
+              "insurance"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "open_leads": {
+            "default": 0,
+            "title": "Open Leads",
+            "type": "integer"
+          },
+          "open_tasks": {
+            "default": 0,
+            "title": "Open Tasks",
+            "type": "integer"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "specialists": {
+            "default": 0,
+            "title": "Specialists",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "product_id",
+          "label",
+          "category"
+        ],
+        "title": "ManagerProductRow",
+        "type": "object"
+      },
+      "ManagerProductsResponse": {
+        "properties": {
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/ManagerProductRow"
+            },
+            "title": "Products",
+            "type": "array"
+          }
+        },
+        "required": [
+          "products"
+        ],
+        "title": "ManagerProductsResponse",
         "type": "object"
       },
       "ManagerTeamsResponse": {
@@ -21238,6 +21343,82 @@
         "title": "ProductCommissionRates",
         "type": "object"
       },
+      "ProductDashboardResponse": {
+        "properties": {
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "leads": {
+            "$ref": "#/components/schemas/ProductLeadKpis"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductRef"
+          },
+          "range_days": {
+            "title": "Range Days",
+            "type": "integer"
+          },
+          "requests_by_status": {
+            "items": {
+              "$ref": "#/components/schemas/ProductStageCount"
+            },
+            "title": "Requests By Status",
+            "type": "array"
+          },
+          "requests_kind": {
+            "enum": [
+              "applications",
+              "enquiries"
+            ],
+            "title": "Requests Kind",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "platform",
+              "team"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "staff": {
+            "items": {
+              "$ref": "#/components/schemas/ProductStaffRow"
+            },
+            "title": "Staff",
+            "type": "array"
+          },
+          "tasks": {
+            "$ref": "#/components/schemas/ProductTaskKpis"
+          },
+          "trend": {
+            "items": {
+              "$ref": "#/components/schemas/ProductTrendPoint"
+            },
+            "title": "Trend",
+            "type": "array"
+          }
+        },
+        "required": [
+          "product",
+          "scope",
+          "date_from",
+          "date_to",
+          "range_days",
+          "leads",
+          "tasks",
+          "requests_kind"
+        ],
+        "title": "ProductDashboardResponse",
+        "type": "object"
+      },
       "ProductFormDefinition": {
         "properties": {
           "sections": {
@@ -21254,6 +21435,551 @@
           "sections"
         ],
         "title": "ProductFormDefinition",
+        "type": "object"
+      },
+      "ProductLeadCount": {
+        "description": "The caller's own Loans leads for one product (null: no product recorded).\n\n``open``: assigned or working. ``overdue``: open with the latest call's\nfollow-up due. ``converted_30d``: converted in the last 30 days.",
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "enum": [
+                  "loan",
+                  "credit_card",
+                  "insurance"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "converted_30d": {
+            "default": 0,
+            "title": "Converted 30D",
+            "type": "integer"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "open": {
+            "default": 0,
+            "title": "Open",
+            "type": "integer"
+          },
+          "overdue": {
+            "default": 0,
+            "title": "Overdue",
+            "type": "integer"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          }
+        },
+        "title": "ProductLeadCount",
+        "type": "object"
+      },
+      "ProductLeadKpis": {
+        "properties": {
+          "captured": {
+            "default": 0,
+            "title": "Captured",
+            "type": "integer"
+          },
+          "conversion_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversion Rate"
+          },
+          "converted": {
+            "default": 0,
+            "title": "Converted",
+            "type": "integer"
+          },
+          "open": {
+            "default": 0,
+            "title": "Open",
+            "type": "integer"
+          },
+          "served_by_fallback": {
+            "default": 0,
+            "title": "Served By Fallback",
+            "type": "integer"
+          },
+          "unassigned": {
+            "default": 0,
+            "title": "Unassigned",
+            "type": "integer"
+          }
+        },
+        "title": "ProductLeadKpis",
+        "type": "object"
+      },
+      "ProductRef": {
+        "description": "One catalogue product as staff see it.",
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "category": {
+            "enum": [
+              "loan",
+              "credit_card",
+              "insurance"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "label",
+          "category"
+        ],
+        "title": "ProductRef",
+        "type": "object"
+      },
+      "ProductStaffPerson": {
+        "description": "A Telecaller or Officer as Admin sees them in the staffing index.",
+        "properties": {
+          "auth_user_uuid": {
+            "format": "uuid",
+            "title": "Auth User Uuid",
+            "type": "string"
+          },
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate",
+              "both"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "telecaller",
+              "employee"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "staff_code": {
+            "title": "Staff Code",
+            "type": "string"
+          },
+          "staff_profile_uuid": {
+            "format": "uuid",
+            "title": "Staff Profile Uuid",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "inactive",
+              "suspended"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "staff_profile_uuid",
+          "auth_user_uuid",
+          "first_name",
+          "last_name",
+          "staff_code",
+          "role",
+          "business_line",
+          "status"
+        ],
+        "title": "ProductStaffPerson",
+        "type": "object"
+      },
+      "ProductStaffRow": {
+        "properties": {
+          "assigned": {
+            "default": 0,
+            "title": "Assigned",
+            "type": "integer"
+          },
+          "completed_tasks": {
+            "default": 0,
+            "title": "Completed Tasks",
+            "type": "integer"
+          },
+          "contacted": {
+            "default": 0,
+            "title": "Contacted",
+            "type": "integer"
+          },
+          "converted": {
+            "default": 0,
+            "title": "Converted",
+            "type": "integer"
+          },
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          },
+          "open_tasks": {
+            "default": 0,
+            "title": "Open Tasks",
+            "type": "integer"
+          },
+          "role": {
+            "enum": [
+              "telecaller",
+              "employee"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "specialist": {
+            "title": "Specialist",
+            "type": "boolean"
+          },
+          "staff_code": {
+            "title": "Staff Code",
+            "type": "string"
+          },
+          "staff_profile_uuid": {
+            "format": "uuid",
+            "title": "Staff Profile Uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "staff_profile_uuid",
+          "first_name",
+          "last_name",
+          "staff_code",
+          "role",
+          "specialist"
+        ],
+        "title": "ProductStaffRow",
+        "type": "object"
+      },
+      "ProductStaffingResponse": {
+        "properties": {
+          "available": {
+            "items": {
+              "$ref": "#/components/schemas/ProductStaffPerson"
+            },
+            "title": "Available",
+            "type": "array"
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/ProductStaffingRow"
+            },
+            "title": "Products",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ProductStaffingSummary"
+          }
+        },
+        "required": [
+          "products",
+          "summary"
+        ],
+        "title": "ProductStaffingResponse",
+        "type": "object"
+      },
+      "ProductStaffingRow": {
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "category": {
+            "enum": [
+              "loan",
+              "credit_card",
+              "insurance"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "coverage": {
+            "default": "none",
+            "enum": [
+              "full",
+              "no_telecaller",
+              "no_officer",
+              "none"
+            ],
+            "title": "Coverage",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "officers": {
+            "items": {
+              "$ref": "#/components/schemas/ProductStaffPerson"
+            },
+            "title": "Officers",
+            "type": "array"
+          },
+          "open_leads": {
+            "default": 0,
+            "title": "Open Leads",
+            "type": "integer"
+          },
+          "open_tasks": {
+            "default": 0,
+            "title": "Open Tasks",
+            "type": "integer"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "telecallers": {
+            "items": {
+              "$ref": "#/components/schemas/ProductStaffPerson"
+            },
+            "title": "Telecallers",
+            "type": "array"
+          },
+          "unassigned_leads": {
+            "default": 0,
+            "title": "Unassigned Leads",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "product_id",
+          "label",
+          "category"
+        ],
+        "title": "ProductStaffingRow",
+        "type": "object"
+      },
+      "ProductStaffingSummary": {
+        "properties": {
+          "active_products": {
+            "default": 0,
+            "title": "Active Products",
+            "type": "integer"
+          },
+          "fully_covered": {
+            "default": 0,
+            "title": "Fully Covered",
+            "type": "integer"
+          },
+          "open_leads": {
+            "default": 0,
+            "title": "Open Leads",
+            "type": "integer"
+          },
+          "open_tasks": {
+            "default": 0,
+            "title": "Open Tasks",
+            "type": "integer"
+          },
+          "products": {
+            "default": 0,
+            "title": "Products",
+            "type": "integer"
+          },
+          "unassigned_leads": {
+            "default": 0,
+            "title": "Unassigned Leads",
+            "type": "integer"
+          },
+          "unspecialised": {
+            "items": {
+              "$ref": "#/components/schemas/UnspecialisedCount"
+            },
+            "title": "Unspecialised",
+            "type": "array"
+          }
+        },
+        "title": "ProductStaffingSummary",
+        "type": "object"
+      },
+      "ProductStageCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "count"
+        ],
+        "title": "ProductStageCount",
+        "type": "object"
+      },
+      "ProductTaskCount": {
+        "description": "The caller's own Loans field tasks for one product (null: no product recorded).\n\n``open``: assigned, in progress or blocked. ``overdue``: open and past its\ndue time. ``completed_30d``: completed in the last 30 days.",
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "enum": [
+                  "loan",
+                  "credit_card",
+                  "insurance"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "completed_30d": {
+            "default": 0,
+            "title": "Completed 30D",
+            "type": "integer"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "open": {
+            "default": 0,
+            "title": "Open",
+            "type": "integer"
+          },
+          "overdue": {
+            "default": 0,
+            "title": "Overdue",
+            "type": "integer"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          }
+        },
+        "title": "ProductTaskCount",
+        "type": "object"
+      },
+      "ProductTaskKpis": {
+        "properties": {
+          "completed": {
+            "default": 0,
+            "title": "Completed",
+            "type": "integer"
+          },
+          "on_time_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On Time Rate"
+          },
+          "open": {
+            "default": 0,
+            "title": "Open",
+            "type": "integer"
+          }
+        },
+        "title": "ProductTaskKpis",
+        "type": "object"
+      },
+      "ProductTrendPoint": {
+        "properties": {
+          "captured": {
+            "default": 0,
+            "title": "Captured",
+            "type": "integer"
+          },
+          "converted": {
+            "default": 0,
+            "title": "Converted",
+            "type": "integer"
+          },
+          "week_start": {
+            "format": "date",
+            "title": "Week Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week_start"
+        ],
+        "title": "ProductTrendPoint",
         "type": "object"
       },
       "ProfileTeamRead": {
@@ -28649,6 +29375,29 @@
             ],
             "title": "Name"
           },
+          "product_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
+          "product_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Label"
+          },
           "requests": {
             "items": {
               "$ref": "#/components/schemas/LeadRequestSummary"
@@ -29421,6 +30170,29 @@
             ],
             "title": "Notes"
           },
+          "product_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
+          "product_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Label"
+          },
           "signals": {
             "$ref": "#/components/schemas/TeamLeadSignals"
           },
@@ -29680,6 +30452,23 @@
             },
             "title": "Follow Ups Due",
             "type": "array"
+          },
+          "product_counts": {
+            "items": {
+              "$ref": "#/components/schemas/ProductLeadCount"
+            },
+            "title": "Product Counts",
+            "type": "array"
+          },
+          "specialty": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProductRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -29865,6 +30654,29 @@
               }
             ],
             "title": "Next Follow Up At"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
+          "product_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Label"
           },
           "property_deals": {
             "default": [],
@@ -30104,6 +30916,29 @@
               }
             ],
             "title": "Next Follow Up At"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
+          "product_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Label"
           },
           "referrer": {
             "anyOf": [
@@ -30945,6 +31780,34 @@
           "count"
         ],
         "title": "UnreadCountResponse",
+        "type": "object"
+      },
+      "UnspecialisedCount": {
+        "properties": {
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate",
+              "both"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "officers": {
+            "default": 0,
+            "title": "Officers",
+            "type": "integer"
+          },
+          "telecallers": {
+            "default": 0,
+            "title": "Telecallers",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "business_line"
+        ],
+        "title": "UnspecialisedCount",
         "type": "object"
       },
       "ValidationError": {
@@ -35418,6 +36281,33 @@
           }
         ],
         "summary": "Edit Product Provider Offer",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/product-staffing": {
+      "get": {
+        "description": "Every catalogue product with its specialist Telecallers and Officers,\nopen and unassigned leads, open tasks and a coverage flag, plus the\nunspecialised staff Admin can assign. Platform Admin only.",
+        "operationId": "get_product_staffing_api_v1_admin_product_staffing_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductStaffingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Product Staffing",
         "tags": [
           "admin"
         ]
@@ -49568,6 +50458,33 @@
         ]
       }
     },
+    "/api/v1/manager/products": {
+      "get": {
+        "description": "Products the members of the caller's own Loans teams specialise in or\nwork on, with their open leads and tasks. Real Estate teams have none.",
+        "operationId": "get_my_products_api_v1_manager_products_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerProductsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get My Products",
+        "tags": [
+          "manager"
+        ]
+      }
+    },
     "/api/v1/manager/teams": {
       "get": {
         "operationId": "get_my_teams_api_v1_manager_teams_get",
@@ -54037,6 +54954,107 @@
         "summary": "Get Pincode",
         "tags": [
           "pincodes"
+        ]
+      }
+    },
+    "/api/v1/products/{product_id}/dashboard": {
+      "get": {
+        "description": "KPIs, requests by status, a weekly trend and the staff table for one\nproduct. The default period is the last 30 IST days.",
+        "operationId": "get_product_dashboard_api_v1_products__product_id__dashboard_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Period in days (7, 30 or 90).",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Period in days (7, 30 or 90).",
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "First IST day of the period, inclusive.",
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "First IST day of the period, inclusive.",
+              "title": "Date From"
+            }
+          },
+          {
+            "description": "Last IST day of the period, inclusive.",
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Last IST day of the period, inclusive.",
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDashboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Product Dashboard",
+        "tags": [
+          "products"
         ]
       }
     },

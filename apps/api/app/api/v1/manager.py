@@ -23,6 +23,7 @@ from app.core.deps import CurrentUser, check_assignment_line, require_assignment
 from app.core.lead_reference import lead_number_filter
 from app.db.session import get_db
 from app.models.staff_team import StaffTeam
+from app.schemas.product_dashboards import ManagerProductsResponse
 from app.schemas.staff_analytics import StaffAnalyticsResponse
 from app.schemas.staff_teams import (
     ManagerTeamsResponse,
@@ -40,6 +41,7 @@ from app.schemas.staff_teams import (
     TeamWorkUpdateResponse,
 )
 from app.schemas.telecaller import PropertyCategoryLiteral, PropertySubtypeLiteral
+from app.services.product_dashboard import manager_products, team_scope
 from app.services.staff_analytics import (
     AMOUNT_LIMIT,
     AnalyticsWindow,
@@ -251,6 +253,24 @@ async def get_my_teams(
 ) -> ManagerTeamsResponse:
     response.headers["Cache-Control"] = "private, no-store"
     return ManagerTeamsResponse(teams=await list_my_teams(db, _manager_uuid(current_user)))
+
+
+@router.get("/products", response_model=ManagerProductsResponse)
+async def get_my_products(
+    response: Response,
+    current_user: CurrentUser = Depends(team_view),
+    db: AsyncSession = Depends(get_db),
+) -> ManagerProductsResponse:
+    """Products the members of the caller's own Loans teams specialise in or
+    work on, with their open leads and tasks. Real Estate teams have none."""
+    response.headers["Cache-Control"] = "private, no-store"
+    check_assignment_line(current_user, "team_manager", "view", "loans")
+    teams = await list_my_teams(db, _manager_uuid(current_user))
+    return ManagerProductsResponse(
+        products=await manager_products(
+            db, team_scope([t for t in teams if t.business_line == "loans"])
+        )
+    )
 
 
 @router.get("/teams/{team_id}/overview", response_model=TeamOverviewResponse)

@@ -94,6 +94,7 @@ from app.schemas.loan_config import (
     LoanTypeUpdate,
 )
 from app.schemas.loans import LoanApplicationProgressUpdate
+from app.schemas.product_dashboards import ProductStaffingResponse
 from app.schemas.profile_metadata import RoleProfileRead
 from app.schemas.property_deals import PropertyDealProgressUpdate
 from app.schemas.staff_invites import StaffInviteLinkRead
@@ -205,6 +206,7 @@ from app.services.loan_config import (
     update_bank,
     update_loan_type,
 )
+from app.services.product_staffing import product_staffing
 from app.services.profile_metadata import role_profiles_for_users
 from app.services.property_deals import InvalidStatusTransition as InvalidDealStatusTransition
 from app.services.property_deals import (
@@ -320,7 +322,7 @@ async def create_staff_user(
     except InvalidLoanSpecialty as exc:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "Choose an active loan product for this Telecaller.",
+            "Choose an active product for this Telecaller or Officer.",
         ) from exc
     except InvalidSubAdminAgents as exc:
         raise HTTPException(422, detail="Choose existing Agents in the assigned line.") from exc
@@ -767,13 +769,28 @@ async def update_staff_loan_specialty(
             actor_id=current_user.id,
         )
     except AdminUserNotFound as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Active Telecaller not found.") from exc
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Active Telecaller or Officer not found."
+        ) from exc
     except InvalidLoanSpecialty as exc:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "Choose an active loan product for a Loans Telecaller.",
+            "Choose an active product for a Loans Telecaller or Officer.",
         ) from exc
     return (await role_profiles_for_users(db, [auth_user_uuid])).get(auth_user_uuid, [])
+
+
+@router.get("/product-staffing", response_model=ProductStaffingResponse)
+async def get_product_staffing(
+    response: Response,
+    current_user: CurrentUser = Depends(require_platform_admin),  # noqa: ARG001
+    db: AsyncSession = Depends(get_db),
+) -> ProductStaffingResponse:
+    """Every catalogue product with its specialist Telecallers and Officers,
+    open and unassigned leads, open tasks and a coverage flag, plus the
+    unspecialised staff Admin can assign. Platform Admin only."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return await product_staffing(db)
 
 
 @router.get("/agents", response_model=AgentApplicationListResponse)
@@ -1455,7 +1472,8 @@ async def delete_admin_loan_type(
     except LoanTypeInUse as exc:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            "This product has applications, enquiries or provider offers. Deactivate it instead.",
+            "This product has applications, enquiries, leads, specialists or provider offers. "
+            "Deactivate it instead.",
         ) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
