@@ -52,6 +52,7 @@ from app.api.v1.offers import router as offers_router
 from app.api.v1.payments import router as payments_router
 from app.api.v1.personalization import router as personalization_router
 from app.api.v1.pincodes import router as pincodes_router
+from app.api.v1.product_dashboard import router as product_dashboard_router
 from app.api.v1.properties import router as properties_router
 from app.api.v1.property_catalog_types import public_router as public_property_types_router
 from app.api.v1.property_catalog_types import router as property_catalog_types_router
@@ -220,6 +221,7 @@ app.include_router(
 app.include_router(reporting_router, prefix="/api/v1/admin/reports", tags=["reports"])
 app.include_router(admin_teams_router, prefix="/api/v1/admin/teams", tags=["teams"])
 app.include_router(manager_router, prefix="/api/v1/manager", tags=["manager"])
+app.include_router(product_dashboard_router, prefix="/api/v1/products", tags=["products"])
 app.include_router(commissions_router, prefix="/api/v1/admin/commissions", tags=["commissions"])
 app.include_router(contests_router, prefix="/api/v1/contests", tags=["contests"])
 app.include_router(attendance_router, prefix="/api/v1/attendance", tags=["attendance"])
