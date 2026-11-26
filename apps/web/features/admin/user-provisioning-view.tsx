@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { components } from "@contracts/generated/schema";
 import { ACCESS_LINES, ASSIGNMENTS, type SubAdminGrant } from "@/lib/sub-admin-access";
 import { getSubAdminAccessHistory, setSubAdminAccess } from "@/lib/admin-api";
@@ -58,7 +59,8 @@ import { isValidMobile, toE164 } from "@/lib/phone";
 
 import { TempCredentialPanel } from "./temp-credential-panel";
 import { OperationalUsersPanel } from "./operational-users-panel";
-import { LoanSpecialtySelect } from "./loan-specialty-select";
+import { ProductSpecialtySelect } from "./product-specialty-select";
+import { specialtyAllowed, specialtyPrefill } from "./staff-specialty-rules";
 
 type StaffRole = StaffCreateRequest["role"];
 type AccessStatus = "loading" | "ready" | "restricted" | "error";
@@ -91,6 +93,9 @@ const EMPTY_FORM = {
 };
 
 export function UserProvisioningView() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefillHandled = React.useRef(false);
   const [form, setForm] = React.useState(EMPTY_FORM);
   const [submitting, setSubmitting] = React.useState(false);
   const [result, setResult] = React.useState<StaffCreateResponse | null>(null);
@@ -107,7 +112,7 @@ export function UserProvisioningView() {
   const formRef = React.useRef<HTMLFormElement>(null);
 
   const needsLine = form.role !== "admin" && form.role !== "sub_admin";
-  const canSpecialize = form.role === "telecaller" && (form.business_line === "loans" || form.business_line === "both");
+  const canSpecialize = specialtyAllowed(form.role, form.business_line);
   const visibleRoleOptions = access
     ? ROLE_OPTIONS
     : ROLE_OPTIONS.filter((option) => option.value !== "admin");
@@ -132,10 +137,21 @@ export function UserProvisioningView() {
     void refreshAccess();
   }, [refreshAccess]);
 
+  // Applied once; the URL is then cleaned so a refresh does not reopen it.
+  React.useEffect(() => {
+    if (prefillHandled.current) return;
+    prefillHandled.current = true;
+    const prefill = specialtyPrefill(searchParams);
+    if (!prefill) return;
+    setForm({ ...EMPTY_FORM, ...prefill });
+    setCreateOpen(true);
+    router.replace("/dashboard/users", { scroll: false });
+  }, [searchParams, router]);
+
   function setField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => {
       const next = { ...prev, [key]: value };
-      if (next.role !== "telecaller" || !["loans", "both"].includes(next.business_line)) next.loan_specialty_id = "";
+      if (!specialtyAllowed(next.role, next.business_line)) next.loan_specialty_id = "";
       return next;
     });
     setFieldErrors((current) => {
@@ -412,7 +428,7 @@ export function UserProvisioningView() {
                   )}
                 </div>
 
-                {canSpecialize && <LoanSpecialtySelect id="create-loan-specialty" value={form.loan_specialty_id} onChange={(value) => setField("loan_specialty_id", value)} disabled={submitting} />}
+                {canSpecialize && <ProductSpecialtySelect id="create-product-specialty" value={form.loan_specialty_id} onChange={(value) => setField("loan_specialty_id", value)} disabled={submitting} />}
 
                 {form.role === "sub_admin" && access ? (
                   <SubAdminGrantEditor grants={subAdminGrants} onChange={setSubAdminGrants} disabled={submitting} />
