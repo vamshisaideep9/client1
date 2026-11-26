@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.db.session as db_session
@@ -18,6 +18,7 @@ from app.models.attendance import (
     AttendanceLineHoliday,
     AttendanceMonthRevision,
     AttendancePolicy,
+    AttendanceRecurringHoliday,
     AttendanceRequest,
 )
 from app.models.audit_log import AuditAction
@@ -386,7 +387,131 @@ async def day_without_clock(
         return "holiday"
     if await db.get(AttendanceHoliday, day) is not None:
         return "holiday"
+    if await recurring_holiday_on(db, day, business_line) is not None:
+        return "holiday"
     return "week_off" if day.weekday() in policy.weekly_off else "absent"
+
+
+def _recurring_on(day: date, business_line: str | None):
+    """Yearly series that fall on ``day`` for every line or for this line."""
+    lines = [AttendanceRecurringHoliday.business_line.is_(None)]
+    if business_line is not None:
+        lines.append(AttendanceRecurringHoliday.business_line == business_line)
+    return select(AttendanceRecurringHoliday).where(
+        AttendanceRecurringHoliday.month == day.month,
+        AttendanceRecurringHoliday.day == day.day,
+        AttendanceRecurringHoliday.starts_on <= day,
+        or_(
+            AttendanceRecurringHoliday.ends_on.is_(None),
+            AttendanceRecurringHoliday.ends_on >= day,
+        ),
+        or_(*lines),
+    )
+
+
+async def recurring_holiday_on(
+    db: AsyncSession, day: date, business_line: str | None
+) -> AttendanceRecurringHoliday | None:
+    return await db.scalar(_recurring_on(day, business_line).limit(1))
+
+
+async def _occurrence_has_attendance(
+    db: AsyncSession, month: int, day: int, starts_on: date, business_line: str | None
+) -> bool:
+    """Attendance or approved leave already recorded on a future occurrence.
+    Like a one-off holiday: any leave on an all-line date, any attendance on
+    a line date."""
+    recorded = select(AttendanceDay.staff_profile_id).where(
+        AttendanceDay.day >= starts_on,
+        func.extract("month", AttendanceDay.day) == month,
+        func.extract("day", AttendanceDay.day) == day,
+    )
+    if business_line is None:
+        recorded = recorded.where(AttendanceDay.leave_units > 0)
+    else:
+        recorded = recorded.where(AttendanceDay.business_line == business_line)
+    return await db.scalar(recorded.limit(1)) is not None
+
+
+async def start_recurring_holiday(
+    actor: CurrentUser, day: date, name: str, business_line: str | None = None
+) -> None:
+    """Repeat a holiday on ``day``'s month and day every year from ``day``.
+    Only today or later, so past and closed months never change."""
+    async with db_session.AsyncSessionLocal() as db:
+        await lock_actor(db, actor)
+        await db.execute(select(func.pg_advisory_xact_lock(ATTENDANCE_POLICY_LOCK)))
+        today = work_date(utc_now())
+        if day < today:
+            raise AttendanceInvalid("Holiday changes cannot alter past work dates.")
+        await require_policy(db, today)
+        line = (
+            AttendanceRecurringHoliday.business_line.is_(None)
+            if business_line is None
+            else AttendanceRecurringHoliday.business_line == business_line
+        )
+        existing = await db.scalar(
+            select(AttendanceRecurringHoliday.id).where(
+                line,
+                AttendanceRecurringHoliday.month == day.month,
+                AttendanceRecurringHoliday.day == day.day,
+                AttendanceRecurringHoliday.ends_on.is_(None),
+            )
+        )
+        if existing is not None:
+            raise AttendanceError("This date already repeats every year.")
+        if await _occurrence_has_attendance(db, day.month, day.day, day, business_line):
+            raise AttendanceError("A future occurrence already has attendance or approved leave.")
+        series = AttendanceRecurringHoliday(
+            business_line=business_line,
+            month=day.month,
+            day=day.day,
+            name=name,
+            starts_on=day,
+            created_by=actor.id,
+        )
+        db.add(series)
+        await db.flush()
+        await audit(
+            db,
+            actor,
+            "start_yearly_holiday",
+            detail={
+                "recurring_id": str(series.id),
+                "starts_on": day.isoformat(),
+                "business_line": business_line,
+            },
+        )
+        await db.commit()
+
+
+async def stop_recurring_holiday(actor: CurrentUser, holiday_id: UUID) -> None:
+    """Stop a yearly holiday after today: occurrences up to today stay as
+    they were; a series that has not started yet is removed."""
+    async with db_session.AsyncSessionLocal() as db:
+        await lock_actor(db, actor)
+        await db.execute(select(func.pg_advisory_xact_lock(ATTENDANCE_POLICY_LOCK)))
+        series = await db.get(AttendanceRecurringHoliday, holiday_id, with_for_update=True)
+        if series is None:
+            raise AttendanceNotFound("Holiday not found.")
+        today = work_date(utc_now())
+        if series.ends_on is not None and series.ends_on <= today:
+            raise AttendanceError("This holiday has already stopped repeating.")
+        if series.starts_on > today:
+            await db.delete(series)
+        else:
+            series.ends_on = today
+        await audit(
+            db,
+            actor,
+            "stop_yearly_holiday",
+            detail={
+                "recurring_id": str(holiday_id),
+                "ends_on": None if series.starts_on > today else today.isoformat(),
+                "business_line": series.business_line,
+            },
+        )
+        await db.commit()
 
 
 def require_employment_days(

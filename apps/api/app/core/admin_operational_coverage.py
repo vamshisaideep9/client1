@@ -131,6 +131,23 @@ ADMIN_OPERATIONAL_COVERAGE: dict[str, AdminCoverageEntry] = {
         audit_expectation="Setting or removing a holiday records the calendar action.",
         rationale="Platform holidays apply across both attendance lines.",
     ),
+    "attendance_recurring_holidays": _entry(
+        domain="Yearly repeating attendance holidays",
+        view_mode=AdminViewMode.FULL,
+        view_coverage=CoverageState.COVERED,
+        update_mode=AdminUpdateMode.CONFIGURATION_COMMAND,
+        update_coverage=CoverageState.COVERED,
+        audit_coverage=CoverageState.COVERED,
+        api_surfaces=(
+            "/api/v1/attendance/holidays",
+            "/api/v1/attendance/holidays/{day}",
+            "/api/v1/attendance/holidays/recurring/{holiday_id}",
+        ),
+        ui_surfaces=("/dashboard/attendance-management",),
+        rls_expectation="FORCE RLS: platform Admin, any staff role for all-line rows, and line rows for the caller's line or employment line. Writes are Admin-guarded commands on the owner session.",
+        audit_expectation="Starting or stopping a yearly holiday records the calendar action.",
+        rationale="A series starts today or later and stopping it ends at today, so past and closed months never change.",
+    ),
     "attendance_line_holidays": _entry(
         domain="Business-line holiday calendar",
         view_mode=AdminViewMode.FULL,

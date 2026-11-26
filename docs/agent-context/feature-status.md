@@ -1,5 +1,14 @@
 # Feature implementation status
 
+**Client feedback round 3 (slice 4 of 7: attendance API).** Attendance
+reviewers can filter the roster and export by department, product, role,
+Sub Admin group (Team, Account and Relationship Managers) and leave type,
+without seeing anyone outside their existing reach. Every approved leave
+type now has a short badge. Admins can view a whole year of holidays and
+make a holiday repeat every year; stopping a repeat never changes past or
+closed months, and 29 February repeats only in leap years. Web screens
+follow in slice 5.
+
 **Client feedback round 3 (slice 3 of 7: Relationship Manager web).** The
 Main Admin sees each approved Agent's Relationship Manager in the Agent
 queue and changes it from the Agent's application in one dialog. The access

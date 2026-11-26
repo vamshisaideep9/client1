@@ -7049,6 +7049,13 @@
             "title": "Late",
             "type": "boolean"
           },
+          "leave_badges": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceLeaveBadge"
+            },
+            "title": "Leave Badges",
+            "type": "array"
+          },
           "leave_codes": {
             "items": {
               "enum": [
@@ -7408,6 +7415,11 @@
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "repeat_yearly": {
+            "default": false,
+            "title": "Repeat Yearly",
+            "type": "boolean"
           }
         },
         "required": [
@@ -7417,23 +7429,78 @@
         "type": "object"
       },
       "AttendanceHolidayRead": {
-        "additionalProperties": false,
         "properties": {
+          "business_line": {
+            "anyOf": [
+              {
+                "enum": [
+                  "loans",
+                  "real_estate"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Line"
+          },
           "day": {
             "format": "date",
             "title": "Day",
             "type": "string"
+          },
+          "ends_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends On"
           },
           "name": {
             "maxLength": 120,
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "recurring_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recurring Id"
+          },
+          "repeats_yearly": {
+            "default": false,
+            "title": "Repeats Yearly",
+            "type": "boolean"
+          },
+          "starts_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts On"
           }
         },
         "required": [
-          "name",
-          "day"
+          "day",
+          "name"
         ],
         "title": "AttendanceHolidayRead",
         "type": "object"
@@ -7457,6 +7524,27 @@
           "total"
         ],
         "title": "AttendanceInboxRead",
+        "type": "object"
+      },
+      "AttendanceLeaveBadge": {
+        "description": "A badge for approved leave of any type: CL and SL as before, others a\ncode of at most three letters derived from the leave type, with its\nfull label.",
+        "properties": {
+          "code": {
+            "maxLength": 3,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "AttendanceLeaveBadge",
         "type": "object"
       },
       "AttendanceLeaveInput": {
@@ -8128,9 +8216,37 @@
       },
       "AttendanceRosterMember": {
         "properties": {
+          "department": {
+            "anyOf": [
+              {
+                "enum": [
+                  "loans",
+                  "real_estate",
+                  "both"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
           },
           "role": {
             "enum": [
@@ -8149,6 +8265,18 @@
             "format": "uuid",
             "title": "Staff Profile Id",
             "type": "string"
+          },
+          "sub_admin_groups": {
+            "items": {
+              "enum": [
+                "team_manager",
+                "account_manager",
+                "relationship_manager"
+              ],
+              "type": "string"
+            },
+            "title": "Sub Admin Groups",
+            "type": "array"
           }
         },
         "required": [
@@ -44058,6 +44186,102 @@
               ],
               "title": "Status"
             }
+          },
+          {
+            "in": "query",
+            "name": "department",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "loans",
+                    "real_estate"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department"
+            }
+          },
+          {
+            "in": "query",
+            "name": "product_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "telecaller",
+                    "employee",
+                    "sub_admin"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sub_admin_group",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "team_manager",
+                    "account_manager",
+                    "relationship_manager"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sub Admin Group"
+            }
+          },
+          {
+            "in": "query",
+            "name": "leave_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z][a-z0-9_]{0,31}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Leave Type"
+            }
           }
         ],
         "responses": {
@@ -44088,26 +44312,59 @@
     },
     "/api/v1/attendance/holidays": {
       "get": {
+        "description": "One-off and yearly holidays for a range of up to 31 days, or for a\nwhole calendar ``year`` (the year view).",
         "operationId": "get_holidays_api_v1_attendance_holidays_get",
         "parameters": [
           {
             "in": "query",
             "name": "start",
-            "required": true,
+            "required": false,
             "schema": {
-              "format": "date",
-              "title": "Start",
-              "type": "string"
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
             }
           },
           {
             "in": "query",
             "name": "end",
-            "required": true,
+            "required": false,
             "schema": {
-              "format": "date",
-              "title": "End",
-              "type": "string"
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9998,
+                  "minimum": 2000,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
             }
           },
           {
@@ -44163,6 +44420,48 @@
           }
         ],
         "summary": "Get Holidays",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/holidays/recurring/{holiday_id}": {
+      "delete": {
+        "description": "Stop repeating after today. Earlier occurrences, and closed months,\nstay as they were.",
+        "operationId": "stop_recurring_holiday_api_v1_attendance_holidays_recurring__holiday_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "holiday_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Holiday Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Stop Recurring Holiday",
         "tags": [
           "attendance"
         ]
@@ -44229,6 +44528,7 @@
         ]
       },
       "put": {
+        "description": "Set a holiday, or with ``repeat_yearly`` start a yearly holiday on\nthis month and day from this date (today or later).",
         "operationId": "put_holiday_api_v1_attendance_holidays__day__put",
         "parameters": [
           {
@@ -45106,6 +45406,7 @@
     },
     "/api/v1/attendance/roster": {
       "get": {
+        "description": "Members the caller may review, filtered. Department also matches\ndual-line members; leave type matches approved leave in the range.",
         "operationId": "get_roster_api_v1_attendance_roster_get",
         "parameters": [
           {
@@ -45210,6 +45511,102 @@
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "department",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "loans",
+                    "real_estate"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department"
+            }
+          },
+          {
+            "in": "query",
+            "name": "product_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "telecaller",
+                    "employee",
+                    "sub_admin"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sub_admin_group",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "team_manager",
+                    "account_manager",
+                    "relationship_manager"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sub Admin Group"
+            }
+          },
+          {
+            "in": "query",
+            "name": "leave_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z][a-z0-9_]{0,31}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Leave Type"
             }
           }
         ],
