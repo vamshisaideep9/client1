@@ -1,5 +1,16 @@
 # Feature implementation status
 
+**Client feedback round 3 (slice 1 of 7: Agent leads).** An Agent's lead
+list and lead page show who is working each lead: the Telecaller and the
+Officer (name, role and staff code, never a phone number or email) and the
+lead's product. These are always shown, even when the Admin hides staff
+names in the lead history. The bulk-upload page lists the products the
+Requirement column accepts, grouped as Loans, Credit cards and Insurance (or
+property types for Real Estate Agents), from the same catalogue the upload
+checks. Agents still cannot read staff or task tables; a confined database
+reader returns only their own leads on their own line. Focused PostgreSQL,
+unit and browser checks passed. No requirement-percentage change.
+
 **Product specialists (slice 4 of 4: Products area).** Admin has a Products &
 staffing page showing which Telecallers and Officers cover each product,
 where leads wait unassigned and which products lack a specialist, with

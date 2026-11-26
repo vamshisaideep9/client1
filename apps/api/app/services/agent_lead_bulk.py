@@ -2,9 +2,10 @@
 
 The browser parses the Agent's spreadsheet and posts at most 200 rows. Every
 row is validated here (mobile normalised to E.164, name, optional email,
-description as notes, and the requirement text mapped to an active loan
-product or a property type on the Agent's own line). Later rows repeating a
-mobile are ``duplicate_in_file``.
+description as notes, and the requirement text mapped to an active product
+of any category or a property type on the Agent's own line). Later rows
+repeating a mobile are ``duplicate_in_file``. ``catalogue_groups`` lists the
+same choices for the upload page.
 
 A dry run stops there: it never reads who else holds a number, creates
 nothing and records no attempt, so it cannot be used to probe numbers.
@@ -37,6 +38,8 @@ from app.schemas.agent import (
     AgentLeadBulkFieldError,
     AgentLeadBulkFieldLiteral,
     AgentLeadBulkOutcomeLiteral,
+    AgentLeadBulkProduct,
+    AgentLeadBulkProductGroup,
     AgentLeadBulkRow,
     AgentLeadBulkRowResult,
     AgentLeadBulkTotals,
@@ -124,25 +127,73 @@ class RequirementCatalogue:
             if found:
                 raise ValueError("This matches more than one product. Use the product code.")
         if self.business_line == "loans":
-            raise ValueError("Use the name of one of your active loan products.")
+            raise ValueError(ACTIVE_PRODUCT_MESSAGE)
         raise ValueError("Use a property type, for example Villa or Plot.")
+
+
+ACTIVE_PRODUCT_MESSAGE = "Use the name or code of one of your active products."
+
+_PRODUCT_GROUPS: tuple[tuple[str, str], ...] = (
+    ("loan", "Loans"),
+    ("credit_card", "Credit cards"),
+    ("insurance", "Insurance"),
+)
+
+
+def catalogue_groups(
+    business_line: str, products: list[LoanType]
+) -> list[AgentLeadBulkProductGroup]:
+    """The choices the Requirement column accepts, grouped for display:
+    active products by category (loans, credit cards, insurance) on the Loans
+    line, the fixed property types on Real Estate. Empty groups are left out;
+    a product of an unknown category is listed under Loans, where
+    ``RequirementCatalogue`` also matches it."""
+    if business_line != "loans":
+        return [
+            AgentLeadBulkProductGroup(
+                category="property",
+                label="Property types",
+                products=[
+                    AgentLeadBulkProduct(code=subtype.value, label=label)
+                    for subtype, label in PROPERTY_TYPE_LABELS.items()
+                ],
+            )
+        ]
+    known = {category for category, _ in _PRODUCT_GROUPS}
+    groups: list[AgentLeadBulkProductGroup] = []
+    for category, label in _PRODUCT_GROUPS:
+        members = [
+            AgentLeadBulkProduct(code=product.name, label=product.label)
+            for product in products
+            if (product.category if product.category in known else "loan") == category
+        ]
+        if members:
+            groups.append(
+                AgentLeadBulkProductGroup(category=category, label=label, products=members)
+            )
+    return groups
+
+
+async def active_products(db: AsyncSession, business_line: str) -> list[LoanType]:
+    """Active products the Agent can see (request session) on the Loans line;
+    none on Real Estate. The single source for matching and for display."""
+    if business_line != "loans":
+        return []
+    return list(
+        (
+            await db.scalars(
+                select(LoanType)
+                .where(LoanType.active.is_(True))
+                .order_by(LoanType.display_order, LoanType.label)
+            )
+        ).all()
+    )
 
 
 async def load_catalogue(db: AsyncSession, business_line: str) -> RequirementCatalogue:
     """Active products the Agent can see (request session), or the fixed
     property types. Only the Agent's own line is ever offered."""
-    products: list[LoanType] = []
-    if business_line == "loans":
-        products = list(
-            (
-                await db.scalars(
-                    select(LoanType)
-                    .where(LoanType.active.is_(True))
-                    .order_by(LoanType.display_order, LoanType.label)
-                )
-            ).all()
-        )
-    return RequirementCatalogue(business_line, products)
+    return RequirementCatalogue(business_line, await active_products(db, business_line))
 
 
 @dataclass
@@ -272,9 +323,7 @@ async def _submit(
         )
     except InvalidLeadInterest:
         # The product was withdrawn between validation and submit.
-        plan.errors.append(
-            _error("requirement", "Use the name of one of your active loan products.")
-        )
+        plan.errors.append(_error("requirement", ACTIVE_PRODUCT_MESSAGE))
         return _result(plan, "invalid")
     except LeadCaptureUnavailable:
         return _result(plan, "unavailable", reason_label=UNAVAILABLE_LABEL)

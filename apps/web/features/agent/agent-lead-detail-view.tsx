@@ -19,6 +19,7 @@ import { agentLeadUpdate } from "@/lib/agent-lead-update";
 import { cn } from "@/lib/utils";
 
 import { AgentLeadHistorySection } from "./agent-lead-history";
+import { AssignedStaff } from "./assigned-staff";
 import { useAgentLeadDetail } from "./use-agent-lead-detail";
 import { AGENT_LEAD_EXPIRY_POLICY, formatAgentLeadExpiry, isAgentLeadExpiryDue } from "./lead-expiry";
 import { ResubmitLeadButton } from "./resubmit-lead-button";
@@ -165,6 +166,23 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
         {lead.resubmittable ? (
           <ResubmitLeadButton className="mt-3" leadName={lead.name} onResubmit={resubmit} />
         ) : null}
+      </DashboardPanel>
+
+      <DashboardPanel
+        id="assigned-team"
+        title="Assigned team"
+        description={lead.product_label ? `Product: ${lead.product_label}` : "Who is working this lead for you."}
+      >
+        <dl className="grid gap-4 text-sm sm:grid-cols-2">
+          <div className="min-w-0">
+            <dt className="text-xs font-medium uppercase tracking-wide text-text-secondary">Telecaller</dt>
+            <dd className="mt-1"><AssignedStaff staff={lead.telecaller} /></dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-xs font-medium uppercase tracking-wide text-text-secondary">Officer</dt>
+            <dd className="mt-1"><AssignedStaff staff={lead.officer} empty="No field visit assigned yet" /></dd>
+          </div>
+        </dl>
       </DashboardPanel>
 
       <DashboardPanel title="Requirement">
