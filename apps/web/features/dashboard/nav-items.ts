@@ -317,6 +317,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
     capability: "teamManager",
     section: "people",
   },
+  // The team's Loans products and one dashboard per product, scoped by the API.
+  {
+    key: "sub-admin-products",
+    label: "Products",
+    href: "/dashboard/products",
+    icon: DASHBOARD_ICONS.products,
+    capability: "teamManager",
+    section: "people",
+  },
   {
     key: "relationship-agents",
     label: "Agent relationships",
@@ -524,6 +533,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
     capability: "admin",
     section: "people",
   },
+  // Which specialists cover each product; each product opens its dashboard.
+  {
+    key: "admin-products",
+    label: "Products & staffing",
+    href: "/dashboard/products",
+    icon: DASHBOARD_ICONS.products,
+    capability: "admin",
+    section: "people",
+  },
   // CS-027: approve Sub Admin contests, confirm winners, pay prizes.
   {
     key: "admin-contests",
@@ -677,6 +695,8 @@ export const DASHBOARD_ROUTE_RULES: readonly DashboardRouteRule[] = [
   { path: "/dashboard/notifications", exact: true, capabilities: ["shared"] },
   { path: "/dashboard/offers", exact: true, capabilities: ["cms"] },
   { path: "/dashboard/payouts", exact: true, capabilities: ["admin", "subAdminPayouts"] },
+  // The index and every /dashboard/products/<id> dashboard: Admin or Team Manager.
+  { path: "/dashboard/products", capabilities: ["admin", "teamManager"] },
   { path: "/dashboard/property-deals", exact: true, capabilities: ["admin"] },
   { path: "/dashboard/property-review", capabilities: ["admin"] },
   {
@@ -757,6 +777,11 @@ function scopedPathAllowed(pathname: string, context: DashboardAccessContext): b
   if (pathname === "/dashboard/attendance") return true;
   if (pathname === "/dashboard/team" || pathname.startsWith("/dashboard/team/")) {
     return assignedLines(access, "team_manager", "view").length > 0;
+  }
+  // Navigation hint only: product dashboards need Team Manager view on Loans,
+  // which the API (require_assignment plus check_assignment_line) enforces.
+  if (pathname === "/dashboard/products" || pathname.startsWith("/dashboard/products/")) {
+    return assignedLines(access, "team_manager", "view").includes("loans");
   }
   if (pathname === "/dashboard/attendance-management") {
     return assignedLines(access, "team_manager", "review").length > 0;

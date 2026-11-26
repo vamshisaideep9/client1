@@ -84,6 +84,31 @@ Slice 3 — web, Admin creation and the specialist's own dashboard (branch
   (staff specialty 20, specialist dashboard 6, lead signal filters 3), at
   390 px and 1,440 px where relevant.
 
+Slice 4 — web, Products area and Team Manager filters (branch
+`feat/product-specialists-4-web-product-dashboards`, stacked on slice 3):
+
+- `/dashboard/products`: for Admin, "Products & staffing" (coverage flags,
+  specialists, open and unassigned leads, open tasks; filters for category,
+  coverage and status; "Add Telecaller", "Add Officer", "Assign existing" and
+  "Open dashboard"); for a Team Manager, the team's products from
+  `/manager/products`, read-only.
+- `/dashboard/products/[productId]`: one dynamic per-product dashboard with a
+  period select, KPI grid, applications or enquiries by status, a weekly
+  captured-against-converted chart (two validated categorical hues, legend
+  with totals, table view) and the people table; loading, empty, not-found
+  and error states.
+- Navigation: Admin "Products & staffing" and Team Manager "Products" in
+  People; the route rule covers the index and each dashboard; scoped Sub
+  Admins need Team Manager view on Loans (navigation hint only).
+- My team shows each Loans member's specialty (linking to its dashboard) with
+  a specialty filter; team work lists filter by the stored product.
+- Verified: lint, typecheck and all 1,184 unit tests (161 files) passed.
+  Mocked Playwright journeys passed on the dev server: product dashboards 7,
+  scoped Sub Admin 3 and Sub Admin teams 6, at 390 px and 1,440 px where
+  relevant. The trend palette passed the categorical palette validator.
+- Next priority: hosted review of the four PRs, then the migration on
+  `dev.dhanadhara.com` before the API and web rollout.
+
 **Merged upstream — Lead reference numbers — web (part 2 of 2)** (branch
 `feat/lead-ref-2-web`, stacked on part 1)
 
