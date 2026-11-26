@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { LeadRefText } from "@/features/dashboard/lead-ref";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DASHBOARD_ICONS } from "@/features/dashboard/dashboard-icons";
@@ -144,8 +145,12 @@ export function AgentEarningsView() {
     {
       key: "lead",
       header: "Lead",
-      render: (row) =>
-        row.lead_status ? (LEAD_STATUS_LABEL[row.lead_status] ?? humanizeStatus(row.lead_status)) : "—",
+      render: (row) => (
+        <DataTablePrimaryCell
+          title={row.lead_status ? (LEAD_STATUS_LABEL[row.lead_status] ?? humanizeStatus(row.lead_status)) : "—"}
+          subtitle={<LeadRefText value={row.lead_ref} />}
+        />
+      ),
     },
     {
       key: "deal_status",
@@ -210,7 +215,7 @@ export function AgentEarningsView() {
               set({ search: next.search, status: next.status, dealType: next.kind, from: next.from, to: next.to })
             }
             searchLabel="Search commissions"
-            searchPlaceholder={isRealEstate ? "Client, property or ID" : "Client, product, bank or ID"}
+            searchPlaceholder={isRealEstate ? "Client, property, lead ref or ID" : "Client, product, bank or lead ref"}
             statusOptions={STATUS_OPTIONS}
             statusLabel="Status"
             kindOptions={DEAL_TYPE_OPTIONS}

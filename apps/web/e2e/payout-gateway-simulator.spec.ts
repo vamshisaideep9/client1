@@ -45,6 +45,7 @@ function payout(overrides: Record<string, unknown>) {
     viewer_is_maker: false,
     viewer_can_approve: true,
     simulate_events: [],
+    lead_refs: ["LD-00000301", "LD-00000302"],
     ...overrides,
   };
 }
@@ -65,8 +66,8 @@ async function mockPayouts(page: Page) {
   let approved = false;
   await page.route(`**/api/v1/admin/commissions/payouts/${PAYOUT_ID}/items`, (route) =>
     route.fulfill({ json: [
-      { id: "commission-one", deal_type: "loan_application", deal_uuid: "deal-one", amount_paise: 1_500_000 },
-      { id: "commission-two", deal_type: "loan_application", deal_uuid: "deal-two", amount_paise: 1_000_000 },
+      { id: "commission-one", deal_type: "loan_application", deal_uuid: "deal-one", lead_ref: "LD-00000301", amount_paise: 1_500_000 },
+      { id: "commission-two", deal_type: "loan_application", deal_uuid: "deal-two", lead_ref: "LD-00000302", amount_paise: 1_000_000 },
     ] }),
   );
   await page.route("**/api/v1/payouts?**", (route) =>
@@ -115,8 +116,11 @@ for (const viewport of [
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto("/dashboard/payouts", { waitUntil: "domcontentloaded" });
 
+    await expect(page.getByText("LD-00000301, LD-00000302").first()).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(`payouts-lead-refs-${viewport.name}.png`) });
     await page.getByRole("button", { name: "Review" }).first().click();
     await expect(page.getByText("Deal deal-two")).toBeVisible();
+    await expect(page.getByText("LD-00000302", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Approve" }).click();
 
     const dialog = page.getByRole("dialog", { name: "Razorpay test payout" });

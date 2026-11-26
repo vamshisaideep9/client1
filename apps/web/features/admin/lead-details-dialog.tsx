@@ -1,5 +1,6 @@
 "use client";
 
+import { LeadRefBadge } from "@/features/dashboard/lead-ref";
 import { ChatInquiries } from "@/features/dashboard/chat-inquiries";
 
 import * as React from "react";
@@ -177,6 +178,7 @@ export function LeadDetailsDialog({
           </div>
         ) : (
           <form onSubmit={save} className="space-y-4">
+            <LeadRefBadge value={details.lead_ref} />
             <section aria-labelledby={`${nameId}-requests`} className="space-y-2">
               <h3 id={`${nameId}-requests`} className="text-sm font-medium text-text-primary">
                 Applications & requests

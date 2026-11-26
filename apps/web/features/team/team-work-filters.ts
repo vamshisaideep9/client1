@@ -10,6 +10,7 @@ import {
   type LeadSignalFilters,
   type LeadSignalValues,
 } from "@/features/telecaller/lead-signal-filters";
+import { matchesLeadRef } from "@/lib/lead-ref";
 import type { TeamLeadRow, TeamTaskRow } from "@/lib/staff-teams-api";
 
 export type TeamWorkFilters = LeadSignalFilters & {
@@ -89,7 +90,8 @@ export function filterTeamLeads(
     (row) =>
       (filters.assignee === "all" || row.assigned_to?.staff_profile_uuid === filters.assignee) &&
       (filters.status === "all" || row.status === filters.status) &&
-      matchesSearch(filters.search, row.name, row.mobile) &&
+      (matchesSearch(filters.search, row.name, row.mobile) ||
+        matchesLeadRef(filters.search, row.lead_ref)) &&
       (!filters.overdueOnly || isOverdueLead(row, now)) &&
       matchesLeadSignals(teamSignalValues(row), filters),
   );

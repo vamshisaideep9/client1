@@ -23,8 +23,10 @@ import { ListEmptyState, ListLoadingState, ListPagination } from "@/features/das
 import { leadStatusRank } from "@/features/dashboard/list-order";
 import { StatusBadge, type StatusTone } from "@/features/dashboard/status-badge";
 import { useFilteredPage } from "@/features/dashboard/use-filtered-page";
+import { LeadRefText } from "@/features/dashboard/lead-ref";
 import { isInDateRange } from "@/lib/date-range";
 import { formatDate } from "@/lib/format";
+import { matchesLeadRef } from "@/lib/lead-ref";
 import { formatMobile } from "@/lib/phone";
 import type { AdminAssignedLead } from "@/lib/admin-api";
 
@@ -65,9 +67,11 @@ export function AssignedLeadsView() {
       if (filters.line !== "all" && lead.business_line !== filters.line) return false;
       if (filters.status !== "all" && lead.status !== filters.status) return false;
       if (!isInDateRange(lead.created_at, filters.from, filters.to)) return false;
-      return matchesSearch(
-        `${lead.name ?? ""} ${lead.mobile} ${lead.assigned_telecaller_name ?? ""} ${lead.assigned_telecaller_staff_code ?? ""}`,
-        filters.search,
+      return (
+        matchesSearch(
+          `${lead.name ?? ""} ${lead.mobile} ${lead.assigned_telecaller_name ?? ""} ${lead.assigned_telecaller_staff_code ?? ""}`,
+          filters.search,
+        ) || matchesLeadRef(filters.search, lead.lead_ref)
       );
     });
     const direction = sort.dir === "asc" ? 1 : -1;
@@ -105,7 +109,13 @@ export function AssignedLeadsView() {
       render: (lead) => (
         <DataTablePrimaryCell
           title={lead.name ?? "Unnamed lead"}
-          subtitle={`${formatMobile(lead.mobile)} · ${ORIGIN_LABEL[lead.origin] ?? lead.origin}`}
+          subtitle={
+            <>
+              {formatMobile(lead.mobile)} · {ORIGIN_LABEL[lead.origin] ?? lead.origin}
+              {lead.lead_ref ? " · " : null}
+              <LeadRefText value={lead.lead_ref} />
+            </>
+          }
         />
       ),
     },
@@ -169,7 +179,7 @@ export function AssignedLeadsView() {
         value={filters}
         onChange={setFilters}
         searchLabel="Search lead assignments"
-        searchPlaceholder="Lead, mobile, or Telecaller"
+        searchPlaceholder="Lead, mobile, lead ref, Telecaller"
         statusOptions={STATUS_OPTIONS}
         lineOptions={LINE_OPTIONS}
         dateFromLabel="Created from"

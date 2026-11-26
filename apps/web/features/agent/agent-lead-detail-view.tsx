@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Check, Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { LeadRefBadge } from "@/features/dashboard/lead-ref";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ResubmissionBadge } from "@/features/dashboard/resubmission-badge";
@@ -116,7 +117,11 @@ export function AgentLeadDetailView({ leadId }: { leadId: string }) {
   return (
     <DashboardPage className="max-w-4xl">
       <DashboardBackLink href={backHref}>Back to leads</DashboardBackLink>
-      <DashboardHeader title={lead.name ?? "Lead details"} description="Registration, attribution and operational progress" />
+      <DashboardHeader
+        title={lead.name ?? "Lead details"}
+        meta={<LeadRefBadge value={lead.lead_ref} />}
+        description="Registration, attribution and operational progress"
+      />
       <ResubmissionBadge count={lead.resubmit_count} at={lead.last_resubmitted_at} />
       <DashboardPanel
         title={lead.name ?? "Unnamed lead"}

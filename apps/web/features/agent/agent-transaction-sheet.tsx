@@ -11,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { LeadRefText } from "@/features/dashboard/lead-ref";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import { TRANSACTION_SOURCE } from "@/features/dashboard/transaction-detail-sheet";
 import { StatusBadge, type StatusTone } from "@/features/dashboard/status-badge";
@@ -205,6 +206,12 @@ export function AgentTransactionSheet({
                           {item.bank_name ? ` · ${item.bank_name}` : ""}
                         </p>
                         <p className="text-xs text-text-secondary">
+                          {item.lead_ref ? (
+                            <>
+                              <LeadRefText value={item.lead_ref} />
+                              {" · "}
+                            </>
+                          ) : null}
                           Deal {humanizeStatus(item.deal_status)}
                           {item.deal_amount ? ` · ${formatDealAmount(item.deal_amount)}` : ""}
                           {" · commission entered "}

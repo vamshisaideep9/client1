@@ -1,5 +1,6 @@
 "use client";
 
+import { LeadRefBadge } from "@/features/dashboard/lead-ref";
 import { ChatInquiries } from "@/features/dashboard/chat-inquiries";
 
 import * as React from "react";
@@ -262,6 +263,7 @@ export function TelecallerLeadDetailView({ leadId }: { leadId: string }) {
 
       <DashboardHeader
         title={leadName}
+        meta={<LeadRefBadge value={lead.lead_ref} />}
         description={
           latest
             ? `${formatMobile(lead.mobile)} · Latest: ${latest.title}, applied ${formatAppliedAt(latest.applied_at)}`

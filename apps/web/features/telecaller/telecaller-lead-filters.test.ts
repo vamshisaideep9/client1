@@ -42,6 +42,22 @@ describe("filterTelecallerLeads", () => {
     expect(filterTelecallerLeads(leads, { ...DEFAULT_TELECALLER_LEAD_FILTERS, search: "7000011111", status: "all" })).toEqual([leads[2]]);
   });
 
+  it("matches an exact lead reference in tolerant forms", () => {
+    const referenced = [
+      lead({ id: "a", lead_ref: "LD-00000123", mobile: "9000000001" }),
+      lead({ id: "b", lead_ref: "LD-00001234", mobile: "9000000002" }),
+    ];
+    for (const search of ["LD-00000123", "ld-123", "LD123", "123"]) {
+      expect(
+        filterTelecallerLeads(referenced, { ...DEFAULT_TELECALLER_LEAD_FILTERS, search }).map((row) => row.id),
+      ).toEqual(["a"]);
+    }
+    // A reference is exact, never a substring of a longer number.
+    expect(
+      filterTelecallerLeads(referenced, { ...DEFAULT_TELECALLER_LEAD_FILTERS, search: "LD-1234" }).map((row) => row.id),
+    ).toEqual(["b"]);
+  });
+
   it("filters by status", () => {
     expect(filterTelecallerLeads(leads, { ...DEFAULT_TELECALLER_LEAD_FILTERS, search: "", status: "converted" })).toEqual([leads[1]]);
   });
