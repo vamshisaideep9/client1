@@ -2,6 +2,7 @@
 // matching rules are unit-tested; they mirror GET /agent/earnings's own filters
 // (IST entry date, commission amount, case-insensitive search that never
 // matches a client name the Admin has hidden).
+import { matchesLeadRef } from "@/lib/lead-ref";
 import type { AgentEarnings, AgentEarningsRow } from "@/lib/agent-api";
 import { formatPeriodLabel } from "@/lib/analytics-range";
 import { toIsoDateIST } from "@/lib/reports";
@@ -146,7 +147,7 @@ export function matchesEarningsFilters(
     const texts = [row.client_name, row.product_label, row.bank_name, row.property_title];
     const textHit = texts.some((text) => (text ?? "").toLocaleLowerCase().includes(needle));
     const idHit = [row.id, row.lead_uuid].some((id) => (id ?? "").startsWith(needle));
-    if (!textHit && !idHit) return false;
+    if (!textHit && !idHit && !matchesLeadRef(filters.search, row.lead_ref)) return false;
   }
   return true;
 }

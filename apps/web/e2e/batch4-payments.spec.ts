@@ -28,6 +28,7 @@ test("Admin selects a single Agent group and retries a payout with both commissi
     id: `41000000-0000-4000-8000-00000000000${number}`,
     deal_uuid: `42000000-0000-4000-8000-00000000000${number}`,
     deal_type: "loan_application",
+    lead_ref: `LD-0000010${number}`,
     agent_profile_uuid: AGENT,
     agent_name: GROUP.agent_name,
     agent_code: GROUP.agent_code,
@@ -62,6 +63,7 @@ test("Admin selects a single Agent group and retries a payout with both commissi
   await page.getByRole("button", { name: "Pay pending commissions" }).click();
   await expect(page.getByText("2 pending", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Select commissions for Asha Rao" }).click();
+  await expect(page.getByText("LD-00000102", { exact: true })).toBeVisible();
   const checks = page.getByRole("checkbox", { name: /Loan commission/ });
   await checks.nth(0).check();
   await checks.nth(1).check();

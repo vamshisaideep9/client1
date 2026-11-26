@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { LeadRefText } from "@/features/dashboard/lead-ref";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -70,6 +71,7 @@ export function CommissionDetailSheet({
                 <Row label="Client">
                   {row.client_name ?? (hiddenFields.includes("client_name") ? "Hidden by Admin" : "—")}
                 </Row>
+                <Row label="Lead ref">{row.lead_ref ? <LeadRefText value={row.lead_ref} /> : "—"}</Row>
                 <Row label="Lead status">
                   {row.lead_status ? (LEAD_STATUS_LABEL[row.lead_status] ?? humanizeStatus(row.lead_status)) : "—"}
                 </Row>

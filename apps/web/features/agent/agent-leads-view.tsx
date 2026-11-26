@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PhoneCall, SearchX } from "lucide-react";
 
+import { LeadRefText } from "@/features/dashboard/lead-ref";
 import { Button } from "@/components/ui/button";
 import { ResubmissionBadge } from "@/features/dashboard/resubmission-badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -153,8 +154,8 @@ export function AgentLeadsView() {
               <FilterBar
                 value={{ ...EMPTY_FILTERS, search: filters.search, status: filters.status }}
                 onChange={(next) => patch({ search: next.search, status: next.status })}
-                searchLabel="Search leads by name or mobile"
-                searchPlaceholder="Search name or mobile"
+                searchLabel="Search leads by name, mobile or lead ref"
+                searchPlaceholder="Name, mobile or lead ref"
                 statusOptions={STATUS_OPTIONS}
                 showLine={false}
                 showDates={false}
@@ -213,7 +214,11 @@ export function AgentLeadsView() {
                             >
                               <td className="px-5 py-4">
                                 <Link href={`/dashboard/leads/${lead.id}?page=${page + 1}`} onClick={(event) => event.stopPropagation()} className="inline-flex min-h-11 items-center rounded font-semibold text-brand-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{lead.name ?? "Unnamed lead"}</Link>
-                                <p className="text-xs text-text-secondary">{formatMobile(lead.mobile)}</p>
+                                <p className="text-xs text-text-secondary">
+                                  {formatMobile(lead.mobile)}
+                                  {lead.lead_ref ? " · " : null}
+                                  <LeadRefText value={lead.lead_ref} />
+                                </p>
                                 <ResubmissionBadge count={lead.resubmit_count} at={lead.last_resubmitted_at} />
                               </td>
                               <td className="px-5 py-4">

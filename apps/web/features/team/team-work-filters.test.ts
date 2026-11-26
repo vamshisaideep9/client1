@@ -85,6 +85,16 @@ describe("team work filters", () => {
     expect(filterTeamLeads(rows, { ...base, status: "closed" }, NOW)).toEqual([]);
   });
 
+  it("finds a lead by its exact reference", () => {
+    const target = lead({ lead_ref: "LD-00000777" });
+    const other = lead({ lead_ref: "LD-00007770" });
+    const rows = [target, other];
+    const base = DEFAULT_TEAM_WORK_FILTERS;
+    expect(filterTeamLeads(rows, { ...base, search: "LD-00000777" }, NOW)).toEqual([target]);
+    expect(filterTeamLeads(rows, { ...base, search: "ld-777" }, NOW)).toEqual([target]);
+    expect(filterTeamLeads(rows, { ...base, search: "7770" }, NOW)).toEqual([other]);
+  });
+
   it("keeps only open leads past their follow-up when overdue is on", () => {
     const due = lead({
       last_call: { disposition: "callback_requested", interest_level: null, follow_up_at: "2026-11-14T10:00:00Z", created_at: NOW.toISOString() },

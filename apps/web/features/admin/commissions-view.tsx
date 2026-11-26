@@ -4,6 +4,7 @@ import * as React from "react";
 import { IndianRupee, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { LeadRefText } from "@/features/dashboard/lead-ref";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -99,7 +100,16 @@ export function CommissionsView() {
         header: "Line",
         render: (deal) => LINE_LABEL[deal.business_line] ?? deal.business_line,
       },
-      { key: "source", header: "Eligible outcome", render: (deal) => dealTypeLabel(deal.deal_type) },
+      {
+        key: "source",
+        header: "Eligible outcome",
+        render: (deal) => (
+          <DataTablePrimaryCell
+            title={dealTypeLabel(deal.deal_type)}
+            subtitle={<LeadRefText value={deal.lead_ref} />}
+          />
+        ),
+      },
       { key: "date", header: "Eligible since", render: (deal) => formatDate(deal.eligible_since) },
       {
         key: "action",
@@ -135,7 +145,12 @@ export function CommissionsView() {
       {
         key: "source",
         header: "Source",
-        render: (commission) => dealTypeLabel(commission.deal_type),
+        render: (commission) => (
+          <DataTablePrimaryCell
+            title={dealTypeLabel(commission.deal_type)}
+            subtitle={<LeadRefText value={commission.lead_ref} />}
+          />
+        ),
       },
       {
         key: "amount",
@@ -207,10 +222,11 @@ export function CommissionsView() {
     columns: eligibleColumns,
     rowKey: (deal) => `${deal.deal_type}:${deal.deal_uuid}`,
     searchText: (deal) => `${deal.agent_name ?? ""} ${deal.agent_code} ${deal.deal_type}`,
+    leadRefs: (deal) => [deal.lead_ref],
     line: (deal) => deal.business_line,
     date: (deal) => deal.eligible_since,
     searchLabel: "Search eligible commission deals",
-    searchPlaceholder: "Agent, code, or outcome",
+    searchPlaceholder: "Agent, code, outcome or lead ref",
     emptyIcon: IndianRupee,
     emptyTitle: "No deals are waiting for a commission entry",
     emptyDescription: "A disbursed loan or closed property deal will appear here when eligible.",
@@ -224,6 +240,7 @@ export function CommissionsView() {
     rowKey: (commission) => commission.id,
     searchText: (commission) =>
       `${commission.agent_name ?? ""} ${commission.agent_code} ${commission.cancelled_reason ?? ""}`,
+    leadRefs: (commission) => [commission.lead_ref],
     status: (commission) => commission.status,
     line: (commission) => commission.business_line,
     date: (commission) => commission.created_at,
@@ -232,7 +249,7 @@ export function CommissionsView() {
     initialStatus: statusFilter,
     onStatusChange: setStatusFilter,
     searchLabel: "Search commissions",
-    searchPlaceholder: "Agent, code, or cancellation reason",
+    searchPlaceholder: "Agent, code, lead ref or reason",
     emptyIcon: IndianRupee,
     emptyTitle: "No commissions match these filters",
     emptyDescription: "Clear or adjust the filters to return to the ledger.",

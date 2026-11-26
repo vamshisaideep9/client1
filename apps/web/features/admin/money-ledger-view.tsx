@@ -21,6 +21,7 @@ import {
 } from "@/features/dashboard/list-states";
 import { useFilteredPage } from "@/features/dashboard/use-filtered-page";
 import { isInDateRange } from "@/lib/date-range";
+import { matchesAnyLeadRef } from "@/lib/lead-ref";
 
 export type MoneyLedgerSection<Row> = {
   title: string;
@@ -29,6 +30,8 @@ export type MoneyLedgerSection<Row> = {
   columns: readonly DataColumn<Row>[];
   rowKey: (row: Row) => string;
   searchText: (row: Row) => string;
+  /** Lead references on the row; the search also matches them exactly. */
+  leadRefs?: (row: Row) => readonly (string | null | undefined)[];
   status?: (row: Row) => string;
   line?: (row: Row) => string | null | undefined;
   date?: (row: Row) => string | null | undefined;
@@ -68,7 +71,12 @@ function MoneyLedgerTable<Row>({
   const filtered = React.useMemo(
     () =>
       section.rows.filter((row) => {
-        if (filters.search && !matchesSearch(section.searchText(row), filters.search)) return false;
+        if (
+          filters.search &&
+          !matchesSearch(section.searchText(row), filters.search) &&
+          !matchesAnyLeadRef(filters.search, section.leadRefs?.(row))
+        )
+          return false;
         if (filters.status !== "all" && section.status?.(row) !== filters.status) return false;
         if (filters.line !== "all" && section.line?.(row) !== filters.line) return false;
         if (section.date && !isInDateRange(section.date(row), filters.from, filters.to)) return false;

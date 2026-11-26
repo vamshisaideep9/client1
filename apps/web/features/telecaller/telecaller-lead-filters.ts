@@ -4,6 +4,7 @@
 
 import { compareLeadsByDefaultOrder, leadStatusRank } from "@/features/dashboard/list-order";
 import { isInDateRange } from "@/lib/date-range";
+import { matchesLeadRef } from "@/lib/lead-ref";
 import type { TelecallerLead } from "@/lib/telecaller-api";
 
 import {
@@ -91,7 +92,10 @@ export function filterTelecallerLeads(
     if (!isInDateRange(lead.next_follow_up_at, filters.followUpFrom, filters.followUpTo)) return false;
     if (!matchesLeadSignals(telecallerSignalValues(lead), filters)) return false;
     if (!query) return true;
-    return `${lead.name ?? ""} ${lead.mobile}`.toLocaleLowerCase().includes(query);
+    return (
+      `${lead.name ?? ""} ${lead.mobile}`.toLocaleLowerCase().includes(query) ||
+      matchesLeadRef(filters.search, lead.lead_ref)
+    );
   });
 }
 

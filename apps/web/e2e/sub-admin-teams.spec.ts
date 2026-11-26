@@ -76,9 +76,18 @@ type Signals = {
 };
 const NO_SIGNALS: Signals = { loan_statuses: [], last_disposition: null, last_interest_level: null, referrer: null };
 
-function leadRow(id: string, name: string, mobile: string, holder: string, first: string, signals: Signals = NO_SIGNALS) {
+function leadRow(
+  id: string,
+  name: string,
+  mobile: string,
+  holder: string,
+  first: string,
+  signals: Signals = NO_SIGNALS,
+  leadRef = "LD-00000101",
+) {
   return {
     id,
+    lead_ref: leadRef,
     name,
     mobile,
     status: "working",
@@ -99,7 +108,7 @@ const PRIYA = leadRow(PRIYA_LEAD, "Priya Shah", "+919811122233", BALA, "Bala", {
   last_disposition: "connected",
   last_interest_level: "hot",
   referrer: { kind: "agent", reference_id: "AG-1042" },
-});
+}, "LD-00000102");
 
 async function mockManager(page: Page, teams: unknown[]) {
   await mockMobileApi(page, "sub_admin");
@@ -222,10 +231,14 @@ test("a manager filters the team's work, changes a lead and leaves a note", asyn
   await expect(list).toContainText("Priya Shah");
   await page.getByRole("button", { name: "Clear all" }).click();
   await expect(list.getByRole("listitem")).toHaveCount(2);
-  await filters.getByLabel("Search client name or mobile").fill("98000");
+  await expect(list).toContainText("LD-00000101");
+  await filters.getByLabel("Search client name, mobile or lead ref").fill("98000");
   await expect(list.getByRole("listitem")).toHaveCount(1);
   await expect(list).toContainText("Kiran Kumar");
-  await filters.getByLabel("Search client name or mobile").fill("");
+  await filters.getByLabel("Search client name, mobile or lead ref").fill("ld-102");
+  await expect(list.getByRole("listitem")).toHaveCount(1);
+  await expect(list).toContainText("Priya Shah");
+  await filters.getByLabel("Search client name, mobile or lead ref").fill("");
   await filters.getByRole("button", { name: "More filters" }).click();
   await page.getByRole("combobox", { name: "Filter by lead interest" }).click();
   await page.getByRole("option", { name: "Hot" }).click();
