@@ -53,33 +53,44 @@ class StaffAlreadyExists(Exception):
 
 
 class InvalidLoanSpecialty(Exception):
-    """Specialties require an active lending product and a Loans Telecaller."""
+    """Specialties require an active product and a Loans or dual-line Telecaller or Officer."""
+
+
+# Staff roles that may specialise in one financial product (the "employee"
+# role is shown as Officer). Real Estate-only staff stay line-only.
+SPECIALTY_ROLES = frozenset({"telecaller", "employee"})
 
 
 async def validate_loan_specialty(
     db: AsyncSession, *, role: str, business_line: str | None, product_id: UUID | None
 ) -> None:
+    """A specialty is one active product of any category (loan, credit card or
+    insurance) on a Loans or dual-line Telecaller or Officer."""
     if product_id is None:
         return
-    if role != "telecaller" or business_line not in ("loans", "both"):
+    if role not in SPECIALTY_ROLES or business_line not in ("loans", "both"):
         raise InvalidLoanSpecialty
     product = await db.scalar(
         select(LoanType).where(LoanType.id == product_id).with_for_update(read=True)
     )
-    if product is None or not product.active or product.category != "loan":
+    if product is None or not product.active:
         raise InvalidLoanSpecialty
 
 
 async def set_staff_specialty(
     db: AsyncSession, *, user_id: UUID, product_id: UUID | None, actor_id: UUID
 ) -> None:
+    """Set or clear the active Telecaller's or Officer's product specialty.
+
+    Work already assigned is not moved; only later routing changes.
+    """
     profile = await db.scalar(
         select(StaffProfile)
         .join(User, User.id == StaffProfile.auth_user_uuid)
         .where(
             StaffProfile.auth_user_uuid == user_id,
             StaffProfile.status == ProfileStatus.ACTIVE,
-            StaffProfile.role == StaffRole.TELECALLER,
+            StaffProfile.role.in_((StaffRole.TELECALLER, StaffRole.EMPLOYEE)),
             User.status != UserStatus.SOFT_DELETED,
         )
         .with_for_update(of=StaffProfile)

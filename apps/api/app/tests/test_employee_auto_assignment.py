@@ -227,7 +227,7 @@ async def test_employee_cursor_is_unreachable_to_api_user() -> None:
 async def test_database_rejects_cross_line_employee_cursor() -> None:
     real_estate_employee = await _seed_staff(StaffRole.EMPLOYEE, "real_estate")
     async with db_session.AsyncSessionLocal() as db:
-        cursor = await db.get(EmployeeAssignmentCursor, "loans")
+        cursor = await db.get(EmployeeAssignmentCursor, ("loans", "all"))
         cursor.last_employee_profile_uuid = real_estate_employee.id
         with pytest.raises(DBAPIError):
             await db.commit()
@@ -238,8 +238,134 @@ async def test_database_rejects_cross_line_employee_cursor() -> None:
 async def test_database_rejects_inactive_employee_cursor() -> None:
     inactive_employee = await _seed_staff(StaffRole.EMPLOYEE, "loans", active=False)
     async with db_session.AsyncSessionLocal() as db:
-        cursor = await db.get(EmployeeAssignmentCursor, "loans")
+        cursor = await db.get(EmployeeAssignmentCursor, ("loans", "all"))
         cursor.last_employee_profile_uuid = inactive_employee.id
         with pytest.raises(DBAPIError):
             await db.commit()
+        await db.rollback()
+
+
+# ---------------------------------------------------------------------------
+# Product specialist Officers (2026-11-26)
+# ---------------------------------------------------------------------------
+
+
+async def _specialise(profile: StaffProfile, product_id: uuid.UUID | None) -> None:
+    async with db_session.AsyncSessionLocal() as db:
+        await db.execute(
+            update(StaffProfile)
+            .where(StaffProfile.id == profile.id)
+            .values(loan_specialty_id=product_id)
+        )
+        await db.commit()
+
+
+async def _seed_product_task(line: str, raiser: StaffProfile, product_id) -> Task:
+    task = await _seed_task(line, raiser)
+    async with db_session.AsyncSessionLocal() as db:
+        await db.execute(
+            update(Lead).where(Lead.id == task.lead_uuid).values(product_id=product_id)
+        )
+        await db.commit()
+    return task
+
+
+async def _assigned(task: Task) -> uuid.UUID | None:
+    assert await assign_task_if_possible(task.id) is True
+    async with db_session.AsyncSessionLocal() as db:
+        return (await db.get(Task, task.id)).assigned_employee_profile_uuid
+
+
+@pytest.mark.asyncio
+async def test_specialist_officers_rotate_in_their_own_pool_with_fallbacks() -> None:
+    from app.tests.test_staff_specialty_routing import product
+
+    insurance, home, card = (
+        await product(category="insurance"),
+        await product(),
+        await product(category="credit_card"),
+    )
+    a = await _seed_staff(StaffRole.EMPLOYEE, "loans")
+    b = await _seed_staff(StaffRole.EMPLOYEE, "both")
+    general = await _seed_staff(StaffRole.EMPLOYEE, "loans")
+    home_specialist = await _seed_staff(StaffRole.EMPLOYEE, "loans")
+    for officer in (a, b):
+        await _specialise(officer, insurance.id)
+    await _specialise(home_specialist, home.id)
+    raiser = await _seed_staff(StaffRole.TELECALLER, "loans")
+
+    # Specialists first, rotating fairly inside their pool.
+    insurance_tasks = [await _seed_product_task("loans", raiser, insurance.id) for _ in range(3)]
+    assert [await _assigned(task) for task in insurance_tasks] == [a.id, b.id, a.id]
+    assert await _assigned(await _seed_product_task("loans", raiser, home.id)) == home_specialist.id
+    # No card specialist: unspecialised Officers. No product: everyone, on its own cursor.
+    assert await _assigned(await _seed_product_task("loans", raiser, card.id)) == general.id
+    assert await _assigned(await _seed_task("loans", raiser)) == a.id
+    assert await _assigned(await _seed_product_task("loans", raiser, insurance.id)) == b.id
+
+    async with db_session.AsyncSessionLocal() as db:
+        pools = set(
+            await db.scalars(
+                select(EmployeeAssignmentCursor.pool).where(
+                    EmployeeAssignmentCursor.business_line == "loans"
+                )
+            )
+        )
+    assert {"all", "unspecialised", f"product:{insurance.id}", f"product:{home.id}"} <= pools
+
+
+@pytest.mark.asyncio
+async def test_officer_pool_falls_back_to_everyone_when_all_are_specialists() -> None:
+    from app.tests.test_staff_specialty_routing import product
+
+    insurance, card = await product(category="insurance"), await product(category="credit_card")
+    specialists = [await _seed_staff(StaffRole.EMPLOYEE, "loans") for _ in range(2)]
+    for officer in specialists:
+        await _specialise(officer, insurance.id)
+    raiser = await _seed_staff(StaffRole.TELECALLER, "loans")
+    tasks = [await _seed_product_task("loans", raiser, card.id) for _ in range(2)]
+    assert [await _assigned(task) for task in tasks] == [specialists[0].id, specialists[1].id]
+
+
+@pytest.mark.asyncio
+async def test_real_estate_work_ignores_officer_specialties() -> None:
+    from app.tests.test_staff_specialty_routing import product
+
+    insurance = await product(category="insurance")
+    dual = await _seed_staff(StaffRole.EMPLOYEE, "both")
+    estate = await _seed_staff(StaffRole.EMPLOYEE, "real_estate")
+    await _specialise(dual, insurance.id)
+    raiser = await _seed_staff(StaffRole.TELECALLER, "real_estate")
+    tasks = [await _seed_task("real_estate", raiser) for _ in range(2)]
+    assert [await _assigned(task) for task in tasks] == [dual.id, estate.id]
+
+
+@pytest.mark.asyncio
+async def test_database_rejects_an_officer_cursor_outside_its_pool() -> None:
+    from app.tests.test_staff_specialty_routing import product
+
+    insurance = await product(category="insurance")
+    general = await _seed_staff(StaffRole.EMPLOYEE, "loans")
+    specialist = await _seed_staff(StaffRole.EMPLOYEE, "loans")
+    await _specialise(specialist, insurance.id)
+    card = await product(category="credit_card")
+    raiser = await _seed_staff(StaffRole.TELECALLER, "loans")
+    # Create both pools legitimately first, so the failures below come from the
+    # pool-membership validator rather than a duplicate key.
+    assert await _assigned(await _seed_product_task("loans", raiser, insurance.id)) == specialist.id
+    assert await _assigned(await _seed_product_task("loans", raiser, card.id)) == general.id
+    for pool, officer in ((f"product:{insurance.id}", general), ("unspecialised", specialist)):
+        async with db_session.AsyncSessionLocal() as db:
+            cursor = await db.get(EmployeeAssignmentCursor, ("loans", pool))
+            assert cursor is not None
+            cursor.last_employee_profile_uuid = officer.id
+            with pytest.raises(DBAPIError):
+                await db.commit()
+            await db.rollback()
+    async with db_session.AsyncSessionLocal() as db:
+        db.add(
+            EmployeeAssignmentCursor(business_line="real_estate", pool=f"product:{uuid.uuid4()}")
+        )
+        with pytest.raises(DBAPIError):
+            await db.commit()  # product pools exist only on the loans line
         await db.rollback()
