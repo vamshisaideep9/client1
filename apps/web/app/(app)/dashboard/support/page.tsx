@@ -5,6 +5,9 @@ import Link from "next/link";
 import { Loader2, Headset } from "lucide-react";
 import { toast } from "sonner";
 
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { WorkspaceDialogHeader } from "@/features/dashboard/workspace-dialog";
+import { DashboardHeader, DashboardPage } from "@/features/dashboard/dashboard-ui";
 import { Input } from "@/components/ui/input";
 import { FieldError, RequiredIndicator } from "@/components/ui/field-error";
 import { Label } from "@/components/ui/label";
@@ -32,6 +35,21 @@ import {
   type SupportTicket,
 } from "@/lib/support-tickets";
 
+// A ticket is a few lines of text, so it opens in a compact panel sized to its
+// content rather than the full-viewport workspace used by editors (which left
+// a screen-sized window with one short paragraph in it).
+const TICKET_DIALOG_CLASS =
+  "!grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] !max-w-lg grid-rows-[auto_minmax(0,1fr)] gap-4 overflow-hidden rounded-xl p-4 sm:max-h-[80dvh] sm:p-6";
+
+// What the client can expect next. The staff resolution note is internal and
+// is deliberately not part of the client ticket view.
+const NEXT_STEP: Record<SupportTicket["status"], string> = {
+  open: "Our support team will review this and get back to you. Status changes appear here.",
+  in_progress: "Our support team is working on this. Status changes appear here.",
+  resolved: "This ticket has been resolved. Raise a new ticket if you still need help.",
+  closed: "This ticket is closed. Raise a new ticket if you still need help.",
+};
+
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
@@ -42,6 +60,8 @@ function formatDate(iso: string): string {
 type Status = "loading" | "ready" | "error";
 
 export default function SupportPage() {
+  const ticketTriggerRef = React.useRef<HTMLButtonElement | null>(null);
+  const [activeTicket, setActiveTicket] = React.useState<SupportTicket | null>(null);
   const [tickets, setTickets] = React.useState<SupportTicket[]>([]);
   const [status, setStatus] = React.useState<Status>("loading");
   const [error, setError] = React.useState<string | null>(null);
@@ -77,13 +97,8 @@ export default function SupportPage() {
   }, [reloadKey]);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 px-4 sm:px-6 lg:px-10">
-      <div>
-        <h1 className="text-2xl font-semibold text-text-primary">Support</h1>
-        <p className="text-sm text-text-secondary">
-          Raise a ticket and our team will get back to you.
-        </p>
-      </div>
+    <DashboardPage>
+      <DashboardHeader title="Support" description="Raise a ticket or open an existing request to see its complete details." />
 
       <NewTicketForm onCreated={(t) => setTickets((prev) => [t, ...prev])} />
 
@@ -96,7 +111,7 @@ export default function SupportPage() {
         </div>
         <Link
           href="/change-mobile"
-          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-brand-cta px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-cta/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cta"
+          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-brand-cta px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-cta/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Start number change
         </Link>
@@ -110,7 +125,7 @@ export default function SupportPage() {
           <FetchError status={errorStatus} message={error} onRetry={retry} />
         ) : tickets.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-card px-6 py-12 text-center">
-            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-loans-soft text-loans-accent">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl text-brand-link">
               <Headset className="h-5 w-5" />
             </span>
             <p className="mt-4 text-sm text-text-secondary">
@@ -126,7 +141,7 @@ export default function SupportPage() {
                 <li key={t.id} className="rounded-xl border border-border bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-text-primary">{t.subject}</p>
+                      <button type="button" onClick={(event) => { ticketTriggerRef.current = event.currentTarget; setActiveTicket(t); }} className="min-h-11 max-w-full break-words text-left font-semibold text-brand-link underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{t.subject}</button>
                       <p className="mt-0.5 text-xs text-text-secondary">
                         {CATEGORY_LABEL[t.category]} · {formatDate(t.createdOn)}
                       </p>
@@ -149,7 +164,47 @@ export default function SupportPage() {
           </div>
         )}
       </section>
-    </div>
+      <Dialog open={activeTicket !== null} onOpenChange={(open) => !open && setActiveTicket(null)}>
+        <DialogContent className={TICKET_DIALOG_CLASS} showCloseButton={false}
+          onCloseAutoFocus={(event) => {
+            if (ticketTriggerRef.current?.isConnected) {
+              event.preventDefault();
+              ticketTriggerRef.current.focus();
+            }
+          }}>
+          {activeTicket && (
+            <>
+              <WorkspaceDialogHeader
+                title={activeTicket.subject}
+                description={`Raised on ${formatDate(activeTicket.createdOn)}`}
+                closeLabel="Close ticket"
+              />
+              <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain">
+                <dl className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/40 p-3 text-sm">
+                  <div className="min-w-0">
+                    <dt className="text-xs text-text-secondary">Status</dt>
+                    <dd className="mt-1">
+                      <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_STYLES[activeTicket.status].className)}>
+                        {STATUS_STYLES[activeTicket.status].label}
+                      </span>
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs text-text-secondary">Topic</dt>
+                    <dd className="mt-1 break-words font-medium text-text-primary">{CATEGORY_LABEL[activeTicket.category]}</dd>
+                  </div>
+                </dl>
+                <div>
+                  <h3 className="text-xs font-medium text-text-secondary">Your message</h3>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-text-primary">{activeTicket.body}</p>
+                </div>
+                <p className="rounded-lg bg-brand-cta-tint/50 px-3 py-2 text-sm text-text-secondary">{NEXT_STEP[activeTicket.status]}</p>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </DashboardPage>
   );
 }
 
@@ -277,7 +332,7 @@ function NewTicketForm({ onCreated }: { onCreated: (ticket: SupportTicket) => vo
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-loans-accent px-5 py-2.5 text-sm font-medium text-surface transition-colors hover:bg-loans-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-loans-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-loans-accent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-loans-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
           {submitting ? "Sending..." : "Raise ticket"}

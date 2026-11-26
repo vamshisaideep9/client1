@@ -20,11 +20,14 @@ export function mapPublicListing(raw: Schemas["PublicPropertyRead"]): PropertyLi
     id: raw.id,
     title: raw.title,
     location: raw.location,
+    ...(raw.developer_name ? { developerName: raw.developer_name } : {}),
     price: raw.price_display,
     type: raw.type,
     listingIntent: raw.listing_intent,
     category: raw.category,
     propertySubtype: raw.property_subtype ?? undefined,
+    catalogTypeCode: raw.catalog_type_code ?? undefined,
+    saleClassification: raw.sale_classification,
     meta: raw.meta ?? undefined,
     image:
       media.find((item) => item.kind === "image")?.url ??
@@ -49,6 +52,25 @@ export async function getPublicListings(): Promise<PropertyListing[]> {
   );
   if (!res.ok) return [];
   return res.data.properties.map(mapPublicListing);
+}
+
+export async function searchPublicListings(params: URLSearchParams) {
+  const result = await serverFetchJson<Schemas["PublicPropertySearchResponse"]>(
+    `/api/v1/public/properties/search?${params.toString()}`,
+    { revalidate: 0, expectedStatuses: [422] },
+  );
+  if (!result.ok) return result;
+  return {
+    ...result,
+    data: { ...result.data, properties: result.data.properties.map(mapPublicListing) },
+  };
+}
+
+export async function getPublicPropertyTypes() {
+  const result = await serverFetchJson<Schemas["PropertyCatalogTypeRead"][]>(
+    "/api/v1/public/property-types", { revalidate: 0 },
+  );
+  return result.ok ? result.data : [];
 }
 
 export function mapPublicPropertyDetail(

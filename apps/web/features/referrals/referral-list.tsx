@@ -3,7 +3,10 @@
 import { Users } from "lucide-react";
 
 import { formatPaise } from "@/lib/format";
+import { rowEligibility } from "@/features/dashboard/eligibility";
+import { RowEligibilityBadge } from "@/features/dashboard/eligibility-ui";
 import { ListPagination, useListPagination } from "@/features/dashboard/list-pagination";
+import { ReferralDetailDialog } from "@/features/referrals/referral-detail-dialog";
 import type { Referral } from "@/lib/referrals-api";
 import { cn } from "@/lib/utils";
 
@@ -23,11 +26,14 @@ export const STATUS_STYLE: Record<string, string> = {
   void: "bg-destructive/10 text-destructive",
 };
 
+// A referral rewards only the referred person's first completed loan or
+// property deal (services/referrals.record_conversion). Once a bonus is earned
+// the link is closed, and later transactions by that person pay nothing.
 export const STATUS_LABEL: Record<string, string> = {
   pending: "Pending",
   converted: "Converted",
-  accrued: "Bonus accrued",
-  paid: "Paid",
+  accrued: "Bonus earned, referral closed",
+  paid: "Bonus paid, referral closed",
   void: "Not eligible",
 };
 
@@ -39,13 +45,30 @@ function formatDate(iso: string | null): string {
     : d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export function ReferralList({ referrals, embedded = false }: { referrals: Referral[]; embedded?: boolean }) {
+export function ReferralList({
+  referrals,
+  embedded = false,
+  filtered = false,
+}: {
+  referrals: Referral[];
+  embedded?: boolean;
+  /** True when a filter emptied the list, so the empty copy says so. */
+  filtered?: boolean;
+}) {
   const { page, pageItems, setPage } = useListPagination(referrals);
+
+  if (referrals.length === 0 && filtered) {
+    return (
+      <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-text-secondary">
+        No referrals match this filter.
+      </p>
+    );
+  }
 
   if (referrals.length === 0) {
     return (
       <div className={cn("rounded-2xl border border-dashed border-border px-6 py-14 text-center", embedded ? "bg-muted/20" : "bg-card")}>
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-text-secondary">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-text-secondary">
           <Users className="h-6 w-6" />
         </span>
         <h2 className="mt-5 text-lg font-semibold text-text-primary">No referrals yet</h2>
@@ -59,15 +82,19 @@ export function ReferralList({ referrals, embedded = false }: { referrals: Refer
 
   return (
     <div className="space-y-3">
-    <div className={cn("overflow-x-auto", !embedded && "rounded-xl border border-border bg-card")}>
+    {/* `relative` keeps the absolutely positioned sr-only header inside the
+        scroll box, so it cannot widen the page on a phone. */}
+    <div className={cn("relative overflow-x-auto", !embedded && "rounded-xl border border-border bg-card")}>
       <table className="w-full text-left text-sm">
         <thead className="border-b border-border text-xs uppercase tracking-wide text-text-secondary">
           <tr>
             <th className="px-5 py-3 font-medium">Referred</th>
             <th className="hidden px-5 py-3 font-medium sm:table-cell">Line</th>
             <th className="px-5 py-3 font-medium">Status</th>
+            <th className="hidden px-5 py-3 font-medium sm:table-cell">Eligibility</th>
             <th className="px-5 py-3 font-medium">Bonus</th>
             <th className="hidden px-5 py-3 font-medium sm:table-cell">Date</th>
+            <th className="px-5 py-3 font-medium"><span className="sr-only">Details</span></th>
           </tr>
         </thead>
         <tbody>
@@ -75,6 +102,11 @@ export function ReferralList({ referrals, embedded = false }: { referrals: Refer
             <tr key={r.id} className="border-b border-border last:border-0">
               <td className="px-5 py-4 font-medium text-text-primary">
                 {r.referred_mobile_masked}
+                {r.converted_item ? (
+                  <span className="mt-0.5 block text-xs font-normal text-text-secondary [overflow-wrap:anywhere]">
+                    {r.converted_item.title}
+                  </span>
+                ) : null}
               </td>
               <td className="hidden px-5 py-4 text-text-secondary sm:table-cell">
                 {r.business_line ? (LINE_LABEL[r.business_line] ?? r.business_line) : "-"}
@@ -88,12 +120,24 @@ export function ReferralList({ referrals, embedded = false }: { referrals: Refer
                 >
                   {STATUS_LABEL[r.conversion_status] ?? r.conversion_status}
                 </span>
+                {/* Phones: eligibility sits under the status instead of its own column. */}
+                {rowEligibility(r) ? (
+                  <span className="mt-2 block sm:hidden">
+                    <RowEligibilityBadge row={r} />
+                  </span>
+                ) : null}
+              </td>
+              <td className="hidden px-5 py-4 sm:table-cell">
+                <RowEligibilityBadge row={r} />
               </td>
               <td className="px-5 py-4 text-text-primary">
                 {r.bonus_amount_paise != null ? formatPaise(r.bonus_amount_paise) : "-"}
               </td>
               <td className="hidden px-5 py-4 text-text-secondary sm:table-cell">
                 {formatDate(r.converted_at ?? r.created_at)}
+              </td>
+              <td className="px-3 py-4 text-right">
+                <ReferralDetailDialog referral={r} />
               </td>
             </tr>
           ))}

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { canActOnLine, type AccessLine } from "@/lib/sub-admin-access";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -50,12 +51,14 @@ function dateTimeLocalValue(value: string | null | undefined): string {
 
 export function OfferForm({
   embedded = false,
+  allowedLines,
   initialOffer,
   onCreated,
   onSaved,
   onDirtyChange,
 }: {
   embedded?: boolean;
+  allowedLines?: readonly AccessLine[];
   initialOffer?: Offer;
   onCreated?: () => void;
   onSaved?: (offer: Offer) => void;
@@ -64,7 +67,7 @@ export function OfferForm({
   const router = useRouter();
   const editing = Boolean(initialOffer);
   const [businessLine, setBusinessLine] = React.useState<"loans" | "real_estate" | "both">(
-    () => (initialOffer?.business_line as "loans" | "real_estate" | "both") ?? "loans",
+    () => (initialOffer?.business_line as "loans" | "real_estate" | "both" | undefined) ?? allowedLines?.[0] ?? "loans",
   );
   const [discountType, setDiscountType] = React.useState<DiscountType>(
     () => (initialOffer?.discount_type as DiscountType) ?? "percentage",
@@ -234,7 +237,7 @@ export function OfferForm({
           />
         </CampaignPreviewPanel>
         {initialOffer?.review_note ? (
-          <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+          <p className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
             <strong>Reviewer note:</strong> {initialOffer.review_note}
           </p>
         ) : null}
@@ -253,7 +256,7 @@ export function OfferForm({
 
         <DashboardFormSection title="Benefit and artwork" description="Use clear, text-light artwork that remains readable on small dashboard cards.">
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="min-w-0"><Label htmlFor="offer-line">Business line</Label><Select name="business_line" value={businessLine} disabled={editing} onValueChange={(value) => setBusinessLine(value as typeof businessLine)}><SelectTrigger id="offer-line" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{LINE_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>
+            <div className="min-w-0"><Label htmlFor="offer-line">Business line</Label><Select name="business_line" value={businessLine} disabled={editing} onValueChange={(value) => setBusinessLine(value as typeof businessLine)}><SelectTrigger id="offer-line" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{LINE_OPTIONS.filter((option) => !allowedLines || canActOnLine(allowedLines, option.value)).map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>
             <div className="min-w-0"><Label htmlFor="offer-discount-type">Discount type</Label><Select name="discount_type" value={discountType} onValueChange={(value) => setDiscountType(value as typeof discountType)}><SelectTrigger id="offer-discount-type" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{DISCOUNT_TYPE_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>
             <div className="min-w-0"><Label htmlFor="offer-discount-value">Discount value <RequiredIndicator /></Label><Input id="offer-discount-value" name="discount_value" inputMode="decimal" value={discountValue} onChange={(event) => setDiscountValue(event.target.value.replace(/[^0-9.]/g, ""))} aria-invalid={Boolean(errors.discount)} aria-describedby={errors.discount ? "offer-discount-error" : undefined} /><FieldError id="offer-discount-error">{errors.discount}</FieldError></div>
           </div>

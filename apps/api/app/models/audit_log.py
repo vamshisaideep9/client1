@@ -57,8 +57,10 @@ class AuditAction(enum.StrEnum):
     AGENT_APPROVED = "agent_approved"
     AGENT_REJECTED = "agent_rejected"
     STAFF_CREATED = "staff_created"
+    STAFF_SPECIALTY_UPDATED = "staff_specialty_updated"
     STAFF_FEATURE_GRANTED = "staff_feature_granted"
     STAFF_FEATURE_REVOKED = "staff_feature_revoked"
+    SUB_ADMIN_ACCESS_UPDATED = "sub_admin_access_updated"
     STAFF_INVITE_CREATED = "staff_invite_created"
     STAFF_INVITE_REVOKED = "staff_invite_revoked"
     ACCOUNT_REMOVED = "account_removed"
@@ -97,11 +99,17 @@ class AuditAction(enum.StrEnum):
     AGENT_LEAD_EXPIRED = "agent_lead_expired"
     LEAD_ASSIGNED = "lead_assigned"
     EMPLOYEE_WORK_ASSIGNED = "employee_work_assigned"
+    EMPLOYEE_TASK_REOPENED = "employee_task_reopened"
     LEAD_DETAILS_UPDATED = "lead_details_updated"
     FIELD_VISIBILITY_UPDATED = "field_visibility_updated"
     MOBILE_CHANGE_VERIFIED = "mobile_change_verified"
     MOBILE_CHANGED = "mobile_changed"
     MOBILE_CHANGE_REJECTED = "mobile_change_rejected"
+    # CS-025 contact changes: ids, field and method only, never the values.
+    CONTACT_CHANGED = "contact_changed"
+    CONTACT_CHANGE_REQUESTED = "contact_change_requested"
+    CONTACT_CHANGE_REJECTED = "contact_change_rejected"
+    CONTACT_HISTORY_VIEWED = "contact_history_viewed"
     VEHICLE_ARRANGEMENT_UPDATED = "vehicle_arrangement_updated"
     BANNER_CREATED = "banner_created"
     BANNER_UPDATED = "banner_updated"
@@ -133,8 +141,61 @@ class AuditAction(enum.StrEnum):
     CONTENT_BLOCK_UPDATED = "content_block_updated"
     CONTENT_BLOCK_PUBLISHED = "content_block_published"
     CONTENT_BLOCK_ARCHIVED = "content_block_archived"
+    WEBSITE_CONTENT_CHANGED = "website_content_changed"
     LOAN_APPLICATION_UPDATED = "loan_application_updated"
     PROPERTY_DEAL_UPDATED = "property_deal_updated"
+    AGENT_LEAD_RESUBMITTED = "agent_lead_resubmitted"
+    AGENT_PAYOUT_DETAILS_UPDATED = "agent_payout_details_updated"
+    AGENT_PAYOUT_DETAILS_DELETED = "agent_payout_details_deleted"
+    AGENT_PAYOUT_DETAILS_VIEWED = "agent_payout_details_viewed"
+    STAFF_TEAM_CREATED = "staff_team_created"
+    STAFF_TEAM_UPDATED = "staff_team_updated"
+    STAFF_TEAM_ARCHIVED = "staff_team_archived"
+    STAFF_TEAM_MEMBER_ADDED = "staff_team_member_added"
+    STAFF_TEAM_MEMBER_REMOVED = "staff_team_member_removed"
+    TEAM_LEAD_VIEWED = "team_lead_viewed"
+    TEAM_LEAD_REASSIGNED = "team_lead_reassigned"
+    TEAM_TASK_REASSIGNED = "team_task_reassigned"
+    TEAM_LEAD_STATUS_UPDATED = "team_lead_status_updated"
+    TEAM_TASK_UPDATED = "team_task_updated"
+    TEAM_NOTE_ADDED = "team_note_added"
+    TEAM_TASK_VIEWED = "team_task_viewed"
+    # Bulk client PII extraction (name + mobile for every client account across
+    # both lines). Unlike the aggregate leads/loans/deals/agents report exports
+    # -- which are counts, never row-level contact data, and intentionally
+    # unaudited -- a client-roster download is a row-level PII export and is
+    # recorded. Written by services/reporting.py::export_client_rows. The enum
+    # label is added by migration a7c9e1b3d5f6 (ALTER TYPE audit_action), which
+    # must land and the api/scheduler restart (ADR-0004) BEFORE this code ships.
+    CLIENT_EXPORT_DOWNLOADED = "client_export_downloaded"
+    # CS-027 contests (migration a8d0f2b4c6e9), written by services/contests.py
+    # and jobs/contest_lifecycle.py: ids, statuses, counts and paise only.
+    CONTEST_CREATED = "contest_created"
+    CONTEST_UPDATED = "contest_updated"
+    ATTENDANCE_UPDATED = "attendance_updated"
+    ATTENDANCE_EXPORTED = "attendance_exported"
+    CONTEST_SUBMITTED = "contest_submitted"
+    CONTEST_DELETED = "contest_deleted"
+    CONTEST_APPROVED = "contest_approved"
+    CONTEST_REJECTED = "contest_rejected"
+    CONTEST_CANCELLED = "contest_cancelled"
+    CONTEST_WENT_LIVE = "contest_went_live"
+    CONTEST_ENDED = "contest_ended"
+    CONTEST_RECALCULATED = "contest_recalculated"
+    CONTEST_FINALIZED = "contest_finalized"
+    CONTEST_PRIZE_PAYOUT_REQUESTED = "contest_prize_payout_requested"
+    CONTEST_PRIZE_MARKED_PAID = "contest_prize_marked_paid"
+    # CS-028 Agent bulk lead submit (migration d3f5b7c9e1a2), written by
+    # api/v1/agent.py once per non-dry-run upload: row counts per outcome
+    # only, never a mobile, name or email.
+    AGENT_LEADS_BULK_SUBMITTED = "agent_leads_bulk_submitted"
+    # CS-028 per-product commission rates (migration e4a6c8d0f2b3), written by
+    # services/commission_rates.py: rate / product ids, kind, bps or paise.
+    COMMISSION_RATE_PROPOSED = "commission_rate_proposed"
+    COMMISSION_RATE_SET = "commission_rate_set"
+    COMMISSION_RATE_APPROVED = "commission_rate_approved"
+    COMMISSION_RATE_REJECTED = "commission_rate_rejected"
+    COMMISSION_RATE_WITHDRAWN = "commission_rate_withdrawn"
 
 
 _ev = lambda x: [e.value for e in x]  # noqa: E731

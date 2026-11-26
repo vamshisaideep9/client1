@@ -8,7 +8,7 @@ import { useEffect, useRef } from "react";
 // sync:
 //   A  Get your code   -> tap Copy, "Copied" pops
 //   B  Share it        -> code flies out to friends
-//   C  Get cashback    -> "Collect your rewards" -> coin burst + Razorpay /
+//   C  Get referral bonus -> "Collect your rewards" -> coin burst + Razorpay /
 //                         cheque + confetti celebration
 // All motion is CSS keyframes in globals.css (refer-* set); this file owns the
 // markup and the IntersectionObserver that adds `.is-playing` so the loop runs
@@ -112,13 +112,13 @@ export function ReferFlowScene({ steps }: { steps: Step[] }) {
             <span className="h-2.5 w-2.5 rounded-full bg-red-300" />
             <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
             <span className="h-2.5 w-2.5 rounded-full bg-green-300" />
-            <span className="ml-3 rounded-md bg-white px-3 py-0.5 text-[11px] text-text-secondary">
+            <span className="ml-3 rounded-md bg-card px-3 py-0.5 text-[11px] text-text-secondary">
               your account
             </span>
           </div>
 
           {/* Content stage. Scene layers stack and crossfade. */}
-          <div className="relative h-[300px] overflow-hidden bg-white">
+          <div className="relative h-[300px] overflow-hidden bg-card">
             {/* Beat A: get your code, tap Copy */}
             <div className="refer-anim-scene-a absolute inset-0 flex flex-col items-center justify-center p-6">
               <p className="text-xs uppercase tracking-wide text-text-secondary">
@@ -161,7 +161,7 @@ export function ReferFlowScene({ steps }: { steps: Step[] }) {
                     style={{ backgroundColor: f.bg }}
                   >
                     {f.initial}
-                    <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[9px] font-bold text-[#7BC47F] shadow">
+                    <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-card text-[9px] font-bold text-[#7BC47F] shadow">
                       ✓
                     </span>
                   </span>

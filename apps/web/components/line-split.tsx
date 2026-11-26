@@ -28,34 +28,34 @@ const LINES: Line[] = [
   {
     id: "loans",
     name: "Loans",
-    title: "Loans, cards, and insurance that fit you",
+    title: "Loans for salaried and self-employed people",
     paragraph:
-      "Every bank and insurer quotes something different, and comparing them gets confusing fast. Tell us what you need once. We find the offers that fit you and stay with you until it is done.",
+      "Choose from 11 loan types, including home, personal, business, car and education loans and loan against property. You can enquire if you earn ₹15,000 a month or more. The lender decides approval, interest rate and tenure. We find the lenders that fit your profile and stay with you until the money reaches your account.",
     benefits: [
-      "Compare offers from banks, lenders, and insurers",
-      "Check if you qualify before you apply",
-      "KYC-verified partners keep your documents safe",
+      "Banks, housing finance companies and NBFCs",
+      "Loans from ₹1 lakh, free for customers",
+      "Your details go to a lender only with your consent",
     ],
     image: "/illustrations/loans.svg",
     imageSide: "left",
-    ctaLabel: "Explore loans",
+    ctaLabel: "Compare loans",
     ctaHref: "/loans",
   },
   {
     id: "real-estate",
     name: "Real Estate",
-    title: "Buy your property with confidence",
+    title: "Verified property in Hyderabad",
     paragraph:
-      "Buying a property is a big decision. We show you only verified properties and trusted partners, and guide you at every step so there are no surprises.",
+      "Flats, villas, plots, resale homes, rentals and commercial space across the city. Before a listing goes live, we check its RERA registration and title documents, visit the site, and complete KYC on the builder or seller. You pay the seller or builder directly; no property money passes through Dhanadhara. Before you pay a token amount, we still recommend a title check by your own lawyer.",
     benefits: [
-      "Flats, plots, villas, and commercial spaces",
-      "Every property and partner is verified upfront",
-      "One person helps you from first visit to final paperwork",
+      "Flats, villas, plots, resale, rentals and commercial",
+      "RERA, title documents and site checked before listing",
+      "You pay the seller or builder directly",
     ],
     image: "/illustrations/real-estate.svg",
     imageScale: 1.18,
     imageSide: "right",
-    ctaLabel: "Explore properties",
+    ctaLabel: "Browse properties",
     ctaHref: "/real-estate",
   },
 ];
@@ -68,7 +68,7 @@ function Band({ line, paddingClassName }: { line: Line; paddingClassName: string
       id={line.id}
       aria-labelledby={`${line.id}-heading`}
       className={cn(
-        "w-full scroll-mt-16 overflow-x-clip bg-surface-sky",
+        "w-full scroll-mt-[var(--site-header-h)] overflow-x-clip bg-surface-sky",
         paddingClassName
       )}
     >
@@ -106,7 +106,7 @@ function Band({ line, paddingClassName }: { line: Line; paddingClassName: string
           >
             <h2
               id={`${line.id}-heading`}
-              className="font-heading text-3xl font-semibold leading-tight tracking-tight text-brand-navy sm:text-4xl lg:text-5xl"
+              className="font-heading text-3xl font-semibold leading-tight tracking-tight text-brand-heading sm:text-4xl lg:text-5xl"
             >
               {line.title}
             </h2>
@@ -117,7 +117,7 @@ function Band({ line, paddingClassName }: { line: Line; paddingClassName: string
               {line.benefits.map((benefit) => (
                 <li key={benefit} className="flex items-start gap-3">
                   <CheckIcon
-                    className="mt-0.5 h-6 w-6 shrink-0 text-brand-blue"
+                    className="mt-0.5 h-6 w-6 shrink-0 text-brand-link"
                     aria-hidden
                   />
                   <span className="text-base text-foreground sm:text-lg">
@@ -129,7 +129,7 @@ function Band({ line, paddingClassName }: { line: Line; paddingClassName: string
             <div className="mt-6 flex justify-center lg:justify-start">
               <Button
                 asChild
-                className="w-full bg-[var(--nav-primary)] text-white hover:bg-[var(--nav-primary-hover)] focus-visible:ring-[var(--nav-primary)] sm:w-auto"
+                className="w-full bg-[var(--nav-primary)] text-white hover:bg-[var(--nav-primary-hover)] focus-visible:ring-ring sm:w-auto"
               >
                 <Link href={line.ctaHref}>{line.ctaLabel}</Link>
               </Button>

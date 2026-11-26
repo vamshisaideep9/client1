@@ -579,7 +579,7 @@ async def test_database_rejects_cross_line_assignment_cursor() -> None:
     real_estate = await _seed_telecaller("real_estate")
 
     async with db_session.AsyncSessionLocal() as db:
-        cursor = await db.get(LeadAssignmentCursor, "loans")
+        cursor = await db.get(LeadAssignmentCursor, ("loans", "all"))
         assert cursor is not None
         cursor.last_telecaller_profile_uuid = real_estate.id
         with pytest.raises(DBAPIError):

@@ -39,6 +39,144 @@ export function buildRegisterUrl(origin: string, code: string): string {
  */
 export function buildWaMeUrl(origin: string, code: string): string {
   const registerUrl = buildRegisterUrl(origin, code);
-  const message = `Join me on this app! Use my referral code ${code} when you sign up: ${registerUrl}`;
+  const message = `Explore loans and real estate with Dhanadhara. Use my referral code ${code} when you sign up: ${registerUrl}`;
   return `https://wa.me/?text=${encodeURIComponent(message)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Referral-aware sharing for public loan and property links.
+//
+// Public pages do not mount AuthProvider (no token on marketing routes), so the
+// signed-in client's OWN code is cached by AuthProvider after login and read
+// here. The code is not a secret (its whole purpose is to be shared), but it is
+// only used while the non-authoritative session hint is present and is removed
+// on logout, so a shared device does not keep sharing a previous user's code.
+// Attribution itself stays server-side (services/referrals.attribute_signup).
+// ---------------------------------------------------------------------------
+
+export const OWN_REFERRAL_CODE_KEY = "referral.own_code";
+export const INCOMING_REFERRAL_CODE_KEY = "referral.incoming_code";
+// Mirrors SESSION_HINT_KEY in components/auth/session-provider.tsx.
+const SESSION_HINT_KEY = "auth.session_hint";
+
+function safeLocal(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function safeSession(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+/** Cache (or clear, with null) the signed-in client's own referral code. */
+export function rememberOwnReferralCode(code: string | null): void {
+  const storage = safeLocal();
+  if (!storage) return;
+  try {
+    const normalized = code ? normalizeReferralCode(code) : "";
+    if (normalized && isValidReferralCodeFormat(normalized)) {
+      storage.setItem(OWN_REFERRAL_CODE_KEY, normalized);
+    } else {
+      storage.removeItem(OWN_REFERRAL_CODE_KEY);
+    }
+  } catch {
+    /* storage full or blocked: sharing simply falls back to a plain link */
+  }
+}
+
+/** The viewer's own code, only while a session hint says they are signed in. */
+export function readOwnReferralCode(): string | null {
+  const storage = safeLocal();
+  if (!storage) return null;
+  try {
+    if (storage.getItem(SESSION_HINT_KEY) !== "1") return null;
+    const code = storage.getItem(OWN_REFERRAL_CODE_KEY);
+    return code && isValidReferralCodeFormat(code) ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Remember a referral code that arrived on a shared public link (?ref=CODE) for
+ * the rest of the browser session, so the visitor can browse before signing up.
+ * Only a format-valid code is kept; the server still decides whether it matches.
+ */
+export function captureIncomingReferral(search: string): void {
+  const raw = new URLSearchParams(search).get("ref");
+  if (!raw) return;
+  const normalized = normalizeReferralCode(raw);
+  if (!isValidReferralCodeFormat(normalized)) return;
+  const storage = safeSession();
+  try {
+    storage?.setItem(INCOMING_REFERRAL_CODE_KEY, normalized);
+  } catch {
+    /* blocked storage: the ?ref= on /register still works directly */
+  }
+}
+
+/** Forget the captured incoming code once it has been used to register. */
+export function clearIncomingReferral(): void {
+  try {
+    safeSession()?.removeItem(INCOMING_REFERRAL_CODE_KEY);
+  } catch {
+    /* blocked storage: nothing was stored */
+  }
+}
+
+export function readIncomingReferral(): string | null {
+  const storage = safeSession();
+  try {
+    const code = storage?.getItem(INCOMING_REFERRAL_CODE_KEY) ?? null;
+    return code && isValidReferralCodeFormat(code) ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+const PUBLIC_PROPERTY_PATH = /^\/real-estate\/properties\/([0-9a-f-]{36})(?:[?#].*)?$/i;
+
+/**
+ * Where a referred visitor lands after signing up or logging in. A property
+ * opens in the signed-in dashboard; anything else goes to the dashboard home.
+ * The value is still re-validated by dashboardReturnTo() on the auth pages,
+ * which only ever honours same-origin /dashboard paths.
+ */
+export function referReturnToFor(path: string): string {
+  const match = PUBLIC_PROPERTY_PATH.exec(path);
+  return match ? `/dashboard/properties/${match[1].toLowerCase()}` : "/dashboard";
+}
+
+/**
+ * Auth-page href that carries the referral code and the post-login
+ * destination, e.g. "/register?ref=AB12CD34&return_to=%2Fdashboard%2Fproperties%2F…".
+ * Used for Refer links and for the Login <-> Register cross-links, so a code
+ * and its property survive switching between the two forms.
+ */
+export function authHref(
+  page: "/register" | "/login",
+  { code, returnTo }: { code?: string | null; returnTo?: string | null },
+): string {
+  const params = new URLSearchParams();
+  if (code) params.set("ref", code);
+  if (returnTo && returnTo !== "/dashboard") params.set("return_to", returnTo);
+  const query = params.toString();
+  return query ? `${page}?${query}` : page;
+}
+
+/** Absolute Refer link: register with the code, then open the referred page. */
+export function buildReferUrl(origin: string, code: string, returnTo: string): string {
+  return `${origin.replace(/\/$/, "")}${authHref("/register", { code, returnTo })}`;
+}
+
+/** Message used by the Refer action for a specific loan or property. */
+export function buildReferMessage(title: string, url: string, code: string): string {
+  return `Check out ${title} on Dhanadhara. Sign up with my referral code ${code}: ${url}`;
 }

@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PropertyFilterSheet } from "@/features/real-estate/property-filter-sheet";
+import { formatBudgetRange } from "@/lib/property-budget";
 import { SuggestionsList, useSuggestionMatches } from "@/features/real-estate/property-suggestions";
 import {
   SEARCH_FIELD_BUTTON_MOTION_CLASS,
@@ -27,10 +28,11 @@ import { useDebounce } from "@/hooks/use-debounce";
 import {
   AMENITIES,
   BHK_OPTIONS,
+  AGE_BAND_OPTIONS,
   FURNISHING_OPTIONS,
+  SALE_TYPE_OPTIONS,
   SORT_OPTIONS,
   STATUS_OPTIONS,
-  formatLakhs,
   type SuggestionIndex,
 } from "@/lib/property-facets";
 import { propertySubtypeOption } from "@/lib/property-taxonomy";
@@ -76,12 +78,34 @@ function buildChips(filters: PropertyFilters, setFilters: (patch: Partial<Proper
   if (filters.city) {
     chips.push({ key: "city", label: filters.city, onRemove: () => setFilters({ city: undefined }) });
   }
+  if (filters.developer) {
+    chips.push({
+      key: "developer",
+      label: `Developer: ${filters.developer}`,
+      onRemove: () => setFilters({ developer: undefined }),
+    });
+  }
 
   chips.push(
     ...arrayChips(
       filters.categories,
       (v) => RE_CATEGORIES.find((c) => c.key === v)?.label ?? v,
       (next) => setFilters({ categories: next }),
+    ),
+  );
+  chips.push(
+    ...arrayChips(
+      filters.saleType,
+      (v) => SALE_TYPE_OPTIONS.find((o) => o.value === v)?.label ?? v,
+      (next) =>
+        setFilters(next?.includes("resale") ? { saleType: next } : { saleType: next, age: undefined }),
+    ),
+  );
+  chips.push(
+    ...arrayChips(
+      filters.age,
+      (v) => AGE_BAND_OPTIONS.find((o) => o.value === v)?.label ?? v,
+      (next) => setFilters({ age: next }),
     ),
   );
   chips.push(
@@ -99,11 +123,11 @@ function buildChips(filters: PropertyFilters, setFilters: (patch: Partial<Proper
     ),
   );
 
-  if (filters.priceMin != null || filters.priceMax != null) {
+  if (filters.budgetMin != null || filters.budgetMax != null) {
     chips.push({
       key: "price",
-      label: `${formatLakhs(filters.priceMin ?? 0)} - ${formatLakhs(filters.priceMax ?? filters.priceMin ?? 0)}`,
-      onRemove: () => setFilters({ priceMin: undefined, priceMax: undefined }),
+      label: formatBudgetRange(filters.budgetMin, filters.budgetMax),
+      onRemove: () => setFilters({ budgetMin: undefined, budgetMax: undefined }),
     });
   }
   if (filters.areaMin != null || filters.areaMax != null) {
@@ -225,6 +249,14 @@ export function PropertySearchBar({
     setOpen(false);
     setFilters({ pincode: value, q: undefined, locality: undefined, city: undefined });
   }
+  // A developer is a facet: it narrows to every listing by that brand across
+  // localities, independent of the free-text box.
+  function pickDeveloper(value: string) {
+    syncingFromFilters.current = true;
+    setText("");
+    setOpen(false);
+    setFilters({ developer: value, q: undefined, locality: undefined, city: undefined, pincode: undefined });
+  }
   function pickProperty(title: string) {
     syncingFromFilters.current = true;
     setText(title);
@@ -309,7 +341,7 @@ export function PropertySearchBar({
                   // The placeholder is an example, not a label: it truncates on
                   // narrow viewports and disappears once the user types.
                   aria-label="Search properties"
-                  placeholder="Search by locality, city, PIN code, or property name..."
+                  placeholder="Search by property, developer, locality, city, or PIN..."
                   // CommandInput's own built-in icon is hidden: SearchFieldIcon
                   // above is the one leading icon this field shows.
                   wrapperClassName="h-full min-w-0 flex-1 border-b-0 px-3 [&>svg]:hidden"
@@ -349,6 +381,7 @@ export function PropertySearchBar({
                 onPickPincode={pickPincode}
                 onPickSubtype={pickSubtype}
                 onPickProperty={pickProperty}
+                onPickDeveloper={pickDeveloper}
               />
             </PopoverContent>
           </Popover>
@@ -365,7 +398,7 @@ export function PropertySearchBar({
                 does not say what it controls. */}
             <SelectTrigger
               aria-label="Sort results"
-              className="h-14 w-full cursor-pointer rounded-xl border-border bg-card px-4 hover:border-brand-cta hover:bg-brand-cta-tint hover:text-brand-cta focus-visible:border-brand-cta focus-visible:ring-brand-cta/40 data-[size=default]:h-14 sm:w-[190px]"
+              className="h-14 w-full cursor-pointer rounded-xl border-border bg-card px-4 hover:border-brand-cta hover:bg-brand-cta-tint hover:text-brand-link focus-visible:border-brand-cta focus-visible:ring-ring/40 data-[size=default]:h-14 sm:w-[190px]"
             >
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
@@ -405,10 +438,10 @@ export function PropertySearchBar({
                 onClick={() => toggleCategory(category.key)}
                 aria-pressed={selected}
                 className={cn(
-                  "inline-flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cta/40",
+                  "inline-flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
                   selected
-                    ? "border-brand-cta bg-brand-cta-tint text-brand-cta"
-                    : "border-border bg-card text-text-secondary hover:border-brand-cta hover:text-brand-cta",
+                    ? "border-brand-cta bg-brand-cta-tint text-brand-link"
+                    : "border-border bg-card text-text-secondary hover:border-brand-cta hover:text-brand-link",
                 )}
               >
                 <Icon className="h-4 w-4" aria-hidden="true" />
@@ -426,7 +459,7 @@ export function PropertySearchBar({
               key={chip.key}
               variant="outline"
               className={cn(
-                "h-8 gap-1.5 rounded-full border-brand-cta/40 bg-nav-tint px-3 text-sm font-normal text-brand-cta",
+                "h-8 gap-1.5 rounded-full border-brand-cta/40 bg-nav-tint px-3 text-sm font-normal text-brand-link",
               )}
             >
               {chip.label}
@@ -443,7 +476,7 @@ export function PropertySearchBar({
           <button
             type="button"
             onClick={clearAll}
-            className="cursor-pointer text-sm font-medium text-text-secondary underline-offset-2 hover:text-brand-cta hover:underline"
+            className="cursor-pointer text-sm font-medium text-text-secondary underline-offset-2 hover:text-brand-link hover:underline"
           >
             Clear all
           </button>

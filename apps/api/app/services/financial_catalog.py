@@ -28,8 +28,9 @@ from app.services.media_processing import (
     ScannerUnavailable,
     canonicalize_object,
 )
+from app.services.provider_logos import BUILT_IN_LOGO_REVIEWED_AT, BUILT_IN_PROVIDER_LOGOS
 
-PROVIDER_LOGO_MAX_BYTES = 1024 * 1024
+PROVIDER_LOGO_MAX_BYTES = 5 * 1024 * 1024
 _LOGO_STAGING_PREFIX = "private/provider-logos/staging/"
 _LOGO_PUBLIC_PREFIX = "public/provider-logos/"
 _LOGO_EXTENSIONS = {
@@ -38,10 +39,8 @@ _LOGO_EXTENSIONS = {
     "image/webp": ".webp",
 }
 _SAFE_FILENAME = re.compile(r"[^A-Za-z0-9._-]")
-# Repository SVGs must be reviewed and added here in the same code change as
-# the asset. The manifest remains empty until the supplied names have approved
-# canonical identities plus trademark/source provenance.
-_REVIEWED_BUILT_IN_LOGO_KEYS: frozenset[str] = frozenset()
+# Every key is paired with exact identity and source provenance in the registry.
+_REVIEWED_BUILT_IN_LOGO_KEYS = frozenset(key for key, _ in BUILT_IN_PROVIDER_LOGOS.values())
 _MANAGED_LOGO_KEY = re.compile(
     r"^public/provider-logos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-"
     r"[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-"
@@ -88,6 +87,20 @@ def provider_logo_url(logo_key: str | None) -> str | None:
     return None
 
 
+def provider_logo_metadata(bank: Bank) -> tuple[str | None, str | None, datetime | None]:
+    if bank.logo_key is not None:
+        url = provider_logo_url(bank.logo_key) if bank.logo_verified_at is not None else None
+        return url, bank.logo_source, bank.logo_verified_at
+    reviewed = (
+        BUILT_IN_PROVIDER_LOGOS.get(bank.name.strip().casefold())
+        if bank.provider_type == "bank"
+        else None
+    )
+    if reviewed:
+        return reviewed[0], reviewed[1], BUILT_IN_LOGO_REVIEWED_AT
+    return None, bank.logo_source, bank.logo_verified_at
+
+
 def validate_provider_logo_key(logo_key: str | None) -> None:
     if logo_key is None:
         return
@@ -105,6 +118,23 @@ async def delete_managed_provider_logo(logo_key: str | None) -> None:
         return
     with suppress(Exception):
         await asyncio.to_thread(storage.delete_object, logo_key)
+
+
+_PUBLIC_PRODUCT_CONDITIONS = (
+    LoanType.active.is_(True),
+    LoanType.public_visible.is_(True),
+    LoanType.public_summary.is_not(None),
+    LoanType.public_description.is_not(None),
+)
+
+
+async def published_product_names(db: AsyncSession, names: set[str]) -> dict[str, str]:
+    result = await db.execute(
+        select(LoanType.name, LoanType.category).where(
+            LoanType.name.in_(names), *_PUBLIC_PRODUCT_CONDITIONS
+        )
+    )
+    return {name: category for name, category in result}
 
 
 async def list_public_products(
@@ -132,12 +162,7 @@ async def list_public_products(
         .group_by(FinancialProductProviderOffer.loan_type_id)
         .subquery()
     )
-    predicates = [
-        LoanType.active.is_(True),
-        LoanType.public_visible.is_(True),
-        LoanType.public_summary.is_not(None),
-        LoanType.public_description.is_not(None),
-    ]
+    predicates = list(_PUBLIC_PRODUCT_CONDITIONS)
     if query:
         pattern = f"%{query.strip()}%"
         predicates.append(
@@ -187,10 +212,7 @@ async def get_public_product(db: AsyncSession, slug: str) -> tuple[LoanType, int
             select(LoanType, provider_count)
             .where(
                 LoanType.name == slug,
-                LoanType.active.is_(True),
-                LoanType.public_visible.is_(True),
-                LoanType.public_summary.is_not(None),
-                LoanType.public_description.is_not(None),
+                *_PUBLIC_PRODUCT_CONDITIONS,
             )
             .limit(1)
         )

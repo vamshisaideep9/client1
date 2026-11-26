@@ -33,6 +33,9 @@ function trustedOrigin(
   return parsed.origin;
 }
 
+export const YOUTUBE_EMBED_ORIGIN = "https://www.youtube-nocookie.com";
+export const YOUTUBE_THUMBNAIL_ORIGIN = "https://i.ytimg.com";
+
 export function buildSecurityHeaders({
   production,
   strictPublicConfig = false,
@@ -51,10 +54,16 @@ export function buildSecurityHeaders({
     production,
     strictPublicConfig,
   );
-  const connectSources = ["'self'", apiOrigin, ...(production ? [] : ["ws:", "wss:"])].filter(
+  // Signed multipart uploads go directly to the configured object-storage
+  // origin. img-src alone does not permit fetch; keep this an exact origin,
+  // never a wildcard or an origin taken from an individual API response.
+  const connectSources = ["'self'", apiOrigin, assetOrigin, ...(production ? [] : ["http://localhost:9000", "ws:", "wss:"])].filter(
     (source): source is string => Boolean(source),
   );
-  const imageSources = ["'self'", "data:", "blob:", assetOrigin].filter(
+  // Public banner videos may embed YouTube, but only through the privacy-
+  // enhanced host and only as a click-to-play facade whose poster comes from
+  // YouTube's thumbnail CDN (components/banner-video.tsx). Exact hosts only.
+  const imageSources = ["'self'", "data:", "blob:", assetOrigin, YOUTUBE_THUMBNAIL_ORIGIN].filter(
     (source): source is string => Boolean(source),
   );
   const scriptSources = [
@@ -68,7 +77,7 @@ export function buildSecurityHeaders({
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "frame-src 'none'",
+    `frame-src ${YOUTUBE_EMBED_ORIGIN}`,
     "object-src 'none'",
     `script-src ${scriptSources.join(" ")}`,
     "style-src 'self' 'unsafe-inline'",
@@ -77,7 +86,9 @@ export function buildSecurityHeaders({
     `connect-src ${connectSources.join(" ")}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
-    "media-src 'self'",
+    // Approved private loan videos use short-lived URLs on the same trusted
+    // storage origin as uploads. Authorization remains at the signed URL/API.
+    `media-src ${["'self'", assetOrigin].filter(Boolean).join(" ")}`,
     ...(production ? ["upgrade-insecure-requests"] : []),
   ];
 
@@ -88,7 +99,9 @@ export function buildSecurityHeaders({
     { key: "X-Frame-Options", value: "DENY" },
     {
       key: "Permissions-Policy",
-      value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+      // CS-026: "Use my location" on the profile asks for the position once,
+      // so geolocation is allowed for this origin only (never for frames).
+      value: "camera=(), microphone=(), geolocation=(self), browsing-topics=()",
     },
     { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
     { key: "Origin-Agent-Cluster", value: "?1" },

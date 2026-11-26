@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
 import * as React from "react";
 import Link from "next/link";
@@ -20,6 +19,7 @@ import { listCampaignMedia, type CampaignMediaAsset } from "@/lib/campaign-media
 import { cn } from "@/lib/utils";
 
 import { ArtworkUploadDialog } from "./artwork-upload-dialog";
+import { CampaignAssetThumb } from "./campaign-asset-thumb";
 
 type BusinessLine = "loans" | "real_estate" | "both";
 
@@ -161,13 +161,13 @@ export function CampaignMediaPicker({
       >
         {loading ? (
           <div className="grid min-h-40 place-items-center">
-            <Loader2 className="h-5 w-5 animate-spin text-brand-blue" aria-hidden />
+            <Loader2 className="h-5 w-5 animate-spin text-brand-link" aria-hidden />
             <span className="sr-only">Loading artwork</span>
           </div>
         ) : error ? (
           <div
             role="alert"
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-error/30 bg-error/10 p-4 text-sm text-error"
           >
             <span>Artwork could not load. {error}</span>
             <Button
@@ -285,15 +285,7 @@ function ArtworkGroup({
               )}
             >
               <span className={cn("relative block w-full bg-muted", surface.aspectClass)}>
-                <img
-                  src={asset.image_url}
-                  alt={asset.alt_text}
-                  width={surface.width}
-                  height={surface.height}
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
+                <CampaignAssetThumb asset={asset} width={surface.width} height={surface.height} />
                 {selected ? (
                   <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-[var(--nav-primary)] text-white">
                     <Check className="h-3.5 w-3.5" aria-hidden />
@@ -312,7 +304,7 @@ function ArtworkGroup({
                   ) : null}
                   {!asset.active ? <Badge variant="outline">Archived</Badge> : null}
                   {fits ? null : (
-                    <span className="inline-flex items-center gap-1 text-amber-700">
+                    <span className="inline-flex items-center gap-1 text-warning">
                       <AlertTriangle className="h-3 w-3" aria-hidden />
                       Crops to fit
                     </span>

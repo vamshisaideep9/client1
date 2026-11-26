@@ -11,6 +11,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { FinancialProviderOptions, financialApplicationHref as applyHref, providerOfferQuery } from "@/components/financial-provider-options";
 import { LeadDialog } from "@/components/lead-dialog";
 import { ServiceArtwork } from "@/components/service-artwork";
+import { WebsiteBody } from "@/components/website-content";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,8 +19,11 @@ import {
   getPublicProviderOffers,
   type PublicFinancialProduct,
 } from "@/lib/financial-catalog";
+import { FinancialServiceGuide } from "@/components/financial-service-guide";
+import { FINANCIAL_SERVICE_SECTIONS, FINANCIAL_SERVICE_SEO } from "@/lib/financial-service-content";
 import { contactHref } from "@/lib/leads";
 import { catalogueIllustration, financialServiceHref } from "@/lib/products";
+import { getWebsiteContent } from "@/lib/public-website-content";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 type PageProps = {
@@ -46,7 +50,7 @@ function ProductFacts({ product }: { product: PublicFinancialProduct }) {
       {sections.map((section) => (
         <Card key={section.title} className="h-full">
           <CardHeader>
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-blue/10 text-brand-blue">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-blue/10 text-brand-link">
               <section.icon className="h-5 w-5" aria-hidden />
             </span>
             <CardTitle className="mt-3 font-heading text-xl">{section.title}</CardTitle>
@@ -56,7 +60,7 @@ function ProductFacts({ product }: { product: PublicFinancialProduct }) {
               <ul className="space-y-3 text-sm text-text-secondary">
                 {section.items.map((item) => (
                   <li key={item} className="flex gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-blue" aria-hidden />
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-link" aria-hidden />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -79,15 +83,17 @@ export async function generateMetadata({ params }: Pick<PageProps, "params">): P
   const product = await publishedService(canonicalSlug);
   if (!product) return { title: "Financial service unavailable", robots: { index: false, follow: false } };
   const label = product.label;
-  const description = product.summary;
+  const seo = FINANCIAL_SERVICE_SEO[product.slug];
+  const title = seo?.title ?? label;
+  const description = seo?.description ?? product.summary;
   const href = financialServiceHref(product.slug);
   const image = catalogueIllustration(canonicalSlug) ?? "/opengraph-image.png";
   return {
-    title: label,
+    title,
     description,
     alternates: { canonical: href },
-    openGraph: { type: "website", title: label, description, url: href, siteName: SITE_NAME, images: [{ url: image, alt: `${label} | ${SITE_NAME}` }] },
-    twitter: { card: "summary_large_image", title: label, description, images: [image] },
+    openGraph: { type: "website", title, description, url: href, siteName: SITE_NAME, images: [{ url: image, alt: `${label} | ${SITE_NAME}` }] },
+    twitter: { card: "summary_large_image", title, description, images: [image] },
   };
 }
 
@@ -106,7 +112,14 @@ export default async function FinancialServicePage({ params, searchParams }: Pag
     notFound();
   }
 
-  const offers = await getPublicProviderOffers(product.slug, offerQuery);
+  const [offers, website] = await Promise.all([
+    getPublicProviderOffers(product.slug, offerQuery),
+    getWebsiteContent(`page/loans/${product.slug}`),
+  ]);
+  const faq = website?.content.faq ?? (product.faq.length ? product.faq : [{
+    question: `How can I enquire about ${product.label}?`,
+    answer: "Use Enquire now on this page. You can also call Dhanadhara and ask about this product.",
+  }]);
   const productJsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -135,20 +148,23 @@ export default async function FinancialServicePage({ params, searchParams }: Pag
         serviceType: "Financial product comparison and application assistance",
         url: `${SITE_URL}${financialServiceHref(product.slug)}`,
         provider: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
-        areaServed: { "@type": "Country", name: "India" },
+        // Loans are arranged in Hyderabad and Telangana; cards are national.
+        areaServed:
+          product.category === "loan"
+            ? [
+                { "@type": "City", name: "Hyderabad" },
+                { "@type": "State", name: "Telangana" },
+              ]
+            : { "@type": "Country", name: "India" },
       },
-      ...(product.faq.length > 0
-        ? [
-            {
-              "@type": "FAQPage",
-              mainEntity: product.faq.map((item) => ({
-                "@type": "Question",
-                name: item.question,
-                acceptedAnswer: { "@type": "Answer", text: item.answer },
-              })),
-            },
-          ]
-        : []),
+      ...(faq.length ? [{
+        "@type": "FAQPage",
+        mainEntity: faq.map((item) => ({
+          "@type": "Question",
+          name: item.question,
+          acceptedAnswer: { "@type": "Answer", text: item.answer },
+        })),
+      }] : []),
     ],
   };
 
@@ -164,7 +180,7 @@ export default async function FinancialServicePage({ params, searchParams }: Pag
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <Link
             href="/loans#financial-services-catalogue"
-            className="inline-flex items-center gap-2 text-sm font-medium text-brand-blue hover:underline"
+            className="inline-flex items-center gap-2 text-sm font-medium text-brand-link hover:underline"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />
             All financial services
@@ -172,18 +188,18 @@ export default async function FinancialServicePage({ params, searchParams }: Pag
           <div className="mt-8 grid items-center gap-10 lg:grid-cols-[1fr_24rem]">
             <div>
               <h1 className="max-w-4xl font-heading text-4xl font-semibold text-foreground sm:text-5xl lg:text-6xl">
-                {product.label}
+                {website?.content.title || (FINANCIAL_SERVICE_SEO[product.slug]?.h1 ?? product.label)}
               </h1>
-              <p className="mt-5 max-w-3xl text-xl text-text-secondary">{product.summary}</p>
+              <p className="mt-5 max-w-3xl text-xl text-text-secondary">{website?.content.summary || product.summary}</p>
               <p className="mt-4 max-w-3xl text-base leading-7 text-text-secondary">
                 {product.description}
               </p>
               <div className="mt-8 grid grid-cols-1 gap-3 sm:max-w-md sm:grid-cols-2">
-                <Button asChild size="lg" className="w-full">
+                {product.category !== "loan" ? <Button asChild size="lg" className="w-full">
                   <Link href={applyHref(product.slug)}>
-                    {product.category === "loan" ? "Apply inside Dhanadhara" : "Request a quote"}
+                    Request a quote
                   </Link>
-                </Button>
+                </Button> : null}
                 <LeadDialog
                   businessLine="loans"
                   product={product.label}
@@ -219,14 +235,17 @@ export default async function FinancialServicePage({ params, searchParams }: Pag
         </div>
       </section>
 
+      <FinancialServiceGuide sections={FINANCIAL_SERVICE_SECTIONS[product.slug]} />
+
       <FinancialProviderOptions product={product} query={offerQuery} offers={offers} />
 
-      {product.faq.length > 0 ? (
+      <WebsiteBody content={website && { body: website.content.body, sections: website.content.sections }} />
+      {faq.length > 0 ? (
         <section className="border-t border-border bg-surface px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl">
             <h2 className="font-heading text-3xl font-semibold text-foreground">Questions about {product.label}</h2>
             <div className="mt-6 space-y-3">
-              {product.faq.map((item) => (
+              {faq.map((item) => (
                 <details key={item.question} className="rounded-xl border border-border bg-card p-5">
                   <summary className="cursor-pointer font-semibold text-foreground">{item.question}</summary>
                   <p className="mt-3 leading-7 text-text-secondary">{item.answer}</p>

@@ -21,11 +21,25 @@ export type PropertySubtype = NonNullable<
 >;
 export type PropertyMediaItem = components["schemas"]["PropertyMediaRead"];
 export type PropertyStructuredDetails = components["schemas"]["PublicPropertyRead"]["structured_details"];
+export type SaleType = components["schemas"]["SaleType"];
+
+/**
+ * New launch vs resale for a sale listing. The value lives inside the typed
+ * structured details (every detail shape that applies to a sale carries
+ * `sale_type`); rent listings and legacy rows without details return null.
+ */
+export function listingSaleType(details: object | null | undefined): SaleType | null {
+  if (!details || !("sale_type" in details)) return null;
+  const value = (details as { sale_type?: unknown }).sale_type;
+  return value === "new_sale" || value === "resale" ? value : null;
+}
 
 export type PropertyListing = {
   id: string;
   title: string; // "2 BHK Apartment"
   location: string;
+  /** Developer / builder brand, e.g. "My Home". Optional; drives search and the Developer filter. */
+  developerName?: string;
   /** Pre-formatted display price. "₹45 L" for sale, "₹25,000/month" for rent. */
   price: string;
   /** Sale vs rent/lease. Drives the card badge and the browse filter. */
@@ -35,6 +49,8 @@ export type PropertyListing = {
   category: PropertyCategory;
   /** Structured navigation and campaign subtype. Missing only on legacy listings. */
   propertySubtype?: PropertySubtype;
+  catalogTypeCode?: string;
+  saleClassification?: SaleType | null;
   meta?: string; // "2 bed · 1,120 sqft"
   /** Resolved image URL; undefined ⇒ cream placeholder band. */
   image?: string;

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { RealEstateHomeSkeleton } from "./home-skeleton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
@@ -8,10 +9,10 @@ import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Command, CommandInput } from "@/components/ui/command";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
-import { ExploreArtCard } from "@/features/dashboard/explore-cards";
 import { DASHBOARD_ICONS } from "@/features/dashboard/dashboard-icons";
 import { DashboardHeader, DashboardPage, MetricCard, MetricGrid } from "@/features/dashboard/dashboard-ui";
 import { SuggestionsList, useSuggestionMatches } from "@/features/real-estate/property-suggestions";
+import { PropertyTypeGrid } from "@/features/real-estate/property-type-grid";
 import {
   SEARCH_FIELD_BUTTON_MOTION_CLASS,
   SEARCH_FIELD_CLEAR_BUTTON_CLASS,
@@ -23,7 +24,7 @@ import { useEnquiries } from "@/features/real-estate/use-enquiries";
 import { useProperties } from "@/features/real-estate/use-properties";
 import { nextUpcomingVisit, useSiteVisits } from "@/features/real-estate/use-site-visits";
 import { buildSuggestionIndex } from "@/lib/property-facets";
-import { RE_CATEGORIES, type RESubtype } from "@/lib/real-estate";
+import { type RESubtype } from "@/lib/real-estate";
 import { cn } from "@/lib/utils";
 
 function formatShortDate(iso: string): string {
@@ -43,7 +44,7 @@ function BrowseCta() {
   return (
     <Link
       href="/dashboard/explore"
-      className="inline-flex items-center gap-2 rounded-lg bg-brand-cta px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-cta/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cta focus-visible:ring-offset-2"
+      className="inline-flex items-center gap-2 rounded-lg bg-brand-cta px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-cta/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <DASHBOARD_ICONS.explore className="h-4 w-4" aria-hidden="true" />
       Browse properties
@@ -105,6 +106,9 @@ export function RealEstateHome() {
   function pickPincode(value: string) {
     goToExplore(`pincode=${encodeURIComponent(value)}`);
   }
+  function pickDeveloper(value: string) {
+    goToExplore(`developer=${encodeURIComponent(value)}`);
+  }
   function pickSubtype(value: RESubtype) {
     goToExplore(`subtypes=${value}`);
   }
@@ -119,6 +123,8 @@ export function RealEstateHome() {
 
   const newEnquiries = enquiries.filter((enquiry) => enquiry.status === "new").length;
   const nextVisit = nextUpcomingVisit(siteVisits);
+
+  if ([enquiriesStatus, siteVisitsStatus].includes("loading")) return <RealEstateHomeSkeleton />;
 
   return (
     <DashboardPage>
@@ -189,6 +195,7 @@ export function RealEstateHome() {
               onPickPincode={pickPincode}
               onPickSubtype={pickSubtype}
               onPickProperty={pickProperty}
+              onPickDeveloper={pickDeveloper}
             />
           </PopoverContent>
         </Popover>
@@ -236,28 +243,14 @@ export function RealEstateHome() {
           <h2 className="text-lg font-semibold text-text-primary">Browse by property type</h2>
           <Link
             href="/dashboard/explore"
-            className="rounded text-sm font-medium text-brand-cta hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cta/40"
+            className="rounded text-sm font-medium text-brand-link hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           >
             View all
           </Link>
         </div>
-        {/* Navigation, not a filter -- no active/selected state and no live
-            counts (Explore's own per-category rows carry those). Illustrated
-            cards (ExploreArtCard, already established on the Explore/loans
-            hub) instead of plain pill buttons, so every property type reads
-            as an inviting destination rather than a filter toggle. */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {RE_CATEGORIES.map((category) => (
-            <ExploreArtCard
-              key={category.key}
-              href={`/dashboard/explore/${category.key}`}
-              title={category.label}
-              blurb={category.blurb}
-              illustration={category.illustration}
-              fallbackIcon={category.icon}
-            />
-          ))}
-        </div>
+        {/* Navigation, not a filter: every subtype, grouped, each opening
+            Explore for its category pre-filtered to that subtype. */}
+        <PropertyTypeGrid />
       </section>
     </DashboardPage>
   );

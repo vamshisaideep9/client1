@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { REVIEW_WORKSPACE_CLASS } from "@/features/dashboard/workspace-dialog";
 import { ArrowRight, Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { roleLabel } from "@/lib/role-label";
 import {
   apiIssuesToFieldErrors,
   focusFirstInvalidField,
@@ -40,6 +42,9 @@ import {
   type MobileChangeAdmin,
   type MobileChangeProof,
 } from "@/lib/admin-api";
+
+import { ContactHistoryButton } from "./contact-history-dialog";
+import { StaffContactRequests } from "./staff-contact-requests";
 
 const PROOF_LABEL: Record<MobileChangeProof, string> = {
   verified_email: "Verified account email",
@@ -93,6 +98,7 @@ export function MobileChangeQueue() {
   const [formError, setFormError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState<"verify" | "complete" | "reject" | null>(null);
   const dialogRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -187,14 +193,23 @@ export function MobileChangeQueue() {
   }
 
   return (
-    <section className="space-y-3 rounded-2xl border border-brand-cta/25 bg-brand-cta-tint/25 p-5">
-      <div className="flex items-start justify-between gap-3">
+    <section
+      aria-labelledby="contact-change-requests-heading"
+      className="space-y-5 rounded-2xl border border-brand-cta/25 bg-brand-cta-tint/25 p-5"
+    >
+      <div className="flex items-center gap-2">
+        <ShieldCheck className="h-5 w-5 text-brand-link" aria-hidden="true" />
+        <h2 id="contact-change-requests-heading" className="font-semibold text-text-primary">
+          Contact change requests
+        </h2>
+      </div>
+
+      <StaffContactRequests />
+
+      <div className="flex items-start justify-between gap-3 border-t border-border pt-5">
         <div>
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-brand-cta" />
-            <h2 className="font-semibold text-text-primary">Mobile-number reviews</h2>
-          </div>
-          <p className="mt-1 text-sm text-text-secondary">
+          <h3 className="text-sm font-semibold text-text-primary">Lost number</h3>
+          <p className="text-sm text-text-secondary">
             A different Admin must perform final approval after identity verification.
           </p>
         </div>
@@ -205,7 +220,7 @@ export function MobileChangeQueue() {
 
       {loading ? (
         <div className="flex justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-brand-cta" />
+          <Loader2 className="h-5 w-5 animate-spin text-brand-link" />
         </div>
       ) : error ? (
         <div className="rounded-xl border border-border bg-card p-4 text-sm text-text-secondary">
@@ -224,12 +239,12 @@ export function MobileChangeQueue() {
             <li key={request.id}>
               <button
                 type="button"
-                onClick={() => setActive(request)}
+                onClick={(event) => { triggerRef.current = event.currentTarget; setActive(request); }}
                 className="flex w-full flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-brand-cta sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
                   <p className="font-medium text-text-primary">
-                    {request.requester_name} · {request.requester_role.replace("_", " ")}
+                    {request.requester_name} · {roleLabel(request.requester_role)}
                   </p>
                   <div className="mt-1 flex items-center gap-2 text-sm text-text-secondary">
                     <span>{request.current_mobile}</span>
@@ -250,17 +265,29 @@ export function MobileChangeQueue() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && close()}>
-        <DialogContent ref={dialogRef} className="max-w-xl">
+        <DialogContent preventOutsideClose ref={dialogRef} className={REVIEW_WORKSPACE_CLASS}
+          onCloseAutoFocus={(event) => {
+            if (triggerRef.current?.isConnected) {
+              event.preventDefault();
+              triggerRef.current.focus();
+            }
+          }}>
           {active ? (
             <>
-              <DialogHeader>
+              <DialogHeader className="border-b border-border pb-4 pr-12 text-left">
                 <DialogTitle>{STATUS_LABEL[active.status]}</DialogTitle>
                 <DialogDescription>
                   {active.requester_name} · {active.current_mobile} → {active.requested_mobile}
                 </DialogDescription>
+                <div className="pt-2">
+                  <ContactHistoryButton
+                    authUserUuid={active.auth_user_uuid}
+                    name={active.requester_name}
+                  />
+                </div>
               </DialogHeader>
 
-              <div className="space-y-4">
+              <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain pr-1">
                 {active.conflicts.length > 0 ? (
                   <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-destructive">
@@ -358,7 +385,7 @@ export function MobileChangeQueue() {
                 {formError ? <p className="text-sm text-destructive" role="alert">{formError}</p> : null}
               </div>
 
-              <DialogFooter className="gap-2 sm:gap-2">
+              <DialogFooter className="border-t border-border pt-4 gap-2 sm:gap-2">
                 <Button
                   variant="outline"
                   onClick={() => void act("reject")}

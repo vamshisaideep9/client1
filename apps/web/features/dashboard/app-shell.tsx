@@ -8,9 +8,11 @@ import { useAuth } from "@/components/auth/session-provider";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { LoanCompareProvider } from "@/features/loans/loan-offers-store";
 import { RealEstateProvider } from "@/features/real-estate/store";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 import { AppSidebar } from "./app-sidebar";
+import { AssignmentToaster } from "./assignment-toaster";
 import { DashboardRouteGuard } from "./dashboard-route-guard";
 import { LineProvider } from "./line-provider";
 import { LineSwitcher } from "./line-switcher";
@@ -18,24 +20,39 @@ import { MeProvider } from "./me-provider";
 import { NotificationBell } from "./notification-bell";
 import { NotificationsProvider } from "./notifications-provider";
 import { ProfileMenu } from "./profile-menu";
-import { hasFixedDesktopSidebar, isDesktopSidebarExpanded } from "./shell-state";
+import {
+  isDesktopSidebarExpanded,
+  readStoredSidebarPreference,
+  storeSidebarPreference,
+} from "./shell-state";
 
-// Authenticated dashboard shell: Clients get a collapsible icon rail that
-// always starts collapsed (session-only expand/collapse, not remembered
-// across reloads), while operational roles use an always-labeled desktop
-// sidebar. Every role gets the same mobile drawer and a top bar with
-// line/account utilities.
+// Authenticated dashboard shell: every role gets a collapsible desktop rail.
+// Clients start collapsed each session (not remembered across reloads);
+// operational roles start expanded and remember their choice on this device.
+// Every role gets the same mobile drawer and a top bar with line/account
+// utilities.
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
+  const role = session?.role;
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const mobileTriggerRef = React.useRef<HTMLButtonElement>(null);
-  const [railOpen, setRailOpen] = React.useState(false);
-  const fixedDesktopSidebar = hasFixedDesktopSidebar(session?.role);
-  const desktopSidebarExpanded = isDesktopSidebarExpanded(session?.role, railOpen);
+  // The session (and so `role`) only exists after the client refresh, so the
+  // server and first client render agree (collapsed) and the stored choice is
+  // read in render once the role is known — no expanded-then-collapsed flash.
+  const [toggledPreference, setRailPreference] = React.useState<boolean | null>(null);
+  const storedPreference = React.useMemo(() => readStoredSidebarPreference(role), [role]);
+  // Tablets (md up to lg, e.g. iPad portrait) keep the rail visible instead of
+  // the menu button, but always as the collapsed icon rail so the content keeps
+  // its width; the expand toggle only applies from lg up.
+  const wideEnoughToExpand = useMediaQuery("(min-width: 64rem)");
+  const desktopSidebarExpanded =
+    wideEnoughToExpand && isDesktopSidebarExpanded(role, toggledPreference ?? storedPreference);
 
   const toggleRail = React.useCallback(() => {
-    setRailOpen((open) => !open);
-  }, []);
+    const next = !desktopSidebarExpanded;
+    setRailPreference(next);
+    storeSidebarPreference(role, next);
+  }, [desktopSidebarExpanded, role]);
 
   return (
     <MeProvider>
@@ -43,25 +60,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <RealEstateProvider>
           <LoanCompareProvider>
             <NotificationsProvider>
+              <AssignmentToaster />
               <div
                 className={cn(
-                  "font-geist min-h-dvh bg-background transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none lg:grid",
-                  desktopSidebarExpanded ? "lg:grid-cols-[15.5rem_minmax(0,1fr)]" : "lg:grid-cols-[4rem_minmax(0,1fr)]",
+                  "font-geist min-h-dvh bg-background transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none md:grid md:grid-cols-[6rem_minmax(0,1fr)]",
+                  desktopSidebarExpanded && "lg:grid-cols-[15.5rem_minmax(0,1fr)]",
                 )}
               >
                 <a
                   href="#dashboard-main-content"
-                  className="fixed left-4 top-4 z-[60] -translate-y-24 rounded-md bg-brand-navy px-4 py-2 text-sm font-semibold text-surface shadow-lg transition-transform duration-150 ease-out focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 motion-reduce:transition-none"
+                  className="fixed left-4 top-4 z-[60] -translate-y-24 rounded-md bg-brand-navy px-4 py-2 text-sm font-semibold text-white shadow-lg transition-transform duration-150 ease-out focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 motion-reduce:transition-none"
                 >
                   Skip to main content
                 </a>
               {/* The grid stretches the rail with the page; only its navigation
                   stays in the viewport. Width and content offset share one track. */}
-              <aside className="relative z-30 hidden min-w-0 bg-dash-rail lg:block">
+              <aside className="relative z-30 hidden min-w-0 bg-dash-rail md:block">
                 <div className="sticky top-0 h-dvh min-h-0">
                   <AppSidebar
                     expanded={desktopSidebarExpanded}
-                    onToggle={fixedDesktopSidebar ? undefined : toggleRail}
+                    onToggle={session && wideEnoughToExpand ? toggleRail : undefined}
                   />
                 </div>
               </aside>
@@ -70,31 +88,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetContent
                   side="left"
-                  className="font-geist h-dvh w-64 border-white/15 bg-dash-rail p-0 text-dash-foreground"
-                  closeButtonClassName="text-dash-foreground hover:bg-dash-rail-hover focus-visible:ring-brand-sky"
+                  className="font-geist h-dvh w-64 border-dash-border bg-dash-rail p-0 text-dash-foreground"
+                  closeButtonClassName="z-10 text-dash-foreground hover:bg-dash-rail-hover focus-visible:ring-ring"
                   onCloseAutoFocus={(event) => {
                     event.preventDefault();
                     mobileTriggerRef.current?.focus();
                   }}
                 >
                   <SheetTitle className="sr-only">Workspace</SheetTitle>
-                  <AppSidebar showLabels onNavigate={() => setMobileOpen(false)} />
+                  <AppSidebar showLabels reserveCloseSpace onNavigate={() => setMobileOpen(false)} />
                 </SheetContent>
               </Sheet>
 
               <div className="min-w-0">
                 {/* Top bar */}
-                <header className="sticky top-0 z-20 flex min-h-16 items-center gap-0.5 border-b border-border bg-surface px-2 sm:gap-3 sm:px-4 lg:px-6">
+                <header className="sticky top-0 z-20 flex min-h-16 items-center gap-0.5 border-b border-border bg-background px-2 sm:gap-3 sm:px-4 lg:px-6">
                   <button
                     ref={mobileTriggerRef}
                     type="button"
                     aria-label="Open menu"
                     onClick={() => setMobileOpen(true)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-brand-navy transition-[background-color,color,transform] duration-150 ease-out hover:bg-brand-cta-tint active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue motion-reduce:transition-none motion-reduce:active:scale-100 lg:hidden"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-brand-heading transition-[background-color,color,transform] duration-150 ease-out hover:bg-brand-cta-tint active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:active:scale-100 md:hidden"
                   >
                     <Menu className="h-5 w-5" />
                   </button>
-                  <Logo variant="symbol" tone="navy" href="/dashboard" className="h-11 w-8 lg:hidden" sizes="32px" />
+                  <Logo variant="symbol" tone="navy" href="/dashboard" className="h-11 w-8 md:hidden" sizes="32px" />
                   <div className="flex-1" />
                   <NotificationBell />
                   <LineSwitcher />

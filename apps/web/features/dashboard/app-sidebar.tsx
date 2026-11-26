@@ -1,7 +1,12 @@
 "use client";
 
+import type { components } from "@contracts/generated/schema";
+import { apiRequest } from "@/lib/api/client";
+
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { BRAND_ASSETS } from "@/lib/brand";
 import { usePathname } from "next/navigation";
 import { ChevronDown, PanelLeft } from "lucide-react";
 
@@ -13,12 +18,13 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/components/auth/session-provider";
 import { useBookmarks } from "@/features/real-estate/store";
+import { useManagesTeam } from "@/features/team/use-manages-team";
 import { RE_CATEGORIES } from "@/lib/real-estate";
 import { cn } from "@/lib/utils";
 
 import { AccountMenu } from "./account-menu";
-import { Logo } from "@/components/logo";
 import { EXPLORE_CATEGORIES } from "./explore-categories";
+import { useMe } from "./me-provider";
 import { useLine } from "./line-provider";
 import {
   getDashboardPathLine,
@@ -31,24 +37,38 @@ function isActive(pathname: string, href: string): boolean {
   return href !== "/dashboard" && pathname.startsWith(`${href}/`);
 }
 
-// Role-aware workspace navigation. The Client may collapse it to an icon rail;
-// operational roles are always labeled on desktop, and the mobile drawer always
-// shows labels. The active item reads as a blue icon plus a left indicator bar.
+// Role-aware workspace navigation. Every role may collapse it to an icon rail
+// on desktop (names move into tooltips); the mobile drawer always shows labels. The active item reads as a blue icon plus a left indicator bar.
 export function AppSidebar({
   showLabels = false,
   expanded = false,
   onToggle,
   onNavigate,
+  reserveCloseSpace = false,
 }: {
   showLabels?: boolean;
   expanded?: boolean;
   onToggle?: () => void;
   onNavigate?: () => void;
+  reserveCloseSpace?: boolean;
 }) {
   const pathname = usePathname();
   const { activeLine } = useLine();
   const { count: bookmarkCount } = useBookmarks();
   const { session } = useAuth();
+  const token = session?.accessToken;
+  const role = session?.role;
+  const [websiteAccessToken, setWebsiteAccessToken] = React.useState<string>();
+  React.useEffect(() => {
+    if (!token || (role !== "admin" && role !== "sub_admin")) return;
+    let active = true;
+    void apiRequest<components["schemas"]["WebsiteAccess"]>("/api/v1/website-content/access").then((result) => {
+      if (active) setWebsiteAccessToken(result.ok && result.data.can_edit ? token : undefined);
+    });
+    return () => { active = false; };
+  }, [role, token]);
+  const { me, status: meStatus } = useMe();
+  const managesTeam = useManagesTeam(session?.role, session?.accessToken);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const toggleRef = React.useRef<HTMLButtonElement>(null);
   const restoreToggleFocus = React.useRef(false);
@@ -73,7 +93,7 @@ export function AppSidebar({
     (session?.role === "client" || session?.businessLine === "both"
       ? activeLine
       : (session?.businessLine ?? activeLine));
-  const activeText = "bg-brand-cta-tint text-brand-navy focus-visible:ring-brand-navy";
+  const activeText = "bg-dash-active text-brand-heading focus-visible:ring-ring";
 
   const sections = session
     ? getNavigationSections({
@@ -81,6 +101,10 @@ export function AppSidebar({
         businessLine: session.businessLine,
         activeLine: screenLine,
         staffFeatures: session.staffFeatures,
+        managesTeam,
+        subAdminAccess: me?.subAdminAccess,
+        subAdminAccessLoading: meStatus !== "ready",
+        websiteDraftAccess: token != null && token === websiteAccessToken,
       })
     : [];
 
@@ -112,24 +136,17 @@ export function AppSidebar({
       <nav
         aria-label="Workspace"
         className={cn(
-          "flex h-full min-h-0 w-full flex-col gap-1.5 overflow-hidden border-r border-white/15 bg-dash-rail pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-dash-foreground",
+          "flex h-full min-h-0 w-full flex-col gap-1.5 overflow-hidden border-r border-dash-border bg-dash-rail pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-dash-foreground",
           labeled ? "px-3" : "px-1",
         )}
       >
-        <div className={cn("mb-3 shrink-0", labeled ? "flex min-h-12 items-center justify-between gap-1" : "flex justify-center")}>
-          <Logo
-            tone="white"
-            variant={labeled ? "horizontal" : "symbol"}
-            href="/dashboard"
-            onClick={onNavigate}
-            sizes={labeled ? (showLabels || onToggle ? "160px" : "192px") : "40px"}
-            className={cn(
-              labeled && (showLabels || onToggle ? "mr-auto w-40 sm:w-40" : "mx-auto w-48 sm:w-48"),
-            )}
-          />
-          {onToggle && labeled && <RailToggle buttonRef={toggleRef} expanded={expanded} onToggle={toggleSidebar} />}
+        <div className={cn("relative mb-3 flex shrink-0 border-b border-dash-border", labeled ? "h-14 items-start" : "flex-col items-center gap-1 pb-3", reserveCloseSpace && "pr-11")} data-sidebar-brand>
+          <Link href="/dashboard" prefetch={false} onClick={onNavigate} aria-label="Dhanadhara dashboard" className={cn("relative flex h-11 min-w-0 items-center justify-center rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring", labeled ? "flex-1" : "w-11 shrink-0")}>
+            <Image src={BRAND_ASSETS.horizontal.src} width={BRAND_ASSETS.horizontal.width} height={BRAND_ASSETS.horizontal.height} alt="" loading="eager" sizes="176px" className={cn("absolute h-auto w-44 max-w-full object-contain dark:brightness-0 dark:invert transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none", labeled ? "scale-100 opacity-100" : "scale-95 opacity-0")} />
+            <Image src={BRAND_ASSETS.symbol.src} width={BRAND_ASSETS.symbol.width} height={BRAND_ASSETS.symbol.height} alt="" unoptimized loading="eager" className={cn("absolute h-10 w-10 object-contain dark:brightness-0 dark:invert transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none", labeled ? "scale-95 opacity-0" : "scale-100 opacity-100")} />
+          </Link>
+          {onToggle && <button ref={toggleRef} type="button" onClick={toggleSidebar} aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"} aria-expanded={expanded} className="grid h-11 w-11 shrink-0 place-items-center rounded-md text-dash-foreground hover:bg-dash-rail-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"><PanelLeft className="h-5 w-5" aria-hidden="true" /></button>}
         </div>
-        {onToggle && !labeled && <RailToggle buttonRef={toggleRef} expanded={expanded} onToggle={toggleSidebar} />}
 
         <div
           ref={scrollRef}
@@ -139,7 +156,7 @@ export function AppSidebar({
           {sections.map((section, sectionIndex) => (
             <div
               key={section.key}
-              className={cn(sectionIndex > 0 && "mt-3 border-t border-white/15 pt-3")}
+              className={cn(sectionIndex > 0 && "mt-3 border-t border-dash-border pt-3")}
             >
               {labeled && section.label ? (
                 <p className="mb-2 px-3 text-xs font-medium text-dash-muted">
@@ -193,38 +210,6 @@ export function AppSidebar({
   );
 }
 
-// Desktop collapse/expand control. Collapsed, it's a centered toggle button in the
-// icon slot; expanded, the toggle sits at the top with the label list below.
-function RailToggle({ expanded, onToggle, buttonRef }: { expanded: boolean; onToggle: () => void; buttonRef: React.Ref<HTMLButtonElement> }) {
-  if (expanded) {
-    return (
-        <button
-          ref={buttonRef}
-          type="button"
-          onClick={onToggle}
-          aria-label="Collapse sidebar"
-          aria-expanded={true}
-          className="group/toggle ml-auto grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-lg text-dash-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-dash-rail-hover hover:text-brand-sky active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-sky focus-visible:ring-inset motion-reduce:transition-none motion-reduce:active:scale-100"
-        >
-          <PanelLeft className="h-5 w-5 transition-transform duration-150 group-hover/toggle:-translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none" aria-hidden="true" />
-        </button>
-    );
-  }
-
-  return (
-    <button
-      ref={buttonRef}
-      type="button"
-      onClick={onToggle}
-      aria-label="Expand sidebar"
-      aria-expanded={false}
-      className="mx-auto mb-2 mt-1 grid h-12 w-12 shrink-0 cursor-pointer place-items-center rounded-xl text-dash-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-dash-rail-hover hover:text-brand-sky active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-sky focus-visible:ring-inset motion-reduce:transition-none motion-reduce:active:scale-100"
-    >
-      <PanelLeft className="h-5 w-5" aria-hidden="true" />
-    </button>
-  );
-}
-
 function SidebarLink({
   item,
   active,
@@ -250,17 +235,17 @@ function SidebarLink({
       aria-current={active ? "page" : undefined}
       onClick={onNavigate}
       className={cn(
-        "group/link relative flex items-center gap-3 rounded-lg text-sm font-medium transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-sky focus-visible:ring-inset motion-reduce:transition-none motion-reduce:active:scale-100",
+        "pressable group/link relative flex items-center gap-3 rounded-lg text-sm font-medium transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset motion-reduce:transition-none motion-reduce:active:scale-100",
         labeled ? "min-h-11 px-3 py-2.5" : "mx-auto h-12 w-12 justify-center",
         // Hover keeps the semantic icon stable and adds a subtle tint plus the
         // left indicator. Active stays blue with a solid bar.
-        active ? activeText : "text-dash-foreground hover:bg-dash-rail-hover hover:text-brand-sky",
+        active ? activeText : "text-dash-foreground hover:bg-dash-rail-hover hover:text-brand-heading",
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          "absolute top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-full bg-brand-sky transition-opacity duration-150 motion-reduce:transition-none",
+          "absolute top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-full bg-brand-navy dark:bg-brand-sky transition-opacity duration-150 motion-reduce:transition-none",
           labeled ? "left-0" : "-left-1",
           active ? "opacity-100" : "opacity-0 group-hover/link:opacity-100",
         )}
@@ -280,7 +265,7 @@ function SidebarLink({
         <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
           <span className="break-words">{label}</span>
           {badge ? (
-            <span className="rounded-full bg-brand-cta-tint px-1.5 py-0.5 text-xs font-semibold text-brand-cta">
+            <span className="rounded-full bg-brand-cta-tint px-1.5 py-0.5 text-xs font-semibold text-brand-link">
               {badge}
             </span>
           ) : null}
@@ -336,14 +321,14 @@ function SidebarExplore({
         aria-current={active ? "page" : undefined}
         onClick={onNavigate}
         className={cn(
-          "relative flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-sky focus-visible:ring-inset motion-reduce:transition-none motion-reduce:active:scale-100",
-          active ? activeText : "text-dash-foreground hover:bg-dash-rail-hover hover:text-brand-sky",
+          "pressable relative flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset motion-reduce:transition-none motion-reduce:active:scale-100",
+          active ? activeText : "text-dash-foreground hover:bg-dash-rail-hover hover:text-brand-heading",
         )}
       >
         <span
           aria-hidden="true"
           className={cn(
-            "absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-full bg-brand-sky transition-opacity duration-150 motion-reduce:transition-none",
+            "absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-full bg-brand-navy dark:bg-brand-sky transition-opacity duration-150 motion-reduce:transition-none",
             active ? "opacity-100" : "opacity-0 group-hover/explore:opacity-100",
           )}
         />
@@ -365,7 +350,7 @@ function SidebarExplore({
         )}
       >
         <div className="overflow-hidden">
-          <div className="ml-[1.375rem] mt-1 flex flex-col gap-1 border-l border-white/15 pl-3">
+          <div className="ml-[1.375rem] mt-1 flex flex-col gap-1 border-l border-dash-border pl-3">
             {categories.map(({ slug, label: subLabel, icon: SubIcon }) => {
               // Prefix match so a loans category stays highlighted while the
               // user is on one of its product pages
@@ -380,8 +365,8 @@ function SidebarExplore({
                   aria-current={subActive ? "page" : undefined}
                   onClick={onNavigate}
                   className={cn(
-                    "flex min-h-11 items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-[background-color,color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-sky focus-visible:ring-inset motion-reduce:transition-none",
-                    subActive ? activeText : "text-dash-foreground hover:bg-dash-rail-hover hover:text-brand-sky",
+                    "flex min-h-11 items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-[background-color,color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset motion-reduce:transition-none",
+                    subActive ? activeText : "text-dash-foreground hover:bg-dash-rail-hover hover:text-brand-heading",
                   )}
                 >
                   <SubIcon className="h-4 w-4 shrink-0" aria-hidden="true" />

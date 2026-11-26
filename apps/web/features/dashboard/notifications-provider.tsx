@@ -22,6 +22,7 @@ type NotificationsContextValue = NotificationSnapshot & {
   feedError: string | null;
   feedErrorStatus: number | null;
   loadNotifications: (force?: boolean) => Promise<void>;
+  refreshNotifications: () => Promise<void>;
   markRead: (id: string) => Promise<boolean>;
   markAllRead: () => Promise<boolean>;
 };
@@ -36,6 +37,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const [feedStatus, setFeedStatus] = React.useState<FeedStatus>("idle");
   const feedStatusRef = React.useRef<FeedStatus>("idle");
   const unreadCountRequestRef = React.useRef(0);
+  const pendingReads = React.useRef(new Set<string>());
   const [feedError, setFeedError] = React.useState<string | null>(null);
   const [feedErrorStatus, setFeedErrorStatus] = React.useState<number | null>(null);
 
@@ -87,17 +89,43 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     [updateFeedStatus, updateSnapshot],
   );
 
+  // Background refresh: keeps an already-loaded feed on screen (no loading
+  // state, no error state) and only swaps in the fresh rows on success.
+  const refreshNotifications = React.useCallback(async () => {
+    if (feedStatusRef.current !== "ready") {
+      await loadNotifications(true);
+      return;
+    }
+    const unreadCountRequestId = ++unreadCountRequestRef.current;
+    const [notifications, unreadCount] = await Promise.all([getNotifications(), getUnreadCount()]);
+    if (!notifications.ok || pendingReads.current.size > 0) return;
+    updateSnapshot(replaceNotificationItems(snapshotRef.current, notifications.data));
+    if (unreadCount.ok && unreadCountRequestId === unreadCountRequestRef.current) {
+      updateSnapshot({ ...snapshotRef.current, unreadCount: unreadCount.data });
+    }
+  }, [loadNotifications, updateSnapshot]);
+
   const markRead = React.useCallback(
     async (id: string) => {
       const before = snapshotRef.current;
+      const original = before.items.find((item) => item.id === id);
+      if (pendingReads.current.has(id) || original?.readAt) return true;
+      pendingReads.current.add(id);
       unreadCountRequestRef.current += 1;
       const optimistic = markNotificationReadInSnapshot(before, id, new Date().toISOString());
       updateSnapshot(optimistic);
 
       const result = await markNotificationRead(id);
+      pendingReads.current.delete(id);
       if (!result.ok) {
-        updateSnapshot(before);
-        await refreshUnreadCount();
+        // Restore only this row: another notification may have been opened
+        // successfully while this request was in flight.
+        const current = snapshotRef.current;
+        updateSnapshot({
+          items: current.items.map((item) => item.id === id && original ? original : item),
+          unreadCount: current.unreadCount + (original?.readAt === null ? 1 : 0),
+        });
+        if (pendingReads.current.size === 0) await refreshUnreadCount();
         return false;
       }
 
@@ -106,7 +134,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
           item.id === id ? result.data : item,
         )),
       );
-      await refreshUnreadCount();
+      if (pendingReads.current.size === 0) await refreshUnreadCount();
       return true;
     },
     [refreshUnreadCount, updateSnapshot],
@@ -135,10 +163,20 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       feedError,
       feedErrorStatus,
       loadNotifications,
+      refreshNotifications,
       markRead,
       markAllRead,
     }),
-    [feedError, feedErrorStatus, feedStatus, loadNotifications, markAllRead, markRead, snapshot],
+    [
+      feedError,
+      feedErrorStatus,
+      feedStatus,
+      loadNotifications,
+      markAllRead,
+      markRead,
+      refreshNotifications,
+      snapshot,
+    ],
   );
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;

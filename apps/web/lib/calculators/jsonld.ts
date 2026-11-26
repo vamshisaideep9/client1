@@ -28,14 +28,14 @@ export function calculatorJsonLd(def: CalculatorDef): Record<string, unknown> {
           { "@type": "ListItem", position: 3, name: def.navLabel, item: url },
         ],
       },
-      {
+      ...(def.faq.length ? [{
         "@type": "FAQPage",
         mainEntity: def.faq.map((f) => ({
           "@type": "Question",
           name: f.q,
           acceptedAnswer: { "@type": "Answer", text: f.a },
         })),
-      },
+      }] : []),
     ],
     publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
   };

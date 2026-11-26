@@ -50,7 +50,15 @@ export function PropertyBrowser({
   return (
     <div className="space-y-6">
       {header}
-      {searchBar}
+      {/* Pinned under the 4rem app header so search, sort and filters stay
+          reachable while scrolling long result grids. The translucent backing
+          keeps cards from showing through the controls. */}
+      <div
+        data-sticky="property-search"
+        className="sticky top-[var(--site-header-h)] z-10 -mx-2 rounded-b-2xl border-b border-border/60 bg-background px-2 py-3"
+      >
+        {searchBar}
+      </div>
 
       {active ? (
         resultCount === 0 ? (
@@ -87,7 +95,7 @@ function ResultsGrid({ results }: { results: REListing[] }) {
 function EmptyResults() {
   return (
     <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-14 text-center">
-      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-text-secondary">
+      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-text-secondary">
         <SearchX className="h-6 w-6" />
       </span>
       <h2 className="mt-5 text-lg font-semibold text-text-primary">No properties match</h2>

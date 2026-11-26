@@ -41,7 +41,27 @@ function renderCard(listing: REListing = LISTING) {
 }
 
 describe("dashboard PropertyCard", () => {
-  it("keeps the browse summary compact and sends primary action to the details page", () => {
+  it("labels resale homes and rentals, and keeps overlay layers inside the card", () => {
+    const resale = renderCard({
+      ...LISTING,
+      structuredDetails: { sale_type: "resale" },
+    } as unknown as REListing);
+    expect(resale).toMatch(/>Resale</);
+    // isolate contains the z-indexed Bookmark/Compare overlay (scroll overlap fix).
+    expect(resale).toMatch(/class="relative isolate aspect-video/);
+
+    const fresh = renderCard({
+      ...LISTING,
+      structuredDetails: { sale_type: "new_sale" },
+    } as unknown as REListing);
+    expect(fresh).not.toMatch(/>Resale</);
+
+    const rental = renderCard({ ...LISTING, listingIntent: "rent" });
+    expect(rental).toContain("For rent / lease");
+    expect(rental).not.toMatch(/>Resale</);
+  });
+
+  it("keeps a compact summary, a preview action, and full-page links", () => {
     const markup = renderCard();
 
     expect(markup).toContain("Baner Heights");
@@ -49,6 +69,7 @@ describe("dashboard PropertyCard", () => {
     expect(markup).toContain("1,100 sq ft");
     expect(markup).toContain("Ready");
     expect(markup).toContain("View details");
+    expect(markup).toContain('aria-haspopup="dialog"');
     expect(markup).toContain('/dashboard/properties/11111111-1111-4111-8111-111111111111');
     expect(markup).not.toContain("Property preview");
     expect(markup).not.toContain("Enquire");

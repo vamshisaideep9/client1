@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 
 import { LeadDialog } from "@/components/lead-dialog";
+import { ShareActions } from "@/components/share-actions";
 import {
   Card,
   CardContent,
@@ -12,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { contactHref } from "@/lib/leads";
-import type { PropertyListing } from "@/lib/properties";
+import { listingSaleType, type PropertyListing } from "@/lib/properties";
 
 // A single placeholder property card for the Properties catalog rows. Mirrors
 // the product-card visual system in components/product-page.tsx: an image band
@@ -30,7 +31,7 @@ export function PropertyCard({ listing }: { listing: PropertyListing }) {
       <Link
         href={detailHref}
         aria-label={`View ${listing.title}`}
-        className="group relative aspect-[4/3] w-full bg-[var(--nav-tint)]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--nav-primary)]"
+        className="group relative aspect-[4/3] w-full bg-[var(--nav-tint)]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
           {listing.image ? (
             <Image
@@ -52,7 +53,12 @@ export function PropertyCard({ listing }: { listing: PropertyListing }) {
             </span>
             {listing.listingIntent === "rent" ? (
               <span className="rounded-full bg-amber-100/95 px-2.5 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
-                For rent
+                For rent / lease
+              </span>
+            ) : null}
+            {listing.listingIntent === "sale" && (listing.saleClassification ?? listingSaleType(listing.structuredDetails)) === "resale" ? (
+              <span className="rounded-full bg-sky-100/95 px-2.5 py-1 text-xs font-semibold text-sky-900 ring-1 ring-sky-200">
+                Resale
               </span>
             ) : null}
           </span>
@@ -60,7 +66,7 @@ export function PropertyCard({ listing }: { listing: PropertyListing }) {
 
       <CardHeader className="flex-1 gap-2 pt-6">
         <CardTitle className="font-heading text-lg text-foreground">
-          <Link href={detailHref} className="rounded-sm hover:text-[var(--nav-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-primary)]">
+          <Link href={detailHref} className="rounded-sm hover:text-brand-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             {listing.title}
           </Link>
         </CardTitle>
@@ -77,7 +83,7 @@ export function PropertyCard({ listing }: { listing: PropertyListing }) {
       </CardHeader>
 
       <CardContent className="pt-1">
-        <p className="font-heading text-xl font-semibold text-brand-blue">
+        <p className="font-heading text-xl font-semibold text-brand-link">
           {listing.price}
         </p>
       </CardContent>
@@ -85,7 +91,7 @@ export function PropertyCard({ listing }: { listing: PropertyListing }) {
       <CardFooter className="flex flex-col gap-2 pt-5">
         <Link
           href={detailHref}
-          className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-[var(--nav-primary)] px-4 text-sm font-medium text-white transition-colors hover:bg-[var(--nav-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-primary)] focus-visible:ring-offset-2"
+          className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-[var(--nav-primary)] px-4 text-sm font-medium text-white transition-colors hover:bg-[var(--nav-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           View property
         </Link>
@@ -100,6 +106,7 @@ export function PropertyCard({ listing }: { listing: PropertyListing }) {
             propertyRef: listing.id,
           })}
         />
+        <ShareActions path={detailHref} title={`${listing.title}, ${listing.location}`} />
       </CardFooter>
     </Card>
   );

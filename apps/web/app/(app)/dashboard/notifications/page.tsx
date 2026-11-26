@@ -6,9 +6,10 @@ import { Bell, CheckCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { optionsFromLabels } from "@/features/dashboard/filter-options";
+import { DateRangeFields, FilterSelect } from "@/features/dashboard/filter-select";
 import { ListPagination } from "@/features/dashboard/list-states";
 import { useFilteredPage } from "@/features/dashboard/use-filtered-page";
 import { isInDateRange } from "@/lib/date-range";
@@ -106,7 +107,7 @@ export default function NotificationsPage() {
         <FetchError status={errorStatus} message={error} onRetry={retry} />
       ) : items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-14 text-center">
-          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-text-secondary">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-text-secondary">
             <Bell className="h-6 w-6" />
           </span>
           <h2 className="mt-5 text-lg font-semibold text-text-primary">No notifications yet</h2>
@@ -131,31 +132,20 @@ export default function NotificationsPage() {
                 maxLength={100}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger aria-label="Filter notifications by type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  {Object.entries(NOTIFICATION_TYPE_LABEL).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                aria-label="Notifications from date"
-                type="date"
-                value={dateFrom}
-                onChange={(event) => setDateFrom(event.target.value)}
+              <FilterSelect
+                label="Type"
+                ariaLabel="Filter notifications by type"
+                value={typeFilter}
+                options={optionsFromLabels(NOTIFICATION_TYPE_LABEL)}
+                onValueChange={setTypeFilter}
               />
-              <Input
-                aria-label="Notifications to date"
-                type="date"
-                min={dateFrom || undefined}
-                value={dateTo}
-                onChange={(event) => setDateTo(event.target.value)}
+              <DateRangeFields
+                from={dateFrom}
+                to={dateTo}
+                fromLabel="Notifications from date"
+                toLabel="Notifications to date"
+                onFromChange={setDateFrom}
+                onToChange={setDateTo}
               />
             </div>
           </div>
@@ -188,11 +178,11 @@ export default function NotificationsPage() {
                           unread ? "border-border bg-muted/40" : "border-border bg-card",
                         )}
                       >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-text-primary">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-text-primary">
                           <Icon className="h-4 w-4" />
                         </span>
                         {n.href && isSafeLocalHref(n.href) ? (
-                          <Link href={n.href} className="min-w-0 flex-1 hover:opacity-80">
+                          <Link href={n.href} onClick={() => { if (!n.readAt) void handleMarkRead(n.id); }} onAuxClick={(event) => { if (event.button === 1 && !n.readAt) void handleMarkRead(n.id); }} className="min-w-0 flex-1 hover:opacity-80">
                             {body}
                           </Link>
                         ) : (

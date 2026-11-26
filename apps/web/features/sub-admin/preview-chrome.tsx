@@ -73,14 +73,14 @@ export function DashboardPreviewChrome({ children }: { children: React.ReactNode
         </span>
       </div>
       <div className="grid lg:grid-cols-[13rem_minmax(0,1fr)]">
-        <aside className="hidden space-y-1 border-r border-white/15 bg-dash-rail p-3 lg:block">
-          <Logo href={null} tone="white" className="mb-4 w-40 sm:w-40" sizes="160px" />
+        <aside className="hidden space-y-1 border-r border-dash-border bg-dash-rail p-3 lg:block">
+          <Logo href={null} className="mb-4 w-40 sm:w-40" sizes="160px" />
           {DASHBOARD_RAIL_LABELS.map((label, index) => (
             <span
               key={label}
               className={`block truncate rounded-lg px-3 py-2 text-sm ${
                 index === 0
-                  ? "bg-brand-cta-tint font-medium text-brand-navy"
+                  ? "bg-dash-active font-medium text-brand-heading"
                   : "text-dash-foreground"
               }`}
             >

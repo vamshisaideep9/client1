@@ -13,7 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { PayoutDestinationFields } from "@/features/admin/payout-destination-fields";
+import {
+  PayoutDestinationFields,
+  type SavedDestinationTarget,
+} from "@/features/admin/payout-destination-fields";
 import type { ApiResponse } from "@/lib/api/client";
 import { apiIssuesToFieldErrors, focusFirstInvalidField } from "@/lib/form-validation";
 import {
@@ -39,6 +42,9 @@ export function MoneyPayoutDialog({
   submitLabel,
   conflictTitle,
   onSubmit,
+  savedDestinationTarget = null,
+  summary,
+  successDescription = "Awaiting a different admin's approval.",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,6 +55,9 @@ export function MoneyPayoutDialog({
   submitLabel: string;
   conflictTitle: string;
   onSubmit: (form: PayoutDestinationFormState) => Promise<ApiResponse<unknown>>;
+  savedDestinationTarget?: SavedDestinationTarget | null;
+  summary?: React.ReactNode;
+  successDescription?: string;
 }) {
   const [form, setForm] = React.useState<PayoutDestinationFormState>(EMPTY_DESTINATION);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -92,7 +101,7 @@ export function MoneyPayoutDialog({
     const response = await onSubmit(form);
     setBusy(false);
     if (response.ok) {
-      toast.success("Payout raised", { description: "Awaiting a different admin's approval." });
+      toast.success("Payout raised", { description: successDescription });
       resetAndClose();
       return;
     }
@@ -113,13 +122,21 @@ export function MoneyPayoutDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : resetAndClose())}>
-      <DialogContent ref={contentRef} className="max-w-lg">
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (busy) return;
+        if (next) onOpenChange(true);
+        else resetAndClose();
+      }}
+    >
+      <DialogContent preventOutsideClose ref={contentRef} className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {summary}
           <p className="rounded-lg bg-muted p-3 text-xs text-text-secondary">{lockedCopy}</p>
           <PayoutDestinationFields
             idPrefix={idPrefix}
@@ -127,6 +144,7 @@ export function MoneyPayoutDialog({
             errors={errors}
             onChange={set}
             disabled={busy}
+            savedDestinationTarget={savedDestinationTarget}
           />
         </div>
         <DialogFooter>

@@ -41,7 +41,7 @@ function ServiceCard({ product }: { product: ServiceDirectoryItem }) {
         {/* Decorative: the whole card is already the link to `href`, so this
             stays a span to avoid a duplicate link for screen readers. */}
         {href ? (
-          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-blue">
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-link">
             <span>Explore</span>
             <ArrowRight
               className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
@@ -68,7 +68,7 @@ function ServiceCard({ product }: { product: ServiceDirectoryItem }) {
         <Link
           href={href}
           aria-label={`Explore ${product.label}`}
-          className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-blue"
+          className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         />
       ) : null}
     </article>
@@ -92,7 +92,7 @@ export function FinancialServicesCatalogue({
       id={CATALOGUE_ANCHOR}
       // scroll-mt clears the 64px site header plus the sticky filter bar, so
       // anchored jumps land on the results rather than behind the chrome.
-      className="scroll-mt-16 border-t border-[var(--nav-border)] bg-[var(--nav-bg)]"
+      className="scroll-mt-[var(--site-header-h)] border-t border-[var(--nav-border)] bg-[var(--nav-bg)]"
     >
       <div className="mx-auto max-w-7xl px-4 pt-16 sm:px-6 sm:pt-20 lg:px-8">
         <div className="max-w-3xl">
@@ -100,8 +100,8 @@ export function FinancialServicesCatalogue({
             Explore financial services
           </h2>
           <p className="mt-4 text-lg text-text-secondary">
-            Explore our loans, insurance and credit card services. Compare available
-            provider options or enquire with our team for guidance.
+            Explore our loan and credit card services. Compare available provider
+            options or enquire with our team for guidance.
           </p>
         </div>
       </div>

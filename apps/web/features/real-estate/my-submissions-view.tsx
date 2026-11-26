@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { PropertyDetailsSummary } from "@/components/property-details-dialog";
 import Link from "next/link";
-import { Inbox, Loader2, Pencil, Trash2 } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Inbox, Loader2, Pencil, SearchX, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -29,6 +31,17 @@ import { StatusBadge, type StatusTone } from "@/features/dashboard/status-badge"
 import { useFilteredPage } from "@/features/dashboard/use-filtered-page";
 import { formatPaiseCompact } from "@/lib/format";
 import { withdrawSubmission, type Submission } from "@/lib/property-submissions-api";
+import { SubmissionFilterBar } from "./submission-filter-bar";
+import {
+  applySubmissionFilters,
+  countActiveSubmissionFilters,
+  EMPTY_SUBMISSION_FILTERS,
+  normalizeSubmissionFilters,
+  parseSubmissionFilters,
+  serializeSubmissionFilters,
+  submissionCityOptions,
+  type SubmissionFilters,
+} from "./submission-filters";
 import { useMySubmissions } from "./use-my-submissions";
 
 const STATUS_META: Record<Submission["status"], { label: string; tone: StatusTone }> = {
@@ -42,17 +55,73 @@ function mediaSummary(submission: Submission): string {
   const media = submission.media ?? [];
   const images = media.filter((asset) => asset.kind === "image").length;
   const documents = media.filter((asset) => asset.kind === "document").length;
-  const panorama = media.some((asset) => asset.kind === "panorama");
+  const panoramas = media.filter((asset) => asset.kind === "panorama").length;
   return [
     `${images} ${images === 1 ? "image" : "images"}`,
-    panorama ? "360° panorama" : null,
+    panoramas ? `${panoramas} 360° ${panoramas === 1 ? "image" : "images"}` : null,
     documents ? `${documents} private ${documents === 1 ? "document" : "documents"}` : null,
   ].filter(Boolean).join(" · ");
 }
 
+/**
+ * Filter state mirrored into the query string so a filtered view can be shared
+ * and survives a reload.
+ *
+ * Local state stays the source of truth while typing: `router.replace` lands
+ * asynchronously, so the URLs this hook wrote itself are remembered and
+ * ignored when they come back. Any other URL change (a sidebar link to the bare
+ * page, browser navigation) is adopted as new filter state.
+ */
+function useUrlSubmissionFilters(): [SubmissionFilters, (next: SubmissionFilters) => void] {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
+  const [filters, setFilters] = React.useState(() => parseSubmissionFilters(searchParams));
+  const written = React.useRef<{ pending: Set<string>; last: string | null }>({
+    pending: new Set(),
+    last: null,
+  });
+
+  React.useEffect(() => {
+    const own = written.current;
+    if (own.pending.has(query)) {
+      if (query === own.last) own.pending.clear();
+      return;
+    }
+    setFilters(parseSubmissionFilters(new URLSearchParams(query)));
+  }, [query]);
+
+  const update = React.useCallback(
+    (next: SubmissionFilters) => {
+      const normalized = normalizeSubmissionFilters(next);
+      setFilters(normalized);
+      const nextQuery = serializeSubmissionFilters(normalized).toString();
+      if (nextQuery === query && written.current.pending.size === 0) return;
+      written.current.pending.add(nextQuery);
+      written.current.last = nextQuery;
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    },
+    [pathname, query, router],
+  );
+
+  return [filters, update];
+}
+
 export function MySubmissionsView() {
   const { items, loading, error, reload } = useMySubmissions();
-  const submissionsPage = useFilteredPage(items, items.length);
+  const [filters, setFilters] = useUrlSubmissionFilters();
+  const filtered = React.useMemo(() => applySubmissionFilters(items, filters), [items, filters]);
+  const cityOptions = React.useMemo(() => {
+    const options = submissionCityOptions(items);
+    // Keep a shared link's city selectable even when no loaded row has it.
+    return filters.city === "all" || options.some((option) => option.value === filters.city)
+      ? options
+      : [...options, { value: filters.city, label: filters.city }];
+  }, [items, filters.city]);
+  const activeFilterCount = countActiveSubmissionFilters(filters);
+  const submissionsPage = useFilteredPage(filtered, filters);
+  const filterByStatus = (status: SubmissionFilters["status"]) => setFilters({ ...filters, status });
   const [active, setActive] = React.useState<Submission | null>(null);
   const [withdrawing, setWithdrawing] = React.useState<Submission | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -133,17 +202,30 @@ export function MySubmissionsView() {
       ) : (
         <>
           <MetricGrid>
-            <MetricCard label="All listings" value={items.length} icon={DASHBOARD_ICONS.propertyListings} />
-            <MetricCard label="Pending review" value={pendingCount} icon={DASHBOARD_ICONS.listingApprovals} attention={pendingCount > 0} />
-            <MetricCard label="Approved" value={approvedCount} icon={DASHBOARD_ICONS.listingApprovals} />
-            <MetricCard label="Rejected" value={rejectedCount} icon={DASHBOARD_ICONS.propertyListings} attention={rejectedCount > 0} />
+            <MetricCard label="All listings" value={items.length} icon={DASHBOARD_ICONS.propertyListings} onClick={() => filterByStatus("all")} pressed={filters.status === "all"} />
+            <MetricCard label="Pending review" value={pendingCount} icon={DASHBOARD_ICONS.listingApprovals} attention={pendingCount > 0} onClick={() => filterByStatus("pending")} pressed={filters.status === "pending"} />
+            <MetricCard label="Approved" value={approvedCount} icon={DASHBOARD_ICONS.listingApprovals} onClick={() => filterByStatus("approved")} pressed={filters.status === "approved"} />
+            <MetricCard label="Rejected" value={rejectedCount} icon={DASHBOARD_ICONS.propertyListings} attention={rejectedCount > 0} onClick={() => filterByStatus("rejected")} pressed={filters.status === "rejected"} />
           </MetricGrid>
+
+          {loading || items.length > 0 ? (
+            <SubmissionFilterBar value={filters} onChange={setFilters} cityOptions={cityOptions} />
+          ) : null}
 
           <DashboardPanel
             title="Submission history"
-            description="Media counts, review state, and reviewer feedback for your listings."
+            description={
+              loading || items.length === 0
+                ? "Media counts, review state, and reviewer feedback for your listings."
+                : `Showing ${filtered.length} of ${items.length} ${items.length === 1 ? "listing" : "listings"}.${filtered.length > 0 ? " Open one for media, review state, and reviewer feedback." : ""}`
+            }
             bodyClassName="p-0"
           >
+            {loading ? null : (
+              <p className="sr-only" role="status">
+                {items.length > 0 ? `Showing ${filtered.length} of ${items.length} listings` : ""}
+              </p>
+            )}
             {loading ? (
               <div className="p-5"><ListLoadingState rows={5} /></div>
             ) : items.length === 0 ? (
@@ -152,6 +234,19 @@ export function MySubmissionsView() {
                 title="No submissions yet"
                 description="Submit your first property listing for Admin review."
                 action={<Button asChild size="sm"><Link href="/dashboard/property-submit">Submit your first listing</Link></Button>}
+                className="m-5"
+              />
+            ) : filtered.length === 0 ? (
+              <ListEmptyState
+                icon={SearchX}
+                title="No listings match these filters"
+                description={`None of your ${items.length} listings match ${activeFilterCount === 1 ? "this filter" : `these ${activeFilterCount} filters`}. Try a wider range or clear them.`}
+                action={
+                  <Button type="button" variant="outline" size="sm" onClick={() => setFilters(EMPTY_SUBMISSION_FILTERS)}>
+                    <X className="h-4 w-4" aria-hidden="true" />
+                    Clear filters
+                  </Button>
+                }
                 className="m-5"
               />
             ) : (
@@ -174,7 +269,7 @@ export function MySubmissionsView() {
       )}
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && setActive(null)}>
-        <DialogContent>
+        <DialogContent className="!max-w-3xl rounded-2xl">
           {active ? (
             <>
               <DialogHeader>
@@ -194,6 +289,7 @@ export function MySubmissionsView() {
                 <div><dt className="text-text-secondary">Property type</dt><dd className="font-medium capitalize">{active.property_subtype?.replaceAll("_", " ") ?? active.type}</dd></div>
                 <div><dt className="text-text-secondary">Submitted</dt><dd className="font-medium">{new Date(active.created_at).toLocaleString("en-IN")}</dd></div>
               </dl>
+              <section className="border-t border-border pt-5"><h3 className="mb-4 font-semibold">Property specifications</h3><PropertyDetailsSummary details={active.structured_details} /></section>
               {active.status === "rejected" && active.review_note ? (
                 <p className="rounded-lg bg-destructive/5 p-3 text-sm text-text-secondary">
                   Reviewer note: {active.review_note}

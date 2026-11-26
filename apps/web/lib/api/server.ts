@@ -11,6 +11,7 @@
 // separate, non-NEXT_PUBLIC_, runtime-only env var instead (see
 // docker-compose.yml's comment on API_INTERNAL_URL for why the split exists).
 
+import { unstable_rethrow } from "next/navigation";
 import type { ApiResponse } from "@/lib/api/client";
 
 if (typeof window !== "undefined") {
@@ -20,7 +21,10 @@ if (typeof window !== "undefined") {
   throw new Error("lib/api/server.ts is server-only and must not be imported by client code.");
 }
 
-const SERVER_BASE_URL = (process.env.API_INTERNAL_URL ?? "http://api:8000").replace(/\/$/, "");
+const SERVER_BASE_URL = (
+  process.env.API_INTERNAL_URL ??
+  (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "http://api:8000")
+).replace(/\/$/, "");
 
 const REQUEST_TIMEOUT_MS = 5_000;
 
@@ -40,41 +44,52 @@ function errorDetail(error: unknown): string {
   return String(error);
 }
 
+/** Absolute backend URL for a server-side call (Server Components and Actions). */
+export function serverApiUrl(path: string): string {
+  return `${SERVER_BASE_URL}${path}`;
+}
+
 export async function serverFetchJson<TResponse>(
   path: string,
   {
     revalidate,
+    tags,
     expectedStatuses = [],
   }: {
     revalidate: number;
+    /** Data-cache tags, so a Server Action can clear this read on demand. */
+    tags?: readonly string[];
     expectedStatuses?: readonly number[];
   },
 ): Promise<ApiResponse<TResponse>> {
   let res: Response;
   try {
-    res = await fetch(`${SERVER_BASE_URL}${path}`, {
+    res = await fetch(serverApiUrl(path), {
       method: "GET",
       headers: { Accept: "application/json" },
       signal:
         typeof AbortSignal !== "undefined" && "timeout" in AbortSignal
           ? AbortSignal.timeout(REQUEST_TIMEOUT_MS)
           : undefined,
-      next: { revalidate },
+      next: tags?.length ? { revalidate, tags: [...tags] } : { revalidate },
     });
   } catch (error) {
+    // Next uses thrown signals to opt a route into dynamic rendering. Swallowing
+    // those as network failures can prerender an empty catalogue permanently.
+    unstable_rethrow(error);
     // Includes prod-image-build-time failures (API_INTERNAL_URL unresolved
     // inside the builder) and a stopped/unreachable API at runtime. Callers
     // must treat this the same as an empty result, never let it throw.
     // Node's TimeoutError is a DOMException. Passing it to Next's logger as a
     // raw object also prints every inherited legacy DOM error constant, burying
     // the useful name/message in a large, misleading dump.
-    console.error("serverFetchJson.network_error", path, errorDetail(error));
+    console.error("serverFetchJson.network_error", path.split("?")[0], errorDetail(error));
     return { ok: false, status: 0, error: NETWORK_ERROR };
   }
 
   if (!res.ok) {
     if (!expectedStatuses.includes(res.status)) {
-      console.error("serverFetchJson.http_error", path, res.status);
+      console.error("serverFetchJson.http_error", path.split("?")[0], res.status);
     }
     return { ok: false, status: res.status, error: errorMessage(res.status) };
   }

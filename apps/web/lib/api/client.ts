@@ -158,7 +158,8 @@ export async function apiRequest<TResponse = undefined>(
   // network failure. `credentials: "include"` carries the httponly refresh
   // cookie across the localhost:3001 -> :8000 origin boundary (CORS allows it).
   const attempt = async (token: string | null): Promise<Response | null> => {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const multipart = typeof FormData !== "undefined" && body instanceof FormData;
+    const headers: Record<string, string> = multipart ? {} : { "Content-Type": "application/json" };
     if (token) headers.Authorization = `Bearer ${token}`;
     const businessLine = readBusinessLine();
     if (businessLine) headers["X-Business-Line"] = businessLine;
@@ -167,7 +168,7 @@ export async function apiRequest<TResponse = undefined>(
         method,
         headers,
         credentials: "include",
-        body: body !== undefined ? JSON.stringify(body) : undefined,
+        body: multipart ? body : body !== undefined ? JSON.stringify(body) : undefined,
         signal: timeoutSignal(),
       });
     } catch {
@@ -192,7 +193,14 @@ export async function apiRequest<TResponse = undefined>(
     }
   }
 
-  const payload = safeParse(await res.text());
+  let payload: unknown;
+  try {
+    payload = safeParse(await res.text());
+  } catch {
+    // fetch resolves at headers; aborts/disconnects can still reject the body.
+    // Preserve the result contract without retrying a potentially accepted write.
+    return { ok: false, status: 0, error: NETWORK_ERROR };
+  }
   if (!res.ok) {
     const issues = validationIssues(payload, res.status);
     return {
@@ -217,7 +225,7 @@ export type ApiDownloadResponse =
 
 export async function apiDownload(
   path: string,
-  filename: string,
+  filename: string | ((contentType: string) => string),
 ): Promise<ApiDownloadResponse> {
   const attempt = async (token: string | null): Promise<Response | null> => {
     const headers: Record<string, string> = {};
@@ -257,7 +265,7 @@ export async function apiDownload(
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = filename;
+  link.download = typeof filename === "string" ? filename : filename(blob.type);
   document.body.appendChild(link);
   link.click();
   link.remove();

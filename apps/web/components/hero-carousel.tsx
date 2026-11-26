@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import { ChevronDown, ShieldCheck } from "lucide-react";
+import { ChevronDown, ExternalLink, ShieldCheck } from "lucide-react";
 
+import { BannerCtaLink } from "@/components/banner-cta-link";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ResponsiveArtwork } from "@/components/responsive-artwork";
+import { BannerVideo } from "@/components/banner-video";
 import {
   Carousel,
   CarouselContent,
@@ -28,17 +30,25 @@ export function HeroCarousel({
   variant = "hero",
   label = "Highlights",
   interactive = true,
+  compact = false,
 }: {
   banners: HeroBanner[];
   variant?: "hero" | "section";
   label?: string;
   interactive?: boolean;
+  // Section variant only: a shorter band for pages (Properties) where the
+  // campaign must not push the listings below the fold.
+  compact?: boolean;
 }) {
+  const isCompact = variant === "section" && compact;
   const [api, setApi] = useState<CarouselApi>();
   const [selected, setSelected] = useState(0);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(() => new Set());
   const [count, setCount] = useState(0);
   const [interactionPaused, setInteractionPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  // True while a banner video plays, so a running video is never slid away.
+  const [videoPlaying, setVideoPlaying] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -55,7 +65,11 @@ export function HeroCarousel({
     setCount(api.scrollSnapList().length);
     setSelected(api.selectedScrollSnap());
 
-    const onSelect = () => setSelected(api.selectedScrollSnap());
+    const onSelect = () => {
+      setSelected(api.selectedScrollSnap());
+      // The newly selected slide reports its own video state.
+      setVideoPlaying(false);
+    };
     api.on("select", onSelect);
     api.on("reInit", onSelect);
 
@@ -91,7 +105,7 @@ export function HeroCarousel({
   useEffect(() => {
     if (!api || banners.length <= 1) return;
 
-    if (reducedMotion || interactionPaused) return;
+    if (reducedMotion || interactionPaused || videoPlaying) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
 
@@ -112,7 +126,7 @@ export function HeroCarousel({
       clearTimeout(timeoutId);
       api.off("select", schedule);
     };
-  }, [api, banners.length, interactionPaused, reducedMotion]);
+  }, [api, banners.length, interactionPaused, reducedMotion, videoPlaying]);
 
   // Embla with zero slides is undefined behavior; the page never intends to
   // pass zero (it falls back to FALLBACK_HERO_BANNERS), but this is
@@ -169,14 +183,33 @@ export function HeroCarousel({
                     "relative w-full overflow-hidden bg-[var(--nav-bg)]",
                     variant === "hero"
                       ? "min-h-[24rem] sm:h-[calc(100svh-4rem)] sm:min-h-[420px]"
-                      : "min-h-[16rem] sm:h-[clamp(14rem,36vw,32.5rem)]",
+                      : isCompact
+                        ? "min-h-[12rem] sm:h-[clamp(10rem,22vw,18rem)]"
+                        : "min-h-[16rem] sm:h-[clamp(14rem,36vw,32.5rem)]",
                   )}
                 >
                   {/* Media layer: real landscape image fills the card; otherwise
                       a cream placeholder that matches the NavBar (no gray seam). */}
-                  {banner.image ? (
+                  {banner.youtubeId || banner.videoUrl ? (
+                    // Video replaces the artwork; the artwork becomes its poster.
+                    // Stacked under the copy on phones, the right-hand panel
+                    // (where artwork sits) from sm up.
+                    <BannerVideo
+                      youtubeId={banner.youtubeId}
+                      videoUrl={banner.videoUrl}
+                      poster={banner.image}
+                      title={banner.title}
+                      active={isSelected && interactive}
+                      onPlayingChange={isSelected ? setVideoPlaying : undefined}
+                      className="mx-5 mt-5 aspect-video rounded-xl sm:absolute sm:inset-y-0 sm:right-0 sm:z-10 sm:m-0 sm:aspect-auto sm:w-[56%] sm:rounded-none"
+                    />
+                  ) : banner.image ? (
+                    <>
+                    {!loadedImages.has(banner.image) && <Skeleton data-banner-loading aria-hidden="true" className="absolute inset-y-0 right-0 hidden w-3/5 rounded-none sm:block [mask-image:linear-gradient(to_right,transparent,black_60%)]" />}
                     <ResponsiveArtwork
                       src={banner.image}
+                      onLoad={(event) => { if (!event.currentTarget.currentSrc.startsWith("data:")) setLoadedImages((current) => new Set(current).add(banner.image!)); }}
+                      onError={() => setLoadedImages((current) => new Set(current).add(banner.image!))}
                       media="(min-width: 640px)"
                       fill
                       loading={i === 0 ? "eager" : "lazy"}
@@ -188,6 +221,7 @@ export function HeroCarousel({
                       // storage host may not resolve from the web container.
                       unoptimized={!banner.image.startsWith("/banner-templates/")}
                     />
+                    </>
                   ) : (
                     <div className="absolute inset-0 bg-[var(--nav-bg)]" />
                   )}
@@ -198,7 +232,9 @@ export function HeroCarousel({
                       "relative flex min-h-[inherit] items-center sm:h-full",
                       variant === "hero"
                         ? "px-5 py-16 sm:px-16 sm:py-10 lg:px-28"
-                        : "px-5 pb-16 pt-8 sm:px-24 sm:py-6 lg:px-28 lg:py-8",
+                        : isCompact
+                          ? "px-5 pb-12 pt-6 sm:px-24 sm:py-4 lg:px-28 lg:py-5"
+                          : "px-5 pb-16 pt-8 sm:px-24 sm:py-6 lg:px-28 lg:py-8",
                     )}
                   >
                     <div
@@ -219,7 +255,9 @@ export function HeroCarousel({
                           "font-heading font-semibold text-[var(--nav-text)]",
                           variant === "hero"
                             ? "break-words text-3xl sm:text-4xl lg:text-5xl"
-                            : "break-words text-2xl sm:line-clamp-2 lg:text-4xl",
+                            : isCompact
+                              ? "break-words text-xl sm:line-clamp-2 lg:text-3xl"
+                              : "break-words text-2xl sm:line-clamp-2 lg:text-4xl",
                         )}
                       >
                         {banner.title}
@@ -241,14 +279,18 @@ export function HeroCarousel({
                         <Button
                           asChild={interactive}
                           disabled={!interactive}
-                          className="mt-5 h-auto min-h-11 max-w-full whitespace-normal bg-[var(--nav-primary)] px-4 py-2 text-center text-sm text-white shadow-sm hover:bg-[var(--nav-primary-hover)] focus-visible:ring-[var(--nav-primary)] sm:min-h-10"
+                          className="mt-5 h-auto min-h-11 max-w-full whitespace-normal bg-[var(--nav-primary)] px-4 py-2 text-center text-sm text-white shadow-sm hover:bg-[var(--nav-primary-hover)] focus-visible:ring-ring sm:min-h-10"
                         >
-                          {interactive ? <Link
-                            href={banner.cta.href}
+                          {interactive ? <BannerCtaLink
+                            cta={{ href: banner.cta.href, external: Boolean(banner.cta.external) }}
                             tabIndex={isSelected ? undefined : -1}
                           >
                             {banner.cta.label}
-                          </Link> : banner.cta.label}
+                            {banner.cta.external ? <ExternalLink className="size-4 shrink-0" aria-hidden /> : null}
+                          </BannerCtaLink> : <>
+                            {banner.cta.label}
+                            {banner.cta.external ? <ExternalLink className="size-4 shrink-0" aria-hidden /> : null}
+                          </>}
                         </Button>
                       )}
                     </div>
@@ -272,7 +314,7 @@ export function HeroCarousel({
               variant="ghost"
               onClick={goPrev}
               className={cn(
-                "left-2 h-12 w-12 cursor-pointer rounded-full border-none bg-white/90 text-brand-blue shadow-md transition-[background-color,color,box-shadow] duration-300 hover:bg-white hover:text-brand-blue [&_svg]:size-7 sm:left-3 sm:h-14 sm:w-14 sm:[&_svg]:size-8 lg:left-4",
+                "left-2 h-12 w-12 cursor-pointer rounded-full border-none bg-transparent text-brand-link transition-[background-color,color,box-shadow] duration-300 hover:bg-accent hover:text-brand-link [&_svg]:size-7 sm:left-3 sm:h-14 sm:w-14 sm:[&_svg]:size-8 lg:left-4",
                 // Keep arrows clear of mobile copy; swipe and accessible dots
                 // provide navigation for both banner variants on phones.
                 "hidden sm:flex",
@@ -282,7 +324,7 @@ export function HeroCarousel({
               variant="ghost"
               onClick={goNext}
               className={cn(
-                "right-2 h-12 w-12 cursor-pointer rounded-full border-none bg-white/90 text-brand-blue shadow-md transition-[background-color,color,box-shadow] duration-300 hover:bg-white hover:text-brand-blue [&_svg]:size-7 sm:right-3 sm:h-14 sm:w-14 sm:[&_svg]:size-8 lg:right-4",
+                "right-2 h-12 w-12 cursor-pointer rounded-full border-none bg-transparent text-brand-link transition-[background-color,color,box-shadow] duration-300 hover:bg-accent hover:text-brand-link [&_svg]:size-7 sm:right-3 sm:h-14 sm:w-14 sm:[&_svg]:size-8 lg:right-4",
                 "hidden sm:flex",
               )}
             />
@@ -294,19 +336,34 @@ export function HeroCarousel({
         <a
           href="#page-overview"
           aria-label="Scroll to page overview"
-          className="absolute bottom-0 left-1/2 z-20 grid h-11 w-11 -translate-x-1/2 translate-y-1/2 place-items-center rounded-full border border-brand-blue/20 bg-[var(--nav-bg)] text-brand-blue shadow-[0_8px_18px_-12px_rgba(10,56,88,0.8)] transition-[background-color,box-shadow] hover:bg-[#eaf3f7] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 motion-reduce:transition-none"
+          className="absolute bottom-0 left-1/2 z-20 grid h-11 w-11 -translate-x-1/2 translate-y-1/2 place-items-center rounded-full border border-border bg-transparent text-brand-link transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
         >
           <span className="sr-only">Scroll to page overview</span>
           <ChevronDown
             aria-hidden
-            className="section-scroll-cue-first absolute h-4 w-4 -translate-y-1 text-brand-blue"
+            className="section-scroll-cue-first absolute h-4 w-4 -translate-y-1 text-brand-link"
           />
           <ChevronDown
             aria-hidden
-            className="section-scroll-cue-second absolute h-4 w-4 translate-y-1 text-brand-blue"
+            className="section-scroll-cue-second absolute h-4 w-4 translate-y-1 text-brand-link"
           />
         </a>
       ) : null}
+
+      {/* Position counter ("2/4"). Top-right keeps it clear of the centred dots
+          (up to seven 44px targets span most of a phone's width), the section
+          scroll chevron and the mid-height arrows. Rendered from banners.length
+          so it is present in server HTML before Embla reports its snaps. The
+          dots already expose position to assistive tech, so this is visual. */}
+      {banners.length > 1 && (
+        <span
+          data-slide-counter
+          aria-hidden="true"
+          className="pointer-events-none absolute right-3 top-3 z-10 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold tabular-nums text-white sm:right-4 sm:top-4"
+        >
+          {`${selected + 1}/${banners.length}`}
+        </span>
+      )}
 
       {/* Large tap targets around compact dots; the mobile section banner also
           needs these because its arrows are hidden at that width. */}
@@ -320,7 +377,7 @@ export function HeroCarousel({
               aria-label={`Go to slide ${i + 1}`}
               aria-current={i === selected}
               className={cn(
-                "flex h-11 w-11 items-center justify-center rounded-full after:h-2 after:rounded-full after:transition-[width,background-color] motion-reduce:after:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2",
+                "flex h-11 w-11 items-center justify-center rounded-full after:h-2 after:rounded-full after:transition-[width,background-color] motion-reduce:after:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 i === selected
                   ? "after:w-6 after:bg-brand-blue"
                   : "after:w-2 after:bg-brand-blue/40 hover:after:bg-brand-blue"

@@ -3,33 +3,42 @@
 // Namespace import (matching hero-carousel.tsx) so the classic JSX transform
 // used by the vitest setup can render this component in tests.
 import * as React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { X } from "lucide-react";
+import { ArrowUpRight, X } from "lucide-react";
 
+import { BannerCtaLink } from "@/components/banner-cta-link";
+import { BannerVideo } from "@/components/banner-video";
 import { Button } from "@/components/ui/button";
 import { CLOSE_BUTTON_CLASS } from "@/components/ui/close-button";
 import type { HeroBanner } from "@/lib/banners";
 import { cn } from "@/lib/utils";
 
-// Sponsored ad band between the sticky header and the full-screen homepage
-// hero, fed by the `homepage_ad` banner placement.
-//
-// The artwork occupies the leading panel and the copy sits on a soft brand-tint
-// surface beside it. The explicit Sponsored eyebrow, inset stage, accent sweep
-// and dismiss affordance keep paid content distinguishable from the first-party
-// hero without falling back to the previous white card treatment.
-//
-// Exactly one sponsor shows at a time, so this is NOT a carousel: no Embla, no
-// autoplay, no arrows, nothing to pause for reduced motion. The "one at a time"
-// rule is enforced upstream by the database --
-// uq_banners_live_placement_category permits a single LIVE banner per
-// placement, regardless of its selected category/theme.
-//
-// The next sponsor is queued rather than rotated: a Sub Admin authors a
-// replacement naming the incumbent, Admin approves it, and the cms_activation
-// job archives the incumbent and promotes the successor at its starts_at.
+// Dismissal lasts for the browser session and is keyed by banner id, so a new
+// sponsor campaign is shown again. Storage can be blocked (private mode,
+// cleared site data); every access is guarded and the ad simply reappears.
+const DISMISS_KEY_PREFIX = "dhanadhara:ad-dismissed:";
+
+function readDismissed(id: string): boolean {
+  try {
+    return window.sessionStorage.getItem(DISMISS_KEY_PREFIX + id) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeDismissed(id: string) {
+  try {
+    window.sessionStorage.setItem(DISMISS_KEY_PREFIX + id, "1");
+  } catch {
+    // Non-persistent dismissal is still honored for this page view.
+  }
+}
+
+// One sponsored card above the homepage hero, fed by the homepage_ad placement.
+// Public pages and CMS previews share this static presentation. The ad is
+// server-rendered visible; a visitor may hide it with the X control. CMS
+// previews pass dismissible={false} so reviewers always see the full card.
 export function AdStrip({
   banner,
   dismissible = true,
@@ -37,80 +46,105 @@ export function AdStrip({
   banner: HeroBanner;
   dismissible?: boolean;
 }) {
-  // Session-only, never persisted. apps/web/app/(public)/privacy/page.tsx
-  // publishes "We do not use advertising or tracking cookies", so a dismissal
-  // must not reach localStorage or a cookie. Matches announcement-banner.tsx.
+  const [failedImage, setFailedImage] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    if (dismissible && readDismissed(banner.id)) setDismissed(true);
+  }, [banner.id, dismissible]);
+
   if (dismissed) return null;
+
+  const hasVideo = Boolean(banner.youtubeId || banner.videoUrl);
 
   return (
     <section
       aria-label="Sponsored"
       data-layout="ad-strip"
-      data-presentation="split-sponsor-card"
-      className="relative isolate min-h-[152px] w-full overflow-hidden border-y border-brand-blue/15 bg-surface-sky px-1.5 py-1.5 sm:h-[176px] sm:px-2 sm:py-2 lg:h-[208px]"
+      data-presentation="static-sponsor-card"
+      className="w-full border-y border-brand-blue/10 bg-surface-sky p-2 sm:p-3"
     >
-      <div className="relative flex h-full w-full overflow-hidden rounded-xl border border-brand-blue/15 bg-surface shadow-[0_12px_28px_-22px_rgba(10,56,88,0.8)] sm:rounded-2xl">
-        <div
-          aria-hidden
-          className="sponsor-accent-sweep pointer-events-none absolute -top-px left-0 z-20 h-0.5 w-[28%] bg-brand-blue/80"
-        />
-        <div className="relative hidden shrink-0 sm:block bg-surface-sky sm:aspect-video sm:h-full sm:w-[284px] lg:w-[341px]">
-          {banner.image ? (
-            <Image
-              src={banner.image}
-              alt=""
-              fill
-              priority
-              sizes="(min-width: 1024px) 341px, (min-width: 640px) 284px, 40vw"
-              className="object-contain p-1 sm:object-cover sm:p-0"
-              // Same reasoning as hero-carousel.tsx: /_next/image is fetched
-              // server-side by the web process, which cannot resolve the
-              // browser-only public asset host that Admin-uploaded artwork points at.
-              unoptimized
+      <div
+        className={cn(
+          "relative grid overflow-hidden rounded-xl border border-[#761f3f]/35 bg-[linear-gradient(110deg,#ffffff_35%,#fcf2f5)] shadow-[0_4px_18px_rgb(118_31_63_/_0.1)] sm:rounded-2xl",
+          (banner.image || hasVideo) && "sm:grid-cols-[minmax(0,38%)_minmax(0,1fr)] lg:grid-cols-[minmax(0,32%)_minmax(0,1fr)]",
+        )}
+      >
+        {dismissible ? (
+          <button
+            type="button"
+            aria-label="Hide sponsored banner"
+            onClick={() => {
+              writeDismissed(banner.id);
+              setDismissed(true);
+            }}
+            className={cn(
+              CLOSE_BUTTON_CLASS,
+              "absolute right-1.5 top-1.5 z-10 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white/90",
+            )}
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        ) : null}
+        {hasVideo ? (
+          <div className="flex items-center justify-center bg-[#761f3f]/[0.04] p-3 sm:p-4">
+            <BannerVideo
+              youtubeId={banner.youtubeId}
+              videoUrl={banner.videoUrl}
+              poster={banner.image}
+              title={banner.title}
+              className="aspect-video w-full rounded-lg"
             />
-          ) : null}
-          <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-surface/90 to-transparent sm:w-12" />
-        </div>
-        <div className="flex min-w-0 flex-1 items-center px-4 py-3 pr-12 sm:px-8 sm:py-5 sm:pr-16 lg:px-12">
-          <div className="min-w-0 max-w-2xl">
-            <span className="inline-flex rounded-full border border-brand-blue/20 bg-brand-blue px-2.5 py-1 font-geist text-[9px] font-semibold uppercase tracking-[0.18em] text-white shadow-sm sm:text-[10px]">
-              Sponsored
-            </span>
-            {/* A <p>, never a heading: this is an ad above the hero, and a
-                heading here would put sponsored copy at the top of the page's
-                document outline. */}
-            <p className="mt-2 font-heading sm:line-clamp-2 text-base font-semibold leading-tight text-[var(--nav-text)] sm:text-xl lg:mt-3 lg:text-2xl">
+          </div>
+        ) : banner.image ? (
+          <div className="flex items-center justify-center bg-[#761f3f]/[0.04] p-3 sm:p-4">
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+              {failedImage !== banner.image ? (
+                <Image
+                  src={banner.image}
+                  alt=""
+                  fill
+                  priority
+                  sizes="(min-width: 1024px) 32vw, (min-width: 640px) 38vw, 100vw"
+                  className="object-contain"
+                  onError={() => setFailedImage(banner.image!)}
+                  // Same as the hero: uploaded artwork can use an asset host
+                  // reachable only by the browser, not Next's image server.
+                  unoptimized
+                />
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+        <div className="flex min-w-0 flex-col items-start justify-center px-5 py-5 sm:px-6 sm:py-6 lg:px-9">
+          <span className="mb-3 rounded-full bg-[#761f3f] px-3 py-1 font-geist text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
+            Sponsored
+          </span>
+          <div className="min-w-0 max-w-2xl [overflow-wrap:anywhere]">
+            {/* Keep paid copy out of the homepage's heading outline. */}
+            <p className="text-balance font-heading text-xl font-semibold leading-tight tracking-tight text-[#53182e] sm:text-2xl lg:text-3xl">
               {banner.title}
             </p>
             {banner.subtitle ? (
-              <p className="mt-1.5 hidden text-xs leading-relaxed text-text-secondary sm:line-clamp-2 sm:text-sm lg:mt-2 lg:text-base">
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-secondary lg:text-base">
                 {banner.subtitle}
               </p>
             ) : null}
-            {banner.cta ? (
-              <Button
-                asChild
-                size="sm"
-                className="mt-2.5 h-auto min-h-11 max-w-full whitespace-normal py-2 text-center sm:min-h-9 bg-[var(--nav-primary)] px-3 text-xs text-white shadow-sm hover:bg-[var(--nav-primary-hover)] focus-visible:ring-[var(--nav-primary)] sm:mt-3 sm:h-9 sm:px-5 sm:text-sm"
-              >
-                <Link href={banner.cta.href}>{banner.cta.label}</Link>
-              </Button>
-            ) : null}
           </div>
+          {banner.cta ? (
+            <Button
+              asChild
+              size="sm"
+              className="mt-4 h-auto min-h-11 max-w-full whitespace-normal bg-[#761f3f] px-5 py-2.5 text-sm text-white hover:bg-[#5c1831] focus-visible:ring-[#761f3f]"
+            >
+              <BannerCtaLink cta={{ href: banner.cta.href, external: Boolean(banner.cta.external) }}>
+                <span className="min-w-0 [overflow-wrap:anywhere]">{banner.cta.label}</span>
+                <ArrowUpRight className="size-4 shrink-0" aria-hidden />
+              </BannerCtaLink>
+            </Button>
+          ) : null}
         </div>
       </div>
-
-      {dismissible ? (
-        <button
-          type="button"
-          onClick={() => setDismissed(true)}
-          aria-label="Dismiss sponsored message"
-          className={cn("absolute right-3 top-3 z-30", CLOSE_BUTTON_CLASS)}
-        >
-          <X className="h-4 w-4" aria-hidden />
-        </button>
-      ) : null}
     </section>
   );
 }

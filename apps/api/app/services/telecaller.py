@@ -18,18 +18,24 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.enquiry import Enquiry
 from app.models.lead import Lead, LeadStatus
 from app.models.lead_activity import CallDisposition, InterestLevel, LeadActivity
-from app.models.loan import LoanApplication, LoanTxnHistory
+from app.models.loan import FinancialServiceEnquiry, LoanApplication, LoanTxnHistory
 from app.models.property_deal import PropertyDeal
+from app.models.site_visit import SiteVisit
 from app.models.task import Task, TaskStatus, TaskType
 from app.schemas.telecaller import (
     LeadActivityCreate,
+    LeadActivityRead,
+    LeadRequestSummary,
     LoanTxnCreate,
+    RequestRef,
     TaskCreate,
     TelecallerLeadUpdate,
 )
 from app.services.employee_assignment import assign_task_if_possible
+from app.services.leads import lead_number_predicates
 
 _TERMINAL_STATUSES = {LeadStatus.CONVERTED, LeadStatus.CLOSED, LeadStatus.RELEASED}
 logger = logging.getLogger(__name__)
@@ -51,10 +57,207 @@ class PropertyDealNotRealEstateLine(Exception):
     """Raised when a property deal is actioned against a non-real-estate lead."""
 
 
-async def list_assigned_leads(
-    db: AsyncSession, staff_profile_uuid: UUID, status_filter: str | None = None
+class RequestNotOnLead(Exception):
+    """Raised when a call is linked to a request that is not on the same lead."""
+
+
+# Request kind -> (model, lead_activities link column). Every model carries a
+# lead_uuid, so "belongs to this lead" is one predicate for all five.
+_REQUEST_MODELS = {
+    "loan_application": (LoanApplication, "loan_application_uuid"),
+    "financial_enquiry": (FinancialServiceEnquiry, "financial_service_enquiry_uuid"),
+    "property_enquiry": (Enquiry, "enquiry_uuid"),
+    "site_visit": (SiteVisit, "site_visit_uuid"),
+    "property_deal": (PropertyDeal, "property_deal_uuid"),
+}
+
+
+def activity_request_ref(activity: LeadActivity) -> RequestRef | None:
+    for kind, (_model, column) in _REQUEST_MODELS.items():
+        value = getattr(activity, column)
+        if value is not None:
+            return RequestRef(kind=kind, id=value)
+    return None
+
+
+def to_activity_read(activity: LeadActivity) -> LeadActivityRead:
+    return LeadActivityRead(
+        id=activity.id,
+        lead_uuid=activity.lead_uuid,
+        disposition=activity.disposition,
+        interest_level=activity.interest_level,
+        notes=activity.notes,
+        follow_up_at=activity.follow_up_at,
+        created_at=activity.created_at,
+        request=activity_request_ref(activity),
+    )
+
+
+async def ensure_request_on_lead(db: AsyncSession, lead: Lead, ref: RequestRef) -> None:
+    """The linked request must exist, be visible to the caller and hang off
+    this same lead; otherwise the call could be filed against another
+    client's application."""
+    model, _column = _REQUEST_MODELS[ref.kind]
+    found = await db.scalar(select(model.id).where(model.id == ref.id, model.lead_uuid == lead.id))
+    if found is None:
+        raise RequestNotOnLead
+
+
+async def list_financial_enquiries_for_lead(
+    db: AsyncSession, lead_id: UUID
+) -> list[FinancialServiceEnquiry]:
+    stmt = (
+        select(FinancialServiceEnquiry)
+        .where(FinancialServiceEnquiry.lead_uuid == lead_id)
+        .options(selectinload(FinancialServiceEnquiry.product))
+        .order_by(FinancialServiceEnquiry.submitted_at.desc())
+    )
+    return list((await db.scalars(stmt)).all())
+
+
+async def list_property_enquiries_for_lead(db: AsyncSession, lead_id: UUID) -> list[Enquiry]:
+    stmt = select(Enquiry).where(Enquiry.lead_uuid == lead_id).order_by(Enquiry.created_at.desc())
+    return list((await db.scalars(stmt)).all())
+
+
+async def list_site_visits_for_lead(db: AsyncSession, lead_id: UUID) -> list[SiteVisit]:
+    stmt = (
+        select(SiteVisit)
+        .where(SiteVisit.lead_uuid == lead_id)
+        .order_by(SiteVisit.created_at.desc())
+    )
+    return list((await db.scalars(stmt)).all())
+
+
+async def request_summaries_for_leads(
+    db: AsyncSession, lead_ids: list[UUID]
+) -> dict[UUID, list[LeadRequestSummary]]:
+    """Every request on each lead, newest first: what was asked for and when."""
+    by_lead: dict[UUID, list[LeadRequestSummary]] = {lead_id: [] for lead_id in lead_ids}
+    if not lead_ids:
+        return by_lead
+
+    for application in await db.scalars(
+        select(LoanApplication)
+        .where(LoanApplication.lead_uuid.in_(lead_ids))
+        .options(selectinload(LoanApplication.loan_type))
+    ):
+        by_lead[application.lead_uuid].append(
+            LeadRequestSummary(
+                kind="loan_application",
+                id=application.id,
+                title=application.loan_type.label,
+                status=application.status.value,
+                applied_at=application.opened_at,
+            )
+        )
+    for enquiry in await db.scalars(
+        select(FinancialServiceEnquiry)
+        .where(FinancialServiceEnquiry.lead_uuid.in_(lead_ids))
+        .options(selectinload(FinancialServiceEnquiry.product))
+    ):
+        by_lead[enquiry.lead_uuid].append(
+            LeadRequestSummary(
+                kind="financial_enquiry",
+                id=enquiry.id,
+                title=enquiry.product.label,
+                status=enquiry.status,
+                applied_at=enquiry.submitted_at,
+            )
+        )
+    for enquiry in await db.scalars(select(Enquiry).where(Enquiry.lead_uuid.in_(lead_ids))):
+        by_lead[enquiry.lead_uuid].append(
+            LeadRequestSummary(
+                kind="property_enquiry",
+                id=enquiry.id,
+                title=enquiry.title,
+                status=enquiry.status.value,
+                applied_at=enquiry.created_at,
+            )
+        )
+    for visit in await db.scalars(select(SiteVisit).where(SiteVisit.lead_uuid.in_(lead_ids))):
+        by_lead[visit.lead_uuid].append(
+            LeadRequestSummary(
+                kind="site_visit",
+                id=visit.id,
+                title=visit.title,
+                status=visit.status.value,
+                applied_at=visit.created_at,
+            )
+        )
+    for deal in await db.scalars(
+        select(PropertyDeal)
+        .where(PropertyDeal.lead_uuid.in_(lead_ids))
+        .options(selectinload(PropertyDeal.property))
+    ):
+        by_lead[deal.lead_uuid].append(
+            LeadRequestSummary(
+                kind="property_deal",
+                id=deal.id,
+                title=deal.property.title,
+                status=deal.status.value,
+                applied_at=deal.opened_at,
+            )
+        )
+
+    for summaries in by_lead.values():
+        summaries.sort(key=lambda summary: _aware(summary.applied_at), reverse=True)
+    return by_lead
+
+
+def _aware(value: datetime) -> datetime:
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
+async def list_client_journeys(
+    db: AsyncSession, lead: Lead, staff_profile_uuid: UUID
 ) -> list[Lead]:
-    stmt = select(Lead).where(Lead.assigned_telecaller_profile_uuid == staff_profile_uuid)
+    """Every lead for the same client and line that is assigned to this
+    Telecaller (current journey included), newest first."""
+    stmt = (
+        select(Lead)
+        .where(
+            Lead.mobile == lead.mobile,
+            Lead.business_line == lead.business_line,
+            Lead.assigned_telecaller_profile_uuid == staff_profile_uuid,
+        )
+        .order_by(Lead.created_at.desc())
+    )
+    return list((await db.scalars(stmt)).all())
+
+
+async def list_activities_for_leads(
+    db: AsyncSession, lead_ids: list[UUID], staff_profile_uuid: UUID
+) -> dict[UUID, list[LeadActivity]]:
+    """The caller's own calls on these leads (explicit filter on top of
+    lead_activities_rls, which already narrows to own rows)."""
+    by_lead: dict[UUID, list[LeadActivity]] = {lead_id: [] for lead_id in lead_ids}
+    if not lead_ids:
+        return by_lead
+    stmt = (
+        select(LeadActivity)
+        .where(
+            LeadActivity.lead_uuid.in_(lead_ids),
+            LeadActivity.telecaller_staff_profile_uuid == staff_profile_uuid,
+        )
+        .order_by(LeadActivity.created_at.desc())
+    )
+    for activity in await db.scalars(stmt):
+        by_lead[activity.lead_uuid].append(activity)
+    return by_lead
+
+
+async def list_assigned_leads(
+    db: AsyncSession,
+    staff_profile_uuid: UUID,
+    status_filter: str | None = None,
+    *,
+    lead_number: int | None = None,
+) -> list[Lead]:
+    stmt = select(Lead).where(
+        Lead.assigned_telecaller_profile_uuid == staff_profile_uuid,
+        *lead_number_predicates(lead_number),
+    )
     if status_filter is not None:
         stmt = stmt.where(Lead.status == LeadStatus(status_filter))
     stmt = stmt.order_by(Lead.updated_at.desc())
@@ -108,8 +311,13 @@ async def log_call_activity(
     db: AsyncSession, lead: Lead, staff_profile_uuid: UUID, payload: LeadActivityCreate
 ) -> LeadActivity:
     """Insert a call-attempt row. First contact on an ASSIGNED lead bumps it to
-    WORKING (design doc §6 flow 2)."""
+    WORKING (design doc §6 flow 2). A linked request must be on this lead."""
+    links: dict[str, UUID] = {}
+    if payload.request is not None:
+        await ensure_request_on_lead(db, lead, payload.request)
+        links[_REQUEST_MODELS[payload.request.kind][1]] = payload.request.id
     activity = LeadActivity(
+        **links,
         lead_uuid=lead.id,
         telecaller_staff_profile_uuid=staff_profile_uuid,
         business_line=lead.business_line,

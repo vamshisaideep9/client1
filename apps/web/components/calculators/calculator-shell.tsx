@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Calculator, ChevronRight, Home as HomeIcon } from "lucide-react";
 
+import { ClosingCtaFrame } from "@/components/closing-cta-frame";
 import { LeadDialog } from "@/components/lead-dialog";
 import { FaqDoodles } from "@/components/faq-doodles";
 import { contactHref } from "@/lib/leads";
@@ -38,10 +39,10 @@ export function CalculatorShell({
               <li>
                 <Link
                   href="/"
-                  className="group flex items-center gap-1.5 hover:text-[var(--nav-primary)]"
+                  className="group flex items-center gap-1.5 hover:text-brand-link"
                 >
                   <HomeIcon
-                    className="h-4 w-4 shrink-0 text-[var(--nav-text)] transition-colors group-hover:text-[var(--nav-primary)]"
+                    className="h-4 w-4 shrink-0 text-[var(--nav-text)] transition-colors group-hover:text-brand-link"
                     aria-hidden
                   />
                   Home
@@ -51,10 +52,10 @@ export function CalculatorShell({
               <li>
                 <Link
                   href="/calculators"
-                  className="group flex items-center gap-1.5 hover:text-[var(--nav-primary)]"
+                  className="group flex items-center gap-1.5 hover:text-brand-link"
                 >
                   <Calculator
-                    className="h-4 w-4 shrink-0 text-[var(--nav-text)] transition-colors group-hover:text-[var(--nav-primary)]"
+                    className="h-4 w-4 shrink-0 text-[var(--nav-text)] transition-colors group-hover:text-brand-link"
                     aria-hidden
                   />
                   Calculators
@@ -95,7 +96,7 @@ export function CalculatorShell({
       </section>
 
       {/* FAQ */}
-      <section className="relative w-full overflow-hidden border-t border-[var(--nav-border)] bg-[var(--nav-bg)]">
+      {def.faq.length ? <section className="relative w-full overflow-hidden border-t border-[var(--nav-border)] bg-[var(--nav-bg)]">
         <FaqDoodles />
         <div className="relative mx-auto max-w-3xl px-4 py-14 sm:px-6 lg:px-8">
           <h2 className="font-heading text-2xl font-semibold text-[var(--nav-text)] sm:text-3xl">
@@ -105,7 +106,7 @@ export function CalculatorShell({
             <CalculatorFaq items={def.faq} />
           </div>
         </div>
-      </section>
+      </section> : null}
 
       {/* Related calculators */}
       {related.length > 0 ? (
@@ -124,28 +125,17 @@ export function CalculatorShell({
       ) : null}
 
       {/* Lead CTA */}
-      <section className="w-full bg-brand-navy">
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 sm:py-20 lg:px-8">
-          <h2 className="font-heading text-3xl font-semibold text-white sm:text-4xl">
-            {def.leadCta.heading}
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-white/85">{def.leadCta.text}</p>
-          <div className="mt-8 flex justify-center">
-            <LeadDialog
-              businessLine={def.businessLine}
-              origin={def.leadOrigin}
-              triggerLabel={def.leadCta.triggerLabel}
-              submitLabel={def.leadCta.submitLabel}
-              description={def.leadCta.text}
-              triggerVariant="invert"
-              href={contactHref({
-                line: def.businessLine,
-                product: def.navLabel,
-              })}
-            />
-          </div>
-        </div>
-      </section>
+      <ClosingCtaFrame heading={def.leadCta.heading} text={def.leadCta.text}>
+        <LeadDialog
+          businessLine={def.businessLine}
+          origin={def.leadOrigin}
+          triggerLabel={def.leadCta.triggerLabel}
+          submitLabel={def.leadCta.submitLabel}
+          description={def.leadCta.text}
+          size="lg"
+          href={contactHref({ line: def.businessLine, product: def.navLabel })}
+        />
+      </ClosingCtaFrame>
     </>
   );
 }

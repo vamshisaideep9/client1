@@ -1,14 +1,14 @@
 import * as React from "react";
 import { BadgeIndianRupee, CalendarRange, FileText, Landmark, Search, SlidersHorizontal } from "lucide-react";
-import Image from "next/image";
+import { ProviderLogo } from "@/components/provider-logo";
 import Link from "next/link";
 
 import { LeadDialog } from "@/components/lead-dialog";
+import { ShareActions } from "@/components/share-actions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { isAllowedAssetUrl } from "@/lib/allowed-asset-url";
 import type { ProviderOfferQuery, ProviderType, PublicFinancialProduct, PublicProviderOfferList } from "@/lib/financial-catalog";
 import { boundedNumberFilter } from "@/lib/form-validation";
 import { contactHref } from "@/lib/leads";
@@ -107,7 +107,7 @@ export function FinancialProviderOptions({ product, query: offerQuery, offers: p
   const sort = offerQuery.sort ?? "recommended";
   const pageCount = Math.max(1, Math.ceil(offers.total / offers.page_size));
   return (
-      <section id="providers" className="scroll-mt-20 bg-[var(--nav-bg)] px-4 py-16 sm:px-6 lg:px-8">
+      <section id="providers" className="scroll-mt-[calc(var(--site-header-h)+1rem)] bg-[var(--nav-bg)] px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-3xl">
             <h2 className="font-heading text-3xl font-semibold text-foreground sm:text-4xl">
@@ -141,7 +141,7 @@ export function FinancialProviderOptions({ product, query: offerQuery, offers: p
                   id="provider-type"
                   name="provider_type"
                   defaultValue={providerType ?? ""}
-                  className="h-11 rounded-md border border-input bg-surface px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy"
+                  className="h-11 rounded-md border border-input bg-surface px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">All provider types</option>
                   {Object.entries(PROVIDER_TYPE_LABEL).map(([value, label]) => (
@@ -155,7 +155,7 @@ export function FinancialProviderOptions({ product, query: offerQuery, offers: p
                   id="provider-sort"
                   name="sort"
                   defaultValue={sort}
-                  className="h-11 rounded-md border border-input bg-surface px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy"
+                  className="h-11 rounded-md border border-input bg-surface px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="recommended">Recommended order</option>
                   <option value="interest_rate">Lowest starting rate</option>
@@ -201,88 +201,93 @@ export function FinancialProviderOptions({ product, query: offerQuery, offers: p
           </div>
 
           {offers.items.length > 0 ? (
-            <div className="mt-5 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            // One offer per row: provider identity, terms, and actions read
+            // left to right on desktop and stack on narrow screens, so offers
+            // are compared by scanning down a single column.
+            <ul className="mt-5 grid gap-5" aria-label={`${product.label} provider options`}>
               {offers.items.map((offer) => {
-                const initials = offer.provider.name
-                  .split(/\s+/)
-                  .slice(0, 2)
-                  .map((part) => part[0])
-                  .join("")
-                  .toUpperCase();
                 const minAmount = formatRupees(offer.min_amount);
                 const maxAmount = formatRupees(offer.max_amount);
                 const verifiedAt = formatVerifiedAt(offer.last_verified_at);
+                const terms = [
+                  {
+                    icon: BadgeIndianRupee,
+                    label: "Indicative amount",
+                    value: minAmount && maxAmount ? `${minAmount} - ${maxAmount}` : maxAmount ?? minAmount ?? "Ask us",
+                  },
+                  {
+                    icon: Landmark,
+                    label: "Interest range",
+                    value: offer.min_interest_rate !== null ? `${offer.min_interest_rate}%${offer.max_interest_rate !== null ? ` - ${offer.max_interest_rate}%` : "+"}` : "Ask us",
+                  },
+                  {
+                    icon: CalendarRange,
+                    label: "Tenure",
+                    value: offer.min_tenure_months !== null ? `${offer.min_tenure_months}${offer.max_tenure_months !== null ? ` - ${offer.max_tenure_months}` : "+"} months` : "Ask us",
+                  },
+                  {
+                    icon: FileText,
+                    label: "Processing fee",
+                    value: offer.processing_fee_text ?? "Provider assessed",
+                  },
+                ];
                 return (
-                  <Card key={offer.id} className="h-full overflow-hidden pt-0">
-                    <div className="flex items-center gap-4 border-b border-border bg-white px-6 py-5">
-                      <div className="relative flex h-14 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-white">
-                        {offer.provider.logo_url && isAllowedAssetUrl(offer.provider.logo_url) ? (
-                          <Image src={offer.provider.logo_url} alt={`${offer.provider.name} logo`} fill sizes="96px" className="object-contain p-2" />
-                        ) : (
-                          <span className="text-lg font-bold text-brand-blue" aria-hidden>{initials}</span>
-                        )}
+                  <li key={offer.id}>
+                    <Card
+                      data-layout="provider-offer-row"
+                      className="grid gap-0 overflow-hidden py-0 lg:grid-cols-[17rem_minmax(0,1fr)_15rem]"
+                    >
+                      <div className="flex items-center gap-4 border-b border-border px-5 py-5 lg:flex-col lg:items-start lg:justify-center lg:border-b-0 lg:border-r">
+                        <ProviderLogo url={offer.provider.logo_url} sizes="96px" className="h-14 w-24 shrink-0" />
+                        <div className="min-w-0">
+                          <h3 className="font-heading text-lg font-semibold text-foreground [overflow-wrap:anywhere]">{offer.provider.name}</h3>
+                          <p className="text-xs text-text-secondary">{PROVIDER_TYPE_LABEL[offer.provider.provider_type]}</p>
+                          {verifiedAt ? (
+                            <p className="mt-1 text-xs text-text-secondary">Terms verified {verifiedAt}</p>
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h3 className="truncate font-heading text-lg font-semibold text-foreground">{offer.provider.name}</h3>
-                        <p className="text-xs text-text-secondary">{PROVIDER_TYPE_LABEL[offer.provider.provider_type]}</p>
-                        {verifiedAt ? (
-                          <p className="mt-1 text-xs text-text-secondary">
-                            Terms verified {verifiedAt}
-                          </p>
+                      <div className="min-w-0 px-5 py-5">
+                        <p className="font-heading text-xl font-semibold text-foreground [overflow-wrap:anywhere]">{offer.offer_name}</p>
+                        {offer.summary ? <p className="mt-1 text-sm leading-6 text-text-secondary">{offer.summary}</p> : null}
+                        <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                          {terms.map(({ icon: Icon, label, value }) => (
+                            <div key={label} className="rounded-xl bg-surface p-3">
+                              <Icon className="h-4 w-4 text-brand-link" aria-hidden />
+                              <dt className="mt-2 text-xs text-text-secondary">{label}</dt>
+                              <dd className="mt-1 font-semibold text-foreground [overflow-wrap:anywhere]">{value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                        {offer.eligibility_summary ? (
+                          <div className="mt-3 rounded-xl border border-border bg-[var(--nav-bg)] p-3">
+                            <p className="text-xs font-semibold text-foreground">Eligibility note</p>
+                            <p className="mt-1 text-sm leading-6 text-text-secondary">{offer.eligibility_summary}</p>
+                          </div>
                         ) : null}
                       </div>
-                    </div>
-                    <CardHeader>
-                      <CardTitle className="font-heading text-xl">{offer.offer_name}</CardTitle>
-                      {offer.summary ? <p className="text-sm leading-6 text-text-secondary">{offer.summary}</p> : null}
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="rounded-xl bg-surface p-3">
-                        <BadgeIndianRupee className="h-4 w-4 text-brand-blue" aria-hidden />
-                        <p className="mt-2 text-xs text-text-secondary">Indicative amount</p>
-                        <p className="mt-1 font-semibold text-foreground">{minAmount && maxAmount ? `${minAmount} - ${maxAmount}` : maxAmount ?? minAmount ?? "Ask us"}</p>
+                      <div className="flex flex-col justify-center gap-2 border-t border-border px-5 py-5 lg:border-l lg:border-t-0">
+                        <Button asChild className="w-full">
+                          <Link href={financialApplicationHref(product.slug, offer.id)}>Apply with this option</Link>
+                        </Button>
+                        <LeadDialog
+                          businessLine="loans"
+                          product={`${product.label} - ${offer.provider.name}`}
+                          triggerLabel="Enquire about this option"
+                          triggerVariant="outline"
+                          origin="provider-offer-card"
+                          href={contactHref({ line: "loans", product: `${product.label} - ${offer.provider.name}` })}
+                        />
+                        <ShareActions
+                          path={`${financialServiceHref(product.slug)}#providers`}
+                          title={`${offer.offer_name} from ${offer.provider.name}`}
+                        />
                       </div>
-                      <div className="rounded-xl bg-surface p-3">
-                        <Landmark className="h-4 w-4 text-brand-blue" aria-hidden />
-                        <p className="mt-2 text-xs text-text-secondary">Interest range</p>
-                        <p className="mt-1 font-semibold text-foreground">{offer.min_interest_rate !== null ? `${offer.min_interest_rate}%${offer.max_interest_rate !== null ? ` - ${offer.max_interest_rate}%` : "+"}` : "Ask us"}</p>
-                      </div>
-                      <div className="rounded-xl bg-surface p-3">
-                        <CalendarRange className="h-4 w-4 text-brand-blue" aria-hidden />
-                        <p className="mt-2 text-xs text-text-secondary">Tenure</p>
-                        <p className="mt-1 font-semibold text-foreground">{offer.min_tenure_months !== null ? `${offer.min_tenure_months}${offer.max_tenure_months !== null ? ` - ${offer.max_tenure_months}` : "+"} months` : "Ask us"}</p>
-                      </div>
-                      <div className="rounded-xl bg-surface p-3">
-                        <FileText className="h-4 w-4 text-brand-blue" aria-hidden />
-                        <p className="mt-2 text-xs text-text-secondary">Processing fee</p>
-                        <p className="mt-1 font-semibold text-foreground">{offer.processing_fee_text ?? "Provider assessed"}</p>
-                      </div>
-                      {offer.eligibility_summary ? (
-                        <div className="col-span-2 rounded-xl border border-border bg-[var(--nav-bg)] p-3">
-                          <p className="text-xs font-semibold text-foreground">Eligibility note</p>
-                          <p className="mt-1 text-sm leading-6 text-text-secondary">
-                            {offer.eligibility_summary}
-                          </p>
-                        </div>
-                      ) : null}
-                    </CardContent>
-                    <CardFooter className="mt-auto flex flex-col gap-2">
-                      <Button asChild className="w-full">
-                        <Link href={financialApplicationHref(product.slug, offer.id)}>Apply with this option</Link>
-                      </Button>
-                      <LeadDialog
-                        businessLine="loans"
-                        product={`${product.label} - ${offer.provider.name}`}
-                        triggerLabel="Enquire about this option"
-                        triggerVariant="outline"
-                        origin="provider-offer-card"
-                        href={contactHref({ line: "loans", product: `${product.label} - ${offer.provider.name}` })}
-                      />
-                    </CardFooter>
-                  </Card>
+                    </Card>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           ) : (
             <div className="mt-5 rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center">
               <h3 className="font-heading text-xl font-semibold text-foreground">{applicationAvailable ? "No published provider options match yet" : "No provider options published yet"}</h3>

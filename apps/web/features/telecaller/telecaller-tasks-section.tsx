@@ -8,13 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FieldError, RequiredIndicator } from "@/components/ui/field-error";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { LongNoteField } from "@/features/dashboard/long-note-field";
 import { DashboardPanel } from "@/features/dashboard/dashboard-ui";
 import type { ApiResponse } from "@/lib/api/client";
 import { apiIssuesToFieldErrors, focusFirstInvalidField } from "@/lib/form-validation";
 import type { Task, TaskCreate } from "@/lib/telecaller-api";
 
 import { validateFieldTask } from "./telecaller-lead-detail-validation";
+import { StaffCounterpart } from "@/features/dashboard/staff-counterpart";
 
 const STATUS_LABEL: Record<string, string> = {
   unassigned: "Unassigned",
@@ -96,16 +97,16 @@ export function TelecallerTasksSection({
   return (
     <DashboardPanel
       title="Field tasks"
-      description="Raise a document-collection visit for automatic Employee assignment."
+      description="Raise a document-collection visit for automatic Officer assignment."
     >
       <form ref={formRef} className="space-y-4" noValidate onSubmit={(e) => void onSubmit(e)}>
         <div>
           <Label htmlFor="task-notes">What&apos;s needed<RequiredIndicator /></Label>
-          <Textarea
+          <LongNoteField
             id="task-notes"
+            counterId="task-notes-count"
             name="task_notes"
             rows={2}
-            maxLength={1000}
             value={notes}
             onChange={(e) => {
               setNotes(e.target.value);
@@ -153,6 +154,7 @@ export function TelecallerTasksSection({
               >
                 <div>
                   <p className="text-sm text-text-primary">{task.notes || "Document collection"}</p>
+                  <StaffCounterpart label="Officer" name={task.assigned_employee_name} code={task.assigned_employee_code} fallback={task.assigned_employee_profile_uuid ? "Not available" : "Awaiting assignment"} />
                   {task.due_at ? (
                     <p className="mt-1 text-xs text-text-secondary">
                       Due: {formatDateTime(task.due_at)}

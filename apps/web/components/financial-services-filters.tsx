@@ -39,7 +39,7 @@ import { cn } from "@/lib/utils";
 const DEBOUNCE_MS = 300;
 
 const PILL_BASE =
-  "inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-surface motion-reduce:transition-none";
+  "inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface motion-reduce:transition-none";
 
 /** Focus shortcut. Matches the "/" convention used by developer tooling and
  *  is ignored while the reader is typing anywhere else on the page. */
@@ -202,7 +202,7 @@ export function FinancialServicesFilters({
         apply(text);
       }}
       // Solid white chrome keeps search and categories legible over the results.
-      className="sticky top-16 z-30 mt-8 border-y border-border bg-surface shadow-sm sm:mt-10"
+      className="sticky top-[var(--site-header-h)] z-30 mt-8 border-y border-border bg-surface shadow-sm sm:mt-10"
     >
       {/* Preserves the active category when the form falls back to a plain
           GET submission (no JS). With JS, onSubmit takes over first. */}
@@ -212,7 +212,7 @@ export function FinancialServicesFilters({
         <div className="group/search relative min-w-0 lg:w-[25rem] lg:shrink-0">
           <span
             aria-hidden
-            className="pointer-events-none absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-brand-cta-tint text-brand-navy transition-colors duration-150 group-focus-within/search:bg-brand-navy group-focus-within/search:text-surface motion-reduce:transition-none"
+            className="pointer-events-none absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-brand-link"
           >
             <Search className="h-4 w-4" />
           </span>
@@ -226,8 +226,8 @@ export function FinancialServicesFilters({
             onChange={(event) => setText(event.target.value)}
             aria-label="Search financial services"
             aria-keyshortcuts={FOCUS_KEY}
-            placeholder="Search personal loan, insurance, cards..."
-            className="h-12 w-full rounded-xl border border-input bg-surface pl-12 pr-12 text-base text-brand-navy shadow-xs transition-[border-color,box-shadow] duration-150 placeholder:text-text-secondary hover:border-brand-blue focus:outline-none focus-visible:border-brand-blue focus-visible:ring-2 focus-visible:ring-brand-blue/30 motion-reduce:transition-none [&::-webkit-search-cancel-button]:appearance-none"
+            placeholder="Search personal loan, home loan, cards..."
+            className="h-12 w-full rounded-xl border border-input bg-surface pl-12 pr-12 text-base text-brand-heading shadow-xs transition-[border-color,box-shadow] duration-150 placeholder:text-text-secondary hover:border-brand-blue focus:outline-none focus-visible:border-brand-blue focus-visible:ring-2 focus-visible:ring-ring/30 motion-reduce:transition-none [&::-webkit-search-cancel-button]:appearance-none"
           />
           {text ? (
             <button
@@ -282,8 +282,8 @@ export function FinancialServicesFilters({
                   className={cn(
                     PILL_BASE,
                     active
-                      ? "border-brand-navy bg-brand-navy text-surface"
-                      : "border-border bg-surface-sky text-brand-navy",
+                      ? "border-brand-navy bg-brand-navy text-white"
+                      : "border-border bg-surface-sky text-brand-heading",
                     !active &&
                       !empty &&
                       "hover:border-brand-blue hover:bg-brand-cta-tint",
@@ -294,7 +294,7 @@ export function FinancialServicesFilters({
                   <span
                     className={cn(
                       "tabular-nums text-xs font-semibold",
-                      active ? "text-dash-foreground" : "text-text-secondary",
+                      active ? "text-white" : "text-text-secondary",
                     )}
                   >
                     {count}

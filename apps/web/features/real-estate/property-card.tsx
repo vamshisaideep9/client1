@@ -6,11 +6,14 @@ import Link from "next/link";
 import { Bookmark, Check, MapPin, Scale } from "lucide-react";
 import { toast } from "sonner";
 
+import { ShareActions } from "@/components/share-actions";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBookmarks, useCompare } from "@/features/real-estate/store";
+import { listingSaleType } from "@/lib/properties";
 import type { REListing } from "@/lib/real-estate";
 import { isReraVerified, resolvePropertyArtwork } from "@/lib/property-artwork";
 import { cn } from "@/lib/utils";
+import { PropertyPreviewDialog } from "./property-preview-dialog";
 
 // Category rails and result grids share one browse-first card. Generated
 // artwork remains a render-only fallback and is never represented as uploaded
@@ -38,15 +41,18 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
   return (
     <Card
       className={cn(
-        "flex h-[408px] flex-col gap-0 overflow-hidden pt-0",
+        "flex h-full min-h-[408px] flex-col gap-0 overflow-hidden py-0",
         fluid ? "w-full" : "w-[280px] shrink-0 sm:w-[300px]",
       )}
     >
-      <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-loans-soft/50">
+      {/* `isolate` keeps the overlay z-indexes below inside this card. Without
+          it the action buttons joined the page stacking order and painted over
+          the sticky app header and search bar while scrolling. */}
+      <div className="relative isolate aspect-video w-full shrink-0 overflow-hidden bg-loans-soft/50">
         <Link
           href={`/dashboard/properties/${listing.id}`}
           aria-label={`View ${listing.title}`}
-          className="absolute inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-blue"
+          className="absolute inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         >
           <ListingArtwork listing={listing} sizes="(min-width: 640px) 300px, 280px" />
           {reraVerified ? <ReraVerifiedCorner /> : null}
@@ -66,8 +72,8 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
             aria-pressed={bookmarked}
             title={bookmarked ? "Remove bookmark" : "Bookmark this property"}
             className={cn(
-              "grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-card/95 text-text-secondary shadow-sm ring-1 ring-border transition-colors hover:text-brand-cta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue",
-              bookmarked && "text-brand-cta",
+              "grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-card/95 text-text-secondary shadow-sm ring-1 ring-border transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              bookmarked && "text-brand-link",
             )}
           >
             <Bookmark className={cn("h-4 w-4", bookmarked && "fill-current")} aria-hidden="true" />
@@ -79,8 +85,8 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
             aria-pressed={inCompare}
             title={inCompare ? "Remove from compare" : "Add to compare"}
             className={cn(
-              "grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-card/95 text-text-secondary shadow-sm ring-1 ring-border transition-colors hover:text-brand-cta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue",
-              inCompare && "text-brand-cta",
+              "grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-card/95 text-text-secondary shadow-sm ring-1 ring-border transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              inCompare && "text-brand-link",
             )}
           >
             <Scale className="h-4 w-4" aria-hidden="true" />
@@ -93,7 +99,12 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
           </span>
           {listing.listingIntent === "rent" ? (
             <span className="rounded-full bg-amber-100/95 px-2.5 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
-              For rent
+              For rent / lease
+            </span>
+          ) : null}
+          {listing.listingIntent === "sale" && listingSaleType(listing.structuredDetails) === "resale" ? (
+            <span className="rounded-full bg-sky-100/95 px-2.5 py-1 text-xs font-semibold text-sky-900 ring-1 ring-sky-200">
+              Resale
             </span>
           ) : null}
         </span>
@@ -103,7 +114,7 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
         <CardTitle className="min-h-11 font-heading text-lg leading-snug text-foreground">
           <Link
             href={`/dashboard/properties/${listing.id}`}
-            className="line-clamp-2 rounded-sm transition-colors hover:text-brand-cta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+            className="line-clamp-2 rounded-sm transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {listing.title}
           </Link>
@@ -114,7 +125,7 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
         </p>
       </CardHeader>
 
-      <CardContent className="flex min-h-0 flex-1 flex-col px-4 pb-3 pt-3">
+      <CardContent className="flex flex-1 flex-col px-4 pb-4 pt-3">
         {facts.length ? (
           <ul className="flex flex-wrap gap-1.5" aria-label="Property highlights">
             {facts.map((fact) => (
@@ -127,18 +138,18 @@ export function PropertyCard({ listing, fluid = false }: { listing: REListing; f
             ))}
           </ul>
         ) : null}
-        <p className="mt-auto pt-3 font-heading text-xl font-semibold text-brand-blue">
+        <p className="mt-auto break-words pt-4 font-heading text-xl font-semibold text-brand-link">
           {listing.price}
         </p>
       </CardContent>
 
-      <CardFooter className="px-4 pb-4 pt-0">
-        <Link
-          href={`/dashboard/properties/${listing.id}`}
-          className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-brand-blue px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-blue/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
-        >
-          View details
-        </Link>
+      <CardFooter className="flex shrink-0 flex-col gap-2 px-4 pb-4 pt-0">
+        <PropertyPreviewDialog listing={listing} />
+        {/* Shares the public listing page so recipients need no account. */}
+        <ShareActions
+          path={`/real-estate/properties/${listing.id}`}
+          title={`${listing.title}, ${listing.locality}`}
+        />
       </CardFooter>
     </Card>
   );
@@ -148,7 +159,7 @@ export function PropertyMiniCard({ listing }: { listing: REListing }) {
   return (
     <Link
       href={`/dashboard/properties/${listing.id}`}
-      className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:border-brand-cta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+      className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:border-brand-cta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="relative hidden h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-loans-soft/50 lg:block">
         <ListingArtwork listing={listing} sizes="64px" />
@@ -157,7 +168,7 @@ export function PropertyMiniCard({ listing }: { listing: REListing }) {
         <p className="truncate font-medium text-text-primary">{listing.title}</p>
         <p className="truncate text-xs text-text-secondary">{listing.location}</p>
       </div>
-      <p className="shrink-0 font-heading text-sm font-semibold text-brand-blue">{listing.price}</p>
+      <p className="shrink-0 font-heading text-sm font-semibold text-brand-link">{listing.price}</p>
     </Link>
   );
 }

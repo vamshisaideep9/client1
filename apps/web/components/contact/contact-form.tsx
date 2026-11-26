@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { submitLead, type LeadTopic } from "@/lib/leads";
 import { isValidMobile, normalizeMobile } from "@/lib/phone";
+import type { WebsiteContent } from "@/lib/website-content";
 
 // Standalone enquiry form for the /contact page. Same field idiom as the
 // agent application form (IconInput, MobileInput, h-12 controls) and the same
@@ -29,6 +30,7 @@ export function ContactForm({
   initialProduct,
   invitationToken,
   propertyRef,
+  copy,
 }: {
   // Prefilled from the /contact query string when a visitor arrives via an
   // Enquire / callback CTA, so the telecaller sees what they came for.
@@ -36,6 +38,7 @@ export function ContactForm({
   initialProduct?: string;
   invitationToken?: string;
   propertyRef?: string;
+  copy?: WebsiteContent["form_copy"];
 } = {}) {
   const [topic, setTopic] = useState<LeadTopic>(initialLine ?? "loans");
   // When the visitor arrived via a category-specific CTA (?line=...), lock the
@@ -108,7 +111,7 @@ export function ContactForm({
   if (done) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-10 text-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--nav-tint)] text-[var(--nav-primary)]">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full text-brand-link">
           <Check className="h-7 w-7" aria-hidden />
         </span>
         <h3 className="font-heading text-xl font-semibold text-foreground">
@@ -121,7 +124,7 @@ export function ContactForm({
           type="button"
           variant="outline"
           onClick={() => setDone(false)}
-          className="border-[var(--nav-primary)] text-[var(--nav-primary)] hover:bg-[var(--nav-tint)] hover:text-[var(--nav-primary-hover)]"
+          className="border-[var(--nav-primary)] text-brand-link hover:bg-[var(--nav-tint)] hover:text-[var(--nav-primary-hover)]"
         >
           Send another message
         </Button>
@@ -147,15 +150,15 @@ export function ContactForm({
 
       {initialProduct ? (
         <div className="grid gap-1.5">
-          <span className="text-sm text-text-secondary">Enquiring about</span>
-          <span className="inline-flex w-fit max-w-full items-center rounded-full bg-[var(--nav-tint)] px-3 py-1 text-sm font-medium text-[var(--nav-primary)]">
+          <span className="text-sm text-text-secondary">{copy?.product || "Enquiring about"}</span>
+          <span className="inline-flex w-fit max-w-full items-center rounded-full bg-[var(--nav-tint)] px-3 py-1 text-sm font-medium text-brand-link">
             {initialProduct}
           </span>
         </div>
       ) : null}
 
       <div className="grid gap-2">
-        <Label id="contact-line-label">What is this about?</Label>
+        <Label id="contact-line-label">{copy?.topic || "What is this about?"}</Label>
         {locked ? (
           <div
             aria-labelledby="contact-line-label"
@@ -178,7 +181,7 @@ export function ContactForm({
                 disabled={submitting}
                 className={cn(
                   "h-12 cursor-pointer rounded-lg border px-2 text-sm font-medium transition",
-                  "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--nav-primary)]/50",
+                  "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
                   "disabled:cursor-default disabled:opacity-50",
                   topic === option.value
                     ? "border-[var(--nav-primary)] bg-[var(--nav-primary)] text-white"
@@ -193,7 +196,7 @@ export function ContactForm({
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="contact-name">Name</Label>
+        <Label htmlFor="contact-name">{copy?.name || "Name"}</Label>
         <IconInput
           id="contact-name"
           icon={User}
@@ -213,7 +216,7 @@ export function ContactForm({
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="contact-mobile">Mobile number</Label>
+        <Label htmlFor="contact-mobile">{copy?.mobile || "Mobile number"}</Label>
         <MobileInput
           id="contact-mobile"
           value={mobile}
@@ -233,7 +236,7 @@ export function ContactForm({
 
       <div className="grid gap-2">
         <Label htmlFor="contact-email">
-          Email <span className="text-text-secondary">(optional)</span>
+          {copy?.email || "Email"} <span className="text-text-secondary">(optional)</span>
         </Label>
         <IconInput
           id="contact-email"
@@ -256,7 +259,7 @@ export function ContactForm({
 
       <div className="grid gap-2">
         <Label htmlFor="contact-message">
-          Message <span className="text-text-secondary">(optional)</span>
+          {copy?.message || "Message"} <span className="text-text-secondary">(optional)</span>
         </Label>
         <Textarea
           id="contact-message"
@@ -272,10 +275,10 @@ export function ContactForm({
       <Button
         type="submit"
         disabled={submitting}
-        className="h-12 bg-[var(--nav-primary)] text-base text-white hover:bg-[var(--nav-primary-hover)] focus-visible:ring-[var(--nav-primary)]"
+        className="h-12 bg-[var(--nav-primary)] text-base text-white hover:bg-[var(--nav-primary-hover)] focus-visible:ring-ring"
       >
         {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-        {submitting ? "Sending..." : "Send message"}
+        {submitting ? "Sending..." : copy?.submit || "Send message"}
       </Button>
     </form>
   );

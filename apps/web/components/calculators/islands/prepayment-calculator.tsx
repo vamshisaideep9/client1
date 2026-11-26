@@ -40,8 +40,8 @@ export function PrepaymentCalculator() {
   );
 
   const amount = clamp(state.amount, 100000, 50000000);
-  const rate = clamp(state.rate, 5, 18);
-  const months = clamp(state.months, 12, 360);
+  const rate = clamp(state.rate, 5, 34);
+  const months = clamp(state.months, 12, 420);
   const at = clamp(state.at, 1, months);
   const lump = clamp(state.lump, 0, amount);
 
@@ -80,7 +80,7 @@ export function PrepaymentCalculator() {
           suffix="% p.a."
           value={rate}
           min={5}
-          max={18}
+          max={34}
           step={0.05}
           onChange={(v) => setState({ rate: v })}
           helper={`${rate.toFixed(2)}% per year`}
@@ -92,7 +92,7 @@ export function PrepaymentCalculator() {
           suffix="months"
           value={months}
           min={12}
-          max={360}
+          max={420}
           step={1}
           onChange={(v) => setState({ months: Math.round(v) })}
           helper={tenureHelper(months)}
@@ -135,7 +135,7 @@ export function PrepaymentCalculator() {
         />
 
         {result.guardTriggered ? (
-          <div className="rounded-xl border border-[var(--nav-border)] bg-white p-5">
+          <div className="rounded-xl border border-[var(--nav-border)] bg-card p-5">
             <p className="text-sm text-text-secondary">
               The EMI here is too low to model a prepayment cleanly. Try a larger loan, a shorter
               tenure, or a smaller lump sum.
@@ -144,7 +144,7 @@ export function PrepaymentCalculator() {
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="min-w-0 rounded-xl border border-[var(--nav-border)] bg-white p-5">
+              <div className="min-w-0 rounded-xl border border-[var(--nav-border)] bg-card p-5">
                 <p className="font-heading text-base font-semibold text-[var(--nav-text)]">
                   Option A: Reduce tenure
                 </p>
@@ -159,12 +159,12 @@ export function PrepaymentCalculator() {
                   <p className="text-sm text-text-secondary">Interest saved</p>
                   <InfoHint label="Interest saved" text={INFO.interestSavedTenure} />
                 </div>
-                <p className="mt-1 whitespace-nowrap font-heading text-xl font-semibold tabular-nums text-brand-blue">
+                <p className="mt-1 whitespace-nowrap font-heading text-xl font-semibold tabular-nums text-brand-link">
                   {formatINR(result.reduceTenure.interestSaved)}
                 </p>
               </div>
 
-              <div className="min-w-0 rounded-xl border border-[var(--nav-border)] bg-white p-5">
+              <div className="min-w-0 rounded-xl border border-[var(--nav-border)] bg-card p-5">
                 <p className="font-heading text-base font-semibold text-[var(--nav-text)]">
                   Option B: Reduce EMI
                 </p>
@@ -179,7 +179,7 @@ export function PrepaymentCalculator() {
                   <p className="text-sm text-text-secondary">Interest saved</p>
                   <InfoHint label="Interest saved" text={INFO.interestSavedEmi} />
                 </div>
-                <p className="mt-1 whitespace-nowrap font-heading text-xl font-semibold tabular-nums text-brand-blue">
+                <p className="mt-1 whitespace-nowrap font-heading text-xl font-semibold tabular-nums text-brand-link">
                   {formatINR(result.reduceEmi.interestSaved)}
                 </p>
               </div>

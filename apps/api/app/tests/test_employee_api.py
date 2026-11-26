@@ -379,3 +379,249 @@ async def test_home_summary_shape(client: AsyncClient, monkeypatch: pytest.Monke
     assert len(body["tasks_today"]) == 2  # overdue + due-later-today both fall on "today"
     assert body["counts_by_status"].get("assigned") == 3
     assert body["counts_by_type"].get("document_collection") == 3
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("line", ["loans", "real_estate"])
+@pytest.mark.parametrize("task_type", ["document_collection", "background_check", "property_visit"])
+async def test_reopen_own_cancelled_task_preserves_work_and_audits(
+    client: AsyncClient, line: str, task_type: str
+) -> None:
+    from sqlalchemy import text
+
+    import app.db.session as sessions
+
+    auth, staff = await _seed_employee(line)
+    due = datetime.now(UTC) + timedelta(days=2)
+    task_id = await _seed_task(line, staff, task_type=task_type, status="cancelled", due_at=due)
+    async with sessions.AsyncSessionLocal() as db:
+        await db.execute(
+            text("UPDATE tasks SET notes='Follow-up arranged' WHERE id=:id"),
+            {"id": uuid.UUID(task_id)},
+        )
+        if task_type == "document_collection":
+            from app.models.task import TaskDocument
+
+            db.add(
+                TaskDocument(
+                    task_uuid=uuid.UUID(task_id),
+                    doc_type="synthetic-evidence",
+                    object_key=f"tasks/{task_id}/synthetic-document.pdf",
+                    verified=True,
+                    review_note="Reviewed synthetic evidence",
+                )
+            )
+        await db.commit()
+    headers = {"Authorization": f"Bearer {_employee_token(auth, staff, line)}"}
+    response = await client.post(
+        f"/api/v1/employee/tasks/{task_id}/reopen",
+        headers=headers,
+        json={"reason": "  Cancelled by mistake  "},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "assigned"
+    assert response.json()["notes"] == "Follow-up arranged"
+    assert datetime.fromisoformat(response.json()["due_at"]) == due
+    async with sessions.AsyncSessionLocal() as db:
+        if task_type == "document_collection":
+            document = (
+                await db.execute(
+                    text("SELECT verified, review_note FROM task_documents WHERE task_uuid=:id"),
+                    {"id": uuid.UUID(task_id)},
+                )
+            ).one()
+            assert document == (True, "Reviewed synthetic evidence")
+        audit = (
+            await db.execute(
+                text(
+                    "SELECT actor_uuid, detail FROM audit_log WHERE entity_uuid=:id AND "
+                    "action='employee_task_reopened'"
+                ),
+                {"id": uuid.UUID(task_id)},
+            )
+        ).one()
+        assert str(audit[0]) == auth
+        assert audit[1] == {
+            "from_status": "cancelled",
+            "to_status": "assigned",
+            "reason": "Cancelled by mistake",
+        }
+    repeated = await client.post(
+        f"/api/v1/employee/tasks/{task_id}/reopen",
+        headers=headers,
+        json={"reason": "Retry request"},
+    )
+    assert repeated.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_reopen_rejects_other_assignment_line_completed_and_pii(client: AsyncClient) -> None:
+    auth, staff = await _seed_employee("loans")
+    _, other_staff = await _seed_employee("loans")
+    _, real_estate_staff = await _seed_employee("real_estate")
+    headers = {"Authorization": f"Bearer {_employee_token(auth, staff)}"}
+    for line, assignee in [("loans", other_staff), ("real_estate", real_estate_staff)]:
+        task = await _seed_task(line, assignee, status="cancelled")
+        assert (
+            await client.post(
+                f"/api/v1/employee/tasks/{task}/reopen",
+                headers=headers,
+                json={"reason": "Cancelled by mistake"},
+            )
+        ).status_code == 404
+    completed = await _seed_task("loans", staff, status="completed")
+    assert (
+        await client.post(
+            f"/api/v1/employee/tasks/{completed}/reopen",
+            headers=headers,
+            json={"reason": "Cancelled by mistake"},
+        )
+    ).status_code == 409
+    cancelled = await _seed_task("loans", staff, status="cancelled")
+    for reason in ["  ", "ab", "Call 9876543210", "Email test@example.com", "x" * 501]:
+        response = await client.post(
+            f"/api/v1/employee/tasks/{cancelled}/reopen", headers=headers, json={"reason": reason}
+        )
+        assert response.status_code == 422, response.text
+    assert (
+        await client.post(
+            f"/api/v1/employee/tasks/{cancelled}/reopen", json={"reason": "Cancelled by mistake"}
+        )
+    ).status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_concurrent_reopening_has_one_transition_and_audit(client: AsyncClient) -> None:
+    import asyncio
+
+    from sqlalchemy import text
+
+    import app.db.session as sessions
+
+    auth, staff = await _seed_employee()
+    task_id = await _seed_task("loans", staff, status="cancelled")
+    headers = {"Authorization": f"Bearer {_employee_token(auth, staff)}"}
+    responses = await asyncio.gather(
+        *[
+            client.post(
+                f"/api/v1/employee/tasks/{task_id}/reopen",
+                headers=headers,
+                json={"reason": "Cancelled by mistake"},
+            )
+            for _ in range(2)
+        ]
+    )
+    assert sorted(r.status_code for r in responses) == [200, 409]
+    async with sessions.AsyncSessionLocal() as db:
+        assert (
+            await db.scalar(
+                text(
+                    "SELECT count(*) FROM audit_log WHERE entity_uuid=:id AND "
+                    "action='employee_task_reopened'"
+                ),
+                {"id": uuid.UUID(task_id)},
+            )
+            == 1
+        )
+
+
+@pytest.mark.asyncio
+async def test_reopen_rolls_back_when_audit_cannot_be_recorded(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from sqlalchemy import text
+
+    import app.db.session as sessions
+    import app.services.employee as employee_service
+
+    auth, staff = await _seed_employee()
+    task_id = await _seed_task("loans", staff, status="cancelled")
+
+    async def reject_audit(*args, **kwargs):
+        raise RuntimeError("Synthetic audit failure")
+
+    monkeypatch.setattr(employee_service, "record_audit", reject_audit)
+    with pytest.raises(RuntimeError, match="Synthetic audit failure"):
+        await client.post(
+            f"/api/v1/employee/tasks/{task_id}/reopen",
+            headers={"Authorization": f"Bearer {_employee_token(auth, staff)}"},
+            json={"reason": "Cancelled by mistake"},
+        )
+    async with sessions.AsyncSessionLocal() as db:
+        assert (
+            await db.scalar(
+                text("SELECT status::text FROM tasks WHERE id=:id"), {"id": uuid.UUID(task_id)}
+            )
+            == "cancelled"
+        )
+        assert (
+            await db.scalar(
+                text("SELECT count(*) FROM audit_log WHERE entity_uuid=:id"),
+                {"id": uuid.UUID(task_id)},
+            )
+            == 0
+        )
+
+
+@pytest.mark.asyncio
+async def test_task_list_and_detail_carry_the_leads_call_signal_and_referrer(
+    client: AsyncClient,
+) -> None:
+    """Employees cannot read call logs or referrals under RLS; the confined
+    lead_list_signals function supplies the outcome and referral code only."""
+    import secrets
+
+    import app.db.session as _session_mod
+    from app.models.lead import Lead
+    from app.models.lead_activity import CallDisposition, InterestLevel, LeadActivity
+    from app.models.referral import Referral, ReferralCode
+    from app.models.task import Task
+    from app.models.user import User
+
+    auth_e, staff_e = await _seed_employee("loans")
+    task_id = await _seed_task("loans", staff_e)
+    bare_task = await _seed_task("loans", staff_e)
+    code = "".join(secrets.choice("0123456789ABCDEFGHJKMNPQRSTVWXYZ") for _ in range(8))
+    async with _session_mod.AsyncSessionLocal() as db:
+        task = await db.get(Task, uuid.UUID(task_id))
+        assert task is not None
+        lead = await db.get(Lead, task.lead_uuid)
+        assert lead is not None
+        referrer = User(
+            first_name="Ref",
+            last_name="Errer",
+            mobile=unique_mobile(),
+            email=f"ref_{uuid.uuid4().hex[:12]}@example.com",
+            password_hash="x",
+        )
+        db.add(referrer)
+        await db.flush()
+        db.add(ReferralCode(auth_user_uuid=referrer.id, code=code))
+        db.add(Referral(referrer_auth_user_uuid=referrer.id, referred_mobile=lead.mobile))
+        db.add(
+            LeadActivity(
+                lead_uuid=lead.id,
+                telecaller_staff_profile_uuid=task.raised_by_staff_profile_uuid,
+                business_line="loans",
+                disposition=CallDisposition.CONNECTED,
+                interest_level=InterestLevel.WARM,
+                notes="private call note",
+            )
+        )
+        await db.commit()
+    headers = {"Authorization": f"Bearer {_employee_token(auth_e, staff_e)}"}
+
+    listed = await client.get("/api/v1/employee/tasks", headers=headers)
+    detail = await client.get(f"/api/v1/employee/tasks/{task_id}", headers=headers)
+
+    assert listed.status_code == 200, listed.text
+    assert detail.status_code == 200, detail.text
+    by_id = {row["id"]: row for row in listed.json()}
+    for body in (by_id[task_id], detail.json()):
+        assert body["lead_referrer"] == {"kind": "client", "reference_id": code}
+        assert body["lead_last_disposition"] == "connected"
+        assert body["lead_last_interest_level"] == "warm"
+        assert body["lead_loan_statuses"] == []
+    assert by_id[bare_task]["lead_referrer"] is None
+    assert by_id[bare_task]["lead_last_disposition"] is None
+    assert "private call note" not in listed.text + detail.text

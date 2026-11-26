@@ -157,6 +157,15 @@ rera_verification_status_enum = ENUM(
 )
 
 
+class PropertyCatalogType(Base):
+    __tablename__ = "property_catalog_types"
+
+    code: Mapped[str] = mapped_column(String(40), primary_key=True)
+    label: Mapped[str] = mapped_column(String(40))
+    form_subtype: Mapped[str] = mapped_column(String(40))
+    active: Mapped[bool]
+
+
 class Property(Base):
     __tablename__ = "properties"
 
@@ -176,6 +185,9 @@ class Property(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     type: Mapped[str] = mapped_column(String(40), nullable=False)  # badge: "House", "Office"
     location: Mapped[str] = mapped_column(String(160), nullable=False)  # "Locality, City"
+    # Optional developer / builder brand ("My Home", "Sattva") for catalog
+    # search and the Developer filter. Copied from the approved submission.
+    developer_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     price_display: Mapped[str] = mapped_column(String(40), nullable=False)  # authored "₹78 L"
     meta: Mapped[str | None] = mapped_column(String(120), nullable=True)  # "2 bed · 1,120 sqft"
     image: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -186,6 +198,10 @@ class Property(Base):
     property_subtype: Mapped[PropertySubtype | None] = mapped_column(
         property_subtype_enum, nullable=True
     )
+    catalog_type_code: Mapped[str | None] = mapped_column(
+        String(40), ForeignKey("property_catalog_types.code")
+    )
+    sale_classification: Mapped[str | None] = mapped_column(String(12))
     city: Mapped[str] = mapped_column(String(120), nullable=False)
     locality: Mapped[str] = mapped_column(String(120), nullable=False)
     state: Mapped[str | None] = mapped_column(String(120), nullable=True)

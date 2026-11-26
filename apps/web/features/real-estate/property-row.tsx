@@ -56,7 +56,7 @@ export function PropertyRow({
   if (listings.length === 0) return null;
 
   return (
-    <section id={id} aria-label={heading} className="w-full scroll-mt-16">
+    <section id={id} aria-label={heading} className="w-full scroll-mt-[var(--site-header-h)]">
       <div className="flex items-baseline justify-between gap-3 px-4 sm:px-6 lg:px-10">
         <div>
           <h3 className="font-heading text-xl font-semibold text-text-primary">{heading}</h3>
@@ -69,7 +69,7 @@ export function PropertyRow({
           type="button"
           aria-label={`Scroll ${heading} left`}
           onClick={() => page(-1)}
-          className="absolute -left-3 top-[42%] z-10 hidden h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-card text-brand-blue shadow-md ring-1 ring-border transition hover:bg-loans-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue sm:flex"
+          className="absolute -left-3 top-[42%] z-10 hidden h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-card text-brand-link shadow-md ring-1 ring-border transition hover:bg-loans-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex"
         >
           <ChevronLeft className="h-5 w-5" aria-hidden />
         </button>
@@ -77,7 +77,7 @@ export function PropertyRow({
           type="button"
           aria-label={`Scroll ${heading} right`}
           onClick={() => page(1)}
-          className="absolute -right-3 top-[42%] z-10 hidden h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-card text-brand-blue shadow-md ring-1 ring-border transition hover:bg-loans-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue sm:flex"
+          className="absolute -right-3 top-[42%] z-10 hidden h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-card text-brand-link shadow-md ring-1 ring-border transition hover:bg-loans-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex"
         >
           <ChevronRight className="h-5 w-5" aria-hidden />
         </button>

@@ -14,19 +14,18 @@ const SPONSOR: HeroBanner = {
 };
 
 describe("AdStrip", () => {
-  it("labels itself as sponsored and offers a dismiss control", () => {
+  it("labels itself as sponsored and offers a labelled dismiss control", () => {
     const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} />);
     expect(markup).toContain('aria-label="Sponsored"');
     expect(markup).toContain('data-layout="ad-strip"');
-    expect(markup).toContain('data-presentation="split-sponsor-card"');
-    expect(markup).toContain("h-[152px]");
-    expect(markup).toContain("hidden shrink-0 sm:block");
-    expect(markup).toContain("sm:aspect-video");
-    expect(markup).toContain("lg:w-[341px]");
-    expect(markup).toContain("object-contain");
-    expect(markup).toContain("sponsor-accent-sweep");
+    expect(markup).toContain('data-presentation="static-sponsor-card"');
     expect(markup).toContain("Sponsored");
-    expect(markup).toContain('aria-label="Dismiss sponsored message"');
+    expect(markup).toContain('aria-label="Hide sponsored banner"');
+  });
+
+  it("omits the dismiss control in CMS previews", () => {
+    const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} dismissible={false} />);
+    expect(markup).not.toContain("<button");
   });
 
   it("renders the sponsor's copy, artwork and internal CTA", () => {
@@ -44,6 +43,15 @@ describe("AdStrip", () => {
     expect(markup).not.toMatch(/<h[1-6][\s>]/);
   });
 
+  it("server-renders the complete ad without reveal layers or state", () => {
+    const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} />);
+    expect(markup).not.toContain("data-reveal");
+    expect(markup).not.toContain("sponsor-curtain");
+    expect(markup).not.toContain("<canvas");
+    expect(markup).toContain(SPONSOR.subtitle);
+    expect(markup).toContain('href="/loans#home-loan"');
+  });
+
   it("shows one sponsor with no carousel affordances", () => {
     // Only one sponsor runs at a time -- the successor waits in the CMS
     // replacement queue -- so there is nothing to rotate between and no
@@ -54,16 +62,32 @@ describe("AdStrip", () => {
     expect(markup).not.toContain('aria-roledescription="carousel"');
   });
 
+  it("opens an external sponsor CTA in a new tab and announces it", () => {
+    const markup = renderToStaticMarkup(
+      <AdStrip
+        banner={{
+          ...SPONSOR,
+          cta: { label: "Compare plans", href: "https://partner.example/plans", external: true },
+        }}
+      />,
+    );
+    expect(markup).toContain('href="https://partner.example/plans"');
+    expect(markup).toContain('target="_blank"');
+    expect(markup).toContain('rel="noopener noreferrer"');
+    expect(markup).toContain('<span class="sr-only"> (opens in a new tab)</span>');
+  });
+
+  it("keeps an internal sponsor CTA in the same tab", () => {
+    const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} />);
+    expect(markup).not.toContain('target="_blank"');
+    expect(markup).not.toContain("opens in a new tab");
+  });
+
   it("renders without a CTA or subtitle when the campaign omits them", () => {
     const bare: HeroBanner = { id: "sponsor-2", title: "A sponsor with no call to action" };
     const markup = renderToStaticMarkup(<AdStrip banner={bare} />);
     expect(markup).toContain("A sponsor with no call to action");
     expect(markup).not.toContain("<a ");
-  });
-
-  it("can render the exact CMS composition without an interactive dismiss control", () => {
-    const markup = renderToStaticMarkup(<AdStrip banner={SPONSOR} dismissible={false} />);
-    expect(markup).toContain('data-presentation="split-sponsor-card"');
-    expect(markup).not.toContain('aria-label="Dismiss sponsored message"');
+    expect(markup).not.toContain("<img ");
   });
 });

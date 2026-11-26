@@ -15,9 +15,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UserAvatar } from "@/components/user-avatar";
 import { logout } from "@/lib/auth";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 import { useMe } from "./me-provider";
+import { OwnRoleBadge } from "./role-badge";
+
+// Hover-open is a desktop nicety. On touch screens a tap opens the menu and a
+// tap outside closes it; emulated mouse and pointer-leave events after a tap
+// must not open it again or schedule a close.
+const HOVER_POINTER_QUERY = "(hover: hover) and (pointer: fine)";
 
 function lineLabel(line: "loans" | "real_estate") {
   return line === "loans" ? "Loans" : "Real Estate";
@@ -33,6 +40,7 @@ export function ProfileMenu() {
   const [signingOut, setSigningOut] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canHover = useMediaQuery(HOVER_POINTER_QUERY);
 
   const fullName = me ? `${me.firstName} ${me.lastName}`.trim() : "";
   const emailVerified = me?.emailVerified ?? session?.emailVerified ?? false;
@@ -73,10 +81,16 @@ export function ProfileMenu() {
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
-      <div onMouseEnter={openNow} onMouseLeave={closeSoon}>
+      <div
+        // A closing workspace can uncover this trigger beneath a stationary
+        // pointer. Open on deliberate mouse movement so it cannot steal focus
+        // as the workspace returns the user to the original ticket.
+        onPointerMove={canHover ? (event) => { if (event.pointerType === "mouse") openNow(); } : undefined}
+        onPointerLeave={canHover ? (event) => { if (event.pointerType === "mouse") closeSoon(); } : undefined}
+      >
         <DropdownMenuTrigger
           aria-label="Open account menu"
-          className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full p-1 text-text-secondary transition-colors hover:text-sky-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue sm:h-8 sm:w-8"
+          className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full p-1 text-text-secondary transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-8 sm:w-8"
         >
           <CircleUser className="h-6 w-6" aria-hidden="true" />
         </DropdownMenuTrigger>
@@ -84,8 +98,8 @@ export function ProfileMenu() {
         <DropdownMenuContent
           align="end"
           className="w-72 bg-surface"
-          onMouseEnter={openNow}
-          onMouseLeave={closeSoon}
+          onMouseEnter={canHover ? openNow : undefined}
+          onMouseLeave={canHover ? closeSoon : undefined}
         >
           {/* Account header */}
           <div className="flex items-center gap-3 px-2.5 py-2">
@@ -101,7 +115,7 @@ export function ProfileMenu() {
           {!emailVerified && (
             <DropdownMenuItem
               onSelect={() => router.push("/dashboard/settings")}
-              className="text-warning [&_svg]:text-warning data-[highlighted]:text-sky-500"
+              className="text-warning [&_svg]:text-warning data-[highlighted]:text-brand-link"
             >
               <MailWarning />
               Verify your email
@@ -129,6 +143,7 @@ export function ProfileMenu() {
             </>
           )}
 
+          <div className="px-2.5 py-2"><OwnRoleBadge /></div>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => router.push("/dashboard/settings")}>
             <Settings />

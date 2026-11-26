@@ -22,6 +22,7 @@ import {
   ScrollText,
   ShieldCheck,
   SlidersHorizontal,
+  Trophy,
   UserMinus,
   UserPlus,
   Undo2,
@@ -68,13 +69,16 @@ import { useAuditLog } from "./use-audit-log";
 // key is a TypeScript error rather than a blank cell, because AuditAction comes
 // from the generated contract.
 const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: string }> = {
+  employee_task_reopened: { label: "Officer task reopened", icon: ShieldCheck, tone: "text-brand-link" },
   agent_approved: {
     label: "Partner approved",
     icon: BadgeCheck,
     tone: "bg-success/10 text-success",
   },
   agent_rejected: { label: "Partner rejected", icon: Ban, tone: "bg-error/10 text-error" },
-  staff_created: { label: "Staff account created", icon: UserPlus, tone: "bg-loans-soft text-loans-accent" },
+  staff_created: { label: "Staff account created", icon: UserPlus, tone: "bg-loans-soft text-brand-link" },
+  staff_specialty_updated: { label: "Loan specialty updated", icon: ShieldCheck, tone: "bg-loans-soft text-brand-link" },
+  sub_admin_access_updated: { label: "Sub Admin access updated", icon: ShieldCheck, tone: "bg-loans-soft text-brand-link" },
   staff_feature_granted: {
     label: "Staff access granted",
     icon: ShieldCheck,
@@ -88,7 +92,7 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   staff_invite_created: {
     label: "Staff invite link issued",
     icon: Link2,
-    tone: "bg-brand-cta-tint text-brand-cta",
+    tone: "bg-brand-cta-tint text-brand-link",
   },
   staff_invite_revoked: {
     label: "Staff invite link revoked",
@@ -98,7 +102,7 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   agent_invite_created: {
     label: "Agent setup link issued",
     icon: Link2,
-    tone: "bg-brand-cta-tint text-brand-cta",
+    tone: "bg-brand-cta-tint text-brand-link",
   },
   agent_invite_revoked: {
     label: "Agent setup link revoked",
@@ -156,7 +160,7 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   support_ticket_advanced: {
     label: "Support ticket updated",
     icon: Headset,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   retention_purged: {
     label: "Records purged",
@@ -166,17 +170,17 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   loan_type_created: {
     label: "Loan type added",
     icon: SlidersHorizontal,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   loan_type_updated: {
     label: "Loan type updated",
     icon: SlidersHorizontal,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   bank_created: {
     label: "Bank added",
     icon: Landmark,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   loan_type_deleted: {
     label: "Financial product deleted",
@@ -186,7 +190,7 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   bank_updated: {
     label: "Bank updated",
     icon: Landmark,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   bank_deleted: {
     label: "Provider deleted",
@@ -196,17 +200,17 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   bank_availability_updated: {
     label: "Bank availability updated",
     icon: Landmark,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   financial_product_offer_created: {
     label: "Provider offer added",
     icon: SlidersHorizontal,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   financial_product_offer_updated: {
     label: "Provider offer updated",
     icon: SlidersHorizontal,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   commission_entered: {
     label: "Commission entered",
@@ -246,7 +250,7 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   notification_broadcast: {
     label: "Broadcast sent",
     icon: Megaphone,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   agent_lead_expired: {
     label: "Agent lead expired",
@@ -256,12 +260,12 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   lead_assigned: {
     label: "Lead assigned",
     icon: Headset,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   employee_work_assigned: {
-    label: "Employee work assigned",
+    label: "Officer work assigned",
     icon: ClipboardList,
-    tone: "bg-realestate-soft text-realestate-accent",
+    tone: "bg-realestate-soft text-brand-link",
   },
   lead_details_updated: {
     label: "Lead details corrected",
@@ -271,7 +275,7 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   field_visibility_updated: {
     label: "Field visibility updated",
     icon: ShieldCheck,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   mobile_change_verified: {
     label: "Mobile change identity verified",
@@ -288,15 +292,35 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
     icon: Ban,
     tone: "bg-error/10 text-error",
   },
+  contact_changed: {
+    label: "Contact details changed",
+    icon: ShieldCheck,
+    tone: "bg-success/10 text-success",
+  },
+  contact_change_requested: {
+    label: "Contact change requested",
+    icon: BadgeCheck,
+    tone: "bg-warning/10 text-warning",
+  },
+  contact_change_rejected: {
+    label: "Contact change rejected",
+    icon: Ban,
+    tone: "bg-error/10 text-error",
+  },
+  contact_history_viewed: {
+    label: "Contact history viewed",
+    icon: ScrollText,
+    tone: "bg-loans-soft text-brand-link",
+  },
   banner_created: {
     label: "Banner created",
     icon: Megaphone,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   banner_updated: {
     label: "Banner updated",
     icon: FilePenLine,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   banner_submitted: {
     label: "Banner submitted",
@@ -331,7 +355,7 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   banner_template_versioned: {
     label: "Banner artwork versioned",
     icon: RefreshCw,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   referral_rule_created: {
     label: "Referral rule created",
@@ -341,15 +365,15 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   referral_rule_updated: {
     label: "Referral rule updated",
     icon: FilePenLine,
-    tone: "bg-loans-soft text-loans-accent",
+    tone: "bg-loans-soft text-brand-link",
   },
   referral_rule_deleted: {
     label: "Unused referral rule deleted",
     icon: Eraser,
     tone: "bg-error/10 text-error",
   },
-  offer_created: { label: "Offer created", icon: Megaphone, tone: "bg-loans-soft text-loans-accent" },
-  offer_updated: { label: "Offer updated", icon: FilePenLine, tone: "bg-loans-soft text-loans-accent" },
+  offer_created: { label: "Offer created", icon: Megaphone, tone: "bg-loans-soft text-brand-link" },
+  offer_updated: { label: "Offer updated", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
   offer_submitted: { label: "Offer submitted", icon: ScrollText, tone: "bg-warning/10 text-warning" },
   offer_approved: { label: "Offer approved", icon: BadgeCheck, tone: "bg-success/10 text-success" },
   offer_rejected: { label: "Offer changes requested", icon: Ban, tone: "bg-error/10 text-error" },
@@ -358,20 +382,61 @@ const ACTION_META: Record<AuditAction, { label: string; icon: LucideIcon; tone: 
   offer_expired: { label: "Offer expired", icon: Archive, tone: "bg-muted text-text-secondary" },
   offer_archived: { label: "Offer archived", icon: Archive, tone: "bg-muted text-text-secondary" },
   offer_deleted: { label: "Offer removed", icon: Eraser, tone: "bg-error/10 text-error" },
-  campaign_media_created: { label: "Campaign media created", icon: FilePenLine, tone: "bg-loans-soft text-loans-accent" },
-  campaign_media_updated: { label: "Campaign media updated", icon: FilePenLine, tone: "bg-loans-soft text-loans-accent" },
+  campaign_media_created: { label: "Campaign media created", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  campaign_media_updated: { label: "Campaign media updated", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
   campaign_media_archived: { label: "Campaign media archived", icon: Archive, tone: "bg-muted text-text-secondary" },
   campaign_media_deleted: { label: "Campaign media deleted", icon: Eraser, tone: "bg-error/10 text-error" },
-  content_block_created: { label: "Content block created", icon: FilePenLine, tone: "bg-loans-soft text-loans-accent" },
-  content_block_updated: { label: "Content block updated", icon: FilePenLine, tone: "bg-loans-soft text-loans-accent" },
+  content_block_created: { label: "Content block created", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  content_block_updated: { label: "Content block updated", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
   content_block_published: { label: "Content block published", icon: Megaphone, tone: "bg-success/10 text-success" },
   content_block_archived: { label: "Content block archived", icon: Archive, tone: "bg-muted text-text-secondary" },
-  loan_application_updated: { label: "Loan application updated", icon: ClipboardList, tone: "bg-loans-soft text-loans-accent" },
-  property_deal_updated: { label: "Property deal updated", icon: Home, tone: "bg-realestate-soft text-realestate-accent" },
+  website_content_changed: { label: "Website content changed", icon: ScrollText, tone: "bg-muted text-text-secondary" },
+  loan_application_updated: { label: "Loan application updated", icon: ClipboardList, tone: "bg-loans-soft text-brand-link" },
+  property_deal_updated: { label: "Property deal updated", icon: Home, tone: "bg-realestate-soft text-brand-link" },
+  agent_lead_resubmitted: { label: "Agent lead resubmitted", icon: RefreshCw, tone: "bg-loans-soft text-brand-link" },
+  agent_payout_details_updated: { label: "Agent payout details saved", icon: Wallet, tone: "bg-muted text-text-secondary" },
+  agent_payout_details_deleted: { label: "Agent payout details removed", icon: Eraser, tone: "bg-muted text-text-secondary" },
+  agent_payout_details_viewed: { label: "Agent payout details viewed", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
+  staff_team_created: { label: "Team created", icon: UserPlus, tone: "bg-loans-soft text-brand-link" },
+  staff_team_updated: { label: "Team updated", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  staff_team_archived: { label: "Team archived", icon: Archive, tone: "bg-muted text-text-secondary" },
+  staff_team_member_added: { label: "Team member added", icon: UserPlus, tone: "bg-success/10 text-success" },
+  staff_team_member_removed: { label: "Team member removed", icon: UserMinus, tone: "bg-muted text-text-secondary" },
+  team_lead_viewed: { label: "Manager viewed a lead", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
+  team_lead_reassigned: { label: "Manager moved a lead", icon: RefreshCw, tone: "bg-loans-soft text-brand-link" },
+  team_task_reassigned: { label: "Manager moved a task", icon: RefreshCw, tone: "bg-loans-soft text-brand-link" },
+  team_lead_status_updated: { label: "Manager changed a lead status", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  team_task_updated: { label: "Manager changed a task", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  team_note_added: { label: "Manager added a note", icon: ScrollText, tone: "bg-muted text-text-secondary" },
+  team_task_viewed: { label: "Manager viewed a task", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
+  // Bulk client-PII download (#364); same warning tone as other sensitive reads.
+  client_export_downloaded: { label: "Client list exported", icon: ShieldCheck, tone: "bg-warning/10 text-warning" },
+  // CS-027 contests.
+  contest_created: { label: "Contest created", icon: Trophy, tone: "bg-loans-soft text-brand-link" },
+  contest_updated: { label: "Contest updated", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  attendance_updated: { label: "Attendance updated", icon: FilePenLine, tone: "bg-loans-soft text-brand-link" },
+  attendance_exported: { label: "Attendance exported", icon: FileCheck2, tone: "bg-loans-soft text-brand-link" },
+  contest_submitted: { label: "Contest submitted", icon: Trophy, tone: "bg-loans-soft text-brand-link" },
+  contest_deleted: { label: "Contest deleted", icon: Eraser, tone: "bg-muted text-text-secondary" },
+  contest_approved: { label: "Contest approved", icon: BadgeCheck, tone: "bg-success/10 text-success" },
+  contest_rejected: { label: "Contest changes requested", icon: Ban, tone: "bg-error/10 text-error" },
+  contest_cancelled: { label: "Contest cancelled", icon: CircleSlash, tone: "bg-muted text-text-secondary" },
+  contest_went_live: { label: "Contest went live", icon: Megaphone, tone: "bg-success/10 text-success" },
+  contest_ended: { label: "Contest ended", icon: Archive, tone: "bg-muted text-text-secondary" },
+  contest_recalculated: { label: "Contest standings recalculated", icon: RefreshCw, tone: "bg-loans-soft text-brand-link" },
+  contest_finalized: { label: "Contest winners confirmed", icon: Trophy, tone: "bg-success/10 text-success" },
+  contest_prize_payout_requested: { label: "Contest prize payout requested", icon: Wallet, tone: "bg-loans-soft text-brand-link" },
+  contest_prize_marked_paid: { label: "Contest prize marked paid", icon: IndianRupee, tone: "bg-success/10 text-success" },
+  agent_leads_bulk_submitted: { label: "Agent bulk lead upload", icon: ClipboardList, tone: "bg-loans-soft text-brand-link" },
+  commission_rate_proposed: { label: "Commission rate proposed", icon: IndianRupee, tone: "bg-loans-soft text-brand-link" },
+  commission_rate_set: { label: "Commission rate set", icon: IndianRupee, tone: "bg-success/10 text-success" },
+  commission_rate_approved: { label: "Commission rate approved", icon: BadgeCheck, tone: "bg-success/10 text-success" },
+  commission_rate_rejected: { label: "Commission rate rejected", icon: Ban, tone: "bg-muted text-text-secondary" },
+  commission_rate_withdrawn: { label: "Commission rate withdrawn", icon: CircleSlash, tone: "bg-muted text-text-secondary" },
   vehicle_arrangement_updated: {
     label: "Vehicle arrangement updated",
     icon: CarFront,
-    tone: "bg-realestate-soft text-realestate-accent",
+    tone: "bg-realestate-soft text-brand-link",
   },
 };
 
@@ -385,7 +450,7 @@ const ROLE_LABEL: Record<string, string> = {
   sub_admin: "Sub Admin",
   agent: "Partner",
   telecaller: "Telecaller",
-  employee: "Employee",
+  employee: "Officer",
   client: "Client",
 };
 
@@ -523,7 +588,7 @@ export function AuditLogView() {
         searchLabel="Filter activity by record type"
         searchPlaceholder="Record type"
         statusOptions={ACTION_OPTIONS}
-        statusLabel="actions"
+        statusLabel="Action"
         note="Open a row to inspect its immutable structured detail."
       />
 

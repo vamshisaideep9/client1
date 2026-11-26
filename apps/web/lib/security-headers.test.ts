@@ -8,6 +8,27 @@ function asRecord(headers: ReturnType<typeof buildSecurityHeaders>) {
 }
 
 describe("browser security headers", () => {
+  it("permits private video playback only from the configured storage origin", () => {
+    const policy = asRecord(buildSecurityHeaders({ production: true, assetHost: "https://storage.example.test/public" }))["Content-Security-Policy"];
+    expect(policy.split("; ").find((directive) => directive.startsWith("media-src"))).toBe(
+      "media-src 'self' https://storage.example.test",
+    );
+  });
+
+  it("allows signed browser uploads only to the configured storage origin", () => {
+    const policy = asRecord(buildSecurityHeaders({ production: true, assetHost: "https://storage.example.test/public" }))["Content-Security-Policy"];
+    const connect = policy.split("; ").find((directive) => directive.startsWith("connect-src"));
+    expect(connect).toBe("connect-src 'self' https://storage.example.test");
+    expect(connect).not.toContain("*");
+    expect(policy).toContain("form-action 'self'");
+  });
+
+  it("allows the existing local MinIO upload endpoint only in development", () => {
+    const development = asRecord(buildSecurityHeaders({ production: false }))["Content-Security-Policy"];
+    const production = asRecord(buildSecurityHeaders({ production: true }))["Content-Security-Policy"];
+    expect(development.split("; ").find((directive) => directive.startsWith("connect-src"))).toContain("http://localhost:9000");
+    expect(production).not.toContain("localhost:9000");
+  });
   it("applies the baseline to every web route", async () => {
     const rules = await nextConfig.headers?.();
     const globalRule = rules?.find((rule) => rule.source === "/:path*");
@@ -27,6 +48,9 @@ describe("browser security headers", () => {
     expect(headers["X-Content-Type-Options"]).toBe("nosniff");
     expect(headers["X-Frame-Options"]).toBe("DENY");
     expect(headers["Permissions-Policy"]).toContain("camera=()");
+    expect(headers["Permissions-Policy"]).toContain("microphone=()");
+    // CS-026: one-time "Use my location" on this origin only, never in frames.
+    expect(headers["Permissions-Policy"]).toContain("geolocation=(self)");
   });
 
   it("adds transport enforcement only to the production policy", () => {
@@ -60,6 +84,13 @@ describe("browser security headers", () => {
     expect(headers["Content-Security-Policy"]).toContain(
       "img-src 'self' data: blob: https://assets.dhanadhara.example",
     );
+    // Banner videos: only the privacy-enhanced YouTube embed host may be
+    // framed, and only its thumbnail CDN is added to images.
+    expect(headers["Content-Security-Policy"]).toContain(
+      "frame-src https://www.youtube-nocookie.com;",
+    );
+    expect(headers["Content-Security-Policy"]).not.toContain("frame-src *");
+    expect(headers["Content-Security-Policy"]).toContain("https://i.ytimg.com");
     expect(() =>
       buildSecurityHeaders({ production: true, apiBaseUrl: "javascript:alert(1)" }),
     ).toThrow(/HTTP/);

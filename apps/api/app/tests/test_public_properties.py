@@ -31,7 +31,7 @@ from datetime import UTC, datetime
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 
 from app.services.public_catalog import PUBLIC_CATALOG_PER_CATEGORY
 
@@ -92,6 +92,120 @@ async def _delete_properties(*property_ids: str) -> None:
     async with _session_mod.AsyncSessionLocal() as db:
         await db.execute(delete(Property).where(Property.id.in_(ids)))
         await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_public_search_filters_before_pagination(client: AsyncClient) -> None:
+    import app.db.session as session_module
+    from app.models.property import Property
+
+    locality = f"Search {uuid.uuid4().hex}"
+    async with session_module.AsyncSessionLocal() as db:
+        rows = [
+            Property(
+                business_line="real_estate",
+                active=index != 25,
+                title=f"Search house {index}",
+                type="House",
+                category="houses",
+                property_subtype="individual_house",
+                listing_intent="sale",
+                sale_classification="resale",
+                location=locality,
+                locality=locality,
+                city="Search City",
+                pincode="500001",
+                price_display="₹40 L",
+                price_paise=400_000_000,
+                area_sqft=1200,
+                bhk=2,
+                details={},
+            )
+            for index in range(26)
+        ]
+        db.add_all(rows)
+        await db.commit()
+    try:
+        query = {
+            "mode": "resale",
+            "location": locality,
+            "property_type": "individual_house",
+            "budget_min": 3_000_000,
+            "budget_max": 5_000_000,
+            "area_min": 1000,
+            "bhk": "2",
+            "page": 2,
+        }
+        response = await client.get("/api/v1/public/properties/search", params=query)
+        assert response.status_code == 200, response.text
+        assert response.json()["total"] == 25
+        assert len(response.json()["properties"]) == 1
+        item = response.json()["properties"][0]
+        assert item["sale_classification"] == "resale"
+        assert "price_paise" not in item
+        assert (
+            await client.get(
+                "/api/v1/public/properties/search",
+                params={
+                    "mode": "rent",
+                    "location": locality,
+                },
+            )
+        ).json()["total"] == 0
+    finally:
+        await _delete_properties(*(str(row.id) for row in rows))
+
+
+@pytest.mark.asyncio
+async def test_managed_property_type_stays_on_old_listings_when_retired(
+    client: AsyncClient,
+) -> None:
+    import app.db.session as session_module
+    from app.models.property import Property, PropertyCatalogType
+    from app.tests.contest_support import admin_token, headers
+
+    endpoint = "/api/v1/admin/property-types"
+    label = f"Managed type {uuid.uuid4().hex[:10]}"
+    body = {"label": label, "form_subtype": "individual_house"}
+    assert (await client.post(endpoint, json=body)).status_code == 401
+    token, _ = await admin_token()
+    auth = headers(token)
+    created = await client.post(endpoint, json=body, headers=auth)
+    assert created.status_code == 201, created.text
+    code = created.json()["code"]
+    property_id = await _seed_property(
+        active=True, title=label, category="houses", property_subtype="individual_house"
+    )
+    try:
+        async with session_module.AsyncSessionLocal() as db:
+            await db.execute(
+                update(Property)
+                .where(Property.id == uuid.UUID(property_id))
+                .values(catalog_type_code=code)
+            )
+            await db.commit()
+        renamed = await client.patch(
+            f"{endpoint}/{code}",
+            headers=auth,
+            json={
+                "label": "Retired house type",
+                "active": False,
+            },
+        )
+        assert renamed.status_code == 200, renamed.text
+        options = await client.get("/api/v1/public/property-types")
+        assert code not in {item["code"] for item in options.json()}
+        result = await client.get(
+            "/api/v1/public/properties/search", params={"property_type": code}
+        )
+        assert result.status_code == 200, result.text
+        assert [item["id"] for item in result.json()["properties"]] == [property_id]
+        assert result.json()["properties"][0]["type"] == "Retired house type"
+    finally:
+        await _delete_properties(property_id)
+        async with session_module.AsyncSessionLocal() as db:
+            await db.execute(delete(PropertyCatalogType).where(PropertyCatalogType.code == code))
+            await db.commit()
 
 
 async def _superuser_sees(property_id: str) -> bool:
@@ -256,14 +370,18 @@ async def test_response_omits_internal_fields(client: AsyncClient) -> None:
             "media",
             "category",
             "property_subtype",
+            "catalog_type_code",
+            "sale_classification",
             "rera_number",
             "rera_verification_status",
             "structured_details",
+            "developer_name",
         }
         assert row["media"] == []
         assert row["property_subtype"] is None
         assert row["rera_verification_status"] == "verified"
         assert row["structured_details"] is None
+        assert row["developer_name"] is None
         for internal_field in (
             "active",
             "created_at",

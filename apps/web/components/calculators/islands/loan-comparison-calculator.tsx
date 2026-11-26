@@ -26,12 +26,12 @@ const AMOUNT_MIN = 100000;
 const AMOUNT_MAX = 50000000;
 const AMOUNT_STEP = 50000;
 const RATE_MIN = 5;
-const RATE_MAX = 24;
+const RATE_MAX = 34;
 const RATE_STEP = 0.05;
 const MONTHS_MIN = 12;
-const MONTHS_MAX = 360;
+const MONTHS_MAX = 420;
 const FEE_MIN = 0;
-const FEE_MAX = 3;
+const FEE_MAX = 5;
 const FEE_STEP = 0.05;
 
 function clamp(value: number, min: number, _max: number): number {
@@ -119,7 +119,7 @@ export function LoanComparisonCalculator() {
           return (
             <div
               key={index}
-              className="grid content-start gap-6 rounded-xl border border-[var(--nav-border)] bg-white p-5"
+              className="grid content-start gap-6 rounded-xl border border-[var(--nav-border)] bg-card p-5"
             >
               <div className="flex items-center justify-between gap-3">
                 <h3 className="font-heading text-lg font-semibold text-[var(--nav-text)]">
@@ -195,7 +195,7 @@ export function LoanComparisonCalculator() {
       />
 
       {/* Comparison table */}
-      <div className="overflow-x-auto rounded-xl border border-[var(--nav-border)] bg-white">
+      <div className="overflow-x-auto rounded-xl border border-[var(--nav-border)] bg-card">
         <table className="w-full min-w-[640px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-[var(--nav-border)]">

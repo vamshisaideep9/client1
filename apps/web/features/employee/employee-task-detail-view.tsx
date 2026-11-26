@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Copy, Link2, Loader2, Phone, ShieldOff, Trash2 } from "lucide-react";
+import { ContactActions } from "@/components/contact-actions";
+import { Copy, Link2, Loader2, ShieldOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
+import { LongNoteField } from "@/features/dashboard/long-note-field";
+import { staffNoteLimitError } from "@/features/dashboard/long-note";
 import { DashboardBackLink, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import type { ApiResponse } from "@/lib/api/client";
@@ -26,10 +28,15 @@ import {
   type ContactShareLink,
   type EmployeeTaskUpdate,
 } from "@/lib/employee-api";
-import { formatMobile, toE164 } from "@/lib/phone";
+import { formatMobile } from "@/lib/phone";
+import { formatReferrer, INTEREST_LABEL, LOAN_STATUS_LABEL } from "@/features/telecaller/lead-signal-filters";
+import { DISPOSITION_LABEL } from "@/features/telecaller/telecaller-lead-status";
 
 import { EmployeeTaskDocumentPanel } from "./employee-task-document-panel";
+import { StaffCounterpart } from "@/features/dashboard/staff-counterpart";
 import { EmployeeTaskFeedbackPanel } from "./employee-task-feedback-panel";
+import { ReopenTaskDialog } from "./reopen-task-dialog";
+import { ManagerNotesPanel } from "@/features/team/manager-notes-panel";
 import { useEmployeeTaskDetail } from "./use-employee-task-detail";
 
 type TaskStatusValue = NonNullable<EmployeeTaskUpdate["status"]>;
@@ -168,6 +175,11 @@ export function EmployeeTaskDetailView({ taskId }: { taskId: string }) {
       setNotesError("A note explaining the no-show is required.");
       return;
     }
+    const limitError = staffNoteLimitError(notes);
+    if (limitError) {
+      setNotesError(limitError);
+      return;
+    }
     setActingStatus(nextStatus ?? "notes");
     // Always send notes (even "") so clearing the field back to blank actually
     // reaches the backend — `|| undefined` would silently drop that intent.
@@ -206,14 +218,11 @@ export function EmployeeTaskDetailView({ taskId }: { taskId: string }) {
         }
       >
         <h2 className="sr-only">Lead contact</h2>
+        <div className="mb-3"><StaffCounterpart label="Telecaller" name={task.raised_by_telecaller_name} code={task.raised_by_telecaller_code} /></div>
         {task.lead_contact_mode === "allow" && task.lead_mobile ? (
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-text-secondary">{formatMobile(task.lead_mobile)}</span>
-            <Button asChild size="icon" variant="outline" aria-label="Call" title="Call">
-              <a href={`tel:${toE164(task.lead_mobile)}`}>
-                <Phone className="h-4 w-4" aria-hidden="true" />
-              </a>
-            </Button>
+            <ContactActions mobile={task.lead_mobile} name={task.lead_name ?? "client"} />
           </div>
         ) : task.lead_contact_mode === "share_link" ? (
           <div className="space-y-3">
@@ -261,12 +270,43 @@ export function EmployeeTaskDetailView({ taskId }: { taskId: string }) {
             Contact details are hidden by Admin policy.
           </p>
         )}
+        <dl className="mt-4 grid gap-x-6 gap-y-2 border-t border-border pt-4 text-sm sm:grid-cols-2">
+          {/* Absent when Admin hides "Referred by"; null when nobody referred. */}
+          {task.lead_referrer !== undefined ? (
+            <div data-testid="lead-referrer">
+              <dt className="text-xs text-text-secondary">Referred by</dt>
+              <dd className="font-medium text-text-primary">
+                {formatReferrer(task.lead_referrer) ?? "No one (direct lead)"}
+              </dd>
+            </div>
+          ) : null}
+          <div>
+            <dt className="text-xs text-text-secondary">Last call</dt>
+            <dd className="font-medium text-text-primary">
+              {task.lead_last_disposition
+                ? `${DISPOSITION_LABEL[task.lead_last_disposition] ?? task.lead_last_disposition}${
+                    task.lead_last_interest_level ? ` · ${INTEREST_LABEL[task.lead_last_interest_level]}` : ""
+                  }`
+                : "Not called yet"}
+            </dd>
+          </div>
+          {task.lead_loan_statuses && task.lead_loan_statuses.length > 0 ? (
+            <div>
+              <dt className="text-xs text-text-secondary">Loan status</dt>
+              <dd className="font-medium text-text-primary">
+                {task.lead_loan_statuses.map((status) => LOAN_STATUS_LABEL[status] ?? status).join(", ")}
+              </dd>
+            </div>
+          ) : null}
+        </dl>
       </DashboardPanel>
 
+      <ManagerNotesPanel notes={task.manager_notes} />
       <DashboardPanel title="Notes">
-        <Textarea
+        {task.status === "cancelled" && <div className="mb-4"><ReopenTaskDialog taskId={task.id} onReopened={retry} /></div>}
+        <LongNoteField
+          counterId="employee-task-notes-count"
           rows={4}
-          maxLength={1000}
           value={notes}
           disabled={isTerminal}
           onChange={(e) => { setNotes(e.target.value); setNotesError(undefined); }}

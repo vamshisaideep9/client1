@@ -5,7 +5,9 @@ import { BRAND_ASSETS, SITE_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 export type LogoVariant = "horizontal" | "stacked" | "symbol";
-export type LogoTone = "original" | "navy" | "white";
+// The original full-colour artwork is used on every light surface. Dark themes
+// lighten it automatically so the navy "dhara" stays legible.
+export type LogoTone = "original" | "navy";
 
 export function Logo({ className, variant = "horizontal", tone = "original", href = "/", onClick, sizes }: {
   className?: string;
@@ -18,10 +20,7 @@ export function Logo({ className, variant = "horizontal", tone = "original", hre
 }) {
   const asset = BRAND_ASSETS[variant];
   const classes = cn(
-    "inline-flex shrink-0 items-center justify-center rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-    tone === "white"
-      ? "transition-colors duration-150 hover:bg-dash-rail-hover focus-visible:ring-brand-sky focus-visible:ring-offset-brand-navy motion-reduce:transition-none"
-      : "focus-visible:ring-brand-blue focus-visible:ring-offset-surface",
+    "inline-flex shrink-0 items-center justify-center rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring focus-visible:ring-offset-surface",
     variant === "symbol" ? "h-10 w-10" : variant === "stacked" ? "w-48" : "w-36 sm:w-44",
     className,
   );
@@ -34,8 +33,8 @@ export function Logo({ className, variant = "horizontal", tone = "original", hre
       sizes={sizes ?? (variant === "symbol" ? "40px" : variant === "stacked" ? "192px" : "(min-width: 640px) 176px, 144px")}
       className={cn(
         "h-auto w-full object-contain",
-        tone === "white" && "brightness-0 invert",
-        tone === "navy" && "[filter:brightness(0)_saturate(100%)_invert(20%)_sepia(31%)_saturate(2761%)_hue-rotate(211deg)_brightness(93%)_contrast(97%)]",
+        "dark:brightness-0 dark:invert",
+        tone === "navy" && "[filter:brightness(0)_saturate(100%)_invert(20%)_sepia(31%)_saturate(2761%)_hue-rotate(211deg)_brightness(93%)_contrast(97%)] dark:[filter:brightness(0)_invert(1)]",
       )}
     />
   );

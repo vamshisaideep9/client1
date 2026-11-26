@@ -18,19 +18,28 @@ import hmac
 import json
 import logging
 from collections.abc import Sequence
+from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import CurrentUser, get_active_user, is_platform_admin
+from app.core.deps import (
+    CurrentUser,
+    check_assignment_line,
+    get_active_user,
+    is_platform_admin,
+    require_assignment,
+)
 from app.db.session import get_db
 from app.models.payout import Payout, PayoutProvider, PayoutStatus, PayoutType
+from app.schemas.agent_payout_details import CancelledChequeRead, SavedPayoutDestinationRead
 from app.schemas.payments import (
     ManualChequeIssue,
     PayoutCreate,
+    PayoutGatewaySimulation,
     PayoutLinkDivergenceRead,
     PayoutLinkDivergencesRead,
     PayoutListResponse,
@@ -40,11 +49,17 @@ from app.schemas.payments import (
     PayoutReject,
     WebhookAck,
 )
+from app.services import agent_payout_cheque, agent_payout_details, storage
 from app.services import payments as payments_service
+from app.services.payout_leads import payout_lead_refs
 from app.services.payout_links import list_link_divergences
 from app.services.payout_recipients import resolve_payout_identities, search_payout_recipients
 
 logger = logging.getLogger(__name__)
+
+finance_view = require_assignment("account_manager", "view", include_admin=True)
+finance_prepare = require_assignment("account_manager", "prepare", include_admin=True)
+
 
 router = APIRouter()
 
@@ -109,6 +124,7 @@ async def _get_payout_or_404(db: AsyncSession, payout_id: UUID) -> Payout:
 async def _to_read(
     payouts: Sequence[Payout],
     current_user: CurrentUser,
+    db: AsyncSession,
 ) -> list[PayoutRead]:
     """Enrich payout rows with display identity in a small, bounded batch.
 
@@ -134,8 +150,14 @@ async def _to_read(
     identities_by_line: dict[str | None, dict[UUID, object]] = {}
     for line in lines_present:
         prefer_line = {p.recipient_user_uuid: line for p in payouts if p.business_line == line}
-        identities_by_line[line] = await resolve_payout_identities(uuids, prefer_line=prefer_line)
+        identities_by_line[line] = await resolve_payout_identities(
+            uuids,
+            prefer_line=prefer_line,
+            profile_line=line if current_user.sub_admin_access is not None else None,
+        )
 
+    # On the caller's RLS session: only leads the caller can already read.
+    lead_refs = await payout_lead_refs(db, [p.id for p in payouts])
     reads: list[PayoutRead] = []
     for p in payouts:
         identities = identities_by_line[p.business_line]
@@ -149,6 +171,7 @@ async def _to_read(
         read.maker_name = maker.name if maker else None
         read.checker_name = checker.name if checker else None
         read.rejected_by_name = rejected_by.name if rejected_by else None
+        read.lead_refs = lead_refs.get(p.id, [])
         read.viewer_is_maker = p.maker_user_uuid == current_user.id
         read.viewer_can_approve = (
             p.status == PayoutStatus.PENDING_APPROVAL
@@ -156,6 +179,8 @@ async def _to_read(
             and p.maker_user_uuid != current_user.id
             and p.recipient_user_uuid != current_user.id
         )
+        if is_platform_admin(current_user) and p.recipient_user_uuid != current_user.id:
+            read.simulate_events = payments_service.simulator_events_for(p)
         reads.append(read)
     return reads
 
@@ -163,10 +188,13 @@ async def _to_read(
 @router.post("", response_model=PayoutRead, status_code=status.HTTP_201_CREATED)
 async def create_payout(
     req: PayoutCreate,
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(finance_prepare),
     db: AsyncSession = Depends(get_db),
 ) -> PayoutRead:
-    _require_payout_requester(current_user)
+    if current_user.sub_admin_access is None:
+        _require_payout_requester(current_user)
+    else:
+        check_assignment_line(current_user, "account_manager", "prepare", req.business_line)
     try:
         payout_id = await payments_service.create_payout(
             recipient_user_uuid=req.recipient_user_uuid,
@@ -178,12 +206,17 @@ async def create_payout(
             idempotency_key=req.idempotency_key,
             maker_user_uuid=current_user.id,
             actor_role=current_user.role,
+            scoped_staff_id=(
+                current_user.staff_profile_uuid
+                if current_user.sub_admin_access is not None
+                else None
+            ),
         )
     except payments_service.PayoutError as exc:
         raise _map_error(exc) from None
 
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.post("/{payout_id}/approve", response_model=PayoutRead)
@@ -203,7 +236,35 @@ async def approve_payout(
         raise _map_error(exc) from None
 
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
+
+
+@router.post("/{payout_id}/simulate-gateway", response_model=PayoutRead)
+async def simulate_gateway(
+    payout_id: UUID,
+    body: PayoutGatewaySimulation,
+    current_user: CurrentUser = Depends(get_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> PayoutRead:
+    """Development-only RazorpayX test mode: an Admin picks the gateway outcome.
+
+    404 unless PAYOUT_GATEWAY_SIMULATOR is on, ENV is development and no live
+    Razorpay credentials exist; the outcome then runs through settle_from_webhook.
+    """
+    _require_admin(current_user, "Simulating a gateway outcome")
+    try:
+        await payments_service.simulate_gateway_event(
+            payout_id=payout_id,
+            event=body.event,
+            actor_user_uuid=current_user.id,
+        )
+    except payments_service.PayoutError as exc:
+        raise _map_error(exc) from None
+
+    payout = await _get_payout_or_404(db, payout_id)
+    # The settle ran on another session; read the committed state, not a cached row.
+    await db.refresh(payout)
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.post("/{payout_id}/reject", response_model=PayoutRead)
@@ -232,6 +293,10 @@ async def reject_payout(
         # the looser _require_platform_admin check would let a Sub Admin
         # indirectly write to a table they have no direct RLS access to.
         _require_admin(current_user, action="Rejecting a commission payout")
+    elif payout.type == PayoutType.CONTEST_REWARD:
+        # CS-027: same shape; the release hook writes contest_results on the
+        # bypass session, which api_user cannot write at all.
+        _require_admin(current_user, action="Rejecting a contest prize payout")
     try:
         await payments_service.reject_payout(
             payout_id=payout_id,
@@ -252,7 +317,7 @@ async def reject_payout(
     # instead of the ORM-vs-Core split there).
     db.expire(payout)
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.post("/{payout_id}/manual/issue", response_model=PayoutRead)
@@ -273,7 +338,7 @@ async def issue_manual_cheque(
     except payments_service.PayoutError as exc:
         raise _map_error(exc) from None
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.post("/{payout_id}/manual/clear", response_model=PayoutRead)
@@ -292,7 +357,7 @@ async def clear_manual_cheque(
     except payments_service.PayoutError as exc:
         raise _map_error(exc) from None
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.post("/{payout_id}/manual/fail", response_model=PayoutRead)
@@ -313,7 +378,7 @@ async def fail_manual_cheque(
     except payments_service.PayoutError as exc:
         raise _map_error(exc) from None
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.post("/{payout_id}/manual/reverse", response_model=PayoutRead)
@@ -334,18 +399,30 @@ async def reverse_manual_cheque(
     except payments_service.PayoutError as exc:
         raise _map_error(exc) from None
     payout = await _get_payout_or_404(db, payout_id)
-    return (await _to_read([payout], current_user))[0]
+    return (await _to_read([payout], current_user, db))[0]
 
 
 @router.get("/recipients", response_model=PayoutRecipientListResponse)
 async def list_payout_recipients(
     q: str = Query(min_length=2, max_length=64),
     limit: int = Query(default=20, ge=1, le=50),
-    current_user: CurrentUser = Depends(get_active_user),
+    business_line: Literal["loans", "real_estate"] | None = None,
+    current_user: CurrentUser = Depends(finance_prepare),
 ) -> PayoutRecipientListResponse:
     """Minimal recipient picker for an authorized payout requester."""
-    _require_payout_requester(current_user)
-    hits = await search_payout_recipients(q=q, limit=limit, exclude_user_uuid=current_user.id)
+    line = None
+    if current_user.sub_admin_access is None:
+        _require_payout_requester(current_user)
+    else:
+        if business_line is None:
+            raise HTTPException(
+                422, detail="Choose a business line before searching for a recipient."
+            )
+        check_assignment_line(current_user, "account_manager", "prepare", business_line)
+        line = business_line
+    hits = await search_payout_recipients(
+        q=q, limit=limit, exclude_user_uuid=current_user.id, line=line
+    )
     return PayoutRecipientListResponse(
         recipients=[
             PayoutRecipientRead(
@@ -360,9 +437,165 @@ async def list_payout_recipients(
     )
 
 
+async def _reveal_saved_destination(
+    current_user: CurrentUser,
+    *,
+    recipient_auth_user_uuid: UUID | None = None,
+    agent_profile_uuid: UUID | None = None,
+) -> SavedPayoutDestinationRead:
+    _require_payout_requester(current_user)
+    if recipient_auth_user_uuid == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot create a payout to yourself.",
+        )
+    try:
+        saved = await agent_payout_details.reveal_for_payout(
+            actor_auth_user_uuid=current_user.id,
+            actor_role=current_user.role,
+            recipient_auth_user_uuid=recipient_auth_user_uuid,
+            agent_profile_uuid=agent_profile_uuid,
+        )
+    except agent_payout_details.SelfPayoutDetailsForbidden as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot create a payout to yourself.",
+        ) from exc
+    except agent_payout_details.PayoutDetailsUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Saved payout details are not available right now.",
+        ) from exc
+    except agent_payout_details.PayoutDetailsUnreadable as exc:
+        logger.error("payout.saved_destination_unreadable")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The saved payout details could not be read. Ask the Agent to save them again.",
+        ) from exc
+    if saved is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This recipient has not saved payout details.",
+        )
+    return SavedPayoutDestinationRead(
+        upi_id=saved.upi_id,
+        bank=saved.bank,
+        updated_at=saved.updated_at,
+        cheque_uploaded_at=saved.cheque_uploaded_at,
+    )
+
+
+async def _view_cancelled_cheque(
+    current_user: CurrentUser,
+    *,
+    recipient_auth_user_uuid: UUID | None = None,
+    agent_profile_uuid: UUID | None = None,
+) -> CancelledChequeRead:
+    _require_payout_requester(current_user)
+    if recipient_auth_user_uuid == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot create a payout to yourself.",
+        )
+    try:
+        view = await agent_payout_cheque.view_for_payout(
+            actor_auth_user_uuid=current_user.id,
+            actor_role=current_user.role,
+            recipient_auth_user_uuid=recipient_auth_user_uuid,
+            agent_profile_uuid=agent_profile_uuid,
+        )
+    except agent_payout_cheque.SelfChequeViewForbidden as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot create a payout to yourself.",
+        ) from exc
+    if view is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This recipient has not uploaded a cancelled cheque.",
+        )
+    # A sanitized image may open inline; a PDF always downloads (it can carry
+    # active content), the same split as loan-document previews.
+    url = (
+        storage.presign_preview(view.object_key)
+        if view.content_type.startswith("image/")
+        else storage.presign_download(view.object_key)
+    )
+    return CancelledChequeRead(
+        url=url,
+        content_type=view.content_type,
+        uploaded_at=view.uploaded_at,
+        expires_in_seconds=storage.PRESIGN_EXPIRE_SECONDS,
+    )
+
+
+@router.get(
+    "/recipients/{user_uuid}/cancelled-cheque",
+    response_model=CancelledChequeRead,
+)
+async def get_recipient_cancelled_cheque(
+    user_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+) -> CancelledChequeRead:
+    """Open the cancelled cheque an Agent attached to their payout details.
+
+    Same access as the saved-destination prefill; every successful view is
+    audited (agent_payout_details_viewed, purpose cheque_view).
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    return await _view_cancelled_cheque(current_user, recipient_auth_user_uuid=user_uuid)
+
+
+@router.get(
+    "/agents/{agent_profile_uuid}/cancelled-cheque",
+    response_model=CancelledChequeRead,
+)
+async def get_agent_cancelled_cheque(
+    agent_profile_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+) -> CancelledChequeRead:
+    """Same as the recipient cheque view, keyed by Agent profile (commission payouts)."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return await _view_cancelled_cheque(current_user, agent_profile_uuid=agent_profile_uuid)
+
+
+@router.get(
+    "/recipients/{user_uuid}/saved-destination",
+    response_model=SavedPayoutDestinationRead,
+)
+async def get_recipient_saved_destination(
+    user_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+) -> SavedPayoutDestinationRead:
+    """Prefill a payout from the bank account / UPI ID an Agent saved.
+
+    Same access as the recipient picker. Every successful read is audited
+    (agent_payout_details_viewed); a maker's own details are refused.
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    return await _reveal_saved_destination(current_user, recipient_auth_user_uuid=user_uuid)
+
+
+@router.get(
+    "/agents/{agent_profile_uuid}/saved-destination",
+    response_model=SavedPayoutDestinationRead,
+)
+async def get_agent_saved_destination(
+    agent_profile_uuid: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(get_active_user),
+) -> SavedPayoutDestinationRead:
+    """Same as the recipient prefill, keyed by Agent profile (commission payouts)."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return await _reveal_saved_destination(current_user, agent_profile_uuid=agent_profile_uuid)
+
+
 @router.get("/link-divergences", response_model=PayoutLinkDivergencesRead)
 async def get_payout_link_divergences(
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(finance_view),
     db: AsyncSession = Depends(get_db),
 ) -> PayoutLinkDivergencesRead:
     """Read-only: payouts whose linked referral/commission/fee_cashback row
@@ -371,7 +604,8 @@ async def get_payout_link_divergences(
     mutating counterpart exists on purpose: see payout_links.py's docstring
     for why a force-unlink endpoint would convert a display bug into a money
     bug."""
-    _require_admin(current_user, action="Viewing payout reconciliation")
+    if current_user.sub_admin_access is None:
+        _require_admin(current_user, action="Viewing payout reconciliation")
     result = await list_link_divergences(db)
     return PayoutLinkDivergencesRead(
         paid_direction=[PayoutLinkDivergenceRead(**row) for row in result["paid_direction"]],
@@ -384,12 +618,13 @@ async def list_payouts(
     status_filter: PayoutStatus | None = None,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
-    current_user: CurrentUser = Depends(get_active_user),
+    current_user: CurrentUser = Depends(finance_view),
     db: AsyncSession = Depends(get_db),
 ) -> PayoutListResponse:
-    _require_payout_requester(current_user)
+    if current_user.sub_admin_access is None:
+        _require_payout_requester(current_user)
     stmt = select(Payout).order_by(Payout.created_at.desc()).limit(limit).offset(offset)
-    if current_user.role == "sub_admin":
+    if current_user.role == "sub_admin" and current_user.sub_admin_access is None:
         # Defence in depth over payouts_rls: delegated Sub Admins are makers and
         # may only see the requests they raised, never another maker's queue.
         stmt = stmt.where(Payout.maker_user_uuid == current_user.id)
@@ -397,7 +632,7 @@ async def list_payouts(
         stmt = stmt.where(Payout.status == status_filter)
     result = await db.execute(stmt)
     payouts = result.scalars().all()
-    return PayoutListResponse(payouts=await _to_read(payouts, current_user))
+    return PayoutListResponse(payouts=await _to_read(payouts, current_user, db))
 
 
 @router.post("/webhook/razorpay", response_model=WebhookAck)

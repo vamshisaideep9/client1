@@ -3,7 +3,6 @@
 import * as React from "react";
 import { ChevronDownIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -14,21 +13,48 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateRangePicker } from "@/features/analytics/date-range-picker";
 import {
   EMPTY_FILTERS,
   FilterBar,
   type FilterBarValue,
 } from "@/features/dashboard/filter-bar";
-import { resolveDatePreset, type DatePreset } from "@/lib/reports";
-import type { ReportBucket, ReportBusinessLine, ReportKind } from "@/lib/reports-api";
-import { cn } from "@/lib/utils";
+import {
+  compactChips,
+  optionsFromLabels,
+  selectFilterChip,
+  textFilterChip,
+} from "@/features/dashboard/filter-options";
+import { AmountRangeFields } from "@/features/dashboard/amount-range-fields";
+import { FilterSelect } from "@/features/dashboard/filter-select";
+import type { MoreFilterGroup } from "@/features/dashboard/more-filters";
+import {
+  DEAL_STATUS_LABEL,
+  PROPERTY_CATEGORY_LABEL,
+  PROPERTY_SUBTYPE_LABEL,
+  amountRangeLabel,
+} from "@/features/dashboard/product-filter-options";
+import {
+  INTEREST_LABEL,
+  LOAN_STATUS_LABEL,
+  REFERRER_SOURCE_LABEL,
+} from "@/features/telecaller/lead-signal-filters";
+import { DISPOSITION_LABEL, STATUS_LABEL } from "@/features/telecaller/telecaller-lead-status";
+import { listAdminBanks, listAdminLoanTypes } from "@/lib/loan-config-api";
+import {
+  activeDetailCount,
+  detailForLine,
+  resolveDatePreset,
+  type ReportDetailFilters,
+} from "@/lib/reports";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
+import {
+  getReportTelecallers,
+  type ReportBucket,
+  type ReportBusinessLine,
+  type ReportKind,
+} from "@/lib/reports-api";
 import { useAgentOptions } from "./use-agent-options";
-
-const PRESETS: { value: DatePreset; label: string }[] = [
-  { value: "this_week", label: "This week" },
-  { value: "this_month", label: "This month" },
-  { value: "last_30_days", label: "Last 30 days" },
-];
 
 const BUCKET_OPTIONS: { value: ReportBucket; label: string }[] = [
   { value: "week", label: "Weekly" },
@@ -41,6 +67,7 @@ export type ReportFilterValue = {
   bucket: ReportBucket;
   businessLine: ReportBusinessLine | undefined;
   agentProfileUuids: string[];
+  detail: ReportDetailFilters;
 };
 
 function baselineFilters(): ReportFilterValue {
@@ -51,11 +78,121 @@ function baselineFilters(): ReportFilterValue {
     bucket: "week",
     businessLine: undefined,
     agentProfileUuids: [],
+    detail: {},
   };
 }
 
-// The report keeps its domain-specific bucket and multi-Agent controls, but
-// date/line/reset layout now comes from the same FilterBar as every staff list.
+type Option = { value: string; label: string };
+
+type DetailSpec = {
+  key: Exclude<keyof ReportDetailFilters, "propertyCity" | "amountMin" | "amountMax">;
+  label: string;
+  options: Option[] | Record<string, string>;
+  /** "More filters" section, or null for the report's status filter in the first row. */
+  group: string | null;
+};
+
+function useOptions(load: () => Promise<Option[] | null>, deps: React.DependencyList): Option[] {
+  const [options, setOptions] = React.useState<Option[]>([]);
+  React.useEffect(() => {
+    let active = true;
+    void load().then((next) => {
+      if (active && next) setOptions(next);
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+  return options;
+}
+
+function toOptions(options: Option[] | Record<string, string>): Option[] {
+  return Array.isArray(options) ? options : optionsFromLabels(options);
+}
+
+function DetailSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string | undefined;
+  options: Option[] | Record<string, string>;
+  onChange: (value: string | undefined) => void;
+}) {
+  return (
+    <FilterSelect
+      label={label}
+      value={value ?? "all"}
+      options={toOptions(options)}
+      onValueChange={(next) => onChange(next === "all" ? undefined : next)}
+    />
+  );
+}
+
+/** The report's amount range: typed locally, applied after a pause. */
+function ReportAmountRange({
+  legend,
+  min,
+  max,
+  onChange,
+}: {
+  legend: string;
+  min: string | undefined;
+  max: string | undefined;
+  onChange: (next: { amountMin: string | undefined; amountMax: string | undefined }) => void;
+}) {
+  const [draft, setDraft] = React.useState({ min: min ?? "", max: max ?? "" });
+  React.useEffect(() => setDraft({ min: min ?? "", max: max ?? "" }), [min, max]);
+  const settled = useDebouncedValue(draft);
+  React.useEffect(() => {
+    const amountMin = settled.min || undefined;
+    const amountMax = settled.max || undefined;
+    if (amountMin !== (min || undefined) || amountMax !== (max || undefined)) onChange({ amountMin, amountMax });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled]);
+  return (
+    <AmountRangeFields
+      legend={`${legend} (₹)`}
+      name={legend.toLocaleLowerCase()}
+      min={draft.min}
+      max={draft.max}
+      invertedNote="The minimum is above the maximum, so the amount is not applied."
+      onChange={setDraft}
+    />
+  );
+}
+
+/** Types into a local box and applies after a pause, so each keystroke isn't a fetch. */
+function CityInput({ value, onChange }: { value: string | undefined; onChange: (value: string | undefined) => void }) {
+  const [draft, setDraft] = React.useState(value ?? "");
+  React.useEffect(() => setDraft(value ?? ""), [value]);
+  React.useEffect(() => {
+    const handle = window.setTimeout(() => {
+      const next = draft.trim() || undefined;
+      if (next !== (value ?? undefined)) onChange(next);
+    }, 400);
+    return () => window.clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
+  return (
+    <Input
+      aria-label="Property city"
+      placeholder="Property city"
+      value={draft}
+      maxLength={120}
+      onChange={(event) => setDraft(event.target.value)}
+    />
+  );
+}
+
+// Date range (calendar picker), business line, grouping and agents for every
+// report, plus the report's own filters: lead source, telecaller, latest call
+// outcome and interest for leads/loans/deals; lead status for leads; loan
+// status, type and bank for loans; deal status and property city/category for
+// deals. Every value is applied server-side and carried into CSV/Excel exports.
 export function ReportFilterBar({
   kind,
   value,
@@ -68,32 +205,66 @@ export function ReportFilterBar({
   const [agentQuery, setAgentQuery] = React.useState("");
   const [agentPopoverOpen, setAgentPopoverOpen] = React.useState(false);
   const { options: agentOptions, loading: agentsLoading } = useAgentOptions(value.businessLine);
+  const journey = kind !== "agents";
+  const telecallers = useOptions(
+    async () => {
+      if (!journey) return [];
+      const res = await getReportTelecallers(value.businessLine);
+      return res.ok
+        ? res.data.map((t) => ({ value: t.staff_profile_uuid, label: `${t.name} (${t.staff_code})` }))
+        : null;
+    },
+    [journey, value.businessLine],
+  );
+  // Loan filters: the loans report, and the leads report unless it shows Real
+  // Estate only. Property filters: the deals report, and the leads report
+  // unless it shows Loans only (CS-023).
+  const loanFilters = kind === "loans" || (kind === "leads" && value.businessLine !== "real_estate");
+  const propertyFilters = kind === "deals" || (kind === "leads" && value.businessLine !== "loans");
+  const loanTypes = useOptions(
+    async () => {
+      if (!loanFilters) return [];
+      const res = await listAdminLoanTypes();
+      // Loan applications exist only for lending products.
+      return res.ok
+        ? res.data.filter((t) => t.category === "loan").map((t) => ({ value: t.id, label: t.label }))
+        : null;
+    },
+    [loanFilters],
+  );
+  const banks = useOptions(
+    async () => {
+      if (!loanFilters) return [];
+      const res = await listAdminBanks();
+      return res.ok ? res.data.map((b) => ({ value: b.id, label: b.name })) : null;
+    },
+    [loanFilters],
+  );
+
   const baseline = baselineFilters();
-  const filters: FilterBarValue = {
-    ...EMPTY_FILTERS,
-    line: value.businessLine ?? "all",
-    from: value.dateFrom,
-    to: value.dateTo,
-  };
+  const filters: FilterBarValue = { ...EMPTY_FILTERS, line: value.businessLine ?? "all" };
+  const detailCount = activeDetailCount(value.detail);
   const filtersCustomized =
     value.dateFrom !== baseline.dateFrom ||
     value.dateTo !== baseline.dateTo ||
     value.bucket !== baseline.bucket ||
     value.businessLine !== baseline.businessLine ||
-    value.agentProfileUuids.length > 0;
+    value.agentProfileUuids.length > 0 ||
+    detailCount > 0;
 
   function updateSharedFilters(next: FilterBarValue) {
-    onChange({
-      ...value,
-      dateFrom: next.from,
-      dateTo: next.to,
-      businessLine: next.line === "all" ? undefined : (next.line as ReportBusinessLine),
-    });
+    const businessLine = next.line === "all" ? undefined : (next.line as ReportBusinessLine);
+    // A telecaller picked on one line is meaningless after switching lines,
+    // and so is a loan filter on Real Estate or a property filter on Loans.
+    const detail =
+      businessLine !== value.businessLine
+        ? detailForLine({ ...value.detail, telecallerProfileUuid: undefined }, kind === "leads" ? businessLine : undefined)
+        : value.detail;
+    onChange({ ...value, businessLine, detail });
   }
 
-  function applyPreset(preset: DatePreset) {
-    const { dateFrom, dateTo } = resolveDatePreset(preset, new Date());
-    onChange({ ...value, dateFrom, dateTo });
+  function setDetail<K extends keyof ReportDetailFilters>(key: K, next: ReportDetailFilters[K]) {
+    onChange({ ...value, detail: { ...value.detail, [key]: next } });
   }
 
   function toggleAgent(id: string) {
@@ -107,6 +278,115 @@ export function ReportFilterBar({
     option.label.toLowerCase().includes(agentQuery.trim().toLowerCase()),
   );
 
+  function setDetailValue(key: keyof ReportDetailFilters, next: string | undefined) {
+    onChange({ ...value, detail: { ...value.detail, [key]: next } as ReportDetailFilters });
+  }
+
+  // The report's status filter stays in the first row; the rest sit behind
+  // "More filters", grouped by what they describe.
+  const specs: DetailSpec[] = [
+    ...(kind === "leads" ? [{ key: "leadStatus" as const, label: "Lead status", options: STATUS_LABEL, group: null }] : []),
+    ...(kind === "loans"
+      ? [{ key: "loanStatus" as const, label: "Loan status", options: LOAN_STATUS_LABEL, group: null }]
+      : []),
+    ...(kind === "deals"
+      ? [{ key: "dealStatus" as const, label: "Deal status", options: DEAL_STATUS_LABEL, group: null }]
+      : []),
+    ...(journey
+      ? [
+          { key: "leadSource" as const, label: "Lead source", options: REFERRER_SOURCE_LABEL, group: "Lead" },
+          { key: "telecallerProfileUuid" as const, label: "Telecaller", options: telecallers, group: "Lead" },
+          { key: "callStatus" as const, label: "Call status", options: DISPOSITION_LABEL, group: "Lead" },
+          { key: "interest" as const, label: "Lead interest", options: INTEREST_LABEL, group: "Lead" },
+        ]
+      : []),
+    ...(loanFilters
+      ? [
+          { key: "loanTypeId" as const, label: "Product", options: loanTypes, group: "Product" },
+          { key: "bankId" as const, label: "Bank", options: banks, group: "Product" },
+        ]
+      : []),
+    ...(kind === "leads" && loanFilters
+      ? [{ key: "loanStatus" as const, label: "Loan status", options: LOAN_STATUS_LABEL, group: "Product" }]
+      : []),
+    ...(propertyFilters
+      ? [
+          { key: "propertyCategory" as const, label: "Property category", options: PROPERTY_CATEGORY_LABEL, group: "Property" },
+          { key: "propertySubtype" as const, label: "Property type", options: PROPERTY_SUBTYPE_LABEL, group: "Property" },
+        ]
+      : []),
+    ...(kind === "leads" && propertyFilters
+      ? [{ key: "dealStatus" as const, label: "Deal status", options: DEAL_STATUS_LABEL, group: "Property" }]
+      : []),
+  ];
+  // Amount: requested loan amount (loans), quoted price (deals), either (leads).
+  const amountLegend =
+    kind === "loans"
+      ? "Loan amount"
+      : kind === "deals"
+        ? "Quoted price"
+        : loanFilters && propertyFilters
+          ? "Loan amount or quoted price"
+          : loanFilters
+            ? "Loan amount"
+            : "Quoted price";
+  const control = (spec: DetailSpec) => (
+    <DetailSelect
+      key={spec.key}
+      label={spec.label}
+      value={value.detail[spec.key]}
+      options={spec.options}
+      onChange={(next) => setDetailValue(spec.key, next)}
+    />
+  );
+  const hidden = specs.filter((spec) => spec.group);
+  const more: MoreFilterGroup[] = [];
+  for (const spec of hidden) {
+    const group = more.find((entry) => entry.title === spec.group);
+    if (group) group.content = [group.content, control(spec)];
+    else more.push({ title: spec.group as string, content: control(spec) });
+  }
+  if (kind === "deals") {
+    const city = <CityInput key="city" value={value.detail.propertyCity} onChange={(next) => setDetail("propertyCity", next)} />;
+    const property = more.find((entry) => entry.title === "Property");
+    if (property) property.content = [property.content, city];
+    else more.push({ title: "Property", content: city });
+  }
+  if (journey) {
+    more.push({
+      title: "Money",
+      content: (
+        <ReportAmountRange
+          key="amount"
+          legend={amountLegend}
+          min={value.detail.amountMin}
+          max={value.detail.amountMax}
+          onChange={(next) => onChange({ ...value, detail: { ...value.detail, ...next } })}
+        />
+      ),
+    });
+  }
+  const amountText = journey ? amountRangeLabel(value.detail.amountMin ?? "", value.detail.amountMax ?? "") : null;
+  const chips = compactChips([
+    ...hidden.map((spec) =>
+      selectFilterChip(spec.key, spec.label, value.detail[spec.key], toOptions(spec.options), () =>
+        setDetailValue(spec.key, undefined),
+      ),
+    ),
+    kind === "deals"
+      ? textFilterChip("propertyCity", "Property city", value.detail.propertyCity, () =>
+          setDetail("propertyCity", undefined),
+        )
+      : null,
+    amountText
+      ? {
+          id: "amount",
+          label: `${amountLegend}: ${amountText}`,
+          onRemove: () => onChange({ ...value, detail: { ...value.detail, amountMin: undefined, amountMax: undefined } }),
+        }
+      : null,
+  ]);
+
   return (
     <FilterBar
       value={filters}
@@ -115,28 +395,38 @@ export function ReportFilterBar({
       searchLabel="Search report"
       showSearch={false}
       showStatus={false}
+      showDates={false}
       showClear={filtersCustomized}
-      dateFromLabel="Report from date"
-      dateToLabel="Report to date"
-      actions={PRESETS.map((preset) => (
-        <Button
-          key={preset.value}
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => applyPreset(preset.value)}
-        >
-          {preset.label}
-        </Button>
-      ))}
+      more={more}
+      moreActiveCount={chips.length}
+      onClearMore={() =>
+        onChange({
+          ...value,
+          detail: Object.fromEntries(
+            Object.entries(value.detail).filter(
+              ([key]) =>
+                !hidden.some((spec) => spec.key === key) &&
+                key !== "propertyCity" &&
+                key !== "amountMin" &&
+                key !== "amountMax",
+            ),
+          ) as ReportDetailFilters,
+        })
+      }
+      chips={chips}
       extra={
         <>
-          {kind !== "agents" ? (
+          <DateRangePicker
+            value={{ dateFrom: value.dateFrom, dateTo: value.dateTo }}
+            onChange={(range) => onChange({ ...value, ...range })}
+            className="sm:w-full"
+          />
+          {journey ? (
             <Select
               value={value.bucket}
               onValueChange={(bucket) => onChange({ ...value, bucket: bucket as ReportBucket })}
             >
-              <SelectTrigger aria-label="Report grouping">
+              <SelectTrigger className="w-full" aria-label="Report grouping">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -154,15 +444,13 @@ export function ReportFilterBar({
               <button
                 type="button"
                 aria-label="Filter by agents"
-                className={cn(
-                  "flex h-9 min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                  value.agentProfileUuids.length === 0 && "text-muted-foreground",
-                )}
+                data-active={value.agentProfileUuids.length > 0 ? "true" : undefined}
+                className="flex h-10 min-w-0 items-center justify-between gap-2 rounded-lg border border-input bg-surface px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[active=true]:border-brand-cta data-[active=true]:font-medium max-sm:min-h-11 dark:bg-input/30"
               >
                 <span className="truncate">
                   {value.agentProfileUuids.length === 0
-                    ? "All agents"
-                    : `${value.agentProfileUuids.length} selected`}
+                    ? "Agents"
+                    : `${value.agentProfileUuids.length} agents selected`}
                 </span>
                 <ChevronDownIcon className="h-4 w-4 shrink-0 opacity-50" aria-hidden="true" />
               </button>
@@ -180,7 +468,7 @@ export function ReportFilterBar({
                 <button
                   type="button"
                   onClick={() => onChange({ ...value, agentProfileUuids: [] })}
-                  className="mb-1 w-full rounded-md px-2 py-1.5 text-left text-xs font-medium text-brand-cta hover:bg-muted"
+                  className="mb-1 w-full rounded-md px-2 py-1.5 text-left text-xs font-medium text-brand-link hover:bg-muted"
                 >
                   Clear selected agents
                 </button>
@@ -207,6 +495,8 @@ export function ReportFilterBar({
               </div>
             </PopoverContent>
           </Popover>
+
+          {specs.filter((spec) => !spec.group).map(control)}
         </>
       }
     />

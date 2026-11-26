@@ -12,7 +12,9 @@ import { LoansApplications } from "@/features/dashboard/loans-applications";
 import { PersonalizedPlacements } from "@/features/dashboard/personalized-placements";
 import { useMe } from "@/features/dashboard/me-provider";
 import { EmployeeHome } from "@/features/employee/employee-home";
+import { RealEstateHomeSkeleton } from "@/features/real-estate/home-skeleton";
 import { RealEstateHome } from "@/features/real-estate/real-estate-home";
+import { ScopedSubAdminHome } from "@/features/sub-admin/scoped-sub-admin-home";
 import { SubAdminHome } from "@/features/sub-admin/sub-admin-home";
 import { TelecallerHome } from "@/features/telecaller/telecaller-home";
 
@@ -27,7 +29,9 @@ export default function DashboardPage() {
   }
 
   if (session?.role === "sub_admin") {
-    return <SubAdminHome />;
+    if (status === "loading") return <Skeleton className="mx-auto mt-6 h-60 w-full max-w-5xl" />;
+    if (status === "error") return <FetchError status={errorStatus} message={error} onRetry={retry} />;
+    return me?.subAdminAccess ? <ScopedSubAdminHome access={me.subAdminAccess} /> : <SubAdminHome />;
   }
 
   if (session?.role === "telecaller") {
@@ -79,7 +83,7 @@ export default function DashboardPage() {
   }
 
   if (activeLine === "real_estate") {
-    return <><PersonalizedPlacements businessLine="real_estate" /><Suspense fallback={<Skeleton className="h-64 rounded-2xl" />}><RealEstateHome /></Suspense></>;
+    return <><PersonalizedPlacements businessLine="real_estate" /><Suspense fallback={<RealEstateHomeSkeleton />}><RealEstateHome /></Suspense></>;
   }
 
   // profiles may be empty briefly right after signup (backfilled by the scheduler);

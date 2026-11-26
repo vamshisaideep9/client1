@@ -1,7 +1,9 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
 import * as React from "react";
+import { useMe } from "@/features/dashboard/me-provider";
+import { assignedLines, canActOnLine } from "@/lib/sub-admin-access";
+
 import { Archive, Images, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -13,15 +15,9 @@ import { Input } from "@/components/ui/input";
 import { LoadingRegion } from "@/components/ui/loading-region";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DashboardHeader, DashboardPage } from "@/features/dashboard/dashboard-ui";
+import { FilterSelect } from "@/features/dashboard/filter-select";
 import { FetchError } from "@/features/dashboard/fetch-error";
 import {
   ARTWORK_SURFACE_ORDER,
@@ -38,6 +34,7 @@ import {
 } from "@/lib/campaign-media-api";
 
 import { ArtworkUploadDialog } from "./artwork-upload-dialog";
+import { CampaignAssetThumb } from "./campaign-asset-thumb";
 import { BannerTemplateManager } from "./banner-template-manager";
 import { CmsWorkspaceHeader } from "./cms-workspace";
 
@@ -52,6 +49,10 @@ type SectionKey = ArtworkUsageType | "legacy";
  * and each tile renders at that surface's real shape.
  */
 export function MediaLibraryView() {
+  const { me } = useMe();
+  const access = me?.subAdminAccess;
+  const editLines = access ? assignedLines(access, "media_sub_admin", "edit") : undefined;
+  const canUpload = !editLines || editLines.length > 0;
   const [assets, setAssets] = React.useState<CampaignMediaAsset[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -148,15 +149,15 @@ export function MediaLibraryView() {
         title="Campaign Media Library"
         description="Artwork grouped by the surface it is made for. Upload once, reuse across campaigns, and see what depends on each image."
         actions={
-          <Button onClick={() => setUploadOpen(true)}>
+          canUpload ? <Button onClick={() => setUploadOpen(true)}>
             <Plus className="h-4 w-4" aria-hidden />
             Upload artwork
-          </Button>
+          </Button> : undefined
         }
       />
 
       <section className="space-y-5 rounded-2xl border border-border bg-card p-4 sm:p-5">
-        <div className="grid gap-3 md:grid-cols-[minmax(14rem,1fr)_12rem_auto_auto]">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_12rem_auto_auto]">
           <Label className="relative block">
             <span className="sr-only">Search media</span>
             <Search
@@ -172,16 +173,15 @@ export function MediaLibraryView() {
               placeholder="Search title, alt text, source, or tag"
             />
           </Label>
-          <Select value={line} onValueChange={setLine}>
-            <SelectTrigger aria-label="Filter by business line">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All business lines</SelectItem>
-              <SelectItem value="loans">Loans</SelectItem>
-              <SelectItem value="real_estate">Real Estate</SelectItem>
-            </SelectContent>
-          </Select>
+          <FilterSelect
+            label="Business line"
+            value={line}
+            options={[
+              { value: "loans", label: "Loans" },
+              { value: "real_estate", label: "Real Estate" },
+            ]}
+            onValueChange={setLine}
+          />
           <Button
             type="button"
             variant={showArchived ? "outline" : "ghost"}
@@ -191,7 +191,7 @@ export function MediaLibraryView() {
             <Archive className="h-4 w-4" aria-hidden />
             {showArchived ? "Archived shown" : "Show archived"}
           </Button>
-          <div className="flex items-center rounded-lg bg-[var(--nav-tint)] px-3 text-sm font-medium text-[var(--nav-primary)]">
+          <div className="flex items-center rounded-lg bg-[var(--nav-tint)] px-3 text-sm font-medium text-brand-link">
             {filtered.length} {filtered.length === 1 ? "asset" : "assets"}
           </div>
         </div>
@@ -228,15 +228,18 @@ export function MediaLibraryView() {
           : null}
       </section>
 
-      <BannerTemplateManager />
+      {!editLines || editLines.length === 2 ? <BannerTemplateManager /> : null}
 
       <ArtworkUploadDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         onUploaded={() => void load()}
+        allowedLines={editLines}
+        defaultBusinessLine={editLines?.length === 1 ? editLines[0] : "both"}
       />
       <AssetDetailDialog
         asset={selected}
+        canEdit={!editLines || (selected !== null && canActOnLine(editLines, selected.business_line))}
         onClose={() => setSelected(null)}
         onSaved={async (next) => {
           setSelected(next);
@@ -267,7 +270,7 @@ function SurfaceSection({
           {surface.description} · {formatTargetSize(surface)} · {assets.length}
         </p>
       </header>
-      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {assets.map((asset) => (
           <li key={asset.id}>
             <button
@@ -276,15 +279,7 @@ function SurfaceSection({
               className="group w-full overflow-hidden rounded-xl border border-border bg-background text-left transition hover:-translate-y-0.5 hover:border-[var(--nav-primary)]/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className={`relative block w-full bg-muted ${surface.aspectClass}`}>
-                <img
-                  src={asset.image_url}
-                  alt={asset.alt_text}
-                  width={surface.width}
-                  height={surface.height}
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
+                <CampaignAssetThumb asset={asset} width={surface.width} height={surface.height} />
               </span>
               <span className="block space-y-3 p-4">
                 <span className="flex items-start justify-between gap-3">
@@ -338,12 +333,14 @@ function SurfaceSection({
 
 function AssetDetailDialog({
   asset,
+  canEdit,
   onClose,
   onSaved,
   onArchiveToggle,
   onDelete,
 }: {
   asset: CampaignMediaAsset | null;
+  canEdit: boolean;
   onClose: () => void;
   onSaved: (asset: CampaignMediaAsset) => Promise<void>;
   onArchiveToggle: (asset: CampaignMediaAsset, active: boolean) => Promise<void>;
@@ -357,6 +354,8 @@ function AssetDetailDialog({
   const { confirm, confirmDialog } = useConfirm();
 
   const [usages, setUsages] = React.useState<CampaignMediaAsset["usages"]>([]);
+  const [usageError, setUsageError] = React.useState(false);
+  const [usageReload, setUsageReload] = React.useState(0);
 
   React.useEffect(() => {
     if (!asset) return;
@@ -369,6 +368,7 @@ function AssetDetailDialog({
   // The listing omits the itemised usage list to keep one page load to a few
   // queries, so "Where used" is fetched when a detail view actually opens.
   React.useEffect(() => {
+    setUsageError(false);
     if (!asset) {
       setUsages([]);
       return;
@@ -380,12 +380,14 @@ function AssetDetailDialog({
     let active = true;
     setUsages([]);
     void getCampaignMedia(asset.id).then((response) => {
-      if (active && response.ok) setUsages(response.data.usages);
+      if (!active) return;
+      if (response.ok) setUsages(response.data.usages);
+      else setUsageError(true);
     });
     return () => {
       active = false;
     };
-  }, [asset]);
+  }, [asset, usageReload]);
 
   const tagList = React.useMemo(
     () =>
@@ -445,25 +447,25 @@ function AssetDetailDialog({
         });
       }}
     >
-      <DialogContent showCloseButton={false} className="max-h-[92dvh] max-w-3xl overflow-y-auto">
+      <DialogContent preventOutsideClose showCloseButton={false} className="flex max-h-[90dvh] w-[calc(100%-2rem)] !max-w-5xl flex-col gap-0 overflow-hidden rounded-2xl !p-0">
         {confirmDialog}
         {asset && surface ? (
           <>
-            <CmsWorkspaceHeader
+            <div className="shrink-0 px-5 pt-5 sm:px-6 sm:pt-6"><CmsWorkspaceHeader
               title={asset.title}
               description={`${surface.label} · ${formatTargetSize(surface)} · ${asset.usage_count} active and historical references`}
-            />
-            <div className="grid gap-5 py-3 md:grid-cols-[minmax(0,1.1fr)_minmax(18rem,.9fr)]">
+            /></div>
+            <div className="grid min-h-0 gap-6 overflow-y-auto p-5 sm:p-6 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
               <div className="space-y-4">
                 <div
                   className={`relative overflow-hidden rounded-xl border border-border bg-muted ${surface.aspectClass}`}
                 >
-                  <img
-                    src={asset.image_url}
-                    alt={asset.alt_text}
+                  <CampaignAssetThumb
+                    asset={asset}
                     width={surface.width}
                     height={surface.height}
-                    className="absolute inset-0 h-full w-full object-cover"
+                    fit="contain"
+                    lazy={false}
                   />
                 </div>
                 <dl className="grid gap-3 rounded-xl border border-border p-4 text-sm sm:grid-cols-2">
@@ -493,7 +495,7 @@ function AssetDetailDialog({
                 </dl>
                 <div>
                   <p className="text-xs font-medium text-text-secondary">Where used</p>
-                  {usages.length ? (
+                  {usageError ? <p role="alert" className="mt-2 text-sm text-destructive">Could not load campaign references. <button type="button" className="underline" onClick={() => setUsageReload((key) => key + 1)}>Try again</button></p> : usages.length ? (
                     <ul className="mt-2 space-y-2">
                       {usages.map((item) => (
                         <li
@@ -515,13 +517,15 @@ function AssetDetailDialog({
                 </div>
               </div>
 
-              <div className="space-y-4 rounded-xl border border-border p-4">
+              <div className="min-w-0 space-y-5">
+                <div><h3 className="font-semibold text-foreground">Artwork details</h3><p className="mt-1 text-sm text-text-secondary">Keep this image easy to find and accessible wherever it appears.</p></div>
                 <div>
                   <Label htmlFor="media-edit-title">Internal title</Label>
                   <Input
                     id="media-edit-title"
                     name="title"
                     value={title}
+                    readOnly={!canEdit}
                     maxLength={160}
                     onChange={(event) => setTitle(event.target.value)}
                   />
@@ -532,6 +536,7 @@ function AssetDetailDialog({
                     id="media-edit-alt"
                     name="alt_text"
                     value={altText}
+                    readOnly={!canEdit}
                     maxLength={300}
                     onChange={(event) => setAltText(event.target.value)}
                   />
@@ -542,6 +547,7 @@ function AssetDetailDialog({
                     id="media-edit-tags"
                     name="tags"
                     value={tags}
+                    readOnly={!canEdit}
                     maxLength={500}
                     onChange={(event) => setTags(event.target.value)}
                   />
@@ -555,21 +561,22 @@ function AssetDetailDialog({
                     id="media-edit-source"
                     name="source_reference"
                     value={source}
+                    readOnly={!canEdit}
                     maxLength={500}
                     onChange={(event) => setSource(event.target.value)}
                     placeholder={asset.source_type}
                   />
                 </div>
-                <Button className="w-full" disabled={busy || !dirty} onClick={() => void save()}>
+                <Button className="w-full" disabled={!canEdit || busy || !dirty} onClick={() => void save()}>
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
                   Save details
                 </Button>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="shrink-0 border-t border-border bg-muted/30 px-5 py-4 sm:px-6">
               <Button
                 variant="outline"
-                disabled={busy || dirty}
+                disabled={!canEdit || busy || dirty}
                 onClick={() => void onArchiveToggle(asset, !asset.active)}
               >
                 <Archive className="h-4 w-4" aria-hidden />
@@ -577,7 +584,7 @@ function AssetDetailDialog({
               </Button>
               <Button
                 variant="destructive"
-                disabled={busy || dirty || asset.usage_count > 0}
+                disabled={!canEdit || busy || dirty || asset.usage_count > 0}
                 onClick={() => void onDelete(asset)}
               >
                 <Trash2 className="h-4 w-4" aria-hidden />

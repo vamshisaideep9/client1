@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +12,7 @@ import { getLoanApplications, type LoanApplication } from "@/lib/loans";
 import { DASHBOARD_ICONS } from "./dashboard-icons";
 import { DashboardHeader, DashboardPage } from "./dashboard-ui";
 import { FetchError } from "./fetch-error";
+import { sinkFinishedLoans } from "./list-order";
 import { ListPagination, useListPagination } from "./list-pagination";
 import { STATUS_STYLES, formatAmount, formatDate } from "./loan-format";
 
@@ -21,7 +23,7 @@ function ApplyCta({ className }: { className?: string }) {
     <Link
       href="/dashboard/explore/loans"
       className={cn(
-        "inline-flex items-center gap-2 rounded-lg bg-loans-accent px-4 py-2 text-sm font-medium text-surface transition-colors hover:bg-loans-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-loans-accent focus-visible:ring-offset-2",
+        "inline-flex items-center gap-2 rounded-lg bg-loans-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-loans-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         className,
       )}
     >
@@ -32,6 +34,7 @@ function ApplyCta({ className }: { className?: string }) {
 }
 
 export function LoansApplications() {
+  const router = useRouter();
   const [applications, setApplications] = React.useState<LoanApplication[]>([]);
   const [status, setStatus] = React.useState<Status>("loading");
   const [error, setError] = React.useState<string | null>(null);
@@ -55,7 +58,8 @@ export function LoansApplications() {
       const res = await getLoanApplications();
       if (!active) return;
       if (res.ok) {
-        setApplications(res.data);
+        // Active applications first; closed and rejected ones sink below them.
+        setApplications(sinkFinishedLoans(res.data, (application) => application.status));
         setStatus("ready");
         return;
       }
@@ -132,12 +136,24 @@ export function LoansApplications() {
                 return (
                   <tr
                     key={a.id}
-                    className="border-b border-border transition-colors last:border-0 hover:bg-muted/40"
+                    tabIndex={0}
+                    aria-label={`Open ${a.loanTypeLabel} application`}
+                    onClick={(event) => {
+                      if (!(event.target as HTMLElement).closest("a, button")) router.push(`/dashboard/loans/${a.id}`);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) return;
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        router.push(`/dashboard/loans/${a.id}`);
+                      }
+                    }}
+                    className="cursor-pointer border-b border-border transition-colors last:border-0 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                   >
                     <td className="px-5 py-4 font-medium">
                       <Link
                         href={`/dashboard/loans/${a.id}`}
-                        className="text-text-primary transition-colors hover:text-loans-accent focus-visible:outline-none focus-visible:text-loans-accent"
+                        className="text-text-primary transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:text-brand-link"
                       >
                         {a.loanTypeLabel}
                       </Link>
@@ -165,7 +181,7 @@ export function LoansApplications() {
                       <Link
                         href={`/dashboard/loans/${a.id}`}
                         aria-label={`View ${a.loanTypeLabel} details`}
-                        className="inline-flex text-text-secondary transition-colors hover:text-loans-accent focus-visible:outline-none focus-visible:text-loans-accent"
+                        className="inline-flex text-text-secondary transition-colors hover:text-brand-link focus-visible:outline-none focus-visible:text-brand-link"
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Link>

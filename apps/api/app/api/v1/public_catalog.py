@@ -15,18 +15,20 @@ every future anonymous read (banner/offer/content serving included).
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from decimal import Decimal
-from typing import Literal
+from typing import Annotated, Literal
 from urllib.parse import urlencode
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import TypeAdapter, ValidationError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models.banner import BannerPlacement
-from app.models.property import Property, ReraVerificationStatus
+from app.models.property import ListingIntent, Property, PropertyCatalogType, ReraVerificationStatus
 from app.schemas.banners import PublicBannerListResponse, PublicBannerRead
 from app.schemas.content import PublicContentBlockListResponse, PublicContentBlockRead
 from app.schemas.financial_catalog import (
@@ -43,6 +45,8 @@ from app.schemas.properties import (
     PublicPropertyDetailRead,
     PublicPropertyListResponse,
     PublicPropertyRead,
+    PublicPropertySearch,
+    PublicPropertySearchResponse,
 )
 from app.schemas.property_details import PropertyStructuredDetails
 from app.services.banners import template_image_url
@@ -51,16 +55,18 @@ from app.services.financial_catalog import (
     get_public_product,
     list_public_products,
     list_public_provider_offers,
-    provider_logo_url,
+    provider_logo_metadata,
 )
 from app.services.properties import media_by_property, media_urls_by_property
 from app.services.property_submissions import format_inr_amount
 from app.services.public_catalog import (
+    PUBLIC_PROPERTY_SEARCH_PAGE_SIZE,
     get_public_content_block_by_slug,
     get_public_property,
     list_public_banners,
     list_public_content_blocks,
     list_public_properties,
+    search_public_properties,
 )
 
 router = APIRouter()
@@ -68,7 +74,7 @@ logger = logging.getLogger(__name__)
 _PROPERTY_DETAILS_ADAPTER = TypeAdapter(PropertyStructuredDetails)
 
 
-def _public_property_data(property_listing: Property) -> dict:
+def _public_property_data(property_listing: Property, type_label: str | None = None) -> dict:
     """Project an ORM row while containing malformed legacy detail JSON.
 
     Structured details were introduced after the catalog table. One stale
@@ -89,7 +95,13 @@ def _public_property_data(property_listing: Property) -> dict:
             structured_details = None
     return {
         **property_listing.__dict__,
+        "type": type_label or property_listing.type,
         "structured_details": structured_details,
+        "sale_classification": (
+            property_listing.sale_classification or getattr(structured_details, "sale_type", None)
+            if property_listing.listing_intent == ListingIntent.SALE
+            else None
+        ),
         # Rendered, not paise: the anonymous shapes deliberately never carry
         # exact minor units (see PublicPropertyDetailRead).
         "security_deposit_display": (
@@ -197,11 +209,7 @@ async def list_financial_product_providers_public(
                     name=provider.name,
                     legal_name=provider.legal_name,
                     provider_type=provider.provider_type,
-                    logo_url=(
-                        provider_logo_url(provider.logo_key)
-                        if provider.logo_verified_at is not None
-                        else None
-                    ),
+                    logo_url=provider_logo_metadata(provider)[0],
                 ),
                 min_amount=offer.min_amount,
                 max_amount=offer.max_amount,
@@ -231,24 +239,57 @@ async def list_properties_public(
     db: AsyncSession = Depends(get_db),
 ) -> PublicPropertyListResponse:
     properties = await list_public_properties(db)
+    return PublicPropertyListResponse(properties=await _public_property_cards(db, properties))
+
+
+@router.get("/properties/search", response_model=PublicPropertySearchResponse)
+async def search_properties_public(
+    filters: Annotated[PublicPropertySearch, Query()],
+    db: AsyncSession = Depends(get_db),
+) -> PublicPropertySearchResponse:
+    properties, total = await search_public_properties(db, filters)
+    return PublicPropertySearchResponse(
+        properties=await _public_property_cards(db, properties),
+        page=filters.page,
+        total=total,
+        page_size=PUBLIC_PROPERTY_SEARCH_PAGE_SIZE,
+    )
+
+
+async def _public_property_cards(
+    db: AsyncSession, properties: Sequence[Property]
+) -> list[PublicPropertyRead]:
+    labels = await _catalog_labels(db, properties)
     media = await media_urls_by_property(db, [property.id for property in properties])
     media_items = await media_by_property(db, [property.id for property in properties])
-    return PublicPropertyListResponse(
-        properties=[
-            PublicPropertyRead.model_validate(_public_property_data(p)).model_copy(
-                update={
-                    "media_urls": media[p.id],
-                    "media": media_items[p.id],
-                    "rera_number": (
-                        p.rera_number
-                        if p.rera_verification_status == ReraVerificationStatus.VERIFIED
-                        else None
-                    ),
-                }
-            )
-            for p in properties
-        ]
+    return [
+        PublicPropertyRead.model_validate(
+            _public_property_data(p, labels.get(p.catalog_type_code or ""))
+        ).model_copy(
+            update={
+                "media_urls": media[p.id],
+                "media": media_items[p.id],
+                "rera_number": (
+                    p.rera_number
+                    if p.rera_verification_status == ReraVerificationStatus.VERIFIED
+                    else None
+                ),
+            }
+        )
+        for p in properties
+    ]
+
+
+async def _catalog_labels(db: AsyncSession, properties: Sequence[Property]) -> dict[str, str]:
+    codes = {p.catalog_type_code for p in properties if p.catalog_type_code}
+    if not codes:
+        return {}
+    rows = await db.execute(
+        select(PropertyCatalogType.code, PropertyCatalogType.label).where(
+            PropertyCatalogType.code.in_(codes)
+        )
     )
+    return {code: label for code, label in rows}
 
 
 @router.get("/properties/{property_id}", response_model=PublicPropertyDetailRead)
@@ -262,8 +303,11 @@ async def get_property_public(
 
     media_urls = await media_urls_by_property(db, [property_listing.id])
     media_items = await media_by_property(db, [property_listing.id])
+    labels = await _catalog_labels(db, [property_listing])
     return PublicPropertyDetailRead.model_validate(
-        _public_property_data(property_listing)
+        _public_property_data(
+            property_listing, labels.get(property_listing.catalog_type_code or "")
+        )
     ).model_copy(
         update={
             "media_urls": media_urls[property_listing.id],
@@ -329,6 +373,10 @@ async def list_banners_public(
                     property_listing is not None
                     and property_listing.rera_verification_status == ReraVerificationStatus.VERIFIED
                 ),
+                # Only the id leaves the API for YouTube; the processed MP4 is
+                # served from its canonical public key (None if not public/).
+                youtube_video_id=banner.youtube_video_id,
+                video_url=asset_image_url(banner.video_key) if banner.video_key else None,
             )
         )
     return PublicBannerListResponse(banners=response)
