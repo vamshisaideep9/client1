@@ -73,6 +73,24 @@ on slice 1; security-sensitive):
   Agent profiles are single-line (`ck_agent_profiles_business_line_
   operational`), so the planned "both-line Agent" picker fix is defensive
   only.
+- Slice 1 PRs: [upstream #413](https://github.com/brollysolutions/client1/pull/413)
+  · [mirror #113](https://github.com/vamshisaideep9/client1/pull/113); slice 2
+  PRs: [upstream #414](https://github.com/brollysolutions/client1/pull/414) ·
+  [mirror #114](https://github.com/vamshisaideep9/client1/pull/114).
+
+Slice 3 — Relationship Manager web (branch `feat/round3-3-rm-web`, stacked
+on slice 2):
+
+- Agent queue: a "Relationship Manager" column and, on an approved Agent's
+  application, the current RM with a "Change" dialog (radio list of eligible
+  Sub Admins with their Agent counts, or "No Relationship Manager"); the API
+  refusal is shown to anyone but the Main Admin.
+- Sub Admin access editor: each RM grant lists its Agents by name and code
+  (status shown when not active) with a Remove button, and explains that
+  saving moves a newly added Agent off any other RM.
+- Agent relationships (RM): selecting an Agent shows a read-only leads table
+  (reference, status, product, introduced, last update) above the activity.
+- Agent home: a "Your Relationship Manager" card (name and staff code).
 
 **Merged upstream 2026-11-26 — Product specialists for Telecallers and
 Officers, with dashboards** (#409–#412, mirror #109–#112; `main` a3e09ce1)
