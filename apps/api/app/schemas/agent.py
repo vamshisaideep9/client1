@@ -40,9 +40,19 @@ class AgentProfileStatusRead(BaseModel):
     approved_at: datetime | None
 
 
+class AgentRelationshipManager(BaseModel):
+    """The Agent's Relationship Manager: display name and staff code only."""
+
+    name: str | None
+    staff_code: str
+
+
 class AgentHomeResponse(BaseModel):
     profile: AgentProfileStatusRead
     counts_by_status: dict[str, int]
+    # Read through the confined agent_relationship_managers function (the
+    # Agent's own profile only); null when no Relationship Manager is set.
+    relationship_manager: AgentRelationshipManager | None = None
 
 
 _AGENT_REQUIREMENT_KEYS = {"notes", "property_id", "product_slug", "email", "property_type"}

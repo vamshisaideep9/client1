@@ -176,6 +176,7 @@ async def home(
             approved_at=profile.approved_at,
         ),
         counts_by_status=counts,
+        relationship_manager=await agent_dashboard.relationship_manager(db, agent_profile_uuid),
     )
 
 

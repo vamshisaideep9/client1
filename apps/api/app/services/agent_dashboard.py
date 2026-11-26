@@ -38,6 +38,7 @@ from app.schemas.agent import (
     AgentHistorySiteVisit,
     AgentLeadHistoryRead,
     AgentLeadStaff,
+    AgentRelationshipManager,
 )
 from app.schemas.commissions import (
     AgentEarningsResponse,
@@ -416,6 +417,20 @@ async def lead_assignments(
         )
         for row in rows
     }
+
+
+async def relationship_manager(
+    db: AsyncSession, agent_profile_uuid: UUID
+) -> AgentRelationshipManager | None:
+    """The Agent's one Relationship Manager (name and staff code), read
+    through the confined ``agent_relationship_managers`` function, which
+    answers an Agent only about their own profile."""
+    from app.services.sub_admin_access import relationship_managers_for
+
+    manager = (await relationship_managers_for(db, [agent_profile_uuid])).get(agent_profile_uuid)
+    if manager is None:
+        return None
+    return AgentRelationshipManager(name=manager.name, staff_code=manager.staff_code)
 
 
 # ---------------------------------------------------------------------------
