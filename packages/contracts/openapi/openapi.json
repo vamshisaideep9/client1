@@ -217,6 +217,15 @@
             ],
             "title": "Last Resubmitted At"
           },
+          "lead_ref": {
+            "description": "Read-only, human-readable lead reference.",
+            "examples": [
+              "LD-00000123"
+            ],
+            "pattern": "^LD-\\d{8,}$",
+            "title": "Lead Ref",
+            "type": "string"
+          },
           "mobile": {
             "title": "Mobile",
             "type": "string"
@@ -261,6 +270,7 @@
         },
         "required": [
           "id",
+          "lead_ref",
           "name",
           "mobile",
           "business_line",
@@ -1009,6 +1019,15 @@
             "title": "Id",
             "type": "string"
           },
+          "lead_ref": {
+            "description": "Read-only, human-readable lead reference.",
+            "examples": [
+              "LD-00000123"
+            ],
+            "pattern": "^LD-\\d{8,}$",
+            "title": "Lead Ref",
+            "type": "string"
+          },
           "name": {
             "anyOf": [
               {
@@ -1066,7 +1085,8 @@
           "field_owners",
           "editable_fields",
           "updated_at",
-          "requests"
+          "requests",
+          "lead_ref"
         ],
         "title": "AdminLeadDetailsRead",
         "type": "object"
@@ -1103,6 +1123,15 @@
             ],
             "title": "Last Resubmitted At"
           },
+          "lead_ref": {
+            "description": "Read-only, human-readable lead reference.",
+            "examples": [
+              "LD-00000123"
+            ],
+            "pattern": "^LD-\\d{8,}$",
+            "title": "Lead Ref",
+            "type": "string"
+          },
           "mobile": {
             "title": "Mobile",
             "type": "string"
@@ -1134,6 +1163,7 @@
         },
         "required": [
           "id",
+          "lead_ref",
           "name",
           "mobile",
           "business_line",
@@ -4022,6 +4052,22 @@
             "title": "Id",
             "type": "string"
           },
+          "lead_ref": {
+            "anyOf": [
+              {
+                "description": "Read-only, human-readable lead reference.",
+                "examples": [
+                  "LD-00000123"
+                ],
+                "pattern": "^LD-\\d{8,}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Ref"
+          },
           "lead_status": {
             "anyOf": [
               {
@@ -5472,6 +5518,15 @@
             ],
             "title": "Last Resubmitted At"
           },
+          "lead_ref": {
+            "description": "Read-only, human-readable lead reference.",
+            "examples": [
+              "LD-00000123"
+            ],
+            "pattern": "^LD-\\d{8,}$",
+            "title": "Lead Ref",
+            "type": "string"
+          },
           "mobile": {
             "title": "Mobile",
             "type": "string"
@@ -5532,6 +5587,7 @@
         },
         "required": [
           "id",
+          "lead_ref",
           "mobile",
           "business_line",
           "status",
@@ -6080,6 +6136,22 @@
             "format": "date-time",
             "title": "Entered At",
             "type": "string"
+          },
+          "lead_ref": {
+            "anyOf": [
+              {
+                "description": "Read-only, human-readable lead reference.",
+                "examples": [
+                  "LD-00000123"
+                ],
+                "pattern": "^LD-\\d{8,}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Ref"
           },
           "lead_uuid": {
             "format": "uuid",
@@ -11403,6 +11475,22 @@
             "title": "Id",
             "type": "string"
           },
+          "lead_ref": {
+            "anyOf": [
+              {
+                "description": "Read-only, human-readable lead reference.",
+                "examples": [
+                  "LD-00000123"
+                ],
+                "pattern": "^LD-\\d{8,}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Ref"
+          },
           "notes": {
             "anyOf": [
               {
@@ -13502,6 +13590,22 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "lead_ref": {
+            "anyOf": [
+              {
+                "description": "Read-only, human-readable lead reference.",
+                "examples": [
+                  "LD-00000123"
+                ],
+                "pattern": "^LD-\\d{8,}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Ref"
           }
         },
         "required": [
@@ -13831,6 +13935,15 @@
             ],
             "title": "Eligible Since"
           },
+          "lead_ref": {
+            "description": "Read-only, human-readable lead reference.",
+            "examples": [
+              "LD-00000123"
+            ],
+            "pattern": "^LD-\\d{8,}$",
+            "title": "Lead Ref",
+            "type": "string"
+          },
           "lead_uuid": {
             "format": "uuid",
             "title": "Lead Uuid",
@@ -13895,6 +14008,7 @@
           "agent_code",
           "agent_name",
           "lead_uuid",
+          "lead_ref",
           "eligible_since"
         ],
         "title": "EligibleDeal",
@@ -14015,6 +14129,22 @@
               }
             ],
             "title": "Eligible Since"
+          },
+          "lead_ref": {
+            "anyOf": [
+              {
+                "description": "Read-only, human-readable lead reference.",
+                "examples": [
+                  "LD-00000123"
+                ],
+                "pattern": "^LD-\\d{8,}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Ref"
           },
           "loan_application_uuid": {
             "format": "uuid",
@@ -14784,6 +14914,22 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "lead_ref": {
+            "anyOf": [
+              {
+                "description": "Read-only, human-readable lead reference.",
+                "examples": [
+                  "LD-00000123"
+                ],
+                "pattern": "^LD-\\d{8,}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Ref"
           },
           "loan_application_uuid": {
             "format": "uuid",
@@ -20364,6 +20510,18 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "lead_refs": {
+            "items": {
+              "description": "Read-only, human-readable lead reference.",
+              "examples": [
+                "LD-00000123"
+              ],
+              "pattern": "^LD-\\d{8,}$",
+              "type": "string"
+            },
+            "title": "Lead Refs",
+            "type": "array"
           },
           "maker_name": {
             "anyOf": [
@@ -28467,6 +28625,15 @@
               }
             ]
           },
+          "lead_ref": {
+            "description": "Read-only, human-readable lead reference.",
+            "examples": [
+              "LD-00000123"
+            ],
+            "pattern": "^LD-\\d{8,}$",
+            "title": "Lead Ref",
+            "type": "string"
+          },
           "mobile": {
             "title": "Mobile",
             "type": "string"
@@ -28504,6 +28671,7 @@
         },
         "required": [
           "id",
+          "lead_ref",
           "name",
           "mobile",
           "status",
@@ -29624,6 +29792,15 @@
               }
             ]
           },
+          "lead_ref": {
+            "description": "Read-only, human-readable lead reference.",
+            "examples": [
+              "LD-00000123"
+            ],
+            "pattern": "^LD-\\d{8,}$",
+            "title": "Lead Ref",
+            "type": "string"
+          },
           "loan_applications": {
             "default": [],
             "items": {
@@ -29778,6 +29955,7 @@
         },
         "required": [
           "id",
+          "lead_ref",
           "mobile",
           "business_line",
           "status",
@@ -29868,6 +30046,15 @@
                 "type": "null"
               }
             ]
+          },
+          "lead_ref": {
+            "description": "Read-only, human-readable lead reference.",
+            "examples": [
+              "LD-00000123"
+            ],
+            "pattern": "^LD-\\d{8,}$",
+            "title": "Lead Ref",
+            "type": "string"
           },
           "loan_statuses": {
             "items": {
@@ -29975,6 +30162,7 @@
         },
         "required": [
           "id",
+          "lead_ref",
           "mobile",
           "business_line",
           "status",
@@ -33894,6 +34082,25 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "description": "Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it.",
+            "in": "query",
+            "name": "lead_ref",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it.",
+              "title": "Lead Ref"
+            }
           }
         ],
         "responses": {
@@ -33958,6 +34165,25 @@
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it.",
+            "in": "query",
+            "name": "lead_ref",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it.",
+              "title": "Lead Ref"
             }
           }
         ],
@@ -41447,6 +41673,25 @@
                 }
               ],
               "title": "Status Filter"
+            }
+          },
+          {
+            "description": "Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it.",
+            "in": "query",
+            "name": "lead_ref",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it.",
+              "title": "Lead Ref"
             }
           }
         ],
@@ -50073,6 +50318,25 @@
               "title": "Scope",
               "type": "string"
             }
+          },
+          {
+            "description": "Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it.",
+            "in": "query",
+            "name": "lead_ref",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it.",
+              "title": "Lead Ref"
+            }
           }
         ],
         "responses": {
@@ -50811,6 +51075,25 @@
               "pattern": "^(open|all)$",
               "title": "Scope",
               "type": "string"
+            }
+          },
+          {
+            "description": "Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it.",
+            "in": "query",
+            "name": "lead_ref",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it.",
+              "title": "Lead Ref"
             }
           }
         ],
@@ -56571,6 +56854,25 @@
                 }
               ],
               "title": "Status Filter"
+            }
+          },
+          {
+            "description": "Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it.",
+            "in": "query",
+            "name": "lead_ref",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it.",
+              "title": "Lead Ref"
             }
           }
         ],

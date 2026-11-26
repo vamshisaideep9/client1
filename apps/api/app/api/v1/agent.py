@@ -18,6 +18,7 @@ from app.cache.redis_keys import TTL_AGENT_LEAD_BULK_RATE, RedisCache, agent_lea
 from app.core import field_crypto
 from app.core.config import settings
 from app.core.deps import CurrentUser, get_cache, require_agent
+from app.core.lead_reference import lead_number_filter
 from app.db.session import get_db
 from app.models.agent_payout_details import AgentPayoutDetails
 from app.models.audit_log import AuditAction
@@ -104,6 +105,7 @@ def _to_agent_lead_read(
         eligibility_reason_label=reason_label(reason),
         **extra,
         id=lead.id,
+        lead_ref=lead.lead_ref,
         mobile=lead.mobile,
         business_line=lead.business_line,
         status="expired" if lead.agent_expired_at is not None else lead.status,
@@ -270,11 +272,12 @@ async def bulk_create_leads(
 async def list_leads(
     status_filter: str | None = None,
     current_user: CurrentUser = Depends(require_agent),
+    lead_number: int | None = Depends(lead_number_filter),
     db: AsyncSession = Depends(get_db),
 ) -> list[AgentLeadRead]:
     agent_profile_uuid = _agent_profile_uuid(current_user)
     try:
-        leads = await list_my_leads(db, agent_profile_uuid, status_filter)
+        leads = await list_my_leads(db, agent_profile_uuid, status_filter, lead_number=lead_number)
     except InvalidStatusFilter as exc:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown status_filter value."

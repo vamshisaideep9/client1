@@ -24,6 +24,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.lead_reference import format_lead_ref, format_optional_lead_ref, parse_lead_ref
 from app.models.field_visibility import FieldVisibilityMode
 from app.models.lead import Lead
 from app.models.transaction import Transaction
@@ -162,8 +163,12 @@ def _matches(row: AgentEarningsRow, filters: EarningsFilters, name_visible: bool
             if name_visible:
                 texts.append(row.client_name)
             ids = [str(row.id), str(row.lead_uuid) if row.lead_uuid else ""]
-            if not any(needle in (value or "").casefold() for value in texts) and not any(
-                value.startswith(needle) for value in ids if value
+            number = parse_lead_ref(needle)
+            names_lead = number is not None and row.lead_ref == format_lead_ref(number)
+            if (
+                not names_lead
+                and not any(needle in (value or "").casefold() for value in texts)
+                and not any(value.startswith(needle) for value in ids if value)
             ):
                 return False
     return True
@@ -195,6 +200,7 @@ async def list_earnings(
             payout_txn_uuid=r["payout_txn_uuid"],
             created_at=r["created_at"],
             lead_uuid=r["lead_uuid"],
+            lead_ref=format_optional_lead_ref(r["lead_number"]),
             lead_status=_lead_status(r["lead_status"], r["lead_agent_expired_at"]),
             client_name=r["lead_name"] if name_visible else None,
             product_uuid=r["product_uuid"],
@@ -316,6 +322,7 @@ async def transaction_detail(
                     deal_type=item["deal_type"],
                     deal_uuid=item["deal_uuid"],
                     lead_uuid=item["lead_uuid"],
+                    lead_ref=format_optional_lead_ref(item.get("lead_number")),
                     client_name=item.get("lead_name") if name_visible else None,
                     product_label=item.get("product_label"),
                     bank_name=item.get("bank_name"),

@@ -12,10 +12,20 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, text
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    text,
+)
 from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.lead_reference import format_lead_ref
 from app.db.base import Base
 from app.models.user import business_line_enum
 
@@ -109,6 +119,17 @@ class Lead(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # Human-readable reference number (``lead_ref`` below). The database
+    # assigns it from leads_lead_number_seq on every insert path, so no
+    # application code sets it, and trg_leads_lead_number_immutable rejects any
+    # later change. Display and search only: ``id`` stays the primary key and
+    # the target of every foreign key.
+    lead_number: Mapped[int] = mapped_column(
+        BigInteger,
+        nullable=False,
+        unique=True,
+        server_default=text("nextval('leads_lead_number_seq'::regclass)"),
+    )
     client_profile_uuid: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("client_profiles.id", ondelete="SET NULL"),
@@ -182,3 +203,8 @@ class Lead(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+
+    @property
+    def lead_ref(self) -> str:
+        """``LD-00000123``: for authenticated staff and Agent responses only."""
+        return format_lead_ref(self.lead_number)

@@ -6617,6 +6617,12 @@ export interface components {
             id: string;
             /** Last Resubmitted At */
             last_resubmitted_at?: string | null;
+            /**
+             * Lead Ref
+             * @description Read-only, human-readable lead reference.
+             * @example LD-00000123
+             */
+            lead_ref: string;
             /** Mobile */
             mobile: string;
             /** Name */
@@ -6957,6 +6963,12 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Lead Ref
+             * @description Read-only, human-readable lead reference.
+             * @example LD-00000123
+             */
+            lead_ref: string;
             /** Name */
             name: string | null;
             /** Requests */
@@ -6995,6 +7007,12 @@ export interface components {
             id: string;
             /** Last Resubmitted At */
             last_resubmitted_at?: string | null;
+            /**
+             * Lead Ref
+             * @description Read-only, human-readable lead reference.
+             * @example LD-00000123
+             */
+            lead_ref: string;
             /** Mobile */
             mobile: string;
             /** Name */
@@ -8010,6 +8028,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Lead Ref */
+            lead_ref?: string | null;
             /** Lead Status */
             lead_status: string | null;
             /** Lead Uuid */
@@ -8447,6 +8467,12 @@ export interface components {
             id: string;
             /** Last Resubmitted At */
             last_resubmitted_at: string | null;
+            /**
+             * Lead Ref
+             * @description Read-only, human-readable lead reference.
+             * @example LD-00000123
+             */
+            lead_ref: string;
             /** Mobile */
             mobile: string;
             /** Name */
@@ -8638,6 +8664,8 @@ export interface components {
              * Format: date-time
              */
             entered_at: string;
+            /** Lead Ref */
+            lead_ref?: string | null;
             /**
              * Lead Uuid
              * Format: uuid
@@ -10423,6 +10451,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Lead Ref */
+            lead_ref?: string | null;
             /** Notes */
             notes: string | null;
             /** Payout Uuid */
@@ -11156,6 +11186,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Lead Ref */
+            lead_ref?: string | null;
         };
         /** DealPropertySummary */
         DealPropertySummary: {
@@ -11308,6 +11340,12 @@ export interface components {
             /** Eligible Since */
             eligible_since: string | null;
             /**
+             * Lead Ref
+             * @description Read-only, human-readable lead reference.
+             * @example LD-00000123
+             */
+            lead_ref: string;
+            /**
              * Lead Uuid
              * Format: uuid
              */
@@ -11368,6 +11406,8 @@ export interface components {
             client_profile_uuid: string;
             /** Eligible Since */
             eligible_since: string | null;
+            /** Lead Ref */
+            lead_ref?: string | null;
             /**
              * Loan Application Uuid
              * Format: uuid
@@ -11645,6 +11685,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Lead Ref */
+            lead_ref?: string | null;
             /**
              * Loan Application Uuid
              * Format: uuid
@@ -13360,6 +13402,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Lead Refs */
+            lead_refs?: string[];
             /** Maker Name */
             maker_name?: string | null;
             /**
@@ -16115,6 +16159,12 @@ export interface components {
              */
             id: string;
             last_call: components["schemas"]["TeamLastCall"] | null;
+            /**
+             * Lead Ref
+             * @description Read-only, human-readable lead reference.
+             * @example LD-00000123
+             */
+            lead_ref: string;
             /** Mobile */
             mobile: string;
             /** Name */
@@ -16529,6 +16579,12 @@ export interface components {
             last_resubmitted_at?: string | null;
             latest_request?: components["schemas"]["LeadRequestSummary"] | null;
             /**
+             * Lead Ref
+             * @description Read-only, human-readable lead reference.
+             * @example LD-00000123
+             */
+            lead_ref: string;
+            /**
              * Loan Applications
              * @default []
              */
@@ -16613,6 +16669,12 @@ export interface components {
             /** Last Resubmitted At */
             last_resubmitted_at?: string | null;
             latest_request?: components["schemas"]["LeadRequestSummary"] | null;
+            /**
+             * Lead Ref
+             * @description Read-only, human-readable lead reference.
+             * @example LD-00000123
+             */
+            lead_ref: string;
             /** Loan Statuses */
             loan_statuses?: ("new" | "assigned" | "contacted" | "docs_collected" | "submitted_to_bank" | "under_review" | "sanctioned" | "agreement_collected" | "agreement_submitted_to_bank" | "disbursed" | "closed" | "rejected" | "on_hold")[];
             /** Mobile */
@@ -18429,6 +18491,8 @@ export interface operations {
             query?: {
                 limit?: number;
                 offset?: number;
+                /** @description Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it. */
+                lead_ref?: string | null;
             };
             header?: never;
             path?: never;
@@ -18461,6 +18525,8 @@ export interface operations {
             query?: {
                 limit?: number;
                 offset?: number;
+                /** @description Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it. */
+                lead_ref?: string | null;
             };
             header?: never;
             path?: never;
@@ -21156,6 +21222,8 @@ export interface operations {
         parameters: {
             query?: {
                 status_filter?: string | null;
+                /** @description Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it. */
+                lead_ref?: string | null;
             };
             header?: never;
             path?: never;
@@ -26315,6 +26383,8 @@ export interface operations {
         parameters: {
             query?: {
                 scope?: string;
+                /** @description Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it. */
+                lead_ref?: string | null;
             };
             header?: never;
             path: {
@@ -26553,6 +26623,8 @@ export interface operations {
         parameters: {
             query?: {
                 scope?: string;
+                /** @description Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it. */
+                lead_ref?: string | null;
             };
             header?: never;
             path: {
@@ -29826,6 +29898,8 @@ export interface operations {
         parameters: {
             query?: {
                 status_filter?: ("new" | "assigned" | "working" | "converted" | "closed" | "released") | null;
+                /** @description Exact lead reference, e.g. LD-00000123, ld-123 or 123. It narrows the caller's existing scope and never widens it. */
+                lead_ref?: string | null;
             };
             header?: never;
             path?: never;

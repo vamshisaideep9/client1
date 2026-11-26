@@ -1,5 +1,20 @@
 # Feature implementation status
 
+**Lead reference numbers (API, part 1 of 2).** Every lead has a sequential
+`lead_number`, assigned by the database on every creation path and immutable
+afterwards. Staff and Agent responses show it as `lead_ref` (`LD-00000123`)
+on lead lists and details, commissions, fee cashbacks, payouts, covered
+commissions, and the Agent's earnings and transaction sheet. Lead lists
+accept an exact reference search inside the caller's existing scope. Public,
+chatbot and client responses never carry it, because sequential numbers
+reveal lead volume. Existing leads were numbered in creation order by a
+batched, resumable migration. PostgreSQL checks cover the public form and
+Agent creation paths, tolerant search, cross-Agent, cross-line and
+cross-team denial, the money surfaces and the immutability guard; 833
+related API tests passed locally and hosted CI passed the full API suite.
+[Upstream #407](https://github.com/brollysolutions/client1/pull/407)
+· [Mirror #107](https://github.com/vamshisaideep9/client1/pull/107)
+
 **Public-site chatbot.** Visitors can open a floating assistant, answer guided
 questions, browse published services or properties, and submit a callback
 request. PostgreSQL assigns each saved inquiry a reference. Admin and the

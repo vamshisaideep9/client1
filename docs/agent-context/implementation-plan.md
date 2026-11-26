@@ -1,5 +1,37 @@
 # Living implementation plan
 
+**In progress — Lead reference numbers (`LD-00000123`)** (2026-11-25;
+branch `feat/lead-ref-1-api`, part 1 of 2)
+
+- Every lead gets `leads.lead_number`, assigned by a PostgreSQL sequence
+  default on every creation path. The API formats it once, as `LD-` plus at
+  least eight digits, in a read-only `lead_ref`. The UUID stays the primary
+  key, the URL id and every foreign-key target.
+- The additive migration numbers existing leads in creation order in
+  committed batches, then adds the default, NOT NULL and UNIQUE without a long
+  table lock. A trigger rejects any later change. A downgrade drops the
+  column; upgrading again renumbers from 1.
+- Staff and Agent responses carry the reference: lead lists and details for
+  Admin, Telecaller, Team Manager and Agent; commissions and fee cashbacks
+  with their eligible queues; payout rows and covered commissions; the
+  Agent's earnings and transaction sheet. Public, chatbot and client
+  responses do not.
+- Lead lists accept `lead_ref` (`LD-00000123`, `ld-123` or `123`) as an exact
+  match inside the caller's existing scope and RLS.
+- No reference on referral or contest payouts (no lead), client transaction
+  history (client-facing), or Employee task rows (outside the approved
+  surfaces).
+- Verified on isolated PostgreSQL 18 and Redis: 46 focused lead-reference,
+  immutability and route-coverage checks, and 833 passed (1 Redis skip that
+  passed on rerun) across 58 lead, money, RLS, retention and seed suites.
+  The migration round trip renumbered 1,150 leads contiguously in creation
+  order with one head. Ruff, format and contract generation passed. Hosted
+  CI passed the full API suite (2,986 tests); its web typecheck needed the
+  new required field in three unit-test fixtures, added in this part.
+- Next priority is part 2: the reference and its search on the web.
+  [Upstream #407](https://github.com/brollysolutions/client1/pull/407)
+  · [Mirror #107](https://github.com/vamshisaideep9/client1/pull/107)
+
 **Public-site chatbot release verification**
 
 - Add a navy-and-sky assistant to the public layout with guided financial and real-estate enquiries. Publish financial choices through the existing catalogue gate.

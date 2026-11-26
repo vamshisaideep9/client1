@@ -16,6 +16,7 @@ const BALA = "30000000-0000-4000-8000-000000000002";
 function lead(overrides: Partial<TeamLeadRow>): TeamLeadRow {
   return {
     id: crypto.randomUUID(),
+    lead_ref: "LD-00000001",
     name: "Kiran Kumar",
     mobile: "+919800000001",
     status: "working",

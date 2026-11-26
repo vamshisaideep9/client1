@@ -14,6 +14,7 @@ import {
 function lead(overrides: Partial<TelecallerLead>): TelecallerLead {
   return {
     id: overrides.id ?? "lead-1",
+    lead_ref: "LD-00000001",
     business_line: "loans",
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",

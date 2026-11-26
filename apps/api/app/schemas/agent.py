@@ -19,6 +19,7 @@ from pydantic import (
     model_validator,
 )
 
+from app.core.lead_reference import LeadRef
 from app.models.lead_activity import CallDisposition, InterestLevel
 from app.models.property import PropertySubtype
 from app.schemas.eligibility import EligibilityReasonLiteral, RowEligibilityLiteral
@@ -322,6 +323,7 @@ class AgentLeadBulkResponse(BaseModel):
 
 class AgentLeadRead(BaseModel):
     id: UUID
+    lead_ref: LeadRef
     name: str | None = None
     mobile: str
     business_line: Literal["loans", "real_estate"] | None

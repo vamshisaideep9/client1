@@ -35,6 +35,7 @@ from app.services.leads import (
     AgentLeadConflict,
     AgentLeadNotResubmittable,
     capture_agent_lead_with_outcome,
+    lead_number_predicates,
     resubmit_agent_lead,
 )
 
@@ -209,9 +210,16 @@ async def introduce_lead_with_outcome(
 
 
 async def list_my_leads(
-    db: AsyncSession, agent_profile_uuid: UUID, status_filter: str | None = None
+    db: AsyncSession,
+    agent_profile_uuid: UUID,
+    status_filter: str | None = None,
+    *,
+    lead_number: int | None = None,
 ) -> list[Lead]:
-    stmt = select(Lead).where(Lead.origin_agent_profile_uuid == agent_profile_uuid)
+    stmt = select(Lead).where(
+        Lead.origin_agent_profile_uuid == agent_profile_uuid,
+        *lead_number_predicates(lead_number),
+    )
     if status_filter is not None:
         if status_filter == "expired":
             stmt = stmt.where(Lead.agent_expired_at.is_not(None))

@@ -7,7 +7,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.db.session as db_session
+from app.core.lead_reference import format_optional_lead_ref
 from app.models.commission import Commission, CommissionPayoutItem, CommissionStatus
+from app.models.lead import Lead
 from app.models.payout import PayoutType
 from app.models.profile import AgentProfile
 from app.models.user import User
@@ -132,8 +134,10 @@ async def list_items(db: AsyncSession, payout_id: UUID) -> list[CoveredCommissio
             Commission.loan_application_uuid,
             Commission.property_deal_uuid,
             CommissionPayoutItem.amount_paise,
+            Lead.lead_number,
         )
         .join(CommissionPayoutItem, CommissionPayoutItem.commission_uuid == Commission.id)
+        .outerjoin(Lead, Lead.id == Commission.lead_uuid)
         .where(CommissionPayoutItem.payout_uuid == payout_id)
         .order_by(Commission.created_at, Commission.id)
     )
@@ -142,6 +146,7 @@ async def list_items(db: AsyncSession, payout_id: UUID) -> list[CoveredCommissio
             id=row.id,
             deal_type="loan_application" if row.loan_application_uuid else "property_deal",
             deal_uuid=row.loan_application_uuid or row.property_deal_uuid,
+            lead_ref=format_optional_lead_ref(row.lead_number),
             amount_paise=row.amount_paise,
         )
         for row in rows

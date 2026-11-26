@@ -178,6 +178,15 @@ def customer_lead_predicates():  # noqa: ANN201
     return (~active_staff, ~active_agent)
 
 
+def lead_number_predicates(lead_number: int | None) -> tuple[Any, ...]:
+    """An exact lead-reference match added to an already-scoped query.
+
+    It only ever narrows: the caller's role filters and RLS still apply, so
+    a reference outside the caller's reach matches nothing.
+    """
+    return () if lead_number is None else (Lead.lead_number == lead_number,)
+
+
 async def _lock_assignment_line(db: AsyncSession, business_line: str) -> None:
     await db.scalar(
         select(
@@ -1239,7 +1248,9 @@ async def release_lead_from_telecaller(
     return lead, previous_telecaller_uuid
 
 
-async def list_unassigned_leads(db: AsyncSession, limit: int = 100, offset: int = 0) -> list[Lead]:
+async def list_unassigned_leads(
+    db: AsyncSession, limit: int = 100, offset: int = 0, *, lead_number: int | None = None
+) -> list[Lead]:
     """Customer leads currently awaiting automatic Telecaller capacity.
 
     Assigned/working orphan rows stay in the relationship view until the
@@ -1252,6 +1263,7 @@ async def list_unassigned_leads(db: AsyncSession, limit: int = 100, offset: int 
             Lead.business_line.is_not(None),
             Lead.status.in_((LeadStatus.NEW, LeadStatus.RELEASED)),
             *customer_lead_predicates(),
+            *lead_number_predicates(lead_number),
         )
         .order_by(Lead.created_at.desc())
         .limit(limit)
@@ -1261,7 +1273,11 @@ async def list_unassigned_leads(db: AsyncSession, limit: int = 100, offset: int 
 
 
 async def list_assigned_leads(
-    db: AsyncSession, limit: int = 100, offset: int = 0
+    db: AsyncSession,
+    limit: int = 100,
+    offset: int = 0,
+    *,
+    lead_number: int | None = None,
 ) -> list[tuple[Lead, StaffProfile | None, User | None]]:
     """Read-only assigned/working customer relationships for Admin oversight.
 
@@ -1275,6 +1291,7 @@ async def list_assigned_leads(
         .where(
             Lead.status.in_((LeadStatus.ASSIGNED, LeadStatus.WORKING)),
             *customer_lead_predicates(),
+            *lead_number_predicates(lead_number),
         )
         .order_by(Lead.updated_at.desc())
         .limit(limit)

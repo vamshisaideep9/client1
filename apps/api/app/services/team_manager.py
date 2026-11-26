@@ -64,6 +64,7 @@ from app.schemas.staff_teams import (
 from app.services.audit_log import record as record_audit
 from app.services.field_visibility import effective_modes
 from app.services.lead_signals import facets, team_lead_signals_for_ids, transaction_summary
+from app.services.leads import lead_number_predicates
 from app.services.notifications import emit_notification
 from app.services.staff_analytics import (
     AnalyticsWindow,
@@ -455,6 +456,7 @@ async def _lead_rows(db: AsyncSession, team: StaffTeamRead, leads: list[Lead]) -
         rows.append(
             TeamLeadRow(
                 id=lead.id,
+                lead_ref=lead.lead_ref,
                 name=None if "name" in hidden else lead.name,
                 mobile=lead.mobile,
                 status=lead.status.value,
@@ -515,7 +517,12 @@ async def _task_rows(db: AsyncSession, team: StaffTeamRead, tasks: list[Task]) -
 
 
 async def _work(
-    db: AsyncSession, team: StaffTeamRead, member_ids: list[UUID], *, open_only: bool
+    db: AsyncSession,
+    team: StaffTeamRead,
+    member_ids: list[UUID],
+    *,
+    open_only: bool,
+    lead_number: int | None = None,
 ) -> tuple[str, list[TeamLeadRow], list[TeamTaskRow]]:
     is_telecaller = team.member_role == TeamMemberRole.TELECALLER
     if not member_ids:
@@ -524,6 +531,7 @@ async def _work(
         stmt = select(Lead).where(
             Lead.assigned_telecaller_profile_uuid.in_(member_ids),
             Lead.business_line == team.business_line,
+            *lead_number_predicates(lead_number),
         )
         if open_only:
             stmt = stmt.where(Lead.status.in_(_OPEN_LEAD))
@@ -533,6 +541,12 @@ async def _work(
         Task.assigned_employee_profile_uuid.in_(member_ids),
         Task.business_line == team.business_line,
     )
+    if lead_number is not None:
+        # Tasks of the referenced lead, read through the manager's own
+        # RLS reach on leads, so it narrows and never widens.
+        stmt = stmt.where(
+            Task.lead_uuid.in_(select(Lead.id).where(*lead_number_predicates(lead_number)))
+        )
     if open_only:
         stmt = stmt.where(Task.status.in_(_OPEN_TASK))
     tasks = list(await db.scalars(stmt.order_by(Task.updated_at.desc()).limit(_WORK_LIMIT)))
@@ -540,11 +554,20 @@ async def _work(
 
 
 async def team_work(
-    db: AsyncSession, team_id: UUID, manager_uuid: UUID, *, open_only: bool
+    db: AsyncSession,
+    team_id: UUID,
+    manager_uuid: UUID,
+    *,
+    open_only: bool,
+    lead_number: int | None = None,
 ) -> TeamWorkResponse:
     team = await _my_team(db, team_id, manager_uuid)
     kind, leads, tasks = await _work(
-        db, team, [member.staff_profile_uuid for member in team.members], open_only=open_only
+        db,
+        team,
+        [member.staff_profile_uuid for member in team.members],
+        open_only=open_only,
+        lead_number=lead_number,
     )
     return TeamWorkResponse(team_id=team.id, kind=kind, leads=leads, tasks=tasks)
 
@@ -556,12 +579,15 @@ async def member_work(
     member_uuid: UUID,
     *,
     open_only: bool,
+    lead_number: int | None = None,
 ) -> TeamMemberWorkResponse:
     team = await _my_team(db, team_id, manager_uuid)
     member = _member(team, member_uuid)
     if member is None:
         raise MemberNotInTeam
-    kind, leads, tasks = await _work(db, team, [member_uuid], open_only=open_only)
+    kind, leads, tasks = await _work(
+        db, team, [member_uuid], open_only=open_only, lead_number=lead_number
+    )
     return TeamMemberWorkResponse(member=member, kind=kind, leads=leads, tasks=tasks)
 
 
