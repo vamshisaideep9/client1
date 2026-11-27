@@ -74,6 +74,7 @@ export const FORM_SURFACE_REGISTRY = {
   "components/profile/pincode-field.tsx": "composite",
   "components/settings/delete-account-dialog.tsx": "mutation",
   "features/admin/agent-queue-view.tsx": "mutation",
+  "features/admin/agent-relationship-manager.tsx": "mutation",
   "features/admin/analytics/report-filter-bar.tsx": "filter",
   "features/admin/bank-availability-view.tsx": "mutation",
   "features/admin/banks-view.tsx": "mutation",

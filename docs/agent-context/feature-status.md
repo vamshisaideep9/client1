@@ -1,5 +1,14 @@
 # Feature implementation status
 
+**Client feedback round 3 (slice 3 of 7: Relationship Manager web).** The
+Main Admin sees each approved Agent's Relationship Manager in the Agent
+queue and changes it from the Agent's application in one dialog. The access
+editor lists a Relationship Manager's Agents by name with Remove buttons. A
+Relationship Manager selecting an Agent now sees that Agent's leads
+read-only, and Agents see their Relationship Manager on their home page.
+Lint, typecheck, unit tests and mocked browser journeys passed (at 390 px
+and 1,440 px).
+
 **Client feedback round 3 (slice 2 of 7: Relationship Manager API).** Each
 Agent now has at most one Relationship Manager. The Main Admin sets or clears
 it from the Agent side, and adding an Agent to a Relationship Manager moves
