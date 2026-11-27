@@ -1,5 +1,17 @@
 # Feature implementation status
 
+**Client feedback round 3 (slice 2 of 7: Relationship Manager API).** Each
+Agent now has at most one Relationship Manager. The Main Admin sets or clears
+it from the Agent side, and adding an Agent to a Relationship Manager moves
+it away from any other one, under row locks and with an audit entry for each
+changed Sub Admin. Editing only Agent lists no longer signs the Sub Admin
+out. Only active Agents can be newly assigned or found in the picker. A
+Relationship Manager can read their assigned Agent's leads (reference,
+status, product and dates, no client contact details). The Agent's home and
+the Admin Agent queue show the Relationship Manager. Positive and denial
+checks (other Relationship Manager, missing grant, non-Main Admin, other
+Agent) passed on PostgreSQL. Web screens follow in slice 3.
+
 **Client feedback round 3 (slice 1 of 7: Agent leads).** An Agent's lead
 list and lead page show who is working each lead: the Telecaller and the
 Officer (name, role and staff code, never a phone number or email) and the

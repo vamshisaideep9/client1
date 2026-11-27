@@ -84,6 +84,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/agents/{agent_id}/relationship-manager": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Agent Relationship Manager
+         * @description Give an Agent exactly one Relationship Manager (or none). The Agent
+         *     leaves every other Relationship Manager's list; no Sub Admin is signed
+         *     out. Main Admin only.
+         */
+        put: operations["set_agent_relationship_manager_api_v1_admin_agents__agent_id__relationship_manager_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/agents/{agent_id}/relationship-manager/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Relationship Manager Options
+         * @description Sub Admins with an active Relationship Manager grant that can take this
+         *     Agent (by Agent profile id). Main Admin only.
+         */
+        get: operations["list_relationship_manager_options_api_v1_admin_agents__agent_id__relationship_manager_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/agents/{application_id}": {
         parameters: {
             query?: never;
@@ -6129,6 +6172,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/relationships/options/selected": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Relationship Selected Agents
+         * @description Names and codes of Agents already listed in a Relationship Manager
+         *     grant, whatever their status, so the editor can show and remove them.
+         *     Main Admin only, like the picker.
+         */
+        get: operations["relationship_selected_agents_api_v1_relationships_options_selected_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/relationships/{agent_id}/activity": {
         parameters: {
             query?: never;
@@ -6141,6 +6206,28 @@ export interface paths {
         put?: never;
         /** Add Relationship Activity */
         post: operations["add_relationship_activity_api_v1_relationships__agent_id__activity_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/relationships/{agent_id}/leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Relationship Leads
+         * @description The assigned Agent's leads, read-only: reference, line, status, product
+         *     and dates. No client name or contact details. Any other Agent reads as
+         *     not found.
+         */
+        get: operations["list_relationship_leads_api_v1_relationships__agent_id__leads_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7777,6 +7864,8 @@ export interface components {
         };
         /** AgentApplicationDetailRead */
         AgentApplicationDetailRead: {
+            /** Agent Profile Id */
+            agent_profile_id?: string | null;
             /**
              * Business Line
              * @enum {string}
@@ -7802,6 +7891,7 @@ export interface components {
             last_name: string | null;
             /** Mobile */
             mobile: string | null;
+            relationship_manager?: components["schemas"]["RelationshipManagerRead"] | null;
             /** Rera Code */
             rera_code: string | null;
             /** Review Note */
@@ -7829,6 +7919,8 @@ export interface components {
         };
         /** AgentApplicationRead */
         AgentApplicationRead: {
+            /** Agent Profile Id */
+            agent_profile_id?: string | null;
             /**
              * Business Line
              * @enum {string}
@@ -7852,6 +7944,7 @@ export interface components {
             last_name: string | null;
             /** Mobile */
             mobile: string | null;
+            relationship_manager?: components["schemas"]["RelationshipManagerRead"] | null;
             /** Rera Code */
             rera_code: string | null;
             /**
@@ -8326,6 +8419,7 @@ export interface components {
                 [key: string]: number;
             };
             profile: components["schemas"]["AgentProfileStatusRead"];
+            relationship_manager?: components["schemas"]["AgentRelationshipManager"] | null;
         };
         /** AgentInviteAcceptRequest */
         AgentInviteAcceptRequest: {
@@ -8735,6 +8829,30 @@ export interface components {
         AgentRejectRequest: {
             /** Note */
             note: string;
+        };
+        /**
+         * AgentRelationshipManager
+         * @description The Agent's Relationship Manager: display name and staff code only.
+         */
+        AgentRelationshipManager: {
+            /** Name */
+            name: string | null;
+            /** Staff Code */
+            staff_code: string;
+        };
+        /** AgentRelationshipManagerRead */
+        AgentRelationshipManagerRead: {
+            /**
+             * Agent Profile Id
+             * Format: uuid
+             */
+            agent_profile_id: string;
+            relationship_manager: components["schemas"]["RelationshipManagerRead"] | null;
+        };
+        /** AgentRelationshipManagerUpdate */
+        AgentRelationshipManagerUpdate: {
+            /** Sub Admin Profile Id */
+            sub_admin_profile_id: string | null;
         };
         /** AgentTransactionDetail */
         AgentTransactionDetail: {
@@ -15387,6 +15505,75 @@ export interface components {
             submitted_leads: number;
         };
         /**
+         * RelationshipLead
+         * @description A lead of an assigned Agent, read-only for their Relationship Manager.
+         *     Never the lead's name, mobile, email, requirement or notes.
+         */
+        RelationshipLead: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lead Ref */
+            lead_ref: string;
+            /** Product Label */
+            product_label: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** RelationshipManagerOption */
+        RelationshipManagerOption: {
+            /** Agent Count */
+            agent_count: number;
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** Current */
+            current: boolean;
+            /** Name */
+            name: string | null;
+            /** Staff Code */
+            staff_code: string;
+            /**
+             * Staff Profile Id
+             * Format: uuid
+             */
+            staff_profile_id: string;
+        };
+        /**
+         * RelationshipManagerRead
+         * @description An Agent's one Relationship Manager: display name and staff code.
+         */
+        RelationshipManagerRead: {
+            /** Name */
+            name: string | null;
+            /** Staff Code */
+            staff_code: string;
+            /**
+             * Staff Profile Id
+             * Format: uuid
+             */
+            staff_profile_id: string;
+        };
+        /**
          * RentalIncomeStart
          * @enum {string}
          */
@@ -17948,6 +18135,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentApplicationListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_agent_relationship_manager_api_v1_admin_agents__agent_id__relationship_manager_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentRelationshipManagerUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentRelationshipManagerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_relationship_manager_options_api_v1_admin_agents__agent_id__relationship_manager_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelationshipManagerOption"][];
                 };
             };
             /** @description Validation Error */
@@ -30258,6 +30511,37 @@ export interface operations {
             };
         };
     };
+    relationship_selected_agents_api_v1_relationships_options_selected_get: {
+        parameters: {
+            query: {
+                ids: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelationshipAgent"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_relationship_activity_api_v1_relationships__agent_id__activity_get: {
         parameters: {
             query?: never;
@@ -30311,6 +30595,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RelationshipActivity"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_relationship_leads_api_v1_relationships__agent_id__leads_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelationshipLead"][];
                 };
             };
             /** @description Validation Error */

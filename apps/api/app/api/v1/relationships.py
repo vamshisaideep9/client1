@@ -9,21 +9,38 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import CurrentUser, require_assignment, require_platform_admin
 from app.db.session import get_db
-from app.models.profile import AgentProfile
+from app.models.profile import AgentProfile, ProfileStatus
 from app.models.user import User, UserStatus
 from app.schemas.sub_admin_access import (
     AccessLine,
     RelationshipActivity,
     RelationshipActivityInput,
     RelationshipAgent,
+    RelationshipLead,
 )
 from app.services.admin import is_primary_admin
+from app.services.sub_admin_access import relationship_leads
 
 router = APIRouter()
 Reader = Annotated[CurrentUser, Depends(require_assignment("relationship_manager", "view"))]
 Writer = Annotated[CurrentUser, Depends(require_assignment("relationship_manager", "follow_up"))]
 Admin = Annotated[CurrentUser, Depends(require_platform_admin)]
 DB = Annotated[AsyncSession, Depends(get_db)]
+
+
+_AGENT_NAME = func.concat_ws(" ", User.first_name, User.last_name)
+
+
+def _agent_rows():
+    return select(
+        AgentProfile.id,
+        _AGENT_NAME.label("name"),
+        AgentProfile.agent_code,
+        AgentProfile.business_line,
+        AgentProfile.status,
+        AgentProfile.kyc_status,
+        AgentProfile.approved_at,
+    ).join(User, User.id == AgentProfile.auth_user_uuid)
 
 
 @router.get("/options", response_model=list[RelationshipAgent])
@@ -39,28 +56,44 @@ async def relationship_options(
     ):
         raise HTTPException(403, detail="Only the Main Admin can assign Agents.")
     response.headers["Cache-Control"] = "private, no-store"
-    name = func.concat_ws(" ", User.first_name, User.last_name)
+    # Assignable Agents only: active, on this line or both lines, with an
+    # account that is neither suspended nor deleted.
     rows = await db.execute(
-        select(
-            AgentProfile.id,
-            name.label("name"),
-            AgentProfile.agent_code,
-            AgentProfile.business_line,
-            AgentProfile.status,
-            AgentProfile.kyc_status,
-            AgentProfile.approved_at,
-        )
-        .join(User, User.id == AgentProfile.auth_user_uuid)
+        _agent_rows()
         .where(
-            AgentProfile.business_line == line,
-            User.status != UserStatus.SOFT_DELETED,
+            AgentProfile.business_line.in_((line, "both")),
+            AgentProfile.status == ProfileStatus.ACTIVE,
+            User.status.notin_((UserStatus.SOFT_DELETED, UserStatus.SUSPENDED)),
             or_(
-                name.icontains(query, autoescape=True),
+                _AGENT_NAME.icontains(query, autoescape=True),
                 AgentProfile.agent_code.icontains(query, autoescape=True),
             ),
         )
         .order_by(AgentProfile.agent_code)
         .limit(25)
+    )
+    return rows.mappings().all()
+
+
+@router.get("/options/selected", response_model=list[RelationshipAgent])
+async def relationship_selected_agents(
+    user: Admin,
+    db: DB,
+    response: Response,
+    ids: Annotated[list[UUID], Query(min_length=1, max_length=100)],
+):
+    """Names and codes of Agents already listed in a Relationship Manager
+    grant, whatever their status, so the editor can show and remove them.
+    Main Admin only, like the picker."""
+    if not await is_primary_admin(
+        db, auth_user_uuid=user.id, staff_profile_uuid=user.staff_profile_uuid
+    ):
+        raise HTTPException(403, detail="Only the Main Admin can assign Agents.")
+    response.headers["Cache-Control"] = "private, no-store"
+    rows = await db.execute(
+        _agent_rows()
+        .where(AgentProfile.id.in_(set(ids)), User.status != UserStatus.SOFT_DELETED)
+        .order_by(AgentProfile.agent_code)
     )
     return rows.mappings().all()
 
@@ -79,6 +112,16 @@ async def _require_agent(db: DB, agent_id: UUID, action: str) -> None:
     )
     if not allowed:
         raise HTTPException(404, detail="Assigned Agent not found.")
+
+
+@router.get("/{agent_id}/leads", response_model=list[RelationshipLead])
+async def list_relationship_leads(agent_id: UUID, _: Reader, db: DB, response: Response):
+    """The assigned Agent's leads, read-only: reference, line, status, product
+    and dates. No client name or contact details. Any other Agent reads as
+    not found."""
+    await _require_agent(db, agent_id, "view")
+    response.headers["Cache-Control"] = "private, no-store"
+    return await relationship_leads(db, agent_id)
 
 
 @router.get("/{agent_id}/activity", response_model=list[RelationshipActivity])
