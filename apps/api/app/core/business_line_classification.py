@@ -42,6 +42,8 @@ TABLE_CLASSIFICATION: dict[str, ClassificationMode] = {
     "attendance_employment": ClassificationMode.OPERATIONAL,
     "attendance_holidays": ClassificationMode.PLATFORM_CONFIG,
     "attendance_line_holidays": ClassificationMode.OPERATIONAL,
+    # A null line repeats on every line (global); otherwise the row line applies.
+    "attendance_recurring_holidays": ClassificationMode.GLOBAL_CONTENT,
     "attendance_month_revisions": ClassificationMode.DERIVED,
     "attendance_policies": ClassificationMode.PLATFORM_CONFIG,
     "attendance_requests": ClassificationMode.PROFILE_SCOPE,

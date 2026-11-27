@@ -31,11 +31,25 @@ RequestStatus = Literal["pending", "approved", "rejected", "cancelled"]
 AttendanceAdjustment = Literal["late_waiver", "early_exit", "on_duty", "holiday_work", "comp_off"]
 LeaveSession = Literal["morning", "afternoon"]
 AttendanceLeaveCode = Literal["CL", "SL"]
+
+
+class AttendanceLeaveBadge(BaseModel):
+    """A badge for approved leave of any type: CL and SL as before, others a
+    code of at most three letters derived from the leave type, with its
+    full label."""
+
+    code: Annotated[str, StringConstraints(min_length=1, max_length=3)]
+    label: str
+
+
 Reason = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=500)]
 LeaveType = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]{0,31}$")]
 LeaveUnits = Annotated[int, Field(ge=0, le=732)]
 Weekday = Annotated[int, Field(ge=0, le=6)]
 AttendanceLine = Literal["loans", "real_estate"]
+# Roster filters (client feedback round 3).
+AttendanceRole = Literal["telecaller", "employee", "sub_admin"]
+SubAdminGroup = Literal["team_manager", "account_manager", "relationship_manager"]
 
 
 class AttendanceInput(BaseModel):
@@ -106,13 +120,26 @@ class AttendancePolicyState(BaseModel):
     can_configure_leave_rules: bool = False
 
 
+HolidayName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+
+
 class AttendanceHolidayInput(AttendanceInput):
-    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    name: HolidayName
+    # Repeat on this month and day every year from this date on.
+    repeat_yearly: bool = False
 
 
-class AttendanceHolidayRead(AttendanceHolidayInput):
+class AttendanceHolidayRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     day: date
+    name: HolidayName
+    # Null for a holiday on every line.
+    business_line: AttendanceLine | None = None
+    # Set on an occurrence of a yearly holiday series.
+    recurring_id: UUID | None = None
+    repeats_yearly: bool = False
+    starts_on: date | None = None
+    ends_on: date | None = None
 
 
 class AttendanceEmploymentInput(AttendanceInput):
@@ -163,6 +190,7 @@ class AttendanceDayRead(BaseModel):
     adjustments: list[AttendanceAdjustment] = Field(default_factory=list)
     leave_sessions: list[LeaveSession] = Field(default_factory=list)
     leave_codes: list[AttendanceLeaveCode] = Field(default_factory=list)
+    leave_badges: list[AttendanceLeaveBadge] = Field(default_factory=list)
 
     @field_validator("adjustments", "leave_sessions", mode="before")
     @classmethod
@@ -278,7 +306,13 @@ class AttendanceRosterMember(BaseModel):
     staff_profile_id: UUID
     name: str
     staff_code: str
-    role: Literal["telecaller", "employee", "sub_admin"]
+    role: AttendanceRole
+    # Attendance employment line, else the staff line ("both" for dual-line).
+    department: Literal["loans", "real_estate", "both"] | None = None
+    # The member's product specialty, if any.
+    product_id: UUID | None = None
+    # Active Sub Admin groups (Team Manager, Account Manager, Relationship Manager).
+    sub_admin_groups: list[SubAdminGroup] = Field(default_factory=list)
 
 
 class AttendanceRosterRead(BaseModel):

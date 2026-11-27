@@ -92,6 +92,37 @@ on slice 2):
   (reference, status, product, introduced, last update) above the activity.
 - Agent home: a "Your Relationship Manager" card (name and staff code).
 
+Slice 4 — attendance API (branch `feat/round3-4-attendance-api`, stacked on
+slice 3):
+
+- `/attendance/roster` and `/attendance/export` accept `department`
+  (dual-line members match either), `product_id` (specialty), `role`,
+  `sub_admin_group` (`team_manager`, `account_manager`,
+  `relationship_manager`) and `leave_type` (members with approved leave of
+  that type in the range). Members carry `department`, `product_id` and
+  `sub_admin_groups`. Reach is unchanged: the new SECURITY DEFINER
+  `attendance_roster_details(uuid)` only decorates the members
+  `attendance_reporting_roster` already returns (a `CREATE OR REPLACE`
+  cannot add result columns, so that function and its grants are untouched).
+- Day reads add `leave_badges` for approved leave of every type (CL and SL
+  unchanged; other types get a code of at most three letters and a label,
+  for example EL "Earned leave", WFH "Work from home").
+- `GET /attendance/holidays?year=` returns a whole year; ranges still cap at
+  31 days. `PUT /attendance/holidays/{day}` with `repeat_yearly` starts a
+  yearly series from that date (today or later, one open series per date and
+  line, refused when a future occurrence already has attendance or leave).
+  `DELETE /attendance/holidays/recurring/{id}` stops it after today (a series
+  that has not started is removed), so earlier occurrences and closed months
+  never change. `day_without_clock` and the staff calendar include yearly
+  occurrences; 29 February repeats only in leap years. Both actions are
+  audited (`start_yearly_holiday`, `stop_yearly_holiday`).
+- Additive migration `e7b3c1f9a5d2`: the roster details function and the
+  `attendance_recurring_holidays` table (FORCE RLS, SELECT-only grant, owner
+  session writes like the other holiday tables). Downgrade refuses to drop
+  saved yearly holidays.
+- The "SD" and "WOH" codes are display codes computed by the web (slice 5);
+  the API keeps the raw `early_exit` and `holiday_work` fields.
+
 **Merged upstream 2026-11-26 — Product specialists for Telecallers and
 Officers, with dashboards** (#409–#412, mirror #109–#112; `main` a3e09ce1)
 

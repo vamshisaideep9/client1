@@ -2356,11 +2356,36 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Holidays */
+        /**
+         * Get Holidays
+         * @description One-off and yearly holidays for a range of up to 31 days, or for a
+         *     whole calendar ``year`` (the year view).
+         */
         get: operations["get_holidays_api_v1_attendance_holidays_get"];
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/holidays/recurring/{holiday_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Stop Recurring Holiday
+         * @description Stop repeating after today. Earlier occurrences, and closed months,
+         *     stay as they were.
+         */
+        delete: operations["stop_recurring_holiday_api_v1_attendance_holidays_recurring__holiday_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2374,7 +2399,11 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Put Holiday */
+        /**
+         * Put Holiday
+         * @description Set a holiday, or with ``repeat_yearly`` start a yearly holiday on
+         *     this month and day from this date (today or later).
+         */
         put: operations["put_holiday_api_v1_attendance_holidays__day__put"];
         post?: never;
         /** Delete Holiday */
@@ -2597,7 +2626,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Roster */
+        /**
+         * Get Roster
+         * @description Members the caller may review, filtered. Department also matches
+         *     dual-line members; leave type matches approved leave in the range.
+         */
         get: operations["get_roster_api_v1_attendance_roster_get"];
         put?: never;
         post?: never;
@@ -9145,6 +9178,8 @@ export interface components {
             early_exit: boolean;
             /** Late */
             late: boolean;
+            /** Leave Badges */
+            leave_badges?: components["schemas"]["AttendanceLeaveBadge"][];
             /** Leave Codes */
             leave_codes?: ("CL" | "SL")[];
             /** Leave Sessions */
@@ -9270,16 +9305,34 @@ export interface components {
         AttendanceHolidayInput: {
             /** Name */
             name: string;
+            /**
+             * Repeat Yearly
+             * @default false
+             */
+            repeat_yearly: boolean;
         };
         /** AttendanceHolidayRead */
         AttendanceHolidayRead: {
+            /** Business Line */
+            business_line?: ("loans" | "real_estate") | null;
             /**
              * Day
              * Format: date
              */
             day: string;
+            /** Ends On */
+            ends_on?: string | null;
             /** Name */
             name: string;
+            /** Recurring Id */
+            recurring_id?: string | null;
+            /**
+             * Repeats Yearly
+             * @default false
+             */
+            repeats_yearly: boolean;
+            /** Starts On */
+            starts_on?: string | null;
         };
         /** AttendanceInboxRead */
         AttendanceInboxRead: {
@@ -9287,6 +9340,18 @@ export interface components {
             requests: components["schemas"]["AttendanceRequestRead"][];
             /** Total */
             total: number;
+        };
+        /**
+         * AttendanceLeaveBadge
+         * @description A badge for approved leave of any type: CL and SL as before, others a
+         *     code of at most three letters derived from the leave type, with its
+         *     full label.
+         */
+        AttendanceLeaveBadge: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
         };
         /** AttendanceLeaveInput */
         AttendanceLeaveInput: {
@@ -9532,8 +9597,12 @@ export interface components {
         };
         /** AttendanceRosterMember */
         AttendanceRosterMember: {
+            /** Department */
+            department?: ("loans" | "real_estate" | "both") | null;
             /** Name */
             name: string;
+            /** Product Id */
+            product_id?: string | null;
             /**
              * Role
              * @enum {string}
@@ -9546,6 +9615,8 @@ export interface components {
              * Format: uuid
              */
             staff_profile_id: string;
+            /** Sub Admin Groups */
+            sub_admin_groups?: ("team_manager" | "account_manager" | "relationship_manager")[];
         };
         /** AttendanceRosterRead */
         AttendanceRosterRead: {
@@ -22677,6 +22748,11 @@ export interface operations {
                 team_id?: string | null;
                 staff_id?: string | null;
                 status?: ("checked_in" | "present" | "half_day" | "short_day" | "absent" | "missing_checkout" | "on_leave" | "holiday" | "week_off") | null;
+                department?: ("loans" | "real_estate") | null;
+                product_id?: string | null;
+                role?: ("telecaller" | "employee" | "sub_admin") | null;
+                sub_admin_group?: ("team_manager" | "account_manager" | "relationship_manager") | null;
+                leave_type?: string | null;
             };
             header?: never;
             path?: never;
@@ -22704,9 +22780,10 @@ export interface operations {
     };
     get_holidays_api_v1_attendance_holidays_get: {
         parameters: {
-            query: {
-                start: string;
-                end: string;
+            query?: {
+                start?: string | null;
+                end?: string | null;
+                year?: number | null;
                 business_line?: ("loans" | "real_estate") | null;
             };
             header?: never;
@@ -22723,6 +22800,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AttendanceHolidayRead"][];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stop_recurring_holiday_api_v1_attendance_holidays_recurring__holiday_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                holiday_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -23259,6 +23365,11 @@ export interface operations {
                 status?: ("checked_in" | "present" | "half_day" | "short_day" | "absent" | "missing_checkout" | "on_leave" | "holiday" | "week_off") | null;
                 limit?: number;
                 offset?: number;
+                department?: ("loans" | "real_estate") | null;
+                product_id?: string | null;
+                role?: ("telecaller" | "employee" | "sub_admin") | null;
+                sub_admin_group?: ("team_manager" | "account_manager" | "relationship_manager") | null;
+                leave_type?: string | null;
             };
             header?: never;
             path?: never;
