@@ -1,5 +1,14 @@
 # Feature implementation status
 
+**Client feedback round 3 (slice 5 of 7: attendance web).** The attendance
+grid and roster share one filter bar with a From/To range of up to 31 days
+(the grid opens on this month so far), department, product, role (such as
+"Loan Officers"), team or Sub Admin group, status and leave type. Times read
+"Login" and "Logout", an early exit shows as "Short day" (SD) and work on a
+holiday as "Work on holiday" (WOH), every badge explains itself and a legend
+sits under the grid. Policy durations are entered as hours and minutes, and
+holidays can be viewed by year and set to repeat every year.
+
 **Client feedback round 3 (slice 4 of 7: attendance API).** Attendance
 reviewers can filter the roster and export by department, product, role,
 Sub Admin group (Team, Account and Relationship Managers) and leave type,

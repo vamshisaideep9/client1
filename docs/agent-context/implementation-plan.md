@@ -123,6 +123,27 @@ slice 3):
 - The "SD" and "WOH" codes are display codes computed by the web (slice 5);
   the API keeps the raw `early_exit` and `holiday_work` fields.
 
+Slice 5 — attendance web (branch `feat/round3-5-attendance-web`, stacked on
+slice 4):
+
+- Monthly grid and Daily roster share one filter bar: From/To (31 days at
+  most, checked before any request; grid opens on the 1st of this month to
+  today, roster on today), Department, Product (the shared product
+  catalogue), Role with department-qualified labels (Loan Telecallers, Loan
+  Officers, Real Estate Telecallers, Real Estate Officers, Sub Admins),
+  Team-wise (teams, Team Managers, Account Managers, Relationship Managers),
+  Status and Leave type. A multi-day roster lists each date per member.
+- Copy: "Checked in" is "Logged in", the roster columns are "Login (IST)" and
+  "Logout (IST)", grid cells name the login and logout times, "Early-exit
+  exception" is "Short-day exception" and "Holiday work" is "Work on
+  holiday". Early exit shows SD and work on a holiday shows WOH.
+- Every badge carries its own meaning in its tooltip and accessible name, and
+  a legend under the grid lists every code, CL and SL, and any other leave
+  type in view (from the API's `leave_badges`).
+- Policy: shift, half-day and full-day thresholds are hours and minutes with
+  a "9h 0m" readout; grace stays in minutes. Holidays have a Month/Year view,
+  a "Repeat every year" option, "Yearly" markers and "Stop repeating".
+
 **Merged upstream 2026-11-26 — Product specialists for Telecallers and
 Officers, with dashboards** (#409–#412, mirror #109–#112; `main` a3e09ce1)
 

@@ -48,10 +48,22 @@ export function getAttendanceHolidays(start: string, end: string, line?: Attenda
   return apiRequest<AttendanceHoliday[]>(`${ATTENDANCE_API}/holidays?${params}`);
 }
 
-export function setAttendanceHoliday(day: string, name: string | null, line?: AttendanceLine) {
+/** A whole calendar year of one-off and yearly holidays. */
+export function getAttendanceHolidayYear(year: number, line?: AttendanceLine) {
+  const params = new URLSearchParams({ year: String(year) });
+  if (line) params.set("business_line", line);
+  return apiRequest<AttendanceHoliday[]>(`${ATTENDANCE_API}/holidays?${params}`);
+}
+
+export function setAttendanceHoliday(day: string, name: string | null, line?: AttendanceLine, repeatYearly = false) {
   const scope = line ? `?${new URLSearchParams({ business_line: line })}` : "";
   return apiRequest<null>(`${ATTENDANCE_API}/holidays/${encodeURIComponent(day)}${scope}`,
-    name === null ? { method: "DELETE" } : { method: "PUT", body: { name } });
+    name === null ? { method: "DELETE" } : { method: "PUT", body: { name, repeat_yearly: repeatYearly } });
+}
+
+/** Stop a yearly holiday after today; earlier dates keep it. */
+export function stopRecurringAttendanceHoliday(id: string) {
+  return apiRequest<null>(`${ATTENDANCE_API}/holidays/recurring/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 export function getAttendanceEmployment(id: string) {
