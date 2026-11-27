@@ -4941,6 +4941,81 @@
         "title": "AgentLeadBulkFieldError",
         "type": "object"
       },
+      "AgentLeadBulkProduct": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "AgentLeadBulkProduct",
+        "type": "object"
+      },
+      "AgentLeadBulkProductGroup": {
+        "properties": {
+          "category": {
+            "enum": [
+              "loan",
+              "credit_card",
+              "insurance",
+              "property"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/AgentLeadBulkProduct"
+            },
+            "title": "Products",
+            "type": "array"
+          }
+        },
+        "required": [
+          "category",
+          "label",
+          "products"
+        ],
+        "title": "AgentLeadBulkProductGroup",
+        "type": "object"
+      },
+      "AgentLeadBulkProductsResponse": {
+        "properties": {
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/AgentLeadBulkProductGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          }
+        },
+        "required": [
+          "business_line",
+          "groups"
+        ],
+        "title": "AgentLeadBulkProductsResponse",
+        "type": "object"
+      },
       "AgentLeadBulkRequest": {
         "additionalProperties": false,
         "properties": {
@@ -5542,6 +5617,27 @@
             ],
             "title": "Name"
           },
+          "officer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentLeadStaff"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "product_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Label"
+          },
           "registered": {
             "title": "Registered",
             "type": "boolean"
@@ -5579,6 +5675,16 @@
             "title": "Status",
             "type": "string"
           },
+          "telecaller": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentLeadStaff"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
@@ -5603,6 +5709,37 @@
           "eligibility"
         ],
         "title": "AgentLeadRead",
+        "type": "object"
+      },
+      "AgentLeadStaff": {
+        "description": "A staff member working an Agent's lead: display name, role and staff\ncode only (2026-11-26 decision; shown regardless of the Agent's staff-name\nfield rule). Never a phone number, email or profile id.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "role_label": {
+            "title": "Role Label",
+            "type": "string"
+          },
+          "staff_code": {
+            "title": "Staff Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "role_label",
+          "staff_code"
+        ],
+        "title": "AgentLeadStaff",
         "type": "object"
       },
       "AgentLeadUpdate": {
@@ -42708,6 +42845,33 @@
           }
         ],
         "summary": "Bulk Create Leads",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/v1/agent/leads/bulk/products": {
+      "get": {
+        "description": "The Requirement choices a bulk upload accepts on the Agent's line: the\nsame active products the upload matches against, grouped by category\n(loans, credit cards, insurance), or the property types on Real Estate.",
+        "operationId": "bulk_lead_products_api_v1_agent_leads_bulk_products_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentLeadBulkProductsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Bulk Lead Products",
         "tags": [
           "agent"
         ]

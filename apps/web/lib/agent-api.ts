@@ -20,11 +20,18 @@ export type AgentPayoutActor = Schemas["AgentPayoutActor"];
 export type AgentLeadHistory = Schemas["AgentLeadHistoryRead"];
 export type AgentLeadBulkRow = Schemas["AgentLeadBulkRow"];
 export type AgentLeadBulkResult = Schemas["AgentLeadBulkResponse"];
+export type AgentLeadBulkProducts = Schemas["AgentLeadBulkProductsResponse"];
+export type AgentLeadStaff = Schemas["AgentLeadStaff"];
 
 export function submitAgentLeadRows(rows: AgentLeadBulkRow[], dryRun: boolean) {
   return apiRequest<AgentLeadBulkResult>("/api/v1/agent/leads/bulk", {
     method: "POST", body: { dry_run: dryRun, rows },
   });
+}
+
+/** The Requirement choices a bulk upload accepts on the Agent's line. */
+export function getAgentLeadBulkProducts(): Promise<ApiResponse<AgentLeadBulkProducts>> {
+  return apiRequest<AgentLeadBulkProducts>("/api/v1/agent/leads/bulk/products");
 }
 
 export async function getAgentHome(): Promise<ApiResponse<AgentHome>> {

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DashboardBackLink, DashboardHeader, DashboardPage, DashboardPanel } from "@/features/dashboard/dashboard-ui";
+import { AgentBulkProductsPanel } from "@/features/agent/agent-bulk-products-panel";
 import { submitAgentLeadRows, type AgentLeadBulkRow, type AgentLeadBulkResult } from "@/lib/agent-api";
 import { LEAD_SHEET_HEADERS, downloadLeadSheet, leadSheetCsv, leadSheetTemplate, readLeadSheet } from "@/lib/agent-lead-sheet";
 
@@ -73,7 +74,7 @@ export function AgentLeadBulkView() {
       <DashboardBackLink href="/dashboard/leads">Back to leads</DashboardBackLink>
       <DashboardHeader title="Bulk upload leads" description="Preview up to 200 leads before introducing them." />
       <DashboardPanel title="1. Prepare your file" description="Use the template headers. Files are read in your browser; only the lead rows are sent.">
-        <p className="mb-3 text-sm text-text-secondary">Requirement: {session?.businessLine === "real_estate" ? "a property type, such as Villa or Plot." : "an active loan product name or code."} Email, requirement and description are optional. Use plain values, without formulas.</p>
+        <p className="mb-3 text-sm text-text-secondary">Requirement: {session?.businessLine === "real_estate" ? "a property type, such as Villa or Plot." : "the name or code of an active product listed below."} Email, requirement and description are optional. Use plain values, without formulas.</p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => downloadLeadSheet(leadSheetCsv([LEAD_SHEET_HEADERS]), "dhanadhara-lead-template.csv", "text/csv;charset=utf-8")}>Download CSV template</Button>
           <Button variant="outline" disabled={busy} onClick={() => void templateXlsx()}>Download Excel template</Button>
@@ -84,6 +85,7 @@ export function AgentLeadBulkView() {
             onChange={(event) => { void chooseFile(event.target.files?.[0]); event.target.value = ""; }} />
         </div>
       </DashboardPanel>
+      <AgentBulkProductsPanel />
       {error ? <p role="alert" className="rounded-xl border border-destructive p-4 text-sm text-destructive">{error}</p> : null}
       {busy ? <p role="status" className="text-sm">Processing your rows…</p> : null}
       {results.length ? (

@@ -1,8 +1,45 @@
 # Living implementation plan
 
-**In progress — Product specialists for Telecallers and Officers, with
-dashboards** (2026-11-26; user-approved plan; four stacked slices, each PR
-against `main` on both repositories)
+**In progress — Client feedback round 3: Agent leads, Relationship Managers,
+Department naming, attendance and banner video** (2026-11-26; user-approved
+plan; seven stacked slices, each PR against `main` on both repositories)
+
+Decisions: an Agent sees each lead's Telecaller and Officer as name, role and
+staff code (never contact details), always shown regardless of the
+staff-name field rule. One Relationship Manager per Agent, assigned from the
+Agent side; the Agent sees their RM and the RM reads the Agent's leads
+read-only. "Business line" reads "Department" in the UI only (the API enum is
+unchanged). Attendance gets one filter bar (From/To up to 31 days, Department,
+Product, Role, Team-wise by Sub Admin type, Status, Leave type), "Short day"
+(SD) and "Work on holiday" (WOH) codes, a badge legend, hours-and-minutes
+policy inputs, a holiday year view and yearly repeating holidays. Video
+banners fill the banner without text and advance when they end. Out of
+scope: changes under commission, new staff roles, dashboard-placement video
+banners and the 60 s upload cap.
+
+Slice 1 — Agent leads (branch `feat/round3-1-agent-leads`, from `main`
+a3e09ce1):
+
+- `GET /agent/leads/bulk/products` returns exactly the catalogue the bulk
+  upload matches against (`agent_lead_bulk.active_products`): active products
+  grouped as Loans, Credit cards and Insurance on the Loans line, property
+  types on Real Estate. The upload page shows it as an "Active products"
+  panel before and during a preview; the copy and the row error now say
+  "active product" instead of "active loan product".
+- Agent lead reads (list, detail, create, edit, resubmit) carry
+  `product_label`, `telecaller` and `officer` (`{name, role_label,
+  staff_code}`). Additive migration `7a3e9c1b5d42` adds the confined SECURITY
+  DEFINER reader `agent_lead_assignees(uuid[])`, which re-checks the Agent
+  context like `agent_lead_history` (own introduced leads on the caller's
+  line); the Officer is the assignee of the latest non-cancelled task with
+  an assignee. No table, grant or policy change; Agents still cannot read
+  `staff_profiles`, `auth_users` or `tasks`.
+- Web: "Telecaller" and "Officer" columns on the Agent's lead list (compact
+  line below 1,024 px) and an "Assigned team" panel on the lead page.
+- Rollout: apply the migration before the API; rollback drops the function.
+
+**Merged upstream 2026-11-26 — Product specialists for Telecallers and
+Officers, with dashboards** (#409–#412, mirror #109–#112; `main` a3e09ce1)
 
 Decisions: any active product (loan, credit card or insurance) can be the one
 specialty of a Loans or dual-line Telecaller or Officer. Unspecialised staff

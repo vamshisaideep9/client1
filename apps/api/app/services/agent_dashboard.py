@@ -37,6 +37,7 @@ from app.schemas.agent import (
     AgentHistoryServiceEnquiry,
     AgentHistorySiteVisit,
     AgentLeadHistoryRead,
+    AgentLeadStaff,
 )
 from app.schemas.commissions import (
     AgentEarningsResponse,
@@ -354,6 +355,67 @@ async def transaction_detail(
         items=items,
         hidden_fields=hidden,
     )
+
+
+# ---------------------------------------------------------------------------
+# Lead assignees
+# ---------------------------------------------------------------------------
+
+STAFF_ROLE_LABELS = {
+    "admin": "Admin",
+    "sub_admin": "Sub Admin",
+    "telecaller": "Telecaller",
+    "employee": "Officer",
+}
+
+
+@dataclass(frozen=True)
+class LeadAssignment:
+    product_label: str | None
+    telecaller: AgentLeadStaff | None
+    officer: AgentLeadStaff | None
+
+
+EMPTY_ASSIGNMENT = LeadAssignment(product_label=None, telecaller=None, officer=None)
+
+
+def _staff(name: object, role: object, staff_code: object) -> AgentLeadStaff | None:
+    if not staff_code or not role:
+        return None
+    return AgentLeadStaff(
+        name=str(name) if name else None,
+        role_label=STAFF_ROLE_LABELS.get(str(role), str(role).replace("_", " ").title()),
+        staff_code=str(staff_code),
+    )
+
+
+async def lead_assignments(
+    db: AsyncSession, lead_ids: Sequence[UUID]
+) -> dict[UUID, LeadAssignment]:
+    """Product label, Telecaller and Officer of the Agent's own leads.
+
+    Read through the confined ``agent_lead_assignees`` function on the request
+    session: it re-checks the Agent context and returns only the caller's own
+    introduced leads on their line, with each person's display name, role and
+    staff code. Staff names are always shown here (2026-11-26 decision), so the
+    Agent's ``lead_history.staff_names`` rule is not applied.
+    """
+    if not lead_ids:
+        return {}
+    rows = (
+        await db.execute(
+            text("SELECT * FROM agent_lead_assignees(CAST(:ids AS uuid[]))"),
+            {"ids": list(lead_ids)},
+        )
+    ).all()
+    return {
+        row.lead_uuid: LeadAssignment(
+            product_label=row.product_label,
+            telecaller=_staff(row.telecaller_name, row.telecaller_role, row.telecaller_staff_code),
+            officer=_staff(row.officer_name, row.officer_role, row.officer_staff_code),
+        )
+        for row in rows
+    }
 
 
 # ---------------------------------------------------------------------------

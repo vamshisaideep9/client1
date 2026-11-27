@@ -321,6 +321,39 @@ class AgentLeadBulkResponse(BaseModel):
     totals: AgentLeadBulkTotals
 
 
+# The choices a bulk upload's Requirement column accepts: exactly the
+# catalogue ``services/agent_lead_bulk.load_catalogue`` matches against.
+AgentLeadBulkProductCategoryLiteral = Literal["loan", "credit_card", "insurance", "property"]
+
+
+class AgentLeadBulkProduct(BaseModel):
+    # The product code (slug) or property type value; either it or the label
+    # can be written in the Requirement column.
+    code: str
+    label: str
+
+
+class AgentLeadBulkProductGroup(BaseModel):
+    category: AgentLeadBulkProductCategoryLiteral
+    label: str
+    products: list[AgentLeadBulkProduct]
+
+
+class AgentLeadBulkProductsResponse(BaseModel):
+    business_line: Literal["loans", "real_estate"]
+    groups: list[AgentLeadBulkProductGroup]
+
+
+class AgentLeadStaff(BaseModel):
+    """A staff member working an Agent's lead: display name, role and staff
+    code only (2026-11-26 decision; shown regardless of the Agent's staff-name
+    field rule). Never a phone number, email or profile id."""
+
+    name: str | None
+    role_label: str
+    staff_code: str
+
+
 class AgentLeadRead(BaseModel):
     id: UUID
     lead_ref: LeadRef
@@ -351,6 +384,13 @@ class AgentLeadRead(BaseModel):
     # deals for the list filters (ids, labels and enums; no amounts), read
     # through the confined lead_list_signals reader's Agent branch.
     facets: LeadFacets | None = None
+    # Who works the lead and its product, read through the confined
+    # ``agent_lead_assignees`` function (own introduced leads on the Agent's
+    # line only). The Officer is the assignee of the latest non-cancelled
+    # task. Null when nobody is assigned or the product is unknown.
+    product_label: str | None = None
+    telecaller: AgentLeadStaff | None = None
+    officer: AgentLeadStaff | None = None
 
 
 # ---------------------------------------------------------------------------
