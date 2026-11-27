@@ -10,6 +10,10 @@ export type Assignment = SubAdminGrant["assignment"];
 export type AccessAction = SubAdminGrant["actions"][number];
 export type RelationshipAgent = Schemas["RelationshipAgent"];
 export type RelationshipActivity = Schemas["RelationshipActivity"];
+export type RelationshipLead = Schemas["RelationshipLead"];
+export type RelationshipManager = Schemas["RelationshipManagerRead"];
+export type RelationshipManagerOption = Schemas["RelationshipManagerOption"];
+export type AgentRelationshipManager = Schemas["AgentRelationshipManagerRead"];
 
 export const ASSIGNMENTS = {
   team_manager: { label: "Team Manager", path: "/dashboard/team", actions: ["edit", "review"] },
@@ -51,4 +55,31 @@ export function listRelationshipActivity(agentId: string) {
 
 export function addRelationshipActivity(agentId: string, body: Schemas["RelationshipActivityInput"]) {
   return apiRequest<RelationshipActivity>(`/api/v1/relationships/${agentId}/activity`, { method: "POST", body });
+}
+
+/** The assigned Agent's leads, read-only and without client contact details. */
+export function listRelationshipLeads(agentId: string) {
+  return apiRequest<RelationshipLead[]>(`/api/v1/relationships/${encodeURIComponent(agentId)}/leads`);
+}
+
+/** Names of Agents already listed in a Relationship Manager grant (Main Admin). */
+export function listSelectedRelationshipAgents(ids: readonly string[]) {
+  const query = new URLSearchParams();
+  ids.forEach((id) => query.append("ids", id));
+  return apiRequest<RelationshipAgent[]>(`/api/v1/relationships/options/selected?${query}`);
+}
+
+/** Sub Admins whose Relationship Manager grant covers this Agent (Main Admin). */
+export function listRelationshipManagerOptions(agentProfileId: string) {
+  return apiRequest<RelationshipManagerOption[]>(
+    `/api/v1/admin/agents/${encodeURIComponent(agentProfileId)}/relationship-manager/options`,
+  );
+}
+
+/** Make one Sub Admin the Agent's only Relationship Manager, or clear it (null). */
+export function setAgentRelationshipManager(agentProfileId: string, subAdminProfileId: string | null) {
+  return apiRequest<AgentRelationshipManager>(
+    `/api/v1/admin/agents/${encodeURIComponent(agentProfileId)}/relationship-manager`,
+    { method: "PUT", body: { sub_admin_profile_id: subAdminProfileId } },
+  );
 }

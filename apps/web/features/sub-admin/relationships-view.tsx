@@ -9,8 +9,14 @@ import { useMe } from "@/features/dashboard/me-provider";
 import { formatDate } from "@/lib/format";
 import {
   ACCESS_LINES, addRelationshipActivity, assignedLines, listRelationshipActivity,
-  listRelationshipAgents, type RelationshipActivity, type RelationshipAgent,
+  listRelationshipAgents, listRelationshipLeads, type RelationshipActivity, type RelationshipAgent,
+  type RelationshipLead,
 } from "@/lib/sub-admin-access";
+
+const LEAD_STATUS: Record<string, string> = {
+  new: "New", assigned: "Assigned", working: "Working", converted: "Converted",
+  closed: "Closed", released: "Released", expired: "Expired",
+};
 
 export function RelationshipsView() {
   const { me } = useMe();
@@ -45,6 +51,7 @@ export function RelationshipsView() {
             </li>
           ))}</ul> : <p className="text-sm text-text-secondary">No Agents are assigned to you.</p>}
     </DashboardPanel>
+    {selected ? <AgentLeads key={`leads-${selected.id}`} agent={selected} /> : null}
     {selected ? <Activity key={selected.id} agent={selected} writable={assignedLines(me?.subAdminAccess, "relationship_manager", "follow_up").includes(selected.business_line)} /> : null}
   </DashboardPage>;
 }
@@ -99,5 +106,53 @@ function Activity({ agent, writable }: { agent: RelationshipAgent; writable: boo
         <p className="whitespace-pre-wrap break-words text-sm">{item.note}</p>
       </li>
     ))}</ol> : items ? <p className="text-sm text-text-secondary">No activity recorded.</p> : null}
+  </DashboardPanel>;
+}
+
+/** The assigned Agent's leads, read-only: no client name or contact details. */
+function AgentLeads({ agent }: { agent: RelationshipAgent }) {
+  const [items, setItems] = React.useState<RelationshipLead[]>();
+  const [error, setError] = React.useState("");
+  const [attempt, setAttempt] = React.useState(0);
+  React.useEffect(() => {
+    let live = true;
+    void listRelationshipLeads(agent.id).then((result) => {
+      if (live) {
+        if (result.ok) setItems(result.data);
+        else setError(result.error);
+      }
+    });
+    return () => { live = false; };
+  }, [agent.id, attempt]);
+
+  return <DashboardPanel id="relationship-agent-leads" title={`Leads from ${agent.name}`}
+    description="Read-only. Client names and contact details stay with the assigned staff.">
+    {error ? <div role="alert"><p className="text-sm text-destructive">{error}</p><Button size="sm" variant="outline" onClick={() => { setError(""); setItems(undefined); setAttempt((value) => value + 1); }}>Retry</Button></div>
+      : items === undefined ? <p role="status" className="text-sm">Loading leads…</p>
+        : items.length === 0 ? <p className="text-sm text-text-secondary">This Agent has not introduced any leads yet.</p>
+          : <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-sm" aria-label={`Leads from ${agent.name}`}>
+              <thead className="border-b border-border text-xs uppercase tracking-wide text-text-secondary">
+                <tr>
+                  <th scope="col" className="px-3 py-2 font-medium">Lead ref</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Status</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Product</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Introduced</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Last update</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((lead) => (
+                  <tr key={lead.id} className="border-b border-border last:border-0">
+                    <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums">{lead.lead_ref}</td>
+                    <td className="px-3 py-2">{LEAD_STATUS[lead.status] ?? lead.status}</td>
+                    <td className="px-3 py-2">{lead.product_label ?? (lead.business_line === "real_estate" ? ACCESS_LINES.real_estate : "-")}</td>
+                    <td className="whitespace-nowrap px-3 py-2">{formatDate(lead.created_at)}</td>
+                    <td className="whitespace-nowrap px-3 py-2">{formatDate(lead.updated_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>}
   </DashboardPanel>;
 }

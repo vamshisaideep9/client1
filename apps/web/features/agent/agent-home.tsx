@@ -189,6 +189,24 @@ export function AgentHome() {
           )}
         </DashboardPanel>
       </div>
+      <DashboardPanel
+        id="relationship-manager"
+        title="Your Relationship Manager"
+        description="Your point of contact for onboarding, leads and payouts"
+      >
+        {home.relationship_manager ? (
+          <p className="text-sm">
+            <span className="font-medium text-text-primary">
+              {home.relationship_manager.name ?? home.relationship_manager.staff_code}
+            </span>
+            <span className="text-text-secondary"> · Staff code {home.relationship_manager.staff_code}</span>
+          </p>
+        ) : (
+          <p className="text-sm text-text-secondary">
+            No Relationship Manager is assigned yet. Your Admin will assign one.
+          </p>
+        )}
+      </DashboardPanel>
       <ContestHomeCard />
     </DashboardPage>
   );

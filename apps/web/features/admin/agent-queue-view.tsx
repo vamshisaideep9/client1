@@ -52,6 +52,7 @@ import {
   type AgentApplicationDocument,
 } from "@/lib/admin-api";
 
+import { AgentRelationshipManagerField, relationshipManagerText } from "./agent-relationship-manager";
 import { TempCredentialPanel } from "./temp-credential-panel";
 import { useAgentApplicationDetail } from "./use-agent-application-detail";
 import { useAgentQueue } from "./use-agent-queue";
@@ -399,6 +400,15 @@ export function AgentQueueView() {
       ),
     },
     {
+      key: "relationship_manager",
+      header: "Relationship Manager",
+      render: (application) => (
+        <span className="text-text-secondary">
+          {application.agent_profile_id ? relationshipManagerText(application.relationship_manager) : "-"}
+        </span>
+      ),
+    },
+    {
       key: "created_at",
       header: "Waiting",
       sortable: true,
@@ -505,7 +515,7 @@ export function AgentQueueView() {
             onSortChange={(key) => setSort((current) => nextSort(current, key))}
             onRowClick={openApplication}
             rowActionLabel="Open application"
-            minWidth="min-w-[860px]"
+            minWidth="min-w-[1020px]"
           />
           <div className="px-5 pb-4">
             <ListPagination page={page} total={total} onPageChange={setPage} />
@@ -586,6 +596,19 @@ export function AgentQueueView() {
                           {active.email ?? "-"}
                         </dd>
                       </div>
+                      {active.agent_profile_id ? (
+                        <div className="col-span-2">
+                          <dt className="text-text-secondary">Relationship Manager</dt>
+                          <dd className="mt-1">
+                            <AgentRelationshipManagerField
+                              agentProfileId={active.agent_profile_id}
+                              agentName={`${active.first_name ?? ""} ${active.last_name ?? ""}`.trim() || "this Agent"}
+                              manager={active.relationship_manager}
+                              onChanged={() => void reload()}
+                            />
+                          </dd>
+                        </div>
+                      ) : null}
                     </dl>
 
                     {active.status !== "pending" ? (
