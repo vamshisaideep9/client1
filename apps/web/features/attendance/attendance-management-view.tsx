@@ -13,12 +13,16 @@ import { FetchError } from "@/features/dashboard/fetch-error";
 import { ListLoadingState } from "@/features/dashboard/list-states";
 import { useMe } from "@/features/dashboard/me-provider";
 import {
-  decideAttendanceRequest, exportAttendance, getAttendanceInbox, getAttendanceRoster,
+  decideAttendanceRequest, exportAttendance, getAttendanceInbox, getAttendancePolicy, getAttendanceRoster,
   type AttendanceDecision, type AttendanceInbox, type AttendanceRequest, type AttendanceRoster,
 } from "@/lib/attendance-api";
 import { getMyTeams, listTeams } from "@/lib/staff-teams-api";
 import { roleLabel } from "@/lib/role-label";
-import { ATTENDANCE_STATUS, attendanceBadges, attendanceDate, attendanceTime, duration, istDay, leaveLabel, monthDays, previousMonth, requestLabel } from "./attendance-display";
+import { useProductCatalogue } from "@/features/dashboard/use-product-catalogue";
+import {
+  ATTENDANCE_STATUS, attendanceBadges, attendanceDate, attendanceLegend, attendanceTime, datesBetween,
+  duration, istDay, leaveLabel, monthStart, rangeError, requestLabel,
+} from "./attendance-display";
 import { AttendancePolicyPanel } from "./attendance-policy-panel";
 import { AttendanceEmploymentDialog } from "./attendance-employment-dialog";
 import { AttendanceCertificateControl } from "./attendance-certificate-control";
@@ -26,8 +30,25 @@ import { AttendanceMonthPanel } from "./attendance-month-panel";
 
 type Mode = "daily" | "month" | "requests" | "policy" | "close";
 type FilterOption = { id: string; name: string };
+type Member = AttendanceRoster["members"][number];
 const PAGE_SIZE = 50;
 const selectClass = "min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+/** Roles with department-qualified labels; each sets role and department. */
+const ROLE_OPTIONS = [
+  { value: "telecaller:loans", label: "Loan Telecallers" },
+  { value: "employee:loans", label: "Loan Officers" },
+  { value: "telecaller:real_estate", label: "Real Estate Telecallers" },
+  { value: "employee:real_estate", label: "Real Estate Officers" },
+  { value: "sub_admin:", label: "Sub Admins" },
+] as const;
+/** Team-wise: a team, or a Sub Admin group. */
+const GROUP_OPTIONS = [
+  { value: "group:team_manager", label: "Team Managers" },
+  { value: "group:account_manager", label: "Account Managers" },
+  { value: "group:relationship_manager", label: "Relationship Managers" },
+] as const;
+const DEFAULT_LEAVE_TYPES = ["casual", "sick"];
 
 export function AttendanceManagementView() {
   const { session } = useAuth();
@@ -36,11 +57,19 @@ export function AttendanceManagementView() {
   const role = session?.role;
   const admin = role === "admin";
   const [mode, setMode] = useState<Mode>("daily");
-  const [date, setDate] = useState(() => istDay());
-  const [month, setMonth] = useState(previousMonth);
+  // One filter bar for both views: the roster opens on today, the grid on
+  // the 1st of this month to today (31 days at most).
+  const [dailyRange, setDailyRange] = useState(() => ({ start: istDay(), end: istDay() }));
+  const [gridRange, setGridRange] = useState(() => ({ start: monthStart(), end: istDay() }));
   const [team, setTeam] = useState("");
   const [staff, setStaff] = useState("");
   const [status, setStatus] = useState("");
+  const [department, setDepartment] = useState("");
+  const [product, setProduct] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [leaveType, setLeaveType] = useState("");
+  const [leaveTypes, setLeaveTypes] = useState<string[]>(DEFAULT_LEAVE_TYPES);
+  const catalogue = useProductCatalogue(department !== "real_estate");
   const [requestStatus, setRequestStatus] = useState("pending");
   const [offset, setOffset] = useState(0);
   const [teams, setTeams] = useState<FilterOption[]>([]);
@@ -53,14 +82,38 @@ export function AttendanceManagementView() {
   const [review, setReview] = useState<AttendanceRequest | null>(null);
   const [assignment, setAssignment] = useState<{ member: AttendanceRoster["members"][number]; trigger: HTMLButtonElement } | null>(null);
   const [revision, refresh] = useState(0);
-  const dates = useMemo(() => mode === "month" ? monthDays(month) : [date], [mode, date, month]);
+  const period = mode === "month" ? gridRange : dailyRange;
+  const setPeriod = mode === "month" ? setGridRange : setDailyRange;
+  const periodError = mode === "requests" ? null : rangeError(period.start, period.end);
+  const dates = useMemo(
+    () => (mode === "requests" ? [dailyRange.start] : datesBetween(period.start, period.end)),
+    [dailyRange.start, mode, period.end, period.start],
+  );
   const range = useMemo(() => {
-    const query = new URLSearchParams({ start: dates[0], end: dates[dates.length - 1] });
-    if (team) query.set("team_id", team);
+    const query = new URLSearchParams({ start: dates[0] ?? istDay(), end: dates[dates.length - 1] ?? istDay() });
+    if (team.startsWith("team:")) query.set("team_id", team.slice(5));
+    if (team.startsWith("group:")) query.set("sub_admin_group", team.slice(6));
     if (staff) query.set("staff_id", staff);
-    if (status && mode !== "requests") query.set("status", status);
+    if (mode === "requests") return query;
+    if (status) query.set("status", status);
+    if (department) query.set("department", department);
+    if (product) query.set("product_id", product);
+    if (roleFilter) query.set("role", roleFilter.split(":")[0]);
+    if (leaveType) query.set("leave_type", leaveType);
     return query;
-  }, [dates, mode, staff, status, team]);
+  }, [dates, department, leaveType, mode, product, roleFilter, staff, status, team]);
+
+  useEffect(() => {
+    if (!admin) return;
+    let current = true;
+    void getAttendancePolicy().then((res) => {
+      if (!current || !res.ok) return;
+      const shown = res.data.scheduled ?? res.data.active;
+      const keys = Object.keys(shown?.leave_quotas ?? {});
+      if (keys.length) setLeaveTypes([...new Set([...DEFAULT_LEAVE_TYPES, ...keys])]);
+    });
+    return () => { current = false; };
+  }, [admin]);
 
   useEffect(() => {
     if (!role) return;
@@ -75,12 +128,12 @@ export function AttendanceManagementView() {
   }, [admin, revision, role]);
 
   useEffect(() => {
-    if (!role || mode === "policy" || mode === "close") return;
+    if (!role || mode === "policy" || mode === "close" || periodError) return;
     let current = true;
     const query = new URLSearchParams(range);
     if (mode !== "requests") query.set("offset", String(offset));
     const requests = new URLSearchParams({ status: requestStatus, offset: String(offset) });
-    if (team) requests.set("team_id", team);
+    if (team.startsWith("team:")) requests.set("team_id", team.slice(5));
     if (staff) requests.set("staff_id", staff);
     void Promise.all([
       getAttendanceRoster(query),
@@ -97,7 +150,7 @@ export function AttendanceManagementView() {
       setError(null);
     });
     return () => { current = false; };
-  }, [mode, offset, range, requestStatus, revision, role, staff, team]);
+  }, [mode, offset, periodError, range, requestStatus, revision, role, staff, team]);
 
   const updateMode = (value: string) => {
     setMode(value as Mode);
@@ -132,21 +185,63 @@ export function AttendanceManagementView() {
             <Button variant="outline" disabled={exporting} onClick={() => void download()}>Export CSV</Button>
           ) : null}>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {mode === "month" ? <div><Label htmlFor="roster-month">Month</Label>
-                <Input id="roster-month" type="month" value={month} min="2000-01" max="9998-12" onChange={(event) => {
-                  if (event.target.value) { setMonth(event.target.value); setOffset(0); }
-                }} /></div> : mode === "daily" ? <div><Label htmlFor="roster-day">Work date</Label>
-                <Input id="roster-day" type="date" value={date} onChange={(event) => {
-                  if (event.target.value) { setDate(event.target.value); setOffset(0); }
-                }} /></div> : null}
-              <div><Label htmlFor="roster-team">Team</Label>
+              {mode !== "requests" ? <>
+                <div><Label htmlFor="roster-from">From</Label>
+                  <Input id="roster-from" type="date" value={period.start} max={period.end || undefined}
+                    aria-describedby={periodError ? "roster-range-error" : undefined}
+                    onChange={(event) => { if (event.target.value) { setPeriod((value) => ({ ...value, start: event.target.value })); setOffset(0); } }} /></div>
+                <div><Label htmlFor="roster-to">To</Label>
+                  <Input id="roster-to" type="date" value={period.end} min={period.start || undefined}
+                    aria-describedby={periodError ? "roster-range-error" : undefined}
+                    onChange={(event) => { if (event.target.value) { setPeriod((value) => ({ ...value, end: event.target.value })); setOffset(0); } }} /></div>
+                <div><Label htmlFor="roster-department">Department</Label>
+                  <select id="roster-department" className={selectClass} value={department} onChange={(event) => {
+                    setDepartment(event.target.value); setOffset(0);
+                    if (event.target.value === "real_estate") setProduct("");
+                    if (roleFilter && !roleFilter.endsWith(`:${event.target.value}`) && !roleFilter.startsWith("sub_admin")) setRoleFilter("");
+                  }}>
+                    <option value="">All departments</option>
+                    <option value="loans">Loans</option>
+                    <option value="real_estate">Real Estate</option>
+                  </select></div>
+                <div><Label htmlFor="roster-product">Product</Label>
+                  <select id="roster-product" className={selectClass} value={product} disabled={department === "real_estate"} onChange={(event) => {
+                    setProduct(event.target.value); setOffset(0);
+                  }}>
+                    <option value="">All products</option>
+                    {catalogue.products.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}
+                  </select></div>
+                <div><Label htmlFor="roster-role">Role</Label>
+                  <select id="roster-role" className={selectClass} value={roleFilter} onChange={(event) => {
+                    const value = event.target.value;
+                    setRoleFilter(value); setOffset(0);
+                    const line = value.split(":")[1];
+                    if (line) setDepartment(line);
+                  }}>
+                    <option value="">All roles</option>
+                    {ROLE_OPTIONS.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}
+                  </select></div>
+              </> : null}
+              <div><Label htmlFor="roster-team">{mode === "requests" ? "Team" : "Team-wise"}</Label>
                 <select id="roster-team" className={selectClass} value={team} onChange={(event) => {
                   setTeam(event.target.value); setStaff(""); setOffset(0);
                 }}>
                   <option value="">{admin ? "All teams and unassigned" : "My teams"}</option>
-                  {teams.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
+                  {teams.length ? <optgroup label="Teams">
+                    {teams.map((entry) => <option key={entry.id} value={`team:${entry.id}`}>{entry.name}</option>)}
+                  </optgroup> : null}
+                  {mode !== "requests" ? <optgroup label="Sub Admin groups">
+                    {GROUP_OPTIONS.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}
+                  </optgroup> : null}
                 </select>
               </div>
+              {mode !== "requests" ? <div><Label htmlFor="roster-leave">Leave type</Label>
+                <select id="roster-leave" className={selectClass} value={leaveType} onChange={(event) => {
+                  setLeaveType(event.target.value); setOffset(0);
+                }}>
+                  <option value="">All leave types</option>
+                  {leaveTypes.map((kind) => <option key={kind} value={kind}>{leaveLabel(kind)} leave</option>)}
+                </select></div> : null}
               <div><Label htmlFor="roster-staff">Staff member</Label>
                 <select id="roster-staff" className={selectClass} value={staff} onChange={(event) => {
                   setStaff(event.target.value); setOffset(0);
@@ -170,6 +265,7 @@ export function AttendanceManagementView() {
                 </select>}
               </div>
             </div>
+            {periodError ? <p id="roster-range-error" role="alert" className="mt-2 text-sm text-destructive">{periodError}</p> : null}
             {teamsFailed ? <p role="status" className="mt-2 text-sm text-text-secondary">Team choices could not load. <Button variant="link" onClick={() => refresh((value) => value + 1)}>Retry</Button></p> : null}
             {notice ? <p role="status" className="mt-2 text-sm text-text-secondary">{notice}</p> : null}
           </DashboardPanel>
@@ -193,6 +289,7 @@ export function AttendanceManagementView() {
               ) : <>
                 {!roster.configured ? <p className="mb-3 text-sm text-text-secondary">Admin setup is pending. Attendance will appear after the policy is configured.</p> : null}
                 <RosterTable roster={roster} dates={dates} daily={mode === "daily"} edit={admin && mode === "daily" ? (member, trigger) => setAssignment({ member, trigger }) : undefined} />
+                {mode === "month" && roster.members.length ? <BadgeLegend roster={roster} /> : null}
               </>}
             {total > PAGE_SIZE ? (
               <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -215,40 +312,60 @@ export function AttendanceManagementView() {
   );
 }
 
+type DayRow = AttendanceRoster["days"][number];
+
+const logoutTime = (row: DayRow | undefined) =>
+  `${attendanceTime(row?.check_out ?? row?.system_check_out ?? null)}${row?.system_check_out && (!row.check_out || row.system_check_out === row.check_out) ? " (system)" : ""}`;
+
+function memberHeader(member: Member, edit?: (member: Member, trigger: HTMLButtonElement) => void) {
+  return <>
+    {member.name}<span className="block text-xs text-text-secondary">{member.staff_code} · {roleLabel(member.role)}</span>
+    {edit ? <Button variant="link" size="sm" className="h-9 px-0" aria-label={`Edit attendance assignment for ${member.name}`} onClick={(event) => edit(member, event.currentTarget)}>Edit assignment</Button> : null}
+  </>;
+}
+
 function RosterTable({ roster, dates, daily, edit }: {
   roster: AttendanceRoster; dates: string[]; daily: boolean;
-  edit?: (member: AttendanceRoster["members"][number], trigger: HTMLButtonElement) => void;
+  edit?: (member: Member, trigger: HTMLButtonElement) => void;
 }) {
   if (!roster.members.length) return <p className="text-sm text-text-secondary">No staff members match these filters.</p>;
   const byDay = new Map(roster.days.map((row) => [`${row.staff_profile_id}/${row.day}`, row]));
+  const multiDay = dates.length > 1;
   return (
     <div className="overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" tabIndex={0} role="region" aria-label={daily ? "Daily roster table" : "Monthly attendance grid"}>
       <table className="w-full min-w-max text-left text-sm">
         <thead className="bg-muted text-text-secondary">
           <tr><th scope="col" className="p-2">Staff member</th>
-            {daily ? ["Status", "Check-in (IST)", "Check-out (IST)", "Worked", "LOP days"].map((label) => <th scope="col" className="p-2" key={label}>{label}</th>)
-              : <>{dates.map((day) => <th scope="col" className="p-2" key={day}>{Number(day.slice(-2))}</th>)}<th scope="col" className="p-2">LOP days</th></>}
+            {daily ? [...(multiDay ? ["Date"] : []), "Status", "Login (IST)", "Logout (IST)", "Worked", "LOP days"].map((label) => <th scope="col" className="p-2" key={label}>{label}</th>)
+              : <>{dates.map((day) => <th scope="col" className="p-2" key={day} title={attendanceDate(day)}>{Number(day.slice(-2))}</th>)}<th scope="col" className="p-2">LOP days</th></>}
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           {roster.members.map((member) => {
-            const row = byDay.get(`${member.staff_profile_id}/${dates[0]}`);
             const totalLop = dates.reduce((sum, day) => sum + (byDay.get(`${member.staff_profile_id}/${day}`)?.lop_units ?? 0), 0);
+            if (daily) {
+              return dates.map((day, index) => {
+                const row = byDay.get(`${member.staff_profile_id}/${day}`);
+                return <tr key={`${member.staff_profile_id}/${day}`}>
+                  {index === 0 ? <th scope="row" rowSpan={dates.length} className="p-2 align-top font-medium">{memberHeader(member, edit)}</th> : null}
+                  {multiDay ? <td className="whitespace-nowrap p-2">{attendanceDate(day)}</td> : null}
+                  <td className="p-2">{row ? ATTENDANCE_STATUS[row.status] : "Unrecorded"}{row?.late ? " · Late" : ""}</td>
+                  <td className="p-2">{attendanceTime(row?.check_in ?? null)}</td>
+                  <td className="p-2">{logoutTime(row)}</td>
+                  <td className="p-2">{row ? duration(row.worked_minutes) : "—"}</td>
+                  <td className="p-2">{(row?.lop_units ?? 0) / 4}</td>
+                </tr>;
+              });
+            }
             return <tr key={member.staff_profile_id}>
-              <th scope="row" className="p-2 font-medium">{member.name}<span className="block text-xs text-text-secondary">{member.staff_code} · {roleLabel(member.role)}</span>
-                {edit ? <Button variant="link" size="sm" className="h-9 px-0" aria-label={`Edit attendance assignment for ${member.name}`} onClick={(event) => edit(member, event.currentTarget)}>Edit assignment</Button> : null}
-              </th>
-              {daily ? <>
-                <td className="p-2">{row ? ATTENDANCE_STATUS[row.status] : "Unrecorded"}{row?.late ? " · Late" : ""}</td>
-                <td className="p-2">{attendanceTime(row?.check_in ?? null)}</td>
-                <td className="p-2">{attendanceTime(row?.check_out ?? row?.system_check_out ?? null)}{row?.system_check_out && (!row.check_out || row.system_check_out === row.check_out) ? " (system)" : ""}</td>
-                <td className="p-2">{row ? duration(row.worked_minutes) : "—"}</td>
-              </> : dates.map((day) => {
+              <th scope="row" className="p-2 font-medium">{memberHeader(member, edit)}</th>
+              {dates.map((day) => {
                 const entry = byDay.get(`${member.staff_profile_id}/${day}`);
                 const badges = entry ? attendanceBadges(entry) : [];
-                return <td key={day} className="p-2 text-xs">{badges.length
-                  ? <div className="flex gap-0.5">{badges.map(({ code, label, tone }) => <span key={code} className={`rounded px-1 ${tone}`} title={label}>
-                    <span aria-hidden="true">{code}</span><span className="sr-only">{label}</span>
+                const times = entry?.check_in ? ` · Login ${attendanceTime(entry.check_in)} · Logout ${logoutTime(entry)}` : "";
+                return <td key={day} className="p-2 text-xs" title={entry ? `${attendanceDate(day)}: ${badges.map((badge) => badge.label).join(", ") || ATTENDANCE_STATUS[entry.status]}${times}` : undefined}>{badges.length
+                  ? <div className="flex gap-0.5">{badges.map(({ code, label, tone }) => <span key={code} className={`rounded px-1 ${tone}`} title={`${label}${times}`}>
+                    <span aria-hidden="true">{code}</span><span className="sr-only">{label}{times}</span>
                   </span>)}</div>
                   : entry ? ATTENDANCE_STATUS[entry.status] : "—"}</td>;
               })}
@@ -259,6 +376,20 @@ function RosterTable({ roster, dates, daily, edit }: {
       </table>
     </div>
   );
+}
+
+/** What every grid code means, including other leave types in view. */
+function BadgeLegend({ roster }: { roster: AttendanceRoster }) {
+  const legend = attendanceLegend(roster.days);
+  return <section aria-labelledby="attendance-legend-title" className="mt-4">
+    <h3 id="attendance-legend-title" className="mb-2 text-sm font-semibold text-text-primary">Legend</h3>
+    <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs" aria-label="Attendance codes">
+      {legend.map(({ code, label, tone }) => <li key={code} className="flex items-center gap-1.5">
+        <span className={`rounded px-1 font-medium ${tone}`} aria-hidden="true">{code}</span><span>{label}</span>
+        <span className="sr-only">({code})</span>
+      </li>)}
+    </ul>
+  </section>;
 }
 
 function ReviewDialog({ entry, name, admin, recommendationsOnly, close, saved }: {
