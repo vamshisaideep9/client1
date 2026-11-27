@@ -47,6 +47,7 @@ import {
   filterAgentLeads,
   type AgentLeadFilters,
 } from "./agent-lead-filters";
+import { AssignedStaff, assignedStaffText } from "./assigned-staff";
 import { useAgentLeads } from "./use-agent-leads";
 import { AGENT_LEAD_EXPIRY_POLICY, formatAgentLeadExpiry } from "./lead-expiry";
 import { ResubmitLeadButton } from "./resubmit-lead-button";
@@ -201,6 +202,8 @@ export function AgentLeadsView() {
                             <th className="px-5 py-3 font-medium">Lead</th>
                             <th className="px-5 py-3 font-medium">Status</th>
                             <th className="px-5 py-3 font-medium">Eligibility</th>
+                            <th className="hidden px-5 py-3 font-medium lg:table-cell">Telecaller</th>
+                            <th className="hidden px-5 py-3 font-medium lg:table-cell">Officer</th>
                             <th className="hidden px-5 py-3 font-medium md:table-cell">Registered</th>
                             <th className="px-5 py-3 font-medium">Agent window</th>
                           </tr>
@@ -219,6 +222,14 @@ export function AgentLeadsView() {
                                   {lead.lead_ref ? " · " : null}
                                   <LeadRefText value={lead.lead_ref} />
                                 </p>
+                                {lead.product_label ? (
+                                  <p className="text-xs text-text-secondary">{lead.product_label}</p>
+                                ) : null}
+                                {lead.telecaller || lead.officer ? (
+                                  <p className="mt-1 text-xs text-text-secondary lg:hidden">
+                                    {[assignedStaffText(lead.telecaller), assignedStaffText(lead.officer)].filter(Boolean).join(" | ")}
+                                  </p>
+                                ) : null}
                                 <ResubmissionBadge count={lead.resubmit_count} at={lead.last_resubmitted_at} />
                               </td>
                               <td className="px-5 py-4">
@@ -233,6 +244,12 @@ export function AgentLeadsView() {
                               </td>
                               <td className="px-5 py-4">
                                 <RowEligibilityBadge row={lead} />
+                              </td>
+                              <td className="hidden px-5 py-4 lg:table-cell">
+                                <AssignedStaff staff={lead.telecaller} />
+                              </td>
+                              <td className="hidden px-5 py-4 lg:table-cell">
+                                <AssignedStaff staff={lead.officer} />
                               </td>
                               <td className="hidden px-5 py-4 text-text-secondary md:table-cell">
                                 {lead.registered ? "Account created" : "Not registered yet"}

@@ -27,6 +27,7 @@ from app.models.lead import Lead
 from app.models.lead_intake_attempt import IntakeActorType
 from app.schemas.agent import (
     AgentHomeResponse,
+    AgentLeadBulkProductsResponse,
     AgentLeadBulkRequest,
     AgentLeadBulkResponse,
     AgentLeadCreate,
@@ -95,6 +96,7 @@ def _to_agent_lead_read(
     signals: LeadSignals | None = None,
     *,
     agent_profile_uuid: UUID,
+    assignment: agent_dashboard.LeadAssignment = agent_dashboard.EMPTY_ASSIGNMENT,
 ) -> AgentLeadRead:
     within_window = lead.expires_at is None or lead.expires_at > datetime.now(UTC)
     eligibility, reason = agent_lead_eligibility(lead.agent_expired_at)
@@ -104,6 +106,9 @@ def _to_agent_lead_read(
         eligibility_reason=reason,
         eligibility_reason_label=reason_label(reason),
         **extra,
+        product_label=assignment.product_label,
+        telecaller=assignment.telecaller,
+        officer=assignment.officer,
         id=lead.id,
         lead_ref=lead.lead_ref,
         mobile=lead.mobile,
@@ -131,6 +136,23 @@ def _to_agent_lead_read(
                 ),
             },
         ),
+    )
+
+
+async def _agent_lead_read(
+    db: AsyncSession,
+    lead: Lead,
+    modes: dict[tuple[str, str], FieldVisibilityMode],
+    *,
+    agent_profile_uuid: UUID,
+) -> AgentLeadRead:
+    """One lead with who works it (confined ``agent_lead_assignees`` read)."""
+    assignments = await agent_dashboard.lead_assignments(db, [lead.id])
+    return _to_agent_lead_read(
+        lead,
+        modes,
+        agent_profile_uuid=agent_profile_uuid,
+        assignment=assignments.get(lead.id, agent_dashboard.EMPTY_ASSIGNMENT),
     )
 
 
@@ -197,7 +219,7 @@ async def create_lead(
             "Choose a published property or product from your business line.",
         ) from exc
     modes = await effective_modes(db, FieldTargetRole.AGENT)
-    return _to_agent_lead_read(lead, modes, agent_profile_uuid=agent_profile_uuid)
+    return await _agent_lead_read(db, lead, modes, agent_profile_uuid=agent_profile_uuid)
 
 
 @router.post("/leads/bulk", response_model=AgentLeadBulkResponse)
@@ -268,6 +290,29 @@ async def bulk_create_leads(
     return AgentLeadBulkResponse(dry_run=payload.dry_run, rows=results, totals=totals)
 
 
+@router.get("/leads/bulk/products", response_model=AgentLeadBulkProductsResponse)
+async def bulk_lead_products(
+    response: Response,
+    current_user: CurrentUser = Depends(require_agent),
+    db: AsyncSession = Depends(get_db),
+) -> AgentLeadBulkProductsResponse:
+    """The Requirement choices a bulk upload accepts on the Agent's line: the
+    same active products the upload matches against, grouped by category
+    (loans, credit cards, insurance), or the property types on Real Estate."""
+    response.headers["Cache-Control"] = "private, no-store"
+    _agent_profile_uuid(current_user)
+    business_line = current_user.business_line
+    if business_line not in ("loans", "real_estate"):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Your agent profile has no business line set."
+        )
+    products = await agent_lead_bulk.active_products(db, business_line)
+    return AgentLeadBulkProductsResponse(
+        business_line=business_line,
+        groups=agent_lead_bulk.catalogue_groups(business_line, products),
+    )
+
+
 @router.get("/leads", response_model=list[AgentLeadRead], response_model_exclude_unset=True)
 async def list_leads(
     status_filter: str | None = None,
@@ -286,12 +331,15 @@ async def list_leads(
     # Product and property facts for the list filters, through the confined
     # reader's Agent branch (own introduced leads on the Agent's line only).
     signals = await lead_signals(db, leads)
+    # Who works each lead, through the confined Agent reader (one query).
+    assignments = await agent_dashboard.lead_assignments(db, [lead.id for lead in leads])
     return [
         _to_agent_lead_read(
             lead,
             modes,
             signals.get(lead.id, EMPTY_SIGNALS),
             agent_profile_uuid=agent_profile_uuid,
+            assignment=assignments.get(lead.id, agent_dashboard.EMPTY_ASSIGNMENT),
         )
         for lead in leads
     ]
@@ -335,7 +383,7 @@ async def get_lead(
     if lead is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Lead not found.")
     modes = await effective_modes(db, FieldTargetRole.AGENT)
-    return _to_agent_lead_read(lead, modes, agent_profile_uuid=agent_profile_uuid)
+    return await _agent_lead_read(db, lead, modes, agent_profile_uuid=agent_profile_uuid)
 
 
 @router.patch("/leads/{lead_id}", response_model=AgentLeadRead, response_model_exclude_unset=True)
@@ -364,7 +412,7 @@ async def patch_lead(
             "and it can no longer be edited.",
         ) from exc
     modes = await effective_modes(db, FieldTargetRole.AGENT)
-    return _to_agent_lead_read(lead, modes, agent_profile_uuid=agent_profile_uuid)
+    return await _agent_lead_read(db, lead, modes, agent_profile_uuid=agent_profile_uuid)
 
 
 @router.post(
@@ -395,7 +443,7 @@ async def resubmit_lead(
             "hasn't registered can be resubmitted.",
         ) from exc
     modes = await effective_modes(db, FieldTargetRole.AGENT)
-    return _to_agent_lead_read(lead, modes, agent_profile_uuid=agent_profile_uuid)
+    return await _agent_lead_read(db, lead, modes, agent_profile_uuid=agent_profile_uuid)
 
 
 @router.get("/commission-rates", response_model=AgentCommissionRatesResponse)

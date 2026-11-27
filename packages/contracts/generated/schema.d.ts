@@ -2028,6 +2028,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agent/leads/bulk/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bulk Lead Products
+         * @description The Requirement choices a bulk upload accepts on the Agent's line: the
+         *     same active products the upload matches against, grouped by category
+         *     (loans, credit cards, insurance), or the property types on Real Estate.
+         */
+        get: operations["bulk_lead_products_api_v1_agent_leads_bulk_products_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/agent/leads/{lead_id}": {
         parameters: {
             query?: never;
@@ -8375,6 +8397,35 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** AgentLeadBulkProduct */
+        AgentLeadBulkProduct: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+        };
+        /** AgentLeadBulkProductGroup */
+        AgentLeadBulkProductGroup: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "loan" | "credit_card" | "insurance" | "property";
+            /** Label */
+            label: string;
+            /** Products */
+            products: components["schemas"]["AgentLeadBulkProduct"][];
+        };
+        /** AgentLeadBulkProductsResponse */
+        AgentLeadBulkProductsResponse: {
+            /**
+             * Business Line
+             * @enum {string}
+             */
+            business_line: "loans" | "real_estate";
+            /** Groups */
+            groups: components["schemas"]["AgentLeadBulkProductGroup"][];
+        };
         /** AgentLeadBulkRequest */
         AgentLeadBulkRequest: {
             /** Dry Run */
@@ -8541,6 +8592,9 @@ export interface components {
             mobile: string;
             /** Name */
             name?: string | null;
+            officer?: components["schemas"]["AgentLeadStaff"] | null;
+            /** Product Label */
+            product_label?: string | null;
             /** Registered */
             registered: boolean;
             /** Requirement */
@@ -8556,11 +8610,26 @@ export interface components {
              * @enum {string}
              */
             status: "new" | "assigned" | "working" | "converted" | "closed" | "released" | "expired";
+            telecaller?: components["schemas"]["AgentLeadStaff"] | null;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * AgentLeadStaff
+         * @description A staff member working an Agent's lead: display name, role and staff
+         *     code only (2026-11-26 decision; shown regardless of the Agent's staff-name
+         *     field rule). Never a phone number, email or profile id.
+         */
+        AgentLeadStaff: {
+            /** Name */
+            name: string | null;
+            /** Role Label */
+            role_label: string;
+            /** Staff Code */
+            staff_code: string;
         };
         /** AgentLeadUpdate */
         AgentLeadUpdate: {
@@ -21839,6 +21908,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_lead_products_api_v1_agent_leads_bulk_products_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentLeadBulkProductsResponse"];
                 };
             };
         };

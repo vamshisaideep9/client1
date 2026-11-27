@@ -126,6 +126,63 @@ test("CSV preview skips invalid and repeated rows and downloads safe results", a
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
   await page.screenshot({ path: info.outputPath("bulk-results-320.png"), fullPage: true });
 });
+test("bulk upload lists the active products by category before and after a preview", async ({ page }, info) => {
+  await session(page, "agent");
+  await page.route("**/api/v1/agent/leads/bulk/products", (route) => route.fulfill({ json: {
+    business_line: "loans",
+    groups: [
+      { category: "loan", label: "Loans", products: [{ code: "personal-loan", label: "Personal Loan" }, { code: "home-loan", label: "Home Loan" }] },
+      { category: "credit_card", label: "Credit cards", products: [{ code: "rewards-card", label: "Rewards Card" }] },
+      { category: "insurance", label: "Insurance", products: [{ code: "term-life", label: "Term Life" }] },
+    ],
+  } }));
+  await page.route("**/api/v1/agent/leads/bulk", (route) => route.fulfill({ json: { dry_run: true, totals: {}, rows: [
+    { row_index: 0, outcome: "ready", requirement_label: "Rewards Card", errors: [] },
+  ] } }));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/dashboard/leads/bulk");
+  await expect(page.getByRole("region", { name: "Active products" })).toBeVisible();
+  await expect(page.getByText("the name or code of an active product listed below.", { exact: false })).toBeVisible();
+  for (const name of ["Loans", "Credit cards", "Insurance"]) await expect(page.getByRole("list", { name })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Credit cards" }).getByText("Rewards Card")).toBeVisible();
+  await expect(page.getByRole("list", { name: "Insurance" }).getByText("term-life")).toBeVisible();
+  const csv = "SNO,Name,Mobile Number,Email,Requirement,Description\n1,Asha,9812345678,,Rewards Card,";
+  await page.getByLabel("Choose CSV or Excel file").setInputFiles({ name: "leads.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+  await expect(page.getByRole("button", { name: "Submit 1 valid row", exact: true })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Loans" }).getByText("Home Loan")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: info.outputPath("bulk-products-390.png"), fullPage: true });
+});
+test("Agent sees the Telecaller and Officer working each lead", async ({ page }, info) => {
+  await session(page, "agent");
+  const assigned = {
+    ...lead(0, "Asha"), product_label: "Personal Loan",
+    telecaller: { name: "Tara Caller", role_label: "Telecaller", staff_code: "TC-0012" },
+    officer: { name: "Olga Field", role_label: "Officer", staff_code: "OF-0007" },
+  };
+  await page.route("**/api/v1/agent/leads", (route) => route.fulfill({ json: [
+    assigned, { ...lead(0, "Waiting Lead", RATE_ID), telecaller: null, officer: null, product_label: null },
+  ] }));
+  await page.route(`**/api/v1/agent/leads/${LEAD_ID}`, (route) => route.fulfill({ json: assigned }));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/dashboard/leads");
+  const table = page.getByRole("table", { name: "Introduced leads" });
+  await expect(table.getByRole("columnheader", { name: "Telecaller" })).toBeVisible();
+  await expect(table.getByRole("columnheader", { name: "Officer" })).toBeVisible();
+  const row = table.getByRole("row").filter({ hasText: "Asha" });
+  await expect(row.getByText("Tara Caller", { exact: true })).toBeVisible();
+  await expect(row.getByText("Officer · OF-0007", { exact: true })).toBeVisible();
+  await expect(table.getByRole("row").filter({ hasText: "Waiting Lead" }).getByText("Not assigned yet")).toHaveCount(2);
+  await page.screenshot({ path: info.outputPath("agent-leads-assignees-1440.png"), fullPage: true });
+  await page.goto(`/dashboard/leads/${LEAD_ID}`, { waitUntil: "domcontentloaded" });
+  const team = page.getByRole("region", { name: "Assigned team" });
+  await expect(team.getByText("Product: Personal Loan")).toBeVisible();
+  await expect(team.getByText("Tara Caller")).toBeVisible();
+  await expect(team.getByText("Olga Field")).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: info.outputPath("agent-lead-team-390.png"), fullPage: true });
+});
 test("Excel file is parsed in browser before preview", async ({ page }) => {
   await session(page, "agent");
   let posted: { rows: { mobile: string }[]; dry_run: boolean } | null = null;
