@@ -3,7 +3,17 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, SmallInteger, String, Text
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    SmallInteger,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -43,6 +53,26 @@ class AttendanceLineHoliday(Base):
     business_line: Mapped[str] = mapped_column(String(12), primary_key=True)
     day: Mapped[date] = mapped_column(Date, primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
+
+
+class AttendanceRecurringHoliday(Base):
+    """A holiday that repeats every year on ``month``/``day`` from
+    ``starts_on`` until ``ends_on`` (open when null). A null line means every
+    line. A 29 February series only occurs in leap years."""
+
+    __tablename__ = "attendance_recurring_holidays"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    business_line: Mapped[str | None] = mapped_column(String(12))
+    month: Mapped[int] = mapped_column(SmallInteger)
+    day: Mapped[int] = mapped_column(SmallInteger)
+    name: Mapped[str] = mapped_column(String(120))
+    starts_on: Mapped[date] = mapped_column(Date)
+    ends_on: Mapped[date | None] = mapped_column(Date)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("auth_users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class AttendanceEmployment(Base):

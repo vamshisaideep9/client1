@@ -41,11 +41,13 @@ from app.schemas.attendance import (
     AttendancePolicyInput,
     AttendancePolicyState,
     AttendanceRequestRead,
+    AttendanceRole,
     AttendanceRosterMember,
     AttendanceRosterRead,
     AttendanceStatus,
     MyAttendanceRead,
     RequestStatus,
+    SubAdminGroup,
 )
 from app.services import (
     attendance,
@@ -93,6 +95,7 @@ Admin = Annotated[CurrentUser, Depends(require_platform_admin)]
 DB = Annotated[AsyncSession, Depends(get_db)]
 PageSize = Annotated[int, Query(ge=1, le=100)]
 Offset = Annotated[int, Query(ge=0)]
+LeaveTypeFilter = Annotated[str | None, Query(pattern=r"^[a-z][a-z0-9_]{0,31}$")]
 
 
 @router.get("/me", response_model=MyAttendanceRead)
@@ -192,7 +195,14 @@ async def get_roster(
     status: AttendanceStatus | None = None,
     limit: PageSize = 50,
     offset: Offset = 0,
+    department: AttendanceLine | None = None,
+    product_id: UUID | None = None,
+    role: AttendanceRole | None = None,
+    sub_admin_group: SubAdminGroup | None = None,
+    leave_type: LeaveTypeFilter = None,
 ):
+    """Members the caller may review, filtered. Department also matches
+    dual-line members; leave type matches approved leave in the range."""
     await _check_team_review(db, user, team_id)
     return await attendance_views.roster(
         db,
@@ -203,6 +213,11 @@ async def get_roster(
         status=status,
         limit=limit,
         offset=offset,
+        department=department,
+        product_id=product_id,
+        role=role,
+        sub_admin_group=sub_admin_group,
+        leave_type=leave_type,
     )
 
 
@@ -258,9 +273,23 @@ async def put_policy(payload: AttendancePolicyInput, user: Admin):
 
 @router.get("/holidays", response_model=list[AttendanceHolidayRead])
 async def get_holidays(
-    _: Admin, db: DB, start: date, end: date, business_line: AttendanceLine | None = None
+    _: Admin,
+    db: DB,
+    start: date | None = None,
+    end: date | None = None,
+    year: Annotated[int | None, Query(ge=2000, le=9998)] = None,
+    business_line: AttendanceLine | None = None,
 ):
-    attendance_views.validate_period(start, end)
+    """One-off and yearly holidays for a range of up to 31 days, or for a
+    whole calendar ``year`` (the year view)."""
+    if year is not None:
+        if start is not None or end is not None:
+            raise attendance.AttendanceInvalid("Choose either a year or a date range.")
+        start, end = date(year, 1, 1), date(year, 12, 31)
+    elif start is None or end is None:
+        raise attendance.AttendanceInvalid("Choose a year or a date range.")
+    else:
+        attendance_views.validate_period(start, end)
     return await attendance_views.holidays(db, start, end, business_line)
 
 
@@ -271,7 +300,20 @@ async def put_holiday(
     user: Admin,
     business_line: AttendanceLine | None = None,
 ):
-    await attendance.configure_holiday(user, day, payload.name, business_line)
+    """Set a holiday, or with ``repeat_yearly`` start a yearly holiday on
+    this month and day from this date (today or later)."""
+    if payload.repeat_yearly:
+        await attendance.start_recurring_holiday(user, day, payload.name, business_line)
+    else:
+        await attendance.configure_holiday(user, day, payload.name, business_line)
+    return Response(status_code=204)
+
+
+@router.delete("/holidays/recurring/{holiday_id}", status_code=204)
+async def stop_recurring_holiday(holiday_id: UUID, user: Admin):
+    """Stop repeating after today. Earlier occurrences, and closed months,
+    stay as they were."""
+    await attendance.stop_recurring_holiday(user, holiday_id)
     return Response(status_code=204)
 
 
@@ -369,6 +411,11 @@ async def export_attendance(
     team_id: UUID | None = None,
     staff_id: UUID | None = None,
     status: AttendanceStatus | None = None,
+    department: AttendanceLine | None = None,
+    product_id: UUID | None = None,
+    role: AttendanceRole | None = None,
+    sub_admin_group: SubAdminGroup | None = None,
+    leave_type: LeaveTypeFilter = None,
 ):
     await attendance.require_policy(db, attendance.work_date(attendance.utc_now()))
     report = await attendance_views.roster(
@@ -380,6 +427,11 @@ async def export_attendance(
         status=status,
         limit=500,
         offset=0,
+        department=department,
+        product_id=product_id,
+        role=role,
+        sub_admin_group=sub_admin_group,
+        leave_type=leave_type,
     )
     members = {member.staff_profile_id: member for member in report.members}
     header = [

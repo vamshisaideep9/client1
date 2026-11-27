@@ -68,7 +68,15 @@ async def test_employment_calendar_and_direct_review(client, monkeypatch):
         assert other_punch.json()["calendar_status"] == "absent"
         assert not (await client.get(f"{BASE}/me", headers=loans)).json()["holidays"]
         assert (await client.get(f"{BASE}/me", headers=staff)).json()["holidays"] == [
-            {"day": str(holiday), "name": "Real estate holiday"}
+            {
+                "day": str(holiday),
+                "name": "Real estate holiday",
+                "business_line": "real_estate",
+                "recurring_id": None,
+                "repeats_yearly": False,
+                "starts_on": None,
+                "ends_on": None,
+            }
         ]
 
         roster = {"start": str(holiday), "end": str(holiday), "staff_id": str(profile.id)}
