@@ -38,6 +38,42 @@ a3e09ce1):
   line below 1,024 px) and an "Assigned team" panel on the lead page.
 - Rollout: apply the migration before the API; rollback drops the function.
 
+Slice 2 — Relationship Manager API (branch `feat/round3-2-rm-api`, stacked
+on slice 1; security-sensitive):
+
+- `PUT /admin/agents/{agent_id}/relationship-manager`
+  (`{sub_admin_profile_id | null}`, Main Admin only, same gate as the Sub
+  Admin access editor) makes one Sub Admin the Agent's only Relationship
+  Manager, or removes them all. `GET .../relationship-manager/options` lists
+  active Sub Admins whose RM grant covers the Agent's line, with their Agent
+  count. The service locks the Agent row, then the affected Sub Admins' staff
+  rows in a stable order, removes the Agent from every other RM grant, bumps
+  each access version and audits each change as
+  `sub_admin_access_updated` (`change: relationship_agents`). The bulk editor
+  applies the same move when it adds an Agent another RM holds.
+- Changing only the Agent lists no longer signs the Sub Admin out (access is
+  read live); any other grant or status change still bumps the session
+  version and revokes refresh tokens.
+- New Agents in a grant must be active with an account that is neither
+  suspended nor deleted; Agents already listed keep their place so the editor
+  can still save. The picker (`/relationships/options`) offers only those
+  active Agents; `/relationships/options/selected?ids=` names the listed
+  Agents for the editor (Main Admin only).
+- `GET /relationships/{agent_id}/leads` (RM view grant): the assigned Agent's
+  leads on the reachable lines, read-only: reference, line, status, product
+  and dates, never the name, mobile, email, requirement or notes; any other
+  Agent reads as not found.
+- The Agent home and the Admin Agent queue (`agent_profile_id`,
+  `relationship_manager`) show the RM's name and staff code.
+- Additive migration `9c4e2a6b8d13`: new SECURITY DEFINER readers
+  `relationship_agent_lines`, `relationship_agent_leads` and
+  `agent_relationship_managers` (platform Admin, or the calling Agent's own
+  profile only); `relationship_can_access` and `relationship_agents()` are
+  replaced with the same signatures. No table, grant or policy change.
+  Agent profiles are single-line (`ck_agent_profiles_business_line_
+  operational`), so the planned "both-line Agent" picker fix is defensive
+  only.
+
 **Merged upstream 2026-11-26 — Product specialists for Telecallers and
 Officers, with dashboards** (#409–#412, mirror #109–#112; `main` a3e09ce1)
 

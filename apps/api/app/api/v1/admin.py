@@ -15,6 +15,7 @@ business line before this change.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Literal
 from uuid import UUID
@@ -29,7 +30,7 @@ from app.core.deps import CurrentUser, get_cache, require_platform_admin
 from app.core.lead_reference import lead_number_filter
 from app.db.session import get_db
 from app.models.audit_log import AuditAction
-from app.models.profile import AgentApplication, StaffRole, SubmissionStatus
+from app.models.profile import AgentApplication, AgentProfile, StaffRole, SubmissionStatus
 from app.models.support_ticket import SupportStatus
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.user import UserStatus
@@ -98,7 +99,13 @@ from app.schemas.product_dashboards import ProductStaffingResponse
 from app.schemas.profile_metadata import RoleProfileRead
 from app.schemas.property_deals import PropertyDealProgressUpdate
 from app.schemas.staff_invites import StaffInviteLinkRead
-from app.schemas.sub_admin_access import SubAdminAccessHistory, SubAdminAccessUpdate
+from app.schemas.sub_admin_access import (
+    AgentRelationshipManagerRead,
+    AgentRelationshipManagerUpdate,
+    RelationshipManagerOption,
+    SubAdminAccessHistory,
+    SubAdminAccessUpdate,
+)
 from app.schemas.support_tickets import (
     SupportTicketAdminListResponse,
     SupportTicketAdminRead,
@@ -226,10 +233,17 @@ from app.services.property_deals import (
 )
 from app.services.sub_admin_access import (
     InvalidSubAdminAgents,
+    RelationshipAgentInactive,
+    RelationshipAgentMissing,
+    RelationshipManagerFull,
+    RelationshipManagerUnavailable,
     SubAdminAccessConflict,
     SubAdminAccessTargetMissing,
     SubAdminTeamsNeedReassignment,
     access_history,
+    assign_relationship_manager,
+    relationship_manager_options,
+    relationship_managers_for,
     update_access,
 )
 from app.services.support_tickets import (
@@ -813,9 +827,38 @@ async def list_agent_applications(
     if status_filter != "all":
         statement = statement.where(AgentApplication.status == SubmissionStatus(status_filter))
     rows = (await db.scalars(statement)).all()
-    return AgentApplicationListResponse(
-        applications=[AgentApplicationRead.model_validate(r, from_attributes=True) for r in rows]
+    return AgentApplicationListResponse(applications=await _with_relationship_managers(db, rows))
+
+
+async def _with_relationship_managers(
+    db: AsyncSession, applications: Sequence[AgentApplication]
+) -> list[AgentApplicationRead]:
+    """Approved applications carry the Agent profile id and its Relationship
+    Manager (confined ``agent_relationship_managers`` read)."""
+    approved = [a.id for a in applications if a.status == SubmissionStatus.APPROVED]
+    profiles = (
+        dict(
+            (
+                await db.execute(
+                    select(AgentProfile.application_uuid, AgentProfile.id).where(
+                        AgentProfile.application_uuid.in_(approved)
+                    )
+                )
+            ).all()
+        )
+        if approved
+        else {}
     )
+    managers = await relationship_managers_for(db, list(profiles.values()))
+    reads = []
+    for application in applications:
+        read = AgentApplicationRead.model_validate(application, from_attributes=True)
+        profile_id = profiles.get(application.id)
+        if profile_id is not None:
+            read.agent_profile_id = profile_id
+            read.relationship_manager = managers.get(profile_id)
+        reads.append(read)
+    return reads
 
 
 @router.get("/agents/{application_id}", response_model=AgentApplicationDetailRead)
@@ -844,11 +887,79 @@ async def get_agent_application(
         for doc_type, ref in doc_refs
         if ref is not None
     ]
+    (read,) = await _with_relationship_managers(db, [application])
     return AgentApplicationDetailRead(
-        **AgentApplicationRead.model_validate(application, from_attributes=True).model_dump(),
+        **read.model_dump(),
         documents=documents,
         review_note=application.review_note,
     )
+
+
+async def _require_main_admin(current_user: CurrentUser, db: AsyncSession, detail: str) -> None:
+    if not await is_primary_admin(
+        db, auth_user_uuid=current_user.id, staff_profile_uuid=current_user.staff_profile_uuid
+    ):
+        raise HTTPException(403, detail=detail)
+
+
+@router.get(
+    "/agents/{agent_id}/relationship-manager/options",
+    response_model=list[RelationshipManagerOption],
+)
+async def list_relationship_manager_options(
+    agent_id: UUID,
+    response: Response,
+    current_user: CurrentUser = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+) -> list[RelationshipManagerOption]:
+    """Sub Admins with an active Relationship Manager grant that can take this
+    Agent (by Agent profile id). Main Admin only."""
+    await _require_main_admin(
+        current_user, db, "Only the Main Admin can assign Relationship Managers."
+    )
+    response.headers["Cache-Control"] = "private, no-store"
+    try:
+        return await relationship_manager_options(db, agent_id)
+    except RelationshipAgentMissing as exc:
+        raise HTTPException(404, detail="Agent not found.") from exc
+
+
+@router.put("/agents/{agent_id}/relationship-manager", response_model=AgentRelationshipManagerRead)
+async def set_agent_relationship_manager(
+    agent_id: UUID,
+    payload: AgentRelationshipManagerUpdate,
+    current_user: CurrentUser = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+) -> AgentRelationshipManagerRead:
+    """Give an Agent exactly one Relationship Manager (or none). The Agent
+    leaves every other Relationship Manager's list; no Sub Admin is signed
+    out. Main Admin only."""
+    await _require_main_admin(
+        current_user, db, "Only the Main Admin can assign Relationship Managers."
+    )
+    try:
+        manager = await assign_relationship_manager(
+            db,
+            agent_id=agent_id,
+            sub_admin_profile_id=payload.sub_admin_profile_id,
+            actor_id=current_user.id,
+        )
+    except RelationshipAgentMissing as exc:
+        raise HTTPException(404, detail="Agent not found.") from exc
+    except RelationshipAgentInactive as exc:
+        raise HTTPException(
+            409, detail="Only an active Agent can be given a Relationship Manager."
+        ) from exc
+    except RelationshipManagerUnavailable as exc:
+        raise HTTPException(
+            422,
+            detail="Choose an active Relationship Manager whose access covers the Agent's line.",
+        ) from exc
+    except RelationshipManagerFull as exc:
+        raise HTTPException(
+            409, detail="This Relationship Manager already has 100 Agents on that line."
+        ) from exc
+    return AgentRelationshipManagerRead(agent_profile_id=agent_id, relationship_manager=manager)
 
 
 @router.post("/agents/{application_id}/approve", response_model=AgentApproveResponse)

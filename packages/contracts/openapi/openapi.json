@@ -3139,6 +3139,18 @@
       },
       "AgentApplicationDetailRead": {
         "properties": {
+          "agent_profile_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Profile Id"
+          },
           "business_line": {
             "enum": [
               "loans",
@@ -3207,6 +3219,16 @@
               }
             ],
             "title": "Mobile"
+          },
+          "relationship_manager": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RelationshipManagerRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "rera_code": {
             "anyOf": [
@@ -3297,6 +3319,18 @@
       },
       "AgentApplicationRead": {
         "properties": {
+          "agent_profile_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Profile Id"
+          },
           "business_line": {
             "enum": [
               "loans",
@@ -3358,6 +3392,16 @@
               }
             ],
             "title": "Mobile"
+          },
+          "relationship_manager": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RelationshipManagerRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "rera_code": {
             "anyOf": [
@@ -4769,6 +4813,16 @@
           },
           "profile": {
             "$ref": "#/components/schemas/AgentProfileStatusRead"
+          },
+          "relationship_manager": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentRelationshipManager"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -6127,6 +6181,79 @@
           "note"
         ],
         "title": "AgentRejectRequest",
+        "type": "object"
+      },
+      "AgentRelationshipManager": {
+        "description": "The Agent's Relationship Manager: display name and staff code only.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "staff_code": {
+            "title": "Staff Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "staff_code"
+        ],
+        "title": "AgentRelationshipManager",
+        "type": "object"
+      },
+      "AgentRelationshipManagerRead": {
+        "properties": {
+          "agent_profile_id": {
+            "format": "uuid",
+            "title": "Agent Profile Id",
+            "type": "string"
+          },
+          "relationship_manager": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RelationshipManagerRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "agent_profile_id",
+          "relationship_manager"
+        ],
+        "title": "AgentRelationshipManagerRead",
+        "type": "object"
+      },
+      "AgentRelationshipManagerUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "sub_admin_profile_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Admin Profile Id"
+          }
+        },
+        "required": [
+          "sub_admin_profile_id"
+        ],
+        "title": "AgentRelationshipManagerUpdate",
         "type": "object"
       },
       "AgentTransactionDetail": {
@@ -25787,6 +25914,146 @@
         "title": "RelationshipAgent",
         "type": "object"
       },
+      "RelationshipLead": {
+        "description": "A lead of an assigned Agent, read-only for their Relationship Manager.\nNever the lead's name, mobile, email, requirement or notes.",
+        "properties": {
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lead_ref": {
+            "title": "Lead Ref",
+            "type": "string"
+          },
+          "product_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Label"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "lead_ref",
+          "business_line",
+          "status",
+          "product_label",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "RelationshipLead",
+        "type": "object"
+      },
+      "RelationshipManagerOption": {
+        "properties": {
+          "agent_count": {
+            "title": "Agent Count",
+            "type": "integer"
+          },
+          "business_line": {
+            "enum": [
+              "loans",
+              "real_estate"
+            ],
+            "title": "Business Line",
+            "type": "string"
+          },
+          "current": {
+            "title": "Current",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "staff_code": {
+            "title": "Staff Code",
+            "type": "string"
+          },
+          "staff_profile_id": {
+            "format": "uuid",
+            "title": "Staff Profile Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "staff_profile_id",
+          "name",
+          "staff_code",
+          "business_line",
+          "agent_count",
+          "current"
+        ],
+        "title": "RelationshipManagerOption",
+        "type": "object"
+      },
+      "RelationshipManagerRead": {
+        "description": "An Agent's one Relationship Manager: display name and staff code.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "staff_code": {
+            "title": "Staff Code",
+            "type": "string"
+          },
+          "staff_profile_id": {
+            "format": "uuid",
+            "title": "Staff Profile Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "staff_profile_id",
+          "name",
+          "staff_code"
+        ],
+        "title": "RelationshipManagerRead",
+        "type": "object"
+      },
       "RentalIncomeStart": {
         "enum": [
           "immediate",
@@ -33001,6 +33268,118 @@
           }
         ],
         "summary": "List Agent Applications",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/agents/{agent_id}/relationship-manager": {
+      "put": {
+        "description": "Give an Agent exactly one Relationship Manager (or none). The Agent\nleaves every other Relationship Manager's list; no Sub Admin is signed\nout. Main Admin only.",
+        "operationId": "set_agent_relationship_manager_api_v1_admin_agents__agent_id__relationship_manager_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRelationshipManagerUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRelationshipManagerRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Set Agent Relationship Manager",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/agents/{agent_id}/relationship-manager/options": {
+      "get": {
+        "description": "Sub Admins with an active Relationship Manager grant that can take this\nAgent (by Agent profile id). Main Admin only.",
+        "operationId": "list_relationship_manager_options_api_v1_admin_agents__agent_id__relationship_manager_options_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RelationshipManagerOption"
+                  },
+                  "title": "Response List Relationship Manager Options Api V1 Admin Agents  Agent Id  Relationship Manager Options Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Relationship Manager Options",
         "tags": [
           "admin"
         ]
@@ -57567,6 +57946,64 @@
         ]
       }
     },
+    "/api/v1/relationships/options/selected": {
+      "get": {
+        "description": "Names and codes of Agents already listed in a Relationship Manager\ngrant, whatever their status, so the editor can show and remove them.\nMain Admin only, like the picker.",
+        "operationId": "relationship_selected_agents_api_v1_relationships_options_selected_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ids",
+            "required": true,
+            "schema": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "maxItems": 100,
+              "minItems": 1,
+              "title": "Ids",
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RelationshipAgent"
+                  },
+                  "title": "Response Relationship Selected Agents Api V1 Relationships Options Selected Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Relationship Selected Agents",
+        "tags": [
+          "relationships"
+        ]
+      }
+    },
     "/api/v1/relationships/{agent_id}/activity": {
       "get": {
         "operationId": "list_relationship_activity_api_v1_relationships__agent_id__activity_get",
@@ -57670,6 +58107,59 @@
           }
         ],
         "summary": "Add Relationship Activity",
+        "tags": [
+          "relationships"
+        ]
+      }
+    },
+    "/api/v1/relationships/{agent_id}/leads": {
+      "get": {
+        "description": "The assigned Agent's leads, read-only: reference, line, status, product\nand dates. No client name or contact details. Any other Agent reads as\nnot found.",
+        "operationId": "list_relationship_leads_api_v1_relationships__agent_id__leads_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RelationshipLead"
+                  },
+                  "title": "Response List Relationship Leads Api V1 Relationships  Agent Id  Leads Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Relationship Leads",
         "tags": [
           "relationships"
         ]

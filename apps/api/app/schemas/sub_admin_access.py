@@ -107,6 +107,49 @@ class RelationshipAgent(BaseModel):
     submitted_leads: int = 0
 
 
+class RelationshipManagerRead(BaseModel):
+    """An Agent's one Relationship Manager: display name and staff code."""
+
+    staff_profile_id: UUID
+    name: str | None
+    staff_code: str
+
+
+class AgentRelationshipManagerUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # A Sub Admin with an active Relationship Manager grant on the Agent's
+    # line; null removes the Agent from every Relationship Manager.
+    sub_admin_profile_id: UUID | None
+
+
+class AgentRelationshipManagerRead(BaseModel):
+    agent_profile_id: UUID
+    relationship_manager: RelationshipManagerRead | None
+
+
+class RelationshipManagerOption(BaseModel):
+    staff_profile_id: UUID
+    name: str | None
+    staff_code: str
+    business_line: AccessLine
+    agent_count: int
+    current: bool
+
+
+class RelationshipLead(BaseModel):
+    """A lead of an assigned Agent, read-only for their Relationship Manager.
+    Never the lead's name, mobile, email, requirement or notes."""
+
+    id: UUID
+    lead_ref: str
+    business_line: AccessLine
+    status: str
+    product_label: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
 class RelationshipActivityInput(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 

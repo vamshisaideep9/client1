@@ -22,6 +22,7 @@ from app.schemas.financial_products import FormAnswers, ProductFormDefinition
 from app.schemas.profile_metadata import RoleProfileRead
 from app.schemas.sub_admin_access import (
     GrantList,
+    RelationshipManagerRead,
     SubAdminAccess,
     SubAdminTeamLink,
     validate_grants,
@@ -134,6 +135,9 @@ class AgentApplicationRead(BaseModel):
     rera_code: str | None
     status: Literal["pending", "approved", "rejected"]
     created_at: datetime
+    # Approved applications: the Agent profile and its Relationship Manager.
+    agent_profile_id: UUID | None = None
+    relationship_manager: RelationshipManagerRead | None = None
 
 
 class AgentApplicationListResponse(BaseModel):
