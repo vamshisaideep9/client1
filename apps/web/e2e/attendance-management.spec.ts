@@ -74,14 +74,22 @@ test("an Admin configures attendance and reviews a staff leave request", async (
   await expect(page.getByText(/Real estate holiday/)).toBeVisible();
   await expect(page.getByLabel("Shift start (IST)")).toHaveValue("09:30");
   await page.getByLabel("Shift start (IST)").fill("09:00");
-  await page.getByLabel("Shift duration (minutes)").fill("480");
+  await page.getByLabel("Shift duration hours").fill("8");
+  await page.getByLabel("Shift duration minutes").fill("0");
+  await expect(page.locator("#policy-shift_minutes-total")).toHaveText("8h 0m");
   await page.getByLabel("Grace period (minutes)").fill("10");
-  await page.getByLabel("Half-day minimum (minutes)").fill("180");
-  await page.getByLabel("Full-day minimum (minutes)").fill("360");
+  await page.getByLabel("Half-day minimum hours").fill("3");
+  await page.getByLabel("Half-day minimum minutes").fill("30");
+  await expect(page.locator("#policy-half_day_minutes-total")).toHaveText("3h 30m");
+  await page.getByLabel("Full-day minimum hours").fill("6");
+  await page.getByLabel("Full-day minimum minutes").fill("0");
   await page.getByLabel("Annual leave days by type").fill("annual=12.5");
   await page.getByRole("button", { name: "Save policy" }).click();
   await expect(page.getByText("Attendance is now open.")).toBeVisible();
-  expect(policy).toMatchObject({ shift_start_minute: 540, leave_quotas: { annual: 25 } });
+  expect(policy).toMatchObject({
+    shift_start_minute: 540, shift_minutes: 480, grace_minutes: 10, half_day_minutes: 210,
+    full_day_minutes: 360, leave_quotas: { annual: 25 },
+  });
   await page.getByText("Monthly leave rules", { exact: true }).click();
   await page.getByLabel("Use the session clock").check();
   await page.getByLabel("Use monthly accrual").check();
